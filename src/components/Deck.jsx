@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { uid } from '../projects.js'
 import {
   allDrivers,
   totalBenefit,
@@ -10,7 +11,6 @@ import {
   driverValue,
   unconfirmed,
   STAKEHOLDERS,
-  ARCHETYPES,
   fmtMoney,
   fmtMoneyFull,
   fmtNum
@@ -20,11 +20,34 @@ import {
 // of the inputs and the selected stakeholder. Change a number on the left and
 // the whole thing moves.
 
-export default function Deck({ inputs, fields }) {
-  const archetype = ARCHETYPES[inputs.archetype] || ARCHETYPES.Enterprise
-  const available = STAKEHOLDERS.filter(s => archetype.stakeholders.includes(s.key))
+const NO_ONE = {
+  key: 'none',
+  role: 'No stakeholder selected',
+  tag: 'Add a stakeholder above',
+  cares: 'Add the people this case has to convince',
+  lead: [],
+  headline: i => `${fmtMoney(totalBenefit(i))} of annual value`,
+  objection: '-',
+  counter: '-',
+  needsToSee: []
+}
+
+// Stored stakeholders are plain data. Built-ins resolve to the model's
+// definition; custom ones get a generic headline and lead drivers.
+function resolve(s) {
+  if (s.builtin) return STAKEHOLDERS.find(b => b.key === s.key)
+  return {
+    lead: ['productivity', 'tooling'],
+    headline: i => `${fmtMoney(totalBenefit(i))} of annual value`,
+    needsToSee: [],
+    ...s
+  }
+}
+
+export default function Deck({ inputs, fields, stakeholders, onStakeholders }) {
+  const available = stakeholders.map(resolve).filter(Boolean)
   const [activeKey, setActiveKey] = useState(available[0]?.key)
-  const active = available.find(s => s.key === activeKey) || available[0]
+  const active = available.find(s => s.key === activeKey) || available[0] || NO_ONE
 
   const drivers = allDrivers(inputs)
   const total = totalBenefit(inputs)
@@ -34,17 +57,35 @@ export default function Deck({ inputs, fields }) {
     <main className="deck-wrap">
       <nav className="toolbar no-print">
         <div className="who">
-          <span className="who-label">Framed for</span>
+          <span className="who-label">Stakeholders</span>
           <div className="who-tabs">
             {available.map(s => (
-              <button
+              <span
                 key={s.key}
-                className={`tab ${s.key === active.key ? 'tab-on' : ''}`}
-                onClick={() => setActiveKey(s.key)}
+                className={`tab tab-group ${s.key === active.key ? 'tab-on' : ''}`}
               >
-                {s.role}
-              </button>
+                <button className="tab-name" onClick={() => setActiveKey(s.key)}>
+                  {s.role}
+                </button>
+                <button
+                  className="tab-x"
+                  title={`Remove ${s.role}`}
+                  aria-label={`Remove ${s.role}`}
+                  onClick={() =>
+                    onStakeholders(list => list.filter(x => x.key !== s.key))
+                  }
+                >
+                  ×
+                </button>
+              </span>
             ))}
+            <AddStakeholder
+              existing={stakeholders}
+              onAdd={s => {
+                onStakeholders(list => [...list, s])
+                setActiveKey(s.key)
+              }}
+            />
           </div>
         </div>
         <button className="primary" onClick={() => window.print()}>
@@ -280,5 +321,67 @@ function AssumptionsSlide({ inputs, open }) {
         </>
       )}
     </Slide>
+  )
+}
+
+function AddStakeholder({ existing, onAdd }) {
+  const [open, setOpen] = useState(false)
+  const [role, setRole] = useState('')
+  const have = new Set(existing.map(s => s.key))
+  const removed = STAKEHOLDERS.filter(s => !have.has(s.key))
+
+  function addCustom(e) {
+    e.preventDefault()
+    const name = role.trim()
+    if (!name) return
+    onAdd({
+      key: `custom_${uid()}`,
+      role: name,
+      tag: 'Custom stakeholder',
+      cares: 'What they care about',
+      objection: '-',
+      counter: '-'
+    })
+    setRole('')
+    setOpen(false)
+  }
+
+  if (!open) {
+    return (
+      <button className="tab tab-add" onClick={() => setOpen(true)}>
+        + Add
+      </button>
+    )
+  }
+
+  return (
+    <form className="stake-add" onSubmit={addCustom}>
+      {removed.map(s => (
+        <button
+          key={s.key}
+          type="button"
+          className="tab"
+          onClick={() => {
+            onAdd({ key: s.key, builtin: true })
+            setOpen(false)
+          }}
+        >
+          + {s.role}
+        </button>
+      ))}
+      <input
+        type="text"
+        placeholder="Or a new role"
+        value={role}
+        onChange={e => setRole(e.target.value)}
+        autoFocus
+      />
+      <button className="primary" type="submit" disabled={!role.trim()}>
+        Add
+      </button>
+      <button className="ghost" type="button" onClick={() => setOpen(false)}>
+        Cancel
+      </button>
+    </form>
   )
 }

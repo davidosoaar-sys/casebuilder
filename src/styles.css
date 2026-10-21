@@ -542,3 +542,34 @@ blockquote {
   .bar-row { grid-template-columns: 150px 1fr 70px; }
   .bar-detail { padding-left: 0; }
 }
+
+/* ------------------------------------------------------------ projects */
+
+.projects-page { max-width: 760px; margin: 0 auto; padding: 56px 20px; }
+.projects-head h1 { margin: 0; font-size: 28px; letter-spacing: -0.02em; }
+.projects-head .sub { color: var(--ink-faint); margin: 4px 0 24px; }
+.project-new { display: flex; gap: 8px; margin-bottom: 24px; }
+.project-new input { flex: 1; }
+.project-new .primary:disabled, .add-form .primary:disabled, .stake-add .primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.empty { color: var(--ink-faint); }
+.project-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.project-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; cursor: pointer; display: flex; flex-direction: column; gap: 6px; }
+.project-card:hover, .project-card:focus-visible { border-color: var(--accent); outline: none; }
+.project-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.project-meta { color: var(--ink-faint); font-size: 12px; }
+
+.icon-btn { background: none; border: 0; color: var(--ink-faint); font-size: 18px; line-height: 1; cursor: pointer; padding: 0 4px; }
+.icon-btn:hover { color: var(--bad); }
+.link-btn { background: none; border: 0; color: var(--ink-dim); cursor: pointer; padding: 0; margin-bottom: 6px; font-size: 12px; }
+.link-btn:hover { color: var(--ink); }
+
+.add-btn { width: 100%; margin-top: 16px; }
+.add-form { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); }
+.add-actions { display: flex; gap: 8px; }
+
+.tab-group { display: inline-flex; align-items: center; padding: 0; }
+.tab-name { background: none; border: 0; color: inherit; font: inherit; cursor: pointer; padding: 5px 4px 5px 12px; }
+.tab-x { background: none; border: 0; color: var(--ink-faint); cursor: pointer; padding: 0 9px 0 4px; font-size: 15px; }
+.tab-x:hover { color: var(--bad); }
+.tab-add { border-style: dashed; cursor: pointer; }
+.stake-add { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }

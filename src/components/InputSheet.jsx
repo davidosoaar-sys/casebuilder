@@ -1,11 +1,20 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { confidence, ARCHETYPES } from '../valueModel.js'
 
 // The input sheet. Chris's mechanic, made visible: everything starts as an
 // assumption and flips to a confirmed input once the customer says it on a
 // call. The deck on the right regenerates on every keystroke.
 
-export default function InputSheet({ fields, onChange, onToggle, onReset }) {
+export default function InputSheet({
+  projectName,
+  fields,
+  onBack,
+  onChange,
+  onToggle,
+  onReset,
+  onAdd,
+  onRemove
+}) {
   const groups = fields.reduce((acc, f) => {
     ;(acc[f.group] ||= []).push(f)
     return acc
@@ -18,7 +27,10 @@ export default function InputSheet({ fields, onChange, onToggle, onReset }) {
     <aside className="sheet">
       <header className="sheet-head">
         <div>
-          <h1>CaseBuilder</h1>
+          <button className="link-btn" onClick={onBack}>
+            ← All projects
+          </button>
+          <h1>{projectName}</h1>
           <p className="sub">Inputs to exec deck, live</p>
         </div>
         <button className="ghost" onClick={onReset} title="Reset to defaults">
@@ -61,10 +73,18 @@ export default function InputSheet({ fields, onChange, onToggle, onReset }) {
         <section key={group} className="group">
           <h2>{group}</h2>
           {items.map(f => (
-            <Field key={f.key} field={f} onChange={onChange} onToggle={onToggle} />
+            <Field
+              key={f.key}
+              field={f}
+              onChange={onChange}
+              onToggle={onToggle}
+              onRemove={onRemove}
+            />
           ))}
         </section>
       ))}
+
+      <AddInput onAdd={onAdd} />
 
       <p className="foot">
         Every figure feeds a formula in <code>src/valueModel.js</code>. Change the
@@ -74,7 +94,7 @@ export default function InputSheet({ fields, onChange, onToggle, onReset }) {
   )
 }
 
-function Field({ field, onChange, onToggle }) {
+function Field({ field, onChange, onToggle, onRemove }) {
   const toggleable = field.type === 'number' || field.type === 'percent'
 
   return (
@@ -84,6 +104,16 @@ function Field({ field, onChange, onToggle }) {
           {field.label}
           {field.unit ? <span className="unit"> ({field.unit})</span> : null}
         </label>
+        {field.custom && (
+          <button
+            className="icon-btn"
+            onClick={() => onRemove(field.key)}
+            title="Remove this input"
+            aria-label={`Remove ${field.label}`}
+          >
+            ×
+          </button>
+        )}
         {toggleable && (
           <button
             className={`pill ${field.confirmed ? 'pill-on' : ''}`}
@@ -142,5 +172,68 @@ function Field({ field, onChange, onToggle }) {
 
       {field.help && <p className="help">{field.help}</p>}
     </div>
+  )
+}
+
+function AddInput({ onAdd }) {
+  const [open, setOpen] = useState(false)
+  const [label, setLabel] = useState('')
+  const [type, setType] = useState('number')
+  const [unit, setUnit] = useState('')
+
+  function submit(e) {
+    e.preventDefault()
+    if (!label.trim()) return
+    onAdd({
+      label: label.trim(),
+      type,
+      unit: type === 'number' ? unit.trim() : '',
+      value: type === 'text' ? '' : type === 'percent' ? 50 : 0,
+      confirmed: false
+    })
+    setLabel('')
+    setUnit('')
+    setOpen(false)
+  }
+
+  if (!open) {
+    return (
+      <button className="ghost add-btn" onClick={() => setOpen(true)}>
+        + Add input
+      </button>
+    )
+  }
+
+  return (
+    <form className="add-form" onSubmit={submit}>
+      <input
+        type="text"
+        placeholder="Input name"
+        value={label}
+        onChange={e => setLabel(e.target.value)}
+        autoFocus
+      />
+      <select value={type} onChange={e => setType(e.target.value)}>
+        <option value="number">Number</option>
+        <option value="percent">Percent</option>
+        <option value="text">Text</option>
+      </select>
+      {type === 'number' && (
+        <input
+          type="text"
+          placeholder="Unit (optional)"
+          value={unit}
+          onChange={e => setUnit(e.target.value)}
+        />
+      )}
+      <div className="add-actions">
+        <button className="primary" type="submit" disabled={!label.trim()}>
+          Add
+        </button>
+        <button className="ghost" type="button" onClick={() => setOpen(false)}>
+          Cancel
+        </button>
+      </div>
+    </form>
   )
 }

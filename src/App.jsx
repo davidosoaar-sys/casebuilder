@@ -1,43 +1,89 @@
-import React, { useState, useMemo } from 'react'
-import { INPUT_FIELDS } from './valueModel.js'
+import React, { useState, useMemo, useEffect } from 'react'
 import InputSheet from './components/InputSheet.jsx'
 import Deck from './components/Deck.jsx'
+import ProjectList from './components/ProjectList.jsx'
+import {
+  loadProjects,
+  saveProjects,
+  newProject,
+  hydrate,
+  defaultFields,
+  defaultStakeholders,
+  uid
+} from './projects.js'
 
 export default function App() {
-  const [fields, setFields] = useState(() =>
-    INPUT_FIELDS.map(f => ({ ...f }))
-  )
+  const [projects, setProjects] = useState(() => loadProjects().map(hydrate))
+  const [currentId, setCurrentId] = useState(null)
 
+  useEffect(() => saveProjects(projects), [projects])
+
+  const project = projects.find(p => p.id === currentId)
+
+  function update(patch) {
+    setProjects(prev =>
+      prev.map(p =>
+        p.id === currentId
+          ? { ...p, ...(typeof patch === 'function' ? patch(p) : patch), updatedAt: Date.now() }
+          : p
+      )
+    )
+  }
+
+  const fields = project?.fields
   const inputs = useMemo(
-    () => Object.fromEntries(fields.map(f => [f.key, f.value])),
+    () => (fields ? Object.fromEntries(fields.map(f => [f.key, f.value])) : {}),
     [fields]
   )
 
-  function handleChange(key, value) {
-    setFields(prev =>
-      prev.map(f => (f.key === key ? { ...f, value } : f))
+  if (!project) {
+    return (
+      <ProjectList
+        projects={projects}
+        onCreate={name => {
+          const p = newProject(name)
+          setProjects(prev => [p, ...prev])
+          setCurrentId(p.id)
+        }}
+        onOpen={setCurrentId}
+        onDelete={id => setProjects(prev => prev.filter(p => p.id !== id))}
+      />
     )
   }
 
-  function handleToggle(key) {
-    setFields(prev =>
-      prev.map(f => (f.key === key ? { ...f, confirmed: !f.confirmed } : f))
-    )
-  }
-
-  function handleReset() {
-    setFields(INPUT_FIELDS.map(f => ({ ...f })))
-  }
+  const setFields = fn => update(p => ({ fields: fn(p.fields) }))
 
   return (
     <div className="app">
       <InputSheet
-        fields={fields}
-        onChange={handleChange}
-        onToggle={handleToggle}
-        onReset={handleReset}
+        projectName={project.name}
+        fields={project.fields}
+        onBack={() => setCurrentId(null)}
+        onChange={(key, value) =>
+          setFields(fs => fs.map(f => (f.key === key ? { ...f, value } : f)))
+        }
+        onToggle={key =>
+          setFields(fs =>
+            fs.map(f => (f.key === key ? { ...f, confirmed: !f.confirmed } : f))
+          )
+        }
+        onReset={() =>
+          update({ fields: defaultFields(), stakeholders: defaultStakeholders() })
+        }
+        onAdd={input =>
+          setFields(fs => [
+            ...fs,
+            { ...input, key: `custom_${uid()}`, group: 'Custom', custom: true }
+          ])
+        }
+        onRemove={key => setFields(fs => fs.filter(f => f.key !== key))}
       />
-      <Deck inputs={inputs} fields={fields} />
+      <Deck
+        inputs={inputs}
+        fields={project.fields}
+        stakeholders={project.stakeholders}
+        onStakeholders={fn => update(p => ({ stakeholders: fn(p.stakeholders) }))}
+      />
     </div>
   )
 }
