@@ -1,13 +1,14 @@
 import { INPUT_FIELDS, STAKEHOLDERS } from './valueModel.js'
+import { uid } from './uid.js'
+import { defaultDeck, migrateDeck } from './deck/model.js'
+
+export { uid }
 
 // Projects live in localStorage. Each project is one business case: its input
-// fields (including any custom ones) and its list of stakeholders.
+// fields (including any custom ones), its stakeholders, the people found for
+// them, and its deck (an ordered list of slides the user can edit).
 
 const KEY = 'casebuilder.projects.v1'
-
-export function uid() {
-  return Math.random().toString(36).slice(2, 9)
-}
 
 export function loadProjects() {
   try {
@@ -43,7 +44,9 @@ export function newProject(name) {
     name,
     updatedAt: Date.now(),
     fields,
-    stakeholders: defaultStakeholders()
+    stakeholders: defaultStakeholders(),
+    deck: defaultDeck(),
+    people: {}
   }
 }
 
@@ -57,6 +60,8 @@ export function hydrate(project) {
   return {
     ...project,
     fields: [...base, ...custom],
-    stakeholders: project.stakeholders || defaultStakeholders()
+    stakeholders: project.stakeholders || defaultStakeholders(),
+    deck: project.deck ? migrateDeck(project.deck) : defaultDeck(),
+    people: project.people || {}
   }
 }

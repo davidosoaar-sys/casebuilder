@@ -1,0 +1,14 @@
+{
+  "name": "casebuilder",
+  "description": "CaseBuilder: business cases for Spotify Portal for Backstage",
+  "owner": {
+    "name": "davidosoaar-sys"
+  },
+  "plugins": [
+    {
+      "name": "casebuilder",
+      "source": "./plugin",
+      "description": "Build a customer-specific business case: ROI model, stakeholder-tailored deck, researched contacts, PowerPoint, one-pager and interactive website."
+    }
+  ]
+}

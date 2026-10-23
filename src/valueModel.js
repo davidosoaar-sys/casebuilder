@@ -215,7 +215,7 @@ export const DRIVERS = [
     key: 'productivity',
     label: 'Engineer time recovered',
     short: 'Productivity',
-    color: '#1db954',
+    color: '#36baa2',
     compute: i =>
       i.engineers *
       i.hoursLostPerWeek *
@@ -229,7 +229,7 @@ export const DRIVERS = [
     key: 'platform',
     label: 'Platform team maintenance avoided',
     short: 'Platform load',
-    color: '#2e77d0',
+    color: '#6c8ebf',
     compute: i =>
       i.platformEngineers *
       (i.pctTimeMaintaining / 100) *
@@ -242,7 +242,7 @@ export const DRIVERS = [
     key: 'onboarding',
     label: 'Faster onboarding',
     short: 'Onboarding',
-    color: '#f0a500',
+    color: '#d6b656',
     compute: i => i.newHiresPerYear * i.daysSavedOnboarding * 8 * i.hourlyCost,
     explain: i =>
       `${i.newHiresPerYear} new hires x ${i.daysSavedOnboarding} days saved x 8 hrs x ${fmtMoney(i.hourlyCost)}/hr`
@@ -251,7 +251,7 @@ export const DRIVERS = [
     key: 'incidents',
     label: 'Shorter incidents',
     short: 'Incidents',
-    color: '#e0533d',
+    color: '#e0636a',
     compute: i =>
       i.incidentsPerMonth *
       12 *
@@ -266,7 +266,7 @@ export const DRIVERS = [
     key: 'tooling',
     label: 'Overlapping tooling retired',
     short: 'Tooling',
-    color: '#8e63d0',
+    color: '#9673a6',
     compute: i => i.currentToolSpend * (i.toolConsolidation / 100),
     explain: i =>
       `${fmtMoney(i.currentToolSpend)}/yr current spend x ${i.toolConsolidation}% retired`
@@ -324,7 +324,7 @@ export const STAKEHOLDERS = [
     tag: 'Shows up late and can stall a done deal',
     cares: 'Payback, contract terms, and whether the numbers survive scrutiny',
     lead: ['productivity', 'tooling'],
-    headline: i => `Payback in ${paybackMonths(i)} months`,
+    headline: i => `Payback in ${paybackMonths(i)} ${paybackMonths(i) === 1 ? 'month' : 'months'}`,
     objection: 'These savings are soft. Nobody gets laid off because of this.',
     counter:
       'Present recovered capacity against hiring plans rather than as cash. The claim is avoided headcount, not reduced headcount.',

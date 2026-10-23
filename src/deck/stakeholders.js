@@ -1,0 +1,33 @@
+import { STAKEHOLDERS, totalBenefit, fmtMoney } from '../valueModel.js'
+
+// Stakeholders as stored are plain data. This turns one into everything the
+// deck needs: built-ins take the model's definition, custom ones get a generic
+// headline and lead drivers, and `edit` holds text the user overwrote.
+
+export const NO_ONE = {
+  key: 'none',
+  role: 'No stakeholder selected',
+  tag: 'Add a stakeholder above',
+  cares: 'Add the people this case has to convince',
+  lead: [],
+  headline: i => `${fmtMoney(totalBenefit(i))} of annual value`,
+  objection: '-',
+  counter: '-',
+  needsToSee: []
+}
+
+export function resolveStakeholder(s) {
+  const base = s.builtin
+    ? STAKEHOLDERS.find(b => b.key === s.key)
+    : {
+        lead: ['productivity', 'tooling'],
+        headline: i => `${fmtMoney(totalBenefit(i))} of annual value`,
+        needsToSee: [],
+        cares: '',
+        tag: '',
+        objection: '-',
+        counter: '-',
+        ...s
+      }
+  return base && { ...base, ...(s.edit || {}) }
+}

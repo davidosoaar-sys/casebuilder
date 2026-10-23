@@ -1,14 +1,12 @@
 import React, { useState } from 'react'
 import { confidence, ARCHETYPES } from '../valueModel.js'
 
-// The input sheet. Chris's mechanic, made visible: everything starts as an
+// The inputs. Chris's mechanic, made visible: everything starts as an
 // assumption and flips to a confirmed input once the customer says it on a
-// call. The deck on the right regenerates on every keystroke.
+// call. The deck regenerates from these on every change.
 
 export default function InputSheet({
-  projectName,
   fields,
-  onBack,
   onChange,
   onToggle,
   onReset,
@@ -24,19 +22,7 @@ export default function InputSheet({
   const archetype = fields.find(f => f.key === 'archetype')?.value
 
   return (
-    <aside className="sheet">
-      <header className="sheet-head">
-        <div>
-          <button className="link-btn" onClick={onBack}>
-            ← All projects
-          </button>
-          <h1>{projectName}</h1>
-          <p className="sub">Inputs to exec deck, live</p>
-        </div>
-        <button className="ghost" onClick={onReset} title="Reset to defaults">
-          Reset
-        </button>
-      </header>
+    <div className="inputs-page">
 
       <div className="confidence">
         <div className="confidence-top">
@@ -48,7 +34,7 @@ export default function InputSheet({
             className="bar-fill"
             style={{
               width: `${conf}%`,
-              background: conf >= 70 ? '#1db954' : conf >= 40 ? '#f0a500' : '#e0533d'
+              background: conf >= 70 ? '#36baa2' : conf >= 40 ? '#ffba00' : '#f0686d'
             }}
           />
         </div>
@@ -69,28 +55,35 @@ export default function InputSheet({
         </div>
       )}
 
-      {Object.entries(groups).map(([group, items]) => (
-        <section key={group} className="group">
-          <h2>{group}</h2>
-          {items.map(f => (
-            <Field
-              key={f.key}
-              field={f}
-              onChange={onChange}
-              onToggle={onToggle}
-              onRemove={onRemove}
-            />
-          ))}
-        </section>
-      ))}
+      <div className="groups-grid">
+        {Object.entries(groups).map(([group, items]) => (
+          <section key={group} className="group">
+            <h2>{group}</h2>
+            {items.map(f => (
+              <Field
+                key={f.key}
+                field={f}
+                onChange={onChange}
+                onToggle={onToggle}
+                onRemove={onRemove}
+              />
+            ))}
+          </section>
+        ))}
+      </div>
 
-      <AddInput onAdd={onAdd} />
+      <div className="inputs-actions">
+        <AddInput onAdd={onAdd} />
+        <button className="ghost" onClick={onReset} title="Reset inputs, stakeholders and deck to defaults">
+          Reset project to defaults
+        </button>
+      </div>
 
       <p className="foot">
         Every figure feeds a formula in <code>src/valueModel.js</code>. Change the
         model there, not in the slides.
       </p>
-    </aside>
+    </div>
   )
 }
 
