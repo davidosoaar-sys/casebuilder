@@ -6,10 +6,9 @@ import ProjectList from './components/ProjectList.jsx'
 import Details from './components/Details.jsx'
 import StakeholderMap from './components/StakeholderMap.jsx'
 import People from './components/People.jsx'
-import useDealSaving from './useDealSaving.js'
-import { dealStorage } from './dealStorage.js'
+import useCloudDeals from './useCloudDeals.js'
+import { supabase } from './supabase.js'
 import {
-  loadProjects,
   duplicateProject,
   newProject,
   hydrate,
@@ -55,12 +54,19 @@ export default function App({ account }) {
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#f6f8f7' : '#111111')
     try { localStorage.setItem(THEME_KEY, theme) } catch {}
   }, [theme])
-  const [projects, setProjects] = useState(() => loadProjects().map(hydrate))
-  const saving = useDealSaving(projects)
-  const [currentId, setCurrentId] = useState(null)
-  const [user, setUser] = useState(loadUser)
-  const [view, setView] = useState('projects') // 'projects' | 'details' | 'deck' | 'website'
   const [connections, setConnections] = useState(loadConnections)
+  const cloud = useCloudDeals(account.session.user.id, connections)
+  const { deals: projects, setDeals: setProjects, loading: dealsLoading } = cloud
+  const saving = cloud.saving
+  const [currentId, setCurrentId] = useState(null)
+  // Display name lives on the account (Supabase user metadata), so it follows
+  // the person to any browser. Falls back to a name typed in this browser before.
+  const [user, setUserState] = useState(() => account.session.user.user_metadata?.name || loadUser())
+  const setUser = name => {
+    setUserState(name)
+    supabase.auth.updateUser({ data: { name } }).catch(() => {})
+  }
+  const [view, setView] = useState('projects') // 'projects' | 'details' | 'deck' | 'website'
   const [stage, setStage] = useState(null) // 'map' | 'people' while setting up a new project
   const brandScans = useRef(new Map())
 
@@ -241,6 +247,7 @@ export default function App({ account }) {
             user={user}
             onUser={setUser}
             projects={projects}
+            loading={dealsLoading}
             activeId={currentId}
             onCreate={name => {
               const p = newProject(name, connections)
@@ -255,9 +262,10 @@ export default function App({ account }) {
               setView('details')
             }}
             onDelete={id => {
-              try { dealStorage.delete(id); saving.forget(id) } catch (e) { saving.reportError(e.message); return }
-              setProjects(prev => prev.filter(p => p.id !== id))
-              if (id === currentId) setCurrentId(null)
+              saving.remove(id).then(() => {
+                setProjects(prev => prev.filter(p => p.id !== id))
+                if (id === currentId) setCurrentId(null)
+              }, e => saving.reportError(e.message))
             }}
             onDuplicate={p => { const copy = duplicateProject(p); setProjects(prev => [copy, ...prev]) }}
           />

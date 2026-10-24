@@ -5,7 +5,7 @@ import { SPOTIFY_LOGO } from '../spotifyLogo.js'
 
 // Landing page: start a new project (company name only), open or delete one.
 
-export default function ProjectList({ user, onUser, projects, activeId, onCreate, onOpen, onDelete, onDuplicate }) {
+export default function ProjectList({ user, onUser, projects, loading = false, activeId, onCreate, onOpen, onDelete, onDuplicate }) {
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
   const [who, setWho] = useState('')
@@ -91,7 +91,9 @@ export default function ProjectList({ user, onUser, projects, activeId, onCreate
             <button className="ghost" aria-pressed={display === 'list'} onClick={() => changeDisplay('list')}><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M5 3h9M5 8h9M5 13h9M1 3h1M1 8h1M1 13h1"/></svg>List</button>
           </div>
         </div>
-        {projects.length === 0 ? (
+        {loading ? (
+          <p className="empty" aria-busy="true">Loading your projects…</p>
+        ) : projects.length === 0 ? (
           <p className="empty">No projects yet. Start your first one.</p>
         ) : (
           <ul className={`project-grid ${display === 'list' ? 'project-list-view' : 'project-cards-view'}`} aria-label={display === 'list' ? 'Projects list' : 'Project cards'}>

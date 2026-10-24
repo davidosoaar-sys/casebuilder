@@ -119,6 +119,27 @@ backoff, then `failed`).
   round-trips in 10 s app-to-app, 5.5 s of it the model. Service peak memory
   78 MB. Key file absent after jobs.
 
+## App on Supabase (24 Oct 2026)
+
+- **Sign-in:** email + password (`AuthGate`), no sign-up page; pilot accounts are
+  made with `worker/create_account.py` (random password to a 0600 file on the
+  Mac). Users change their own password from the sidebar.
+- **Deals:** `src/cloudDeals.js` + `useCloudDeals`. Loads the account's own rows
+  (admins can read all rows under RLS, so the list filters by owner explicitly).
+  Inserts new deals; updates go through `save_deal` with the last-read version,
+  so a stale tab gets a conflict instead of overwriting.
+- **No lost edits:** every queued edit is first copied to browser storage (keyed
+  per account) and removed only after Supabase confirms. Offline saves show
+  "Not saved", retry every 5 s, and land when the network returns; a tab closed
+  mid-save is replayed on next load.
+- **Sample deal:** one Spotify sample per new account, with a fixed id so two
+  racing loads cannot create two (a real bug the browser test caught).
+- **Display name** is stored on the account, so it follows the person.
+- **Verified:** `scripts/review-deals.mjs`, 16 checks in a real browser against
+  the live database (create, edit, duplicate, reload, second browser, other
+  account isolation, offline and back, delete). Plus 7 unit tests in
+  `src/cloudDeals.test.js` (conflicts, offline retry, replay).
+
 ## Next
 
 1. Hermes worker: claim → run Hermes in the account's profile → write back.
