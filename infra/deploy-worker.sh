@@ -5,7 +5,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 scp -q worker/worker.py casebuilder-vps:/tmp/cb-worker.py
 # worker.env -> server, stripped to the two needed vars, owner-only.
-grep -E '^(SUPABASE_URL|SUPABASE_SECRET_KEY)=' ~/.config/casebuilder/worker.env | ssh casebuilder-vps 'cat > /tmp/cb-worker.env'
+{ grep -E '^(SUPABASE_URL|SUPABASE_SECRET_KEY)=' ~/.config/casebuilder/worker.env
+  grep -E '^TAVILY_API_KEY=tvly-' ~/.config/casebuilder/search.env 2>/dev/null || true; } | ssh casebuilder-vps 'cat > /tmp/cb-worker.env'
 ssh casebuilder-vps 'bash -s' <<'EOF'
 set -e
 sudo install -d -o casebuilder -g casebuilder -m 700 /home/casebuilder/worker
@@ -35,5 +36,6 @@ ProtectSystem=full
 WantedBy=multi-user.target
 UNIT
 sudo systemctl daemon-reload
-echo "deployed; service file installed (not started by this script)"
+sudo systemctl try-restart casebuilder-worker
+echo "deployed; worker restarted if it was running"
 EOF

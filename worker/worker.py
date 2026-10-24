@@ -91,7 +91,7 @@ def run_hermes(profile, prompt, api_key):
     """
     home = os.path.join(HOME, "profiles", profile)
     env = {k: v for k, v in os.environ.items()
-           if not k.startswith("SUPABASE_") and k != "ANTHROPIC_API_KEY"}  # agent never sees DB creds
+           if not k.startswith("SUPABASE_") and k not in ("ANTHROPIC_API_KEY", "TAVILY_API_KEY")}  # agent never sees DB creds
     env["HERMES_HOME"] = home
     workdir = os.path.join(home, "work")
     os.makedirs(workdir, exist_ok=True)
@@ -99,6 +99,10 @@ def run_hermes(profile, prompt, api_key):
     fd = os.open(envfile, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w") as f:
         f.write(f"ANTHROPIC_API_KEY={api_key}\n")
+        # Shared search key (team's, not the account's): Hermes reads it from the
+        # same profile .env, and shreds with it after the job.
+        if os.environ.get("TAVILY_API_KEY"):
+            f.write(f"TAVILY_API_KEY={os.environ['TAVILY_API_KEY']}\n")
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as u:
         usage_path = u.name
     try:
