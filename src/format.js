@@ -32,7 +32,7 @@ export function fmtHours(n) {
 
 export function fmtMonths(n) {
   if (n == null || isNaN(n) || n <= 0) return 'n/a'
-  if (n < 1) return 'under 1 month'
-  const r = Math.round(n)
-  return `${r} ${r === 1 ? 'month' : 'months'}`
+  // two decimals while it is short, so a small change in an input still shows
+  const r = n < 10 ? Math.max(0.01, Math.round(n * 100) / 100) : Math.round(n)
+  return `${fmtDec(r, 2)} ${r === 1 ? 'month' : 'months'}`
 }

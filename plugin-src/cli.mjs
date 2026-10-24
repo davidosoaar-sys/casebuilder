@@ -23,6 +23,7 @@ import {
   fmtMoneyFull
 } from '../src/valueModel.js'
 import { computeModel } from '../src/model.js'
+import { withValue, withState, withOrigin, stateOf, emptySource } from '../src/source.js'
 import { projectToCaseFile, caseFileToProject, checkCaseFile, CASE_VERSION } from '../src/caseFile.js'
 import { buildEnv, resolveSlides, TEXT_STYLES } from '../src/deck/model.js'
 import { resolveStakeholder } from '../src/deck/stakeholders.js'
@@ -140,11 +141,6 @@ function cmdInit(pos, flags) {
   const data = projectToCaseFile(newProject(company))
   delete data.deck // left out so the standard deck is used until it is customised
   delete data.exportedAt
-  // The app's demo defaults mark some numbers as confirmed. A real case starts
-  // with every number an assumption until the customer has said it.
-  for (const f of INPUT_FIELDS) {
-    if (f.type === 'number' || f.type === 'percent') data.inputs[f.key].confirmed = false
-  }
   const arch = one(flags, 'archetype')
   if (arch) {
     if (!ARCHETYPES[arch]) fail(`Unknown archetype "${arch}". Choices: ${Object.keys(ARCHETYPES).join(' | ')}`)
@@ -165,7 +161,7 @@ function cmdInfo(pos, flags) {
     unit: f.unit || undefined,
     default: f.value,
     options: f.options,
-    startsAs: f.confirmed ? 'confirmed' : 'assumption',
+    startsAs: f.type === 'number' || f.type === 'percent' ? (f.structural ? 'input' : 'empty') : 'input',
     help: f.help
   }))
   const info = {
@@ -190,40 +186,42 @@ function parseValue(field, raw) {
   return String(raw)
 }
 
+// An entry in the case file's `inputs`, as a field the source helpers can work on.
+const asField = (key, entry) => ({ key, value: entry && entry.value != null ? entry.value : '', source: entry && entry.source ? entry.source : emptySource() })
+const toEntry = (prev, f) => ({ ...prev, value: f.value, confirmed: stateOf(f) === 'input', source: f.source })
+
 function cmdSet(pos, flags) {
   const [file, ...pairs] = pos
   const data = readCase(file)
   const confirmed = new Set(many(flags, 'confirmed').flatMap(v => String(v).split(',')).map(s => s.trim()).filter(Boolean))
   const assumed = new Set(many(flags, 'assumed').flatMap(v => String(v).split(',')).map(s => s.trim()).filter(Boolean))
-  if (!pairs.length && !confirmed.size && !assumed.size) fail('Usage: set <file> key=value [key=value ...] [--confirmed key,key] [--assumed key,key]')
+  const origin = one(flags, 'origin')
+  if (!pairs.length && !confirmed.size && !assumed.size) fail('Usage: set <file> key=value [key=value ...] [--confirmed key,key] [--assumed key,key] [--origin "where it came from"]')
   data.inputs ||= {}
   const changed = []
+  const apply = (key, f) => {
+    // --confirmed: the customer said it (an input). --assumed: your own read. Neither: the source stays as it is.
+    if (confirmed.has(key)) f = withState(f, 'input')
+    else if (assumed.has(key)) f = withState(f, 'assumption')
+    if (origin) f = withOrigin(f, origin)
+    data.inputs[key] = toEntry(data.inputs[key] || {}, f)
+    changed.push({ key, value: f.value, state: stateOf(f), origin: f.source.origin || '' })
+  }
   for (const pair of pairs) {
     const eq = pair.indexOf('=')
     if (eq < 1) fail(`"${pair}" should look like key=value`)
     const key = pair.slice(0, eq)
     const f = INPUT_FIELDS.find(x => x.key === key) || (data.inputs[key] && data.inputs[key].label ? { key, type: data.inputs[key].type } : null)
     if (!f) fail(`Unknown input "${key}". Run "info" for the list, or add your own with "custom".`)
-    const value = parseValue(f, pair.slice(eq + 1))
-    const prev = data.inputs[key] || {}
-    data.inputs[key] = { ...prev, value, confirmed: confirmed.has(key) ? true : assumed.has(key) ? false : (prev.confirmed ?? INPUT_FIELDS.find(x => x.key === key)?.confirmed ?? false) }
-    changed.push({ key, value, confirmed: data.inputs[key].confirmed })
+    const raw = pair.slice(eq + 1)
+    const value = raw === '' ? '' : parseValue(f, raw)
+    apply(key, withValue(asField(key, data.inputs[key]), value))
   }
-  // flags can also confirm an input without changing its value
-  for (const key of confirmed) {
+  // flags can also change the state of a number without changing its value
+  for (const key of [...confirmed, ...assumed]) {
     if (changed.some(c => c.key === key)) continue
-    const f = INPUT_FIELDS.find(x => x.key === key)
-    if (!f && !data.inputs[key]) fail(`Unknown input "${key}".`)
-    data.inputs[key] = { ...(data.inputs[key] || { value: f.value }), confirmed: true }
-    changed.push({ key, value: data.inputs[key].value, confirmed: true })
-  }
-  // flags can also flip an input back to an assumption without changing its value
-  for (const key of assumed) {
-    if (changed.some(c => c.key === key)) continue
-    const f = INPUT_FIELDS.find(x => x.key === key)
-    if (!f && !data.inputs[key]) fail(`Unknown input "${key}".`)
-    data.inputs[key] = { ...(data.inputs[key] || { value: f.value }), confirmed: false }
-    changed.push({ key, value: data.inputs[key].value, confirmed: false })
+    if (!INPUT_FIELDS.some(x => x.key === key) && !data.inputs[key]) fail(`Unknown input "${key}".`)
+    apply(key, asField(key, data.inputs[key]))
   }
   const warnings = writeCase(file, data)
   print({ saved: path.resolve(file), changed, warnings })
@@ -239,7 +237,7 @@ function cmdCustom(pos, flags) {
   if (INPUT_FIELDS.some(f => f.key === key)) fail(`"${key}" is a built-in input; use "set".`)
   const raw = one(flags, 'value')
   data.inputs ||= {}
-  data.inputs[key] = { label, type, unit: one(flags, 'unit') || '', value: type === 'text' ? String(raw) : Number(raw), confirmed: has(flags, 'confirmed') }
+  data.inputs[key] = { label, type, unit: one(flags, 'unit') || '', value: type === 'text' ? String(raw) : Number(raw), confirmed: has(flags, 'confirmed'), source: has(flags, 'confirmed') ? { state: 'input', origin: one(flags, 'origin') || 'Confirmed by the customer' } : { state: 'assumption', origin: one(flags, 'origin') || 'Your own read' } }
   const warnings = writeCase(file, data)
   print({ saved: path.resolve(file), added: key, note: 'Custom inputs appear in the case and the assumptions list but do not change the value model.', warnings })
 }
@@ -348,17 +346,18 @@ function calcAll(project) {
     company: project.name,
     confidence: confidence(project.fields),
     totals,
+    // a figure that cannot be computed yet is "incomplete", never $0
     formatted: {
-      annualValue: fmtMoneyFull(totals.annualValue),
-      portalCost: fmtMoney(totals.portalCost),
-      netYearOne: fmtMoney(totals.netYearOne),
-      payback: totals.paybackMonths > 0 ? `${totals.paybackMonths} months` : 'n/a',
-      return: `${totals.returnMultiple.toFixed(1)}x`,
-      fiveYearNet: fmtMoney(totals.fiveYearNet)
+      annualValue: F.totalValue.incomplete ? 'incomplete' : fmtMoneyFull(totals.annualValue),
+      portalCost: model.blankInputs.includes('portalCost') ? 'incomplete' : fmtMoney(totals.portalCost),
+      netYearOne: F.netValue.incomplete ? 'incomplete' : fmtMoney(totals.netYearOne),
+      payback: F.paybackMonths.incomplete ? 'incomplete' : totals.paybackMonths > 0 ? `${totals.paybackMonths} months` : 'n/a',
+      return: F.roiMultiple.incomplete ? 'incomplete' : `${totals.returnMultiple.toFixed(1)}x`,
+      fiveYearNet: F.fiveYearValue.incomplete ? 'incomplete' : fmtMoney(totals.fiveYearNet)
     },
-    figures: Object.fromEntries(model.order.map(k => [k, { value: F[k].value, equation: F[k].equation, flag: F[k].flag }])),
+    figures: Object.fromEntries(model.order.map(k => [k, F[k].incomplete ? { incomplete: true, waitingOn: F[k].missing } : { value: F[k].value, equation: F[k].equation, flag: F[k].flag }])),
     warnings: model.warnings.map(w => w.message),
-    drivers: allDrivers(model).map(d => ({ key: d.key, label: d.label, value: Math.round(d.value), formatted: fmtMoney(d.value), working: d.detail })),
+    drivers: allDrivers(model).map(d => (d.incomplete ? { key: d.key, label: d.label, incomplete: true, waitingOn: d.missing } : { key: d.key, label: d.label, value: Math.round(d.value), formatted: fmtMoney(d.value), working: d.detail })),
     versusSelfHost: { selfHost: F.selfHostCost.value, portal: model.inputs.portalCost, portalIsCheaperBy: Math.max(0, F.versusSelfHost.raw), cheaper: F.versusSelfHost.raw > 0 ? 'portal' : 'self-host' },
     stillAssumed: open.map(f => ({ key: f.key, label: f.label, assumedAt: f.value, unit: f.unit || (f.type === 'percent' ? '%' : ''), askThem: f.help })),
     stakeholders: stakeholders.map(s => ({
@@ -395,7 +394,7 @@ function cmdCalc(pos, flags) {
     `| Five-year net | ${f.fiveYearNet} |`,
     '',
     '## Where the value comes from',
-    ...result.drivers.map(d => `- **${d.label}**: ${d.formatted} (${d.working})`),
+    ...result.drivers.map(d => (d.incomplete ? `- **${d.label}**: incomplete, waiting on ${d.waitingOn.join(', ')}` : `- **${d.label}**: ${d.formatted} (${d.working})`)),
     '',
     `## Against self-hosting`,
     `Self-hosting costs about ${fmtMoney(result.versusSelfHost.selfHost)}/yr in platform engineers; Portal is ${fmtMoney(result.versusSelfHost.portal)}/yr.`,
@@ -573,7 +572,7 @@ function help() {
 
   init "<company>" [--archetype A] [--out f]      create a case file
   info [--md]                                      list every input, archetype and stakeholder
-  set <f> key=value ... [--confirmed k,k] [--assumed k,k]   change inputs (confirmed = the customer said it)
+  set <f> key=value ... [--confirmed k,k] [--assumed k,k] [--origin text]   change inputs (confirmed = the customer said it)
   custom <f> --key k --label L --value V           add an input of your own
   stakeholder <add|remove|restore> <f> ...         manage who is in the room
   person <add|remove> <f> --stakeholder k ...      record a researched person (with sources)

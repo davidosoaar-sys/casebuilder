@@ -23,7 +23,7 @@ const bundle = path.join(skill, 'scripts/casebuilder.mjs')
 fs.mkdirSync(path.join(root, '.build'), { recursive: true })
 fs.writeFileSync(
   path.join(root, '.build/valueModel.txt'),
-  ['src/format.js', 'src/model.js', 'src/valueModel.js'].map(f => fs.readFileSync(path.join(root, f), 'utf8')).join('\n')
+  ['src/format.js', 'src/model.js', 'src/source.js', 'src/valueModel.js'].map(f => fs.readFileSync(path.join(root, f), 'utf8')).join('\n')
 )
 
 // 2. the bundle
@@ -46,7 +46,7 @@ console.log(`bundle   ${path.relative(root, bundle)}  ${(fs.statSync(bundle).siz
 const M = await import(pathToFileURL(path.join(root, 'src/valueModel.js')).href)
 fs.mkdirSync(refs, { recursive: true })
 
-const defaults = Object.fromEntries(M.INPUT_FIELDS.map(f => [f.key, f.value]))
+const defaults = M.DEMO_VALUES
 const money = M.fmtMoney
 
 const inputsMd = [

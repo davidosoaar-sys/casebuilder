@@ -1,5 +1,8 @@
 import { buildEnv, resolveBlock } from '../deck/model.js'
-import { STAKEHOLDERS } from '../valueModel.js'
+import { STAKEHOLDERS, INPUT_GROUPS, confidence, unconfirmed, completeness, fmtDec, fmtMoneyFull } from '../valueModel.js'
+import { computeModel } from '../model.js'
+import { stateOf, isBlank } from '../source.js'
+import { enabledLabels } from '../connectors.js'
 import { NO_ONE } from '../deck/stakeholders.js'
 
 // Turn a project into the plain data the one-pager and website builders take.
@@ -12,7 +15,6 @@ export function prepareOnePager({ inputs, fields, who, date }) {
   const env = buildEnv(inputs, fields, who)
   const block = type => resolveBlock({ type }, env)
   const room = block('room')
-  const asm = block('assumptions')
   const drivers = block('drivers')
   return {
     company: env.ctx.company,
@@ -24,12 +26,10 @@ export function prepareOnePager({ inputs, fields, who, date }) {
     totalEq: drivers.totalEq,
     pairs: block('pairs').rows,
     total: drivers.total,
-    versus: block('versus'),
+    versus: (v => (v.incomplete ? null : v))(block('versus')),
     needs: room.needs,
     objection: room.objection,
     counter: room.counter,
-    open: asm.items.slice(0, 8),
-    openCount: asm.count,
     date: date || new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
   }
 }
@@ -62,7 +62,6 @@ export function prepareWebsite({ company, deck, inputs, fields, stakeholders, wh
     })),
     activeKey: who.key,
     inputs: values,
-    openFields: resolveBlock({ type: 'assumptions' }, env).items,
     sliders: SLIDERS.filter(([k]) => typeof values[k] === 'number').map(([key, label, unit, step]) => ({
       key,
       label,
@@ -71,5 +70,48 @@ export function prepareWebsite({ company, deck, inputs, fields, stakeholders, wh
       min: 0,
       max: unit === '%' ? 100 : Math.max(step * 10, Math.ceil((values[key] * 3) / step) * step)
     }))
+  }
+}
+
+// ---------------------------------------------------------------- internal summary
+
+const shown = f => {
+  if (isBlank(f.value)) return ''
+  if (f.type === 'percent') return `${f.value}%`
+  if (f.unit === '$/yr' || f.unit === '$/hr') return `${fmtMoneyFull(f.value)}${f.unit === '$/hr' ? '/hr' : '/yr'}`
+  return `${fmtDec(Number(f.value), 2)}${f.unit ? ` ${f.unit}` : ''}`
+}
+
+// CHRIS'S page, not the client's: every number, its state and its origin, which
+// figures are still incomplete, and the questions to confirm. It is the question set
+// he can send the customer before a trial. It is never part of the deck.
+export function prepareInternal({ company, fields, inputs, connectors, date }) {
+  const model = computeModel(inputs)
+  const numeric = fields.filter(f => (f.type === 'number' || f.type === 'percent') && !f.structural)
+  const row = f => {
+    const s = f.source || {}
+    return {
+      label: f.label,
+      value: shown(f),
+      state: stateOf(f),
+      origin: stateOf(f) === 'empty' ? (s.notes && s.notes.length ? s.notes.join(' ') : '') : s.origin || '',
+      link: s.link || '',
+      pinnedAt: s.pinnedAt || ''
+    }
+  }
+  const groups = [...INPUT_GROUPS, 'Custom']
+    .map(g => ({ group: g, rows: numeric.filter(f => (f.group || 'Custom') === g).map(row) }))
+    .filter(g => g.rows.length)
+  const done = completeness(model)
+  return {
+    company,
+    date: date || new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }),
+    confidence: confidence(fields),
+    connections: enabledLabels(connectors),
+    figuresDone: done.done,
+    figuresTotal: done.total,
+    waiting: done.waiting.map(w => ({ label: w.label, missing: w.missing.map(k => (fields.find(f => f.key === k) || {}).label || k) })),
+    groups,
+    questions: unconfirmed(fields).map(f => ({ label: f.label, value: shown(f), state: stateOf(f), origin: (f.source && f.source.origin) || '' }))
   }
 }

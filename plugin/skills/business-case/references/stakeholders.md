@@ -32,7 +32,7 @@ The same numbers are framed differently for each person who has to approve the d
 - **Who:** Shows up late and can stall a done deal
 - **Cares about:** Payback, contract terms, and whether the numbers survive scrutiny
 - **Value drivers to lead with:** productivity, tooling
-- **Headline with default inputs:** Payback in 1 month
+- **Headline with default inputs:** Payback in 1.25 months
 - **Needs to see:**
   - Payback period and five-year value
   - Which inputs are confirmed and which are still assumptions
@@ -43,8 +43,8 @@ The same numbers are framed differently for each person who has to approve the d
 ## Security / Compliance (`security`)
 - **Who:** The late arrival that kills timelines
 - **Cares about:** Proving which services meet which standards, on a date
-- **Value drivers to lead with:** incidents, platform
-- **Headline with default inputs:** Ownership and standards provable on demand
+- **Value drivers to lead with:** standards, incidents
+- **Headline with default inputs:** $96k of audit effort avoided per year
 - **Needs to see:**
   - Where the data lives and who can see it
   - How standards are enforced and evidenced for an audit

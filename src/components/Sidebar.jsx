@@ -1,10 +1,12 @@
 import React from 'react'
 import Logo from './Logo.jsx'
+import ThemeToggle from './ThemeToggle.jsx'
+import SaveIndicator from './SaveIndicator.jsx'
 
-// The left navigation: logo, then Projects, then the open project's Details and
-// Deck. Details and Deck are greyed out until a project has been opened.
+// Global navigation. The project's own tabs are in ProjectNav.
 
 const icon = {
+  lookup: <><circle cx="6.5" cy="5" r="2.5" /><path d="M2 13c0-3 9-3 9 0M11 8l3 3M12 7l2 2" /></>,
   projects: (
     <path d="M2.5 4.5h4l1.5 1.8h5.5v6.2h-11z" strokeLinejoin="round" />
   ),
@@ -20,6 +22,14 @@ const icon = {
     <>
       <rect x="2.5" y="3.5" width="11" height="7.5" rx="1" />
       <path d="M6 13.5h4M8 11v2.5" strokeLinecap="round" />
+    </>
+  ),
+  connections: (
+    <>
+      <circle cx="4" cy="8" r="1.8" />
+      <circle cx="12" cy="4" r="1.8" />
+      <circle cx="12" cy="12" r="1.8" />
+      <path d="M5.7 7.2l4.6-2.4M5.7 8.8l4.6 2.4" strokeLinecap="round" />
     </>
   ),
   website: (
@@ -47,8 +57,7 @@ function Item({ id, label, view, onNav, disabled, title }) {
   )
 }
 
-export default function Sidebar({ view, project, onNav }) {
-  const none = !project
+export default function Sidebar({ view, project, projectMode = false, onNav, theme, onThemeToggle, saveStatus, children }) {
   return (
     <aside className="sidebar no-print">
       <div className="sidebar-logo">
@@ -56,35 +65,17 @@ export default function Sidebar({ view, project, onNav }) {
       </div>
 
       <nav className="sidebar-nav" aria-label="Main">
-        <Item id="projects" label="Projects" view={view} onNav={onNav} />
+        {projectMode ? <>
+          <button className="side-item project-sidebar-back" onClick={() => onNav('projects')}>← All projects</button>
+          <Item id="details" label="Input sheet" view={view} onNav={onNav} />
+          <Item id="deck" label="Deck" view={view === 'website' ? 'deck' : view} onNav={onNav} />
+        </> : <Item id="projects" label="Projects" view={view} onNav={onNav} />}
+        {!projectMode && <Item id="connections" label="Connections" view={view} onNav={onNav} title="What the agent is allowed to read" />}
+        <Item id="lookup" label="Person lookup" view={view} onNav={onNav} />
 
-        <p className="side-caption">{project ? project.name : 'No project open'}</p>
-
-        <Item
-          id="details"
-          label="Details"
-          view={view}
-          onNav={onNav}
-          disabled={none}
-          title={none ? 'Open a project first' : undefined}
-        />
-        <Item
-          id="deck"
-          label="Deck"
-          view={view}
-          onNav={onNav}
-          disabled={none}
-          title={none ? 'Open a project first' : undefined}
-        />
-        <Item
-          id="website"
-          label="Website"
-          view={view}
-          onNav={onNav}
-          disabled={none}
-          title={none ? 'Open a project first' : undefined}
-        />
       </nav>
+      {children}
+      <div className="sidebar-footer"><SaveIndicator status={saveStatus} /><ThemeToggle theme={theme} onToggle={onThemeToggle} /></div>
     </aside>
   )
 }

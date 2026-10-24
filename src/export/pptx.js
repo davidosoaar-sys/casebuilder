@@ -5,6 +5,8 @@
 // deps lets the caller supply the browser-only bits (rasterising the logo,
 // measuring images) so this module can also run under Node for testing.
 
+import { normalizeBrand, blockDesign } from '../brand.js'
+
 const W = 13.333
 const H = 7.5
 const MX = 0.7
@@ -45,6 +47,7 @@ const STYLE = {
 }
 
 const hex = c => String(c || '').replace('#', '').toUpperCase()
+const DEFAULTS = { colors: C, font: FONT, styles: STYLE }
 
 // Rough text height: characters per line from the box width and font size.
 function textHeight(str, size, widthIn, bold) {
@@ -77,10 +80,13 @@ function paraRuns(paras, size, color) {
 
 // Each block becomes { h, draw(slide, y, k) }: its height at scale 1 and a
 // function that draws it at vertical position y, scaled by k.
-async function layoutBlock(b, deps) {
+async function layoutBlock(b, deps, theme = DEFAULTS) {
+  const { colors: C, font: FONT, styles: STYLE } = theme
   switch (b.kind) {
     case 'text': {
-      const st = STYLE[b.style] || STYLE.body
+      const base = STYLE[b.style] || STYLE.body
+      const safeStyle = blockDesign(b.design)
+      const st = { ...base, ...(safeStyle.fontSize ? { size: parseFloat(safeStyle.fontSize) * .75 } : {}), ...(safeStyle.color ? { color: hex(safeStyle.color) } : {}) }
       if (b.style === 'body') {
         const paras = b.paras || []
         const h = parasHeight(paras, st.size, CW) + st.gap
@@ -96,8 +102,9 @@ async function layoutBlock(b, deps) {
         h,
         draw: (s, y, k) =>
           s.addText(t, {
-            x: MX, y, w: CW, h: h * k - st.gap * k, fontFace: FONT, fontSize: st.size * k, bold: !!st.bold,
-            color: st.color, valign: 'top', margin: 0, charSpacing: st.spacing || 0, italic: false
+            x: MX, y, w: b.style === 'tag' && safeStyle['--badge-background'] ? Math.min(CW, t.length * st.size / 72 * .62 + .3) : CW, h: h * k - st.gap * k, fontFace: FONT, fontSize: st.size * k, bold: !!st.bold,
+            ...(b.style === 'tag' && safeStyle['--badge-background'] ? { fill: { color: hex(safeStyle['--badge-background']) }, margin: 4 } : {}),
+            color: st.color, valign: 'top', margin: b.style === 'tag' && safeStyle['--badge-background'] ? 4 : 0, charSpacing: st.spacing || 0, italic: false
           })
       }
     }
@@ -268,31 +275,6 @@ async function layoutBlock(b, deps) {
         }
       }
     }
-    case 'assumptions': {
-      if (!b.count) {
-        return {
-          h: 0.7,
-          draw: (s, y, k) => s.addText('Every material input is confirmed. This case is ready to go upward.', { x: MX, y, w: CW, h: 0.5 * k, fontFace: FONT, fontSize: 16 * k, color: C.accent, margin: 0 })
-        }
-      }
-      const per = Math.ceil(b.items.length / 2)
-      return {
-        h: 0.5 + per * 0.5 + 0.1,
-        draw: (s, y, k) => {
-          s.addText(`${b.count} input${b.count === 1 ? '' : 's'} still assumed:`, { x: MX, y, w: CW, h: 0.35 * k, fontFace: FONT, fontSize: 14 * k, color: C.strong, margin: 0 })
-          const cw = (CW - 0.3) / 2
-          b.items.forEach((it, i) => {
-            const col = Math.floor(i / per)
-            const row = i % per
-            const x = MX + col * (cw + 0.3)
-            const yy = y + 0.5 * k + row * 0.5 * k
-            s.addShape('roundRect', { x, y: yy, w: cw, h: 0.42 * k, rectRadius: 0.05, fill: { color: C.panel }, line: { color: C.track, width: 1 } })
-            s.addText(it.label, { x: x + 0.15, y: yy, w: cw * 0.62, h: 0.42 * k, fontFace: FONT, fontSize: 11 * k, bold: true, color: C.ink, margin: 0, valign: 'middle', fit: 'shrink' })
-            s.addText(it.assumed, { x: x + cw * 0.62, y: yy, w: cw * 0.38 - 0.15, h: 0.42 * k, fontFace: FONT, fontSize: 10 * k, color: C.faint, align: 'right', margin: 0, valign: 'middle' })
-          })
-        }
-      }
-    }
     case 'room': {
       const colW = (CW - 0.6) / 2
       const left = b.needs.reduce((h, n) => h + textHeight(n, 15, colW - 0.3) + 0.08, 0) + 0.45
@@ -322,7 +304,13 @@ async function layoutBlock(b, deps) {
 }
 
 // deps: { PptxGenJS, logoPng(): {data, ratio} | null, imageSize(src): {w,h} }
-export async function buildPptx({ company, slides, deps }) {
+export async function buildPptx({ company, slides, deps, brand }) {
+  const b = normalizeBrand(brand)
+  const officeFont = name => ['system-ui', 'sans-serif'].includes(name) ? 'Arial' : name
+  const colors = brand ? { ...DEFAULTS.colors, bg: hex(b.background), panel: hex(b.surface), ink: hex(b.text), strong: hex(b.text), dim: hex(b.muted), faint: hex(b.muted), accent: hex(b.primary), mint: hex(b.primary) } : DEFAULTS.colors
+  const styles = Object.fromEntries(Object.entries(DEFAULTS.styles).map(([key, style]) => [key, { ...style, color: style.color === DEFAULTS.colors.strong ? colors.strong : style.color === DEFAULTS.colors.ink ? colors.ink : style.color === DEFAULTS.colors.mint ? colors.mint : style.color === DEFAULTS.colors.faint ? colors.faint : style.color === DEFAULTS.colors.dim ? colors.dim : style.color }]))
+  const theme = { colors, font: brand ? officeFont(b.bodyFont) : DEFAULTS.font, styles }
+  const C = colors, FONT = theme.font
   const pptx = new deps.PptxGenJS()
   pptx.layout = 'LAYOUT_WIDE'
   pptx.title = `${company} - business case`
@@ -332,15 +320,28 @@ export async function buildPptx({ company, slides, deps }) {
   for (const sl of slides) {
     n += 1
     const s = pptx.addSlide()
-    s.background = { color: C.bg }
-    if (sl.variant === 'hero') {
+    s.background = { color: /^#[0-9a-f]{6}$/i.test(sl.design?.background) ? hex(sl.design.background) : C.bg }
+    const nativeText = s.addText.bind(s)
+    let activeDesign = {}, heading = false
+    s.addText = (text, options) => {
+      const design = blockDesign(activeDesign)
+      return nativeText(text, { ...options,
+        ...(brand && heading ? { fontFace: officeFont(b.headingFont) } : {}),
+        ...(design.fontFamily ? { fontFace: activeDesign.font } : {}),
+        ...(design.color ? { color: hex(design.color) } : {}),
+        ...(design.textAlign ? { align: design.textAlign } : {}),
+        ...(design.fontWeight ? { bold: Number(design.fontWeight) >= 600 } : {}),
+        fit: 'shrink'
+      })
+    }
+    if (sl.variant === 'hero' && !sl.design?.background) {
       // A soft teal glow bottom-right stands in for the gradient.
-      s.addShape('ellipse', { x: W - 6.2, y: H - 5.2, w: 9, h: 9, fill: { color: '1F3A35', transparency: 40 }, line: { color: '1F3A35', width: 0, transparency: 100 } })
+      s.addShape('ellipse', { x: W - 6.2, y: H - 5.2, w: 9, h: 9, fill: { color: C.panel, transparency: 40 }, line: { color: C.panel, width: 0, transparency: 100 } })
       s.addShape('ellipse', { x: W - 4.2, y: H - 3.8, w: 6, h: 6, fill: { color: C.accent, transparency: 86 }, line: { color: C.accent, width: 0, transparency: 100 } })
     }
 
     const laid = []
-    for (const b of sl.blocks) laid.push(await layoutBlock(b, deps))
+    for (const block of sl.blocks) laid.push({ ...await layoutBlock(block, deps, theme), block })
 
     const total = laid.reduce((h, l) => h + l.h, 0)
     const avail = BOTTOM - TOP
@@ -348,9 +349,13 @@ export async function buildPptx({ company, slides, deps }) {
 
     let y = sl.variant === 'hero' && total * k < avail - 1 ? TOP + Math.min(1, (avail - total * k) / 3) : TOP
     for (const l of laid) {
+      activeDesign = l.block.design || {}
+      heading = l.block.kind === 'text' && ['hero', 'headline', 'title'].includes(l.block.style)
+      if (/^#[0-9a-f]{6}$/i.test(activeDesign.background)) s.addShape('rect', { x: MX, y, w: CW, h: l.h * k, fill: { color: hex(activeDesign.background) }, line: { transparency: 100 } })
       l.draw(s, y, k)
       y += l.h * k
     }
+    activeDesign = {}; heading = false
 
     s.addText(`${company}  ·  Business case`, { x: MX, y: H - 0.42, w: 6, h: 0.25, fontFace: FONT, fontSize: 9, color: C.faint, margin: 0 })
     s.addText(String(n), { x: W - MX - 1, y: H - 0.42, w: 1, h: 0.25, fontFace: FONT, fontSize: 9, color: C.faint, align: 'right', margin: 0 })

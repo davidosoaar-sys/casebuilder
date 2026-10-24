@@ -2,7 +2,6 @@ import { uid } from '../uid.js'
 import { computeModel } from '../model.js'
 import {
   driversByPillar,
-  unconfirmed,
   PAIRS,
   fmtMoney,
   fmtMoneyFull,
@@ -69,21 +68,30 @@ export function fill(str, ctx) {
 // read from it.
 export function buildEnv(inputs, fields, active, model = computeModel(inputs)) {
   const F = model.figures
+  // a figure that is not computable yet reads as nothing, never as $0
+  const show = (f, fn) => (f.incomplete ? '' : fn(f))
+  const total = F.totalValue
   const ctx = {
     company: inputs.companyName || 'Untitled',
     role: active.role,
     archetype: inputs.archetype,
-    headline: active.headline(model),
+    headline: active.headline(model) ?? show(total, f => `${fmtMoney(f.value)} of annual value`),
     cares: active.cares,
     tag: active.tag,
-    annual: fmtMoney(F.totalValue.value),
-    cost: fmtMoney(model.inputs.portalCost),
-    net: fmtMoney(F.netValue.raw),
-    payback: F.paybackMonths.value > 0 ? fmtMonths(F.paybackMonths.value) : 'n/a',
-    roi: `${F.roiMultiple.value.toFixed(1)}x`,
-    five: fmtMoney(F.fiveYearValue.raw)
+    annual: show(total, f => fmtMoney(f.value)),
+    cost: model.blankInputs.includes('portalCost') ? '' : fmtMoney(model.inputs.portalCost),
+    net: show(F.netValue, f => fmtMoney(f.raw)),
+    payback: show(F.paybackMonths, f => (f.value > 0 ? fmtMonths(f.value) : 'n/a')),
+    roi: show(F.roiMultiple, f => `${f.value.toFixed(1)}x`),
+    five: show(F.fiveYearValue, f => fmtMoney(f.raw))
   }
   return { inputs, fields, active, ctx, model }
+}
+
+// What Chris still has to fill in for some figures, by label (his view only).
+export function waitingFor(env, figureKeys) {
+  const keys = [...new Set(figureKeys.flatMap(k => env.model.figures[k].missing))]
+  return keys.map(k => (env.fields.find(f => f.key === k) || {}).label || k)
 }
 
 // ----------------------------------------------------- built-in templates
@@ -139,24 +147,12 @@ function builtin(type, ed = {}) {
         text('tag', '{tag}'),
         block('room')
       ])
-    case 'assumptions':
-      return slide('plain', [
-        text('label', 'Honesty slide'),
-        text('title', ed.title ?? 'What is confirmed and what is not'),
-        text('note', ed.note ?? 'Finance will ask. Showing it first is stronger than being caught by it.'),
-        block('assumptions'),
-        text(
-          'note',
-          ed.note2 ??
-            'Each one is a question for the next call. Confirming them is what turns this from a pitch into a case.'
-        )
-      ])
     default:
       return null
   }
 }
 
-export const BUILTIN_TYPES = ['title', 'headline', 'drivers', 'pairs', 'versus', 'stakeholder', 'assumptions']
+export const BUILTIN_TYPES = ['title', 'headline', 'drivers', 'pairs', 'versus', 'stakeholder']
 
 export const SLIDE_TEMPLATES = [
   { key: 'blank', name: 'Blank page', make: () => slide('plain', [text('label', 'Notes'), text('title', 'New page')]) },
@@ -195,8 +191,7 @@ export const SLIDE_TEMPLATES = [
   { key: 'drivers', name: 'Value drivers', make: () => builtin('drivers') },
   { key: 'pairs', name: 'Today vs with Portal', make: () => builtin('pairs') },
   { key: 'versus', name: 'Against self-hosting', make: () => builtin('versus') },
-  { key: 'stakeholder', name: 'This room', make: () => builtin('stakeholder') },
-  { key: 'assumptions', name: 'Confirmed vs assumed', make: () => builtin('assumptions') }
+  { key: 'stakeholder', name: 'This room', make: () => builtin('stakeholder') }
 ]
 
 export const BLOCK_MENU = [
@@ -210,7 +205,6 @@ export const BLOCK_MENU = [
   { name: 'Value drivers chart', make: () => block('drivers') },
   { name: 'Today vs with Portal', make: () => block('pairs') },
   { name: 'Portal vs self-hosting', make: () => block('versus') },
-  { name: 'Assumptions list', make: () => block('assumptions') },
   { name: 'Stakeholder brief', make: () => block('room') },
   { name: 'Logo', make: () => block('logo') },
   { name: 'Divider', make: () => block('divider') },
@@ -228,6 +222,8 @@ export function defaultDeck() {
 // every edit the user had made.
 export function migrateDeck(deck) {
   return deck
+    // the old "what is confirmed and what is not" page is internal: it moved to Chris's view
+    .filter(s => !(Array.isArray(s.blocks) && s.blocks.some(b => b.type === 'assumptions')) && s.type !== 'assumptions')
     .map(s => {
       if (Array.isArray(s.blocks)) return s
       if (s.type === 'custom') {
@@ -259,23 +255,26 @@ export function parseBody(str) {
 
 export function statValue(key, env) {
   const F = env.model.figures
+  const money = f => fmtMoney(f.raw)
   switch (key) {
     case 'annual':
-      return { label: 'Annual value', value: fmtMoney(F.totalValue.value), eq: F.totalValue.equation }
+      return F.totalValue.incomplete ? null : { label: 'Annual value', value: fmtMoney(F.totalValue.value), eq: F.totalValue.equation }
     case 'cost':
-      return { label: 'Portal cost', value: fmtMoney(env.model.inputs.portalCost), eq: '' }
+      return env.model.blankInputs.includes('portalCost') ? null : { label: 'Portal cost', value: fmtMoney(env.model.inputs.portalCost), eq: '' }
     case 'net':
-      return { label: 'Net, year one', value: fmtMoney(F.netValue.raw), tone: F.netValue.raw > 0 ? 'good' : 'bad', eq: F.netValue.equation }
+      return F.netValue.incomplete ? null : { label: 'Net, year one', value: money(F.netValue), tone: F.netValue.raw > 0 ? 'good' : 'bad', eq: F.netValue.equation }
     case 'payback':
-      return { label: 'Payback', value: F.paybackMonths.value > 0 ? fmtMonths(F.paybackMonths.value) : 'n/a', eq: F.paybackMonths.equation }
+      return F.paybackMonths.incomplete ? null : { label: 'Payback', value: F.paybackMonths.value > 0 ? fmtMonths(F.paybackMonths.value) : 'n/a', eq: F.paybackMonths.equation }
     case 'roi':
-      return { label: 'Return', value: `${F.roiMultiple.value.toFixed(1)}x`, eq: F.roiMultiple.equation }
+      return F.roiMultiple.incomplete ? null : { label: 'Return', value: `${F.roiMultiple.value.toFixed(1)}x`, eq: F.roiMultiple.equation }
     case 'five':
-      return { label: 'Five-year net', value: fmtMoney(F.fiveYearValue.raw), eq: F.fiveYearValue.equation }
+      return F.fiveYearValue.incomplete ? null : { label: 'Five-year net', value: money(F.fiveYearValue), eq: F.fiveYearValue.equation }
     default:
       return null
   }
 }
+
+const STAT_FIGURE = { annual: 'totalValue', cost: 'portalCost', net: 'netValue', payback: 'paybackMonths', roi: 'roiMultiple', five: 'fiveYearValue' }
 
 // A plain, serialisable description of a block for one audience. The editor,
 // the PowerPoint export, the one-pager and the website all read this.
@@ -292,13 +291,16 @@ export function resolveBlock(b, env) {
       return { kind: 'columns', left: parseBody(fill(b.left, ctx)), right: parseBody(fill(b.right, ctx)) }
     case 'image':
       return { kind: 'image', src: b.src || '', caption: fill(b.caption || '', ctx) }
-    case 'stats':
+    case 'stats': {
+      const keys = b.items || STAT_KEYS.map(([k]) => k)
       return {
         kind: 'stats',
-        items: (b.items || STAT_KEYS.map(([k]) => k)).map(k => ({ key: k, ...statValue(k, env) })).filter(i => i.label)
+        items: keys.map(k => ({ key: k, ...statValue(k, env) })).filter(i => i.label),
+        waiting: waitingFor(env, ['totalValue', 'netValue', 'paybackMonths'].filter(k => keys.some(x => STAT_FIGURE[x] === k)))
       }
+    }
     case 'drivers': {
-      const groups = driversByPillar(model, inputs.archetype)
+      const groups = driversByPillar(model, inputs.archetype, inputs.strategicPriority)
       const max = Math.max(...groups.flatMap(g => g.items.map(d => d.value)), 1)
       return {
         kind: 'drivers',
@@ -316,19 +318,21 @@ export function resolveBlock(b, env) {
             detail: d.detail,
             flag: d.flag,
             color: d.color,
-            lead: active.lead.includes(d.key),
+            lead: active.lead.includes(d.key) || d.priority,
             pct: (d.value / max) * 100
           }))
         })),
         total: fmtMoneyFull(model.figures.totalValue.value),
-        totalEq: model.figures.totalValue.equation
+        totalEq: model.figures.totalValue.equation,
+        waiting: waitingFor(env, ['totalValue'])
       }
     }
     case 'pairs': {
       const I = model.inputs
       return {
         kind: 'pairs',
-        rows: PAIRS.map(p => {
+        waiting: waitingFor(env, PAIRS.map(p => p.valueFigure)),
+        rows: PAIRS.filter(p => !model.figures[p.valueFigure].incomplete && !(p.key === 'audit' && I.auditsPerYear === 0)).map(p => {
           const today = I[p.today]
           const portal = I[p.portal]
           const show = n => (p.money ? fmtMoney(n) : `${fmtDec(n, 2)}${p.unit === '%' ? '%' : ''}`)
@@ -350,6 +354,7 @@ export function resolveBlock(b, env) {
     }
     case 'versus': {
       const F = model.figures
+      if (F.versusSelfHost.incomplete) return { kind: 'versus', rows: [], incomplete: true, waiting: waitingFor(env, ['versusSelfHost']) }
       const selfHost = F.selfHostCost.value
       const portalCost = model.inputs.portalCost
       const max = Math.max(selfHost, portalCost, 1)
@@ -368,17 +373,6 @@ export function resolveBlock(b, env) {
         eq: F.versusSelfHost.equation
       }
     }
-    case 'assumptions': {
-      const open = unconfirmed(env.fields)
-      return {
-        kind: 'assumptions',
-        count: open.length,
-        items: open.map(f => ({
-          label: f.label,
-          assumed: `assumed at ${f.type === 'percent' ? `${f.value}%` : fmtDec(f.value, 2)}${f.unit && f.unit !== '%' ? ` ${f.unit}` : ''}`
-        }))
-      }
-    }
     case 'room':
       return {
         kind: 'room',
@@ -391,6 +385,35 @@ export function resolveBlock(b, env) {
   }
 }
 
+export const LIVE = new Set(['stats', 'drivers', 'pairs', 'versus'])
+
+// A live block with nothing it can compute yet.
+export const isEmptyLive = r =>
+  (r.kind === 'drivers' && !r.groups.length) ||
+  (r.kind === 'pairs' && !r.rows.length) ||
+  (r.kind === 'stats' && !r.items.length) ||
+  (r.kind === 'versus' && r.incomplete)
+
+// The deck as the CLIENT sees it. A figure that cannot be computed yet is absent
+// (never a $0 bar), a slide whose figures are all absent is dropped, and nothing
+// internal (assumptions, sources, confidence) is ever in here.
 export function resolveSlides(deck, env) {
-  return deck.map(s => ({ id: s.id, variant: s.variant || 'plain', blocks: s.blocks.map(b => ({ id: b.id, ...resolveBlock(b, env) })) }))
+  return deck
+    .map(s => {
+      const all = s.blocks.map(b => ({ id: b.id, ...resolveBlock(b, env), ...(b.design ? { design: b.design } : {}) }))
+      const live = all.filter(r => LIVE.has(r.kind))
+      const blocks = all.filter(r => r.kind !== 'assumptions' && !isEmptyLive(r) && !(r.kind === 'text' && !r.text.trim()))
+      const shown = live.filter(r => !isEmptyLive(r)).length
+      const dropped = (live.length > 0 && shown === 0) || blocks.length === 0
+      return { id: s.id, variant: s.variant || 'plain', blocks, dropped, ...(s.design ? { design: s.design } : {}) }
+    })
+    .filter(s => !s.dropped)
+    .map(({ dropped, ...s }) => s)
+}
+
+// True when a slide has figures in it but none can be computed yet, so the client
+// deck leaves the whole page out. (The editor still shows it, with what is missing.)
+export function slideIsEmpty(slide, env) {
+  const live = slide.blocks.map(b => resolveBlock(b, env)).filter(r => LIVE.has(r.kind))
+  return live.length > 0 && live.every(isEmptyLive)
 }

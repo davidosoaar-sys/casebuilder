@@ -1,12 +1,21 @@
 import React, { useMemo, useRef, useState } from 'react'
 import { resolve, AddStakeholder } from './Deck.jsx'
 import Logo from './Logo.jsx'
-import { defaultPositions, GUIDE_RINGS } from '../deck/mapLayout.js'
+import { defaultPositions } from '../deck/mapLayout.js'
 
 // A map of who has to say yes. The company sits in the middle, stakeholders
 // around it. Drag them anywhere, add and remove as needed; "Tidy up" puts
 // everyone back in the default arrangement. Positions are stored on the
 // stakeholder as percentages of the map.
+
+// Up to two capitals from a role name: "Director / VP Engineering" -> "DV".
+const initials = role =>
+  String(role || '?')
+    .split(/[^A-Za-z]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(w => w[0].toUpperCase())
+    .join('')
 
 export default function StakeholderMap({
   company,
@@ -78,9 +87,6 @@ export default function StakeholderMap({
 
       <div className="map" ref={mapRef}>
         <svg className="map-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          {GUIDE_RINGS.map(([rx, ry]) => (
-            <ellipse key={rx} className="map-ring" cx="50" cy="50" rx={rx} ry={ry} vectorEffect="non-scaling-stroke" />
-          ))}
           {items.map((s, i) => {
             const { x, y } = where(s, i)
             return <line key={s.key} x1="50" y1="50" x2={x} y2={y} vectorEffect="non-scaling-stroke" />
@@ -88,6 +94,7 @@ export default function StakeholderMap({
         </svg>
 
         <div className="map-center" style={{ left: '50%', top: '50%' }}>
+          <small>Customer</small>
           <span>{company}</span>
         </div>
 
@@ -112,12 +119,13 @@ export default function StakeholderMap({
               >
                 ×
               </button>
-              <strong>{s.role}</strong>
-              {found > 0 && (
+              <span className="map-badge" aria-hidden="true">{initials(s.role)}</span>
+              <span className="map-text">
+                <strong>{s.role}</strong>
                 <span className="map-people">
-                  {found} {found === 1 ? 'person' : 'people'} found
+                  {found > 0 ? `${found} ${found === 1 ? 'person' : 'people'} found` : 'No one found yet'}
                 </span>
-              )}
+              </span>
             </div>
           )
         })}

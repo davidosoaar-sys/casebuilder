@@ -15,6 +15,11 @@
 //               'divide-by-zero'   the divisor was 0, so the figure is 0
 //               'not-finite'       the result was NaN or Infinity, so the figure is 0
 //
+// An input left blank is NOT zero. A figure that needs a blank input is `incomplete`
+// (figure.incomplete, with figure.missing naming the inputs). Its value is 0 so the
+// numbers stay finite, but nothing should show it: the deck leaves it out, and the
+// total only adds the figures that can actually be computed.
+//
 // Inputs are read as numbers; anything missing, non-numeric or negative is read
 // as 0 (and listed in `invalidInputs`), and percentages are held to 0 to 100.
 
@@ -30,6 +35,9 @@ export const FIGURE_ORDER = [
   // chaos-control
   'incidentHoursSaved',
   'incidentValue',
+  // standards and audit
+  'auditDaysSaved',
+  'standardsValue',
   // scale
   'maintHoursSaved',
   'platformValue',
@@ -58,6 +66,10 @@ export const NUMERIC_INPUTS = [
   'incidentHoursPortal',
   'peoplePerIncident',
   'incidentsPerMonth',
+  'auditPrepDaysToday',
+  'auditPrepDaysPortal',
+  'auditsPerYear',
+  'peoplePerAudit',
   'maintPctToday',
   'maintPctPortal',
   'toolSpendToday',
@@ -69,6 +81,31 @@ export const NUMERIC_INPUTS = [
   'hoursPerDay',
   'hoursPerYear'
 ]
+
+// What each figure is computed from: inputs or other figures. totalValue is special:
+// it adds whichever drivers are complete, so it is incomplete only when none are.
+export const DRIVER_FIGURES = ['productivityValue', 'onboardingValue', 'incidentValue', 'standardsValue', 'platformValue', 'toolingValue']
+export const FIGURE_DEPS = {
+  platformEngineers: ['engineers', 'platformShare'],
+  hoursSavedPerEngPerWeek: ['searchHoursToday', 'searchHoursPortal'],
+  productivityValue: ['hoursSavedPerEngPerWeek', 'engineers', 'weeksPerYear', 'hourlyCost'],
+  rampDaysSaved: ['rampDaysToday', 'rampDaysPortal'],
+  onboardingValue: ['rampDaysSaved', 'newHiresPerYear', 'hoursPerDay', 'hourlyCost'],
+  incidentHoursSaved: ['incidentHoursToday', 'incidentHoursPortal', 'peoplePerIncident', 'incidentsPerMonth'],
+  incidentValue: ['incidentHoursSaved', 'hourlyCost'],
+  auditDaysSaved: ['auditPrepDaysToday', 'auditPrepDaysPortal'],
+  standardsValue: ['auditDaysSaved', 'auditsPerYear', 'peoplePerAudit', 'hoursPerDay', 'hourlyCost'],
+  maintHoursSaved: ['platformEngineers', 'maintPctToday', 'maintPctPortal', 'hoursPerYear'],
+  platformValue: ['maintHoursSaved', 'hourlyCost'],
+  toolingValue: ['toolSpendToday', 'toolSpendPortal'],
+  totalValue: DRIVER_FIGURES,
+  netValue: ['totalValue', 'portalCost'],
+  paybackMonths: ['portalCost', 'totalValue'],
+  roiMultiple: ['portalCost', 'totalValue'],
+  fiveYearValue: ['netValue'],
+  selfHostCost: ['selfHostEngineers', 'selfHostSalary'],
+  versusSelfHost: ['selfHostCost', 'portalCost']
+}
 
 const PERCENT_INPUTS = new Set(['platformShare', 'maintPctToday', 'maintPctPortal'])
 
@@ -84,12 +121,17 @@ const num = n => fmtDec(n, 2)
 export function computeModel(rawInputs = {}) {
   // ---- read the inputs as safe numbers
   const invalidInputs = []
+  const blank = new Set()
   const I = {}
   for (const key of NUMERIC_INPUTS) {
     const given = rawInputs ? rawInputs[key] : undefined
-    let v = given === '' || given == null ? NaN : Number(given)
+    const isBlank = given === '' || given == null
+    let v = isBlank ? 0 : Number(given)
     let bad = null
-    if (!Number.isFinite(v)) {
+    if (isBlank) {
+      // not entered yet: no complaint, but anything that needs it is incomplete
+      blank.add(key)
+    } else if (!Number.isFinite(v)) {
       bad = 'not a number'
       v = 0
     } else if (v < 0) {
@@ -99,8 +141,21 @@ export function computeModel(rawInputs = {}) {
       bad = 'over 100%'
       v = 100
     }
-    if (bad && !(given === undefined)) invalidInputs.push({ key, problem: bad })
+    if (bad) invalidInputs.push({ key, problem: bad })
     I[key] = v
+  }
+
+  // ---- which inputs each figure is still waiting on
+  const memo = {}
+  const missingOf = key => {
+    if (key in memo) return memo[key]
+    let out
+    if (!(key in FIGURE_DEPS)) out = blank.has(key) ? [key] : []
+    else if (key === 'totalValue') {
+      const per = DRIVER_FIGURES.map(missingOf)
+      out = per.some(m => m.length === 0) ? [] : [...new Set(per.flat())]
+    } else out = [...new Set(FIGURE_DEPS[key].flatMap(missingOf))]
+    return (memo[key] = out)
   }
 
   // ---- one figure
@@ -118,7 +173,8 @@ export function computeModel(rawInputs = {}) {
       value = 0
       flag = 'clamped'
     }
-    F[key] = { value, raw: Number.isFinite(raw) && !divideByZero ? raw : 0, equation, flag }
+    const missing = missingOf(key)
+    F[key] = { value, raw: Number.isFinite(raw) && !divideByZero ? raw : 0, equation, flag, incomplete: missing.length > 0, missing }
     return F[key]
   }
   // a difference that was clamped prints as 0, not as a negative that was not used
@@ -152,6 +208,14 @@ export function computeModel(rawInputs = {}) {
   if (ihDiff < 0) F.incidentHoursSaved.flag = 'clamped'
   figure('incidentValue', ih.value * I.hourlyCost, `${num(ih.value)} * ${money(I.hourlyCost)}`)
 
+  // ---- STANDARDS AND AUDIT
+  const ad = figure('auditDaysSaved', I.auditPrepDaysToday - I.auditPrepDaysPortal, `${num(I.auditPrepDaysToday)} - ${num(I.auditPrepDaysPortal)}`)
+  figure(
+    'standardsValue',
+    ad.value * I.auditsPerYear * I.peoplePerAudit * I.hoursPerDay * I.hourlyCost,
+    `${diff(ad, I.auditPrepDaysToday, I.auditPrepDaysPortal)} * ${num(I.auditsPerYear)} * ${num(I.peoplePerAudit)} * ${num(I.hoursPerDay)} * ${money(I.hourlyCost)}`
+  )
+
   // ---- SCALE
   const pe = F.platformEngineers.value
   const mDiff = I.maintPctToday - I.maintPctPortal
@@ -165,8 +229,9 @@ export function computeModel(rawInputs = {}) {
   figure('toolingValue', I.toolSpendToday - I.toolSpendPortal, `${money(I.toolSpendToday)} - ${money(I.toolSpendPortal)}`)
 
   // ---- ROLL-UPS
-  const drivers = ['productivityValue', 'onboardingValue', 'incidentValue', 'platformValue', 'toolingValue']
-  const total = figure('totalValue', drivers.reduce((s, k) => s + F[k].value, 0), drivers.map(k => money(F[k].value)).join(' + '))
+  // the total adds only the drivers that can be computed; an unfinished one is left out, not counted as 0
+  const done = DRIVER_FIGURES.filter(k => !F[k].incomplete)
+  const total = figure('totalValue', done.reduce((sum, k) => sum + F[k].value, 0), done.length ? done.map(k => money(F[k].value)).join(' + ') : '0')
   const net = figure('netValue', total.value - I.portalCost, `${money(total.value)} - ${money(I.portalCost)}`)
   const monthly = total.value / 12
   figure(
@@ -182,14 +247,16 @@ export function computeModel(rawInputs = {}) {
   const sh = figure('selfHostCost', I.selfHostEngineers * I.selfHostSalary, `${num(I.selfHostEngineers)} * ${money(I.selfHostSalary)}`)
   figure('versusSelfHost', sh.value - I.portalCost, `${money(sh.value)} - ${money(I.portalCost)}`)
 
-  return { inputs: I, figures: F, order: FIGURE_ORDER, warnings: consistencyWarnings(I, F), invalidInputs }
+  return { inputs: I, figures: F, order: FIGURE_ORDER, warnings: consistencyWarnings(I, F, blank), invalidInputs, blankInputs: [...blank] }
 }
 
 // The case has to agree with itself: the upkeep burden Portal removes
 // (maintHoursSaved / hoursPerYear, in engineers) and the headcount that
 // self-hosting needs describe the same thing from two directions.
-function consistencyWarnings(I, F) {
+function consistencyWarnings(I, F, blank) {
   const warnings = []
+  // nothing to compare until both sides have been entered
+  if (F.maintHoursSaved.incomplete || blank.has('selfHostEngineers')) return warnings
   const removed = I.hoursPerYear > 0 ? F.maintHoursSaved.value / I.hoursPerYear : 0
   const needed = I.selfHostEngineers
 
@@ -202,7 +269,7 @@ function consistencyWarnings(I, F) {
       message: `The case is not internally consistent. The upkeep Portal removes equals about ${num(removed)} engineers, but self-hosting is set to need ${num(needed)}. These describe the same thing, so they should be within ${Math.round(CONSISTENCY_TOLERANCE * 100)}% of each other.`
     })
   }
-  if (needed < SELF_HOST_RANGE[0] || needed > SELF_HOST_RANGE[1]) {
+  if ((needed < SELF_HOST_RANGE[0] || needed > SELF_HOST_RANGE[1])) {
     warnings.push({
       key: 'selfHostRange',
       severity: 'warning',

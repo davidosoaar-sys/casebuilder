@@ -7,10 +7,14 @@ import react from '@vitejs/plugin-react'
 // calling the same handlers the Vercel functions use, so the people-finder and
 // "Publish to Vercel" work locally without the Vercel CLI. Reads ANTHROPIC_API_KEY,
 // VERCEL_TOKEN etc. from .env.local.
-const ROUTES = { '/api/research': 'handle', '/api/publish': 'handlePublish', '/api/suggest': 'handleSuggest' }
+const ROUTES = { '/api/research': 'handle', '/api/publish': 'handlePublish', '/api/suggest': 'handleSuggest', '/api/brand': 'handleBrand' }
 
 function localApi() {
-  const makeMiddleware = loadHandlers => async (req, res, next) => {
+  const makeMiddleware = (loadHandlers, loadPerson) => async (req, res, next) => {
+    if (req.url?.split('?')[0] === '/api/person') {
+      const { servePerson } = await loadPerson()
+      return servePerson(req, res)
+    }
     const route = Object.keys(ROUTES).find(r => req.url?.startsWith(r))
     if (!route) return next()
     const chunks = []
@@ -29,6 +33,7 @@ function localApi() {
   }
 
   const file = pathToFileURL(path.resolve('server/handler.js')).href
+  const personFile = pathToFileURL(path.resolve('server/personAgent.js')).href
 
   return {
     name: 'local-api',
@@ -37,10 +42,10 @@ function localApi() {
     },
     configureServer(server) {
       // ssrLoadModule re-reads the file after edits, so server code hot-reloads.
-      server.middlewares.use(makeMiddleware(() => server.ssrLoadModule('/server/handler.js')))
+      server.middlewares.use(makeMiddleware(() => server.ssrLoadModule('/server/handler.js'), () => server.ssrLoadModule('/server/personAgent.js')))
     },
     configurePreviewServer(server) {
-      server.middlewares.use(makeMiddleware(() => import(/* @vite-ignore */ file)))
+      server.middlewares.use(makeMiddleware(() => import(/* @vite-ignore */ file), () => import(/* @vite-ignore */ personFile)))
     }
   }
 }

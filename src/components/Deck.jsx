@@ -1,6 +1,8 @@
 import React, { useState, useRef, useLayoutEffect, useEffect } from 'react'
 import { uid } from '../uid.js'
-import Logo from './Logo.jsx'
+import BrandPanel from './BrandPanel.jsx'
+import DeckLogo from './DeckLogo.jsx'
+import { brandVars, fontFaceCss, blockDesign, normalizeBrand } from '../brand.js'
 import ExportMenu from '../export/ExportMenu.jsx'
 import { NO_ONE, resolveStakeholder } from '../deck/stakeholders.js'
 import { fileToDataUrl } from '../deck/image.js'
@@ -13,7 +15,9 @@ import {
   buildEnv,
   fill,
   parseBody,
-  resolveBlock
+  resolveBlock,
+  isEmptyLive,
+  slideIsEmpty
 } from '../deck/model.js'
 import { STAKEHOLDERS } from '../valueModel.js'
 
@@ -43,7 +47,8 @@ const TEXT_TAG = {
 }
 const SINGLE_LINE = new Set(['hero', 'headline', 'title', 'label', 'eyebrow', 'tag', 'forwhom'])
 
-export default function Deck({ inputs, model, fields, stakeholders, onStakeholders, deck, onDeck, company, onWebsite }) {
+export default function Deck({ inputs, model, fields, connectors, stakeholders, onStakeholders, deck, onDeck, company, onWebsite, brand, onBrand, onScanBrand }) {
+  const [designOpen, setDesignOpen] = useState(false)
   const available = stakeholders.map(resolve).filter(Boolean)
   const [activeKey, setActiveKey] = useState(available[0]?.key)
   const active = available.find(s => s.key === activeKey) || available[0] || NO_ONE
@@ -94,23 +99,12 @@ export default function Deck({ inputs, model, fields, stakeholders, onStakeholde
     <main className="deck-wrap">
       <nav className="toolbar no-print">
         <div className="who">
-          <span className="who-label">Stakeholders</span>
-          <div className="who-tabs">
-            {available.map(s => (
-              <span key={s.key} className={`tab tab-group ${s.key === active.key ? 'tab-on' : ''}`}>
-                <button className="tab-name" onClick={() => setActiveKey(s.key)}>
-                  {s.role}
-                </button>
-                <button
-                  className="tab-x"
-                  title={`Remove ${s.role}`}
-                  aria-label={`Remove ${s.role}`}
-                  onClick={() => onStakeholders(list => list.filter(x => x.key !== s.key))}
-                >
-                  ×
-                </button>
-              </span>
-            ))}
+          <label className="who-label" htmlFor="deck-stakeholder">Stakeholder</label>
+          <div className="stakeholder-select-row">
+            <select id="deck-stakeholder" aria-label="Stakeholder framing" value={active.key} disabled={!available.length} onChange={e => setActiveKey(e.target.value)}>
+              {!available.length && <option value="none">No stakeholder selected</option>}
+              {available.map(s => <option key={s.key} value={s.key}>{s.role}{stakeholders.find(x => x.key === s.key)?.namedPeople?.length ? ` · ${stakeholders.find(x => x.key === s.key).namedPeople.map(p => p.name).join(', ')}` : ''}</option>)}
+            </select>
             <AddStakeholder
               existing={stakeholders}
               onAdd={s => {
@@ -118,18 +112,18 @@ export default function Deck({ inputs, model, fields, stakeholders, onStakeholde
                 setActiveKey(s.key)
               }}
             />
+            <button className="ghost stakeholder-remove" disabled={!canEditStakeholder} title={`Remove ${active.role}`} aria-label={`Remove ${active.role}`} onClick={() => onStakeholders(list => list.filter(s => s.key !== active.key))}>×</button>
           </div>
         </div>
         <div className="toolbar-actions">
-          <span className="toolbar-hint">Click any text to edit</span>
-          <button className="ghost" onClick={onWebsite}>
-            View as website
-          </button>
+          <button className="ghost" onClick={() => setDesignOpen(v => !v)} aria-expanded={designOpen}>Deck design{brand?.status === 'scanning' ? ' · scanning' : ''}</button>
           <ExportMenu
+            brand={brand}
             company={company}
             deck={deck}
             inputs={inputs}
             fields={fields}
+            connectors={connectors}
             stakeholders={available}
             activeKey={active.key}
             onWebsite={onWebsite}
@@ -137,12 +131,16 @@ export default function Deck({ inputs, model, fields, stakeholders, onStakeholde
         </div>
       </nav>
 
-      <div className="deck">
+      {designOpen && <BrandPanel brand={brand} onChange={onBrand} onScan={onScanBrand} onClose={() => setDesignOpen(false)} />}
+      <style>{fontFaceCss(brand)}</style>
+      <div className="deck customer-deck" style={brandVars(brand)}>
         {deck.map((slide, idx) => (
-          <div className="slide-wrap" key={slide.id}>
+          <div className={`slide-wrap ${slideIsEmpty(slide, env) ? 'slide-incomplete' : ''}`} key={slide.id}>
             <div className="slide-bar no-print">
               <span className="slide-num">Page {idx + 1}</span>
               <div className="slide-bar-tools">
+                <label className="slide-color-control">Page color<input type="color" aria-label={`Page ${idx + 1} background`} value={slide.design?.background || normalizeBrand(brand).background} onChange={e => patchSlide(slide.id, s => ({ ...s, design: { ...s.design, background: e.target.value } }))} /></label>
+                <label className="slide-color-control">Text color<input type="color" aria-label={`Page ${idx + 1} text color`} value={slide.blocks.find(b => b.design?.color)?.design.color || normalizeBrand(brand).text} onChange={e => { const color = e.target.value; patchSlide(slide.id, s => ({ ...s, blocks: s.blocks.map(b => ['logo', 'image'].includes(b.type) ? b : { ...b, design: { ...b.design, color } }) })) }} /></label>
                 <button
                   className={`tool tool-text ${slide.variant === 'hero' ? 'tool-on' : ''}`}
                   onClick={() => patchSlide(slide.id, s => ({ ...s, variant: s.variant === 'hero' ? 'plain' : 'hero' }))}
@@ -172,12 +170,13 @@ export default function Deck({ inputs, model, fields, stakeholders, onStakeholde
               </div>
             </div>
 
-            <section className={`slide ${slide.variant === 'hero' ? 'slide-hero' : ''}`}>
+            <section className={`slide ${slide.variant === 'hero' ? 'slide-hero' : ''}`} style={/^#[0-9a-f]{6}$/i.test(slide.design?.background) ? { background: slide.design.background, '--page-background': slide.design.background } : undefined}>
               <div className="blocks">
                 {slide.blocks.map((b, bi) => (
                   <BlockEditor
                     key={b.id}
                     block={b}
+                    brand={brand}
                     first={bi === 0}
                     last={bi === slide.blocks.length - 1}
                     env={env}
@@ -215,13 +214,21 @@ export default function Deck({ inputs, model, fields, stakeholders, onStakeholde
 
 // ----------------------------------------------------------------- blocks
 
-function BlockEditor({ block: b, first, last, env, canEditStakeholder, onPatch, onMove, onRemove, onStakeholderText }) {
+function BlockEditor({ block: b, first, last, env, canEditStakeholder, onPatch, onMove, onRemove, onStakeholderText, brand }) {
   const [settings, setSettings] = useState(false)
+  const [formatting, setFormatting] = useState(false)
+  const [badgeColors, setBadgeColors] = useState(false)
+  const [badgeTextEditing, setBadgeTextEditing] = useState(false)
+  const backgroundKey = b.type === 'text' && b.style === 'tag' ? 'badgeBackground' : 'background'
+  const [colorDraft, setColorDraft] = useState(b.design?.color || '')
+  useEffect(() => { setColorDraft(b.design?.color || '') }, [b.design?.color])
   const r = resolveBlock(b, env)
   const hasSettings = b.type === 'stats' || b.type === 'image'
 
   const tools = (
     <div className="block-tools no-print">
+      <button className="tool tool-text" aria-expanded={formatting} onClick={() => setFormatting(v => !v)}>Text & style</button>
+      {!['logo', 'image'].includes(b.type) && <label className="block-quick-color" title="Change text color">Text color<input type="color" aria-label="Text color" value={b.design?.color || normalizeBrand(brand).text} onChange={e => onPatch(x => ({ ...x, design: { ...x.design, color: e.target.value } }))} /></label>}
       {b.type === 'text' && (
         <select
           className="block-style"
@@ -259,6 +266,18 @@ function BlockEditor({ block: b, first, last, env, canEditStakeholder, onPatch, 
     case 'text': {
       const [Tag, cls] = TEXT_TAG[b.style] || TEXT_TAG.body
       const body = b.style === 'body'
+      if (b.style === 'tag' && !badgeTextEditing) {
+        content = <div className="editable-badge">
+          <button className="tag tag-color-target" aria-label="Change badge background color" aria-expanded={badgeColors} title="Click to change background color" onClick={() => setBadgeColors(v => !v)}>{r.text || 'Add a label'}</button>
+          {badgeColors && <div className="badge-color-panel no-print" role="group" aria-label="Badge background colors">
+            <div className="badge-panel-head"><strong>Text background</strong><button className="tool" aria-label="Close badge colors" onClick={() => setBadgeColors(false)}>×</button></div>
+            <div className="badge-swatches">{['#29261F', '#1DB954', '#123D32', '#253453', '#482B54', '#733A22', '#FFFFFF', '#000000'].map(color => <button key={color} type="button" className="badge-swatch" style={{ background: color }} aria-label={`Badge background ${color}`} onClick={() => onPatch(x => ({ ...x, design: { ...x.design, badgeBackground: color } }))} />)}</div>
+            <label className="badge-custom-color">Custom color<input type="color" aria-label="Badge background color" value={b.design?.badgeBackground || '#29261F'} onChange={e => onPatch(x => ({ ...x, design: { ...x.design, badgeBackground: e.target.value } }))} /></label>
+            <button className="ghost" onClick={() => { setBadgeColors(false); setBadgeTextEditing(true) }}>Edit label text</button>
+          </div>}
+        </div>
+        break
+      }
       content = (
         <Editable
           as={Tag}
@@ -268,6 +287,7 @@ function BlockEditor({ block: b, first, last, env, canEditStakeholder, onPatch, 
           value={b.text}
           hint={tokenHint(b.text)}
           onChange={v => onPatch(x => ({ ...x, text: v }))}
+          onFinish={b.style === 'tag' ? () => setBadgeTextEditing(false) : undefined}
         >
           {body ? <Body paras={r.paras} /> : r.text}
         </Editable>
@@ -427,26 +447,6 @@ function BlockEditor({ block: b, first, last, env, canEditStakeholder, onPatch, 
         </>
       )
       break
-    case 'assumptions':
-      content =
-        r.count === 0 ? (
-          <p className="all-good">Every material input is confirmed. This case is ready to go upward.</p>
-        ) : (
-          <>
-            <p className="still-open">
-              {r.count} input{r.count === 1 ? '' : 's'} still assumed:
-            </p>
-            <ul className="assumption-list">
-              {r.items.map(i => (
-                <li key={i.label}>
-                  <strong>{i.label}</strong>
-                  <span className="assumed-val">{i.assumed}</span>
-                </li>
-              ))}
-            </ul>
-          </>
-        )
-      break
     case 'room': {
       const st = env.active
       const can = canEditStakeholder
@@ -481,7 +481,7 @@ function BlockEditor({ block: b, first, last, env, canEditStakeholder, onPatch, 
     case 'logo':
       content = (
         <div className="title-logo">
-          <Logo height={26} />
+          <DeckLogo brand={brand} />
         </div>
       )
       break
@@ -495,9 +495,31 @@ function BlockEditor({ block: b, first, last, env, canEditStakeholder, onPatch, 
       content = null
   }
 
+  // Chris's view only: what a figure is still waiting on. Never printed or exported.
+  const waiting = isEmptyLive(r)
+  if (waiting) {
+    content = (
+      <p className="waiting no-print">
+        Not shown to the client yet. Still needed: {r.waiting && r.waiting.length ? r.waiting.join(', ') : 'more inputs'}.
+      </p>
+    )
+  }
+
   return (
     <div className={`block block-${b.type}`}>
       {tools}
+      {formatting && (
+        <div className="block-settings block-format no-print">
+          <label>Text color<input type="color" aria-label="Block text color" value={b.design?.color || normalizeBrand(brand).text} onChange={e => onPatch(x => ({ ...x, design: { ...x.design, color: e.target.value } }))} /></label>
+          <label>Color hex<input aria-label="Block text color hex" value={colorDraft} onChange={e => { const color = e.target.value; setColorDraft(color); if (/^#[0-9a-f]{6}$/i.test(color)) onPatch(x => ({ ...x, design: { ...x.design, color } })) }} placeholder="#ffffff" maxLength={7} onBlur={() => setColorDraft(b.design?.color || '')} /></label>
+          <label>Background<input type="color" aria-label="Block background" value={b.design?.[backgroundKey] || normalizeBrand(brand).background} onChange={e => onPatch(x => ({ ...x, design: { ...x.design, [backgroundKey]: e.target.value } }))} /></label>
+          <label>Font size<input type="number" aria-label="Block font size" min="10" max="120" placeholder="Auto" value={b.design?.fontSize || ''} onChange={e => onPatch(x => ({ ...x, design: { ...x.design, fontSize: e.target.value } }))} /></label>
+          <label>Font<input aria-label="Block font" placeholder="Use deck font" value={b.design?.font || ''} onChange={e => onPatch(x => ({ ...x, design: { ...x.design, font: e.target.value } }))} /></label>
+          <label>Alignment<select aria-label="Block alignment" value={b.design?.align || 'left'} onChange={e => onPatch(x => ({ ...x, design: { ...x.design, align: e.target.value } }))}>{['left', 'center', 'right'].map(a => <option key={a}>{a}</option>)}</select></label>
+          <label>Weight<select aria-label="Block font weight" value={b.design?.weight || ''} onChange={e => onPatch(x => ({ ...x, design: { ...x.design, weight: e.target.value } }))}><option value="">Auto</option>{['400', '500', '600', '700', '800', '900'].map(w => <option key={w}>{w}</option>)}</select></label>
+          <button className="tool tool-text" onClick={() => onPatch(x => ({ ...x, design: {} }))}>Reset formatting</button>
+        </div>
+      )}
       {settings && b.type === 'stats' && (
         <div className="block-settings no-print">
           {STAT_KEYS.map(([k, label]) => {
@@ -534,7 +556,7 @@ function BlockEditor({ block: b, first, last, env, canEditStakeholder, onPatch, 
           )}
         </div>
       )}
-      {content}
+      <div className={`block-content ${b.design?.color ? 'custom-color' : ''} ${b.design?.fontSize ? 'custom-size' : ''} ${b.design?.font ? 'custom-font' : ''} ${b.design?.weight ? 'custom-weight' : ''}`} style={blockDesign(b.design)}>{content}</div>
     </div>
   )
 }
@@ -572,6 +594,7 @@ function Editable({
   placeholder = 'Click to add text',
   hint,
   disabled = false,
+  onFinish,
   children
 }) {
   const [editing, setEditing] = useState(false)
@@ -585,7 +608,7 @@ function Editable({
           single={single}
           minRows={minRows}
           onChange={onChange}
-          onDone={() => setEditing(false)}
+          onDone={() => { setEditing(false); onFinish?.() }}
         />
         {hint && <span className="edit-hint no-print">{hint}</span>}
       </Tag>

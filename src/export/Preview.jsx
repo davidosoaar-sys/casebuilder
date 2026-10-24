@@ -18,7 +18,7 @@ export default function Preview({ preview, onClose, audience }) {
         <header className="preview-bar">
           <div>
             <strong>{preview.title}</strong>
-            <span>For {audience}</span>
+            <span>For {preview.for || audience}</span>
           </div>
           <div className="preview-actions">
             <button className="primary" onClick={() => frame.current?.contentWindow?.print()}>

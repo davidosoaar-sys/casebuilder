@@ -1,7 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { research } from './research.js'
-import { suggest } from './suggest.js'
+import { suggest, SUGGESTIBLE } from './suggest.js'
 import { publishSite, PublishError } from './publish.js'
+import { discoverBrand } from './brand.js'
 
 // Shared by the Vercel functions (api/*.js) and the Vite dev server. Each
 // handler returns { status, body }. RESEARCH_ACCESS_CODE gates both, so a
@@ -11,6 +12,16 @@ import { publishSite, PublishError } from './publish.js'
 const needsCode = headers => {
   const code = process.env.RESEARCH_ACCESS_CODE
   return code && headers['x-access-code'] !== code
+}
+
+export async function handleBrand({ body, headers }) {
+  if (process.env.VERCEL && !process.env.RESEARCH_ACCESS_CODE) return { status: 503, body: { error: 'Brand discovery needs the workspace access code configured.' } }
+  if (needsCode(headers)) return { status: 401, body: { error: 'Enter your access code to scan company branding.' } }
+  const company = typeof body?.company === 'string' ? body.company.trim().slice(0, 120) : ''
+  const website = typeof body?.website === 'string' ? body.website.trim().slice(0, 500) : ''
+  if (!company && !website) return { status: 400, body: { error: 'Enter a company name or official website.' } }
+  try { return { status: 200, body: await discoverBrand({ company, website }) } }
+  catch (err) { return { status: 422, body: { error: err.message || 'Could not read the company branding. You can set it manually.' } } }
 }
 
 export async function handle({ body, headers }) {
@@ -78,24 +89,36 @@ export async function handlePublish({ body, headers, fetchImpl, wait }) {
   }
 }
 
-// Suggest starting values for unconfirmed inputs. The only model call that
-// touches the numbers, and it never produces a figure.
+// The suggestion agent: reads only the material the caller sends (what Chris switched
+// on) and proposes values for empty inputs. It never produces a figure.
+const DOC_SOURCES = ['gong', 'hubspot', 'slack', 'clay', 'lemlist']
+
 export async function handleSuggest({ body, headers }) {
-  if (!process.env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_AUTH_TOKEN) {
-    return { status: 503, body: { error: 'not_configured' } }
-  }
   if (needsCode(headers)) return { status: 401, body: { error: 'access_code' } }
 
   const company = typeof body?.company === 'string' ? body.company.trim() : ''
-  const engineers = Number(body?.engineers)
   if (!company || company.length > 120) return { status: 400, body: { error: 'A company name is required.' } }
-  if (!Number.isFinite(engineers) || engineers < 1 || engineers > 1_000_000) {
-    return { status: 400, body: { error: 'An engineer count is required.' } }
+  const only = (Array.isArray(body?.only) ? body.only : []).filter(k => typeof k === 'string' && k in SUGGESTIBLE).slice(0, 40)
+  const documents = (Array.isArray(body?.documents) ? body.documents : [])
+    .filter(d => d && DOC_SOURCES.includes(d.source) && typeof d.text === 'string' && d.text.trim())
+    .slice(0, 20)
+    .map(d => ({ source: d.source, name: typeof d.name === 'string' ? d.name : 'Untitled', text: d.text }))
+  const web = body?.web === true
+  const filled = Object.fromEntries(
+    Object.entries(body?.filled && typeof body.filled === 'object' ? body.filled : {})
+      .filter(([k, v]) => k in SUGGESTIBLE && Number.isFinite(Number(v)))
+      .slice(0, 60)
+  )
+  const labels = Object.fromEntries(Object.entries(body?.labels && typeof body.labels === 'object' ? body.labels : {}).filter(([k, v]) => k in SUGGESTIBLE && typeof v === 'string').map(([k, v]) => [k, v.slice(0, 160)]))
+
+  // nothing to read: nothing to ask
+  if (!only.length || (!documents.length && !web)) return { status: 200, body: { suggestions: [] } }
+  if (!process.env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_AUTH_TOKEN) {
+    return { status: 503, body: { error: 'not_configured' } }
   }
-  const only = Array.isArray(body?.only) ? body.only.filter(k => typeof k === 'string').slice(0, 40) : undefined
 
   try {
-    return { status: 200, body: await suggest({ company, engineers: Math.round(engineers), only }) }
+    return { status: 200, body: await suggest({ company, filled, documents, web, only, labels }) }
   } catch (err) {
     if (err instanceof Anthropic.RateLimitError) return { status: 429, body: { error: 'Rate limited. Try again in a minute.' } }
     return { status: 502, body: { error: 'The suggestion service is unavailable.' } }

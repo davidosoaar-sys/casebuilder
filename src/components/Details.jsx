@@ -3,26 +3,37 @@ import InputSheet from './InputSheet.jsx'
 import StakeholderMap from './StakeholderMap.jsx'
 import People from './People.jsx'
 import { uid } from '../projects.js'
-import { projectToCaseFile } from '../caseFile.js'
+import { ORIGIN, emptySource } from '../source.js'
+import { dealMarkdown, markdownFilename } from '../dealReport.js'
+import { download } from '../export/download.js'
 
-// A project's details: the inputs that feed the deck, the stakeholder map, and
-// the people found for each stakeholder.
+// A project's details: the inputs that feed the deck (with where every number came
+// from), the stakeholder map and the people found for each stakeholder. All of it is
+// for Chris; none of it is on the deck.
 
-export default function Details({ project, model, onFields, onStakeholders, onPeople, onReset }) {
+export default function Details({
+  project,
+  model,
+  connections,
+  onFields,
+  onStakeholders,
+  onPeople,
+  onReset
+}) {
   const [tab, setTab] = useState('inputs')
   const peopleCount = Object.values(project.people || {}).reduce((n, l) => n + l.length, 0)
-
-  const setFields = fn => onFields(fn)
 
   return (
     <div className="details">
       <p className="mono-label">Details</p>
       <div className="details-title">
         <h1>{project.name}</h1>
-        <button className="ghost" onClick={() => downloadCase(project)} title="Save this case as a .case.json file the Claude plugin or another copy of the app can open">
-          Export case file
-        </button>
+        <button className="ghost" onClick={() => download(markdownFilename(project), new Blob([dealMarkdown(project)], { type: 'text/markdown;charset=utf-8' }))}>Export MD file</button>
       </div>
+
+      {project.stakeholders.some(s => s.namedPeople?.length) && <section className="lookup-deal-people" aria-label="Named stakeholder mappings">
+        {project.stakeholders.flatMap(s => (s.namedPeople || []).map(p => <p key={p.id}><strong><a href={p.sources[0]} target="_blank" rel="noreferrer noopener">{p.name}</a></strong> · <a href={p.mapping.sourceUrl} target="_blank" rel="noreferrer noopener">{p.title}</a><br />Mapped to {p.mapping.role} · {p.mapping.confidence} confidence · Inferred from title, not confirmed. {p.mapping.why} <a href={p.mapping.sourceUrl} target="_blank" rel="noreferrer noopener">Title source</a></p>))}
+      </section>}
 
       <div className="details-tabs" role="tablist">
         {[
@@ -48,54 +59,34 @@ export default function Details({ project, model, onFields, onStakeholders, onPe
           fields={project.fields}
           model={model}
           company={project.name}
-          onApply={values =>
-            setFields(fs => fs.map(f => (f.key in values && !f.confirmed ? { ...f, value: values[f.key], confirmed: false } : f)))
-          }
-          onChange={(key, value) =>
-            setFields(fs => fs.map(f => (f.key === key ? { ...f, value } : f)))
-          }
-          onToggle={key =>
-            setFields(fs => fs.map(f => (f.key === key ? { ...f, confirmed: !f.confirmed } : f)))
-          }
+          connectors={connections}
+          documents={project.documents}
+          onFields={onFields}
           onAdd={input =>
-            onFields(fs => [...fs, { ...input, key: `custom_${uid()}`, group: 'Custom', custom: true }])
+            onFields(fs => [
+              ...fs,
+              {
+                ...input,
+                key: `custom_${uid()}`,
+                group: 'Custom',
+                custom: true,
+                source: input.type === 'text' ? { state: 'input', origin: '' } : { state: 'assumption', origin: ORIGIN.assumption }
+              }
+            ])
           }
-          onRemove={key => setFields(fs => fs.filter(f => f.key !== key))}
+          onRemove={key => onFields(fs => fs.filter(f => f.key !== key))}
           onReset={onReset}
         />
       )}
 
       {tab === 'stakeholders' && (
-        <StakeholderMap
-          embedded
-          company={project.name}
-          stakeholders={project.stakeholders}
-          people={project.people}
-          onChange={onStakeholders}
-        />
+        <StakeholderMap embedded company={project.name} stakeholders={project.stakeholders} people={project.people} onChange={onStakeholders} />
       )}
 
       {tab === 'people' && (
-        <People
-          embedded
-          company={project.name}
-          stakeholders={project.stakeholders}
-          people={project.people}
-          onPeople={onPeople}
-        />
+        <People embedded company={project.name} stakeholders={project.stakeholders} people={project.people} onPeople={onPeople} />
       )}
     </div>
   )
 }
 
-function downloadCase(project) {
-  const blob = new Blob([JSON.stringify(projectToCaseFile(project), null, 2) + '\n'], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${String(project.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'case'}.case.json`
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 2000)
-}

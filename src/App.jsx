@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import Sidebar from './components/Sidebar.jsx'
 import Deck from './components/Deck.jsx'
 import WebsiteView from './components/WebsiteView.jsx'
@@ -6,19 +6,36 @@ import ProjectList from './components/ProjectList.jsx'
 import Details from './components/Details.jsx'
 import StakeholderMap from './components/StakeholderMap.jsx'
 import People from './components/People.jsx'
+import useDealSaving from './useDealSaving.js'
+import { dealStorage } from './dealStorage.js'
 import {
   loadProjects,
-  saveProjects,
+  duplicateProject,
   newProject,
   hydrate,
   defaultFields,
   defaultStakeholders
 } from './projects.js'
 import { defaultDeck } from './deck/model.js'
+import { loadConnections, saveConnections } from './connectors.js'
+import Connections from './components/Connections.jsx'
 import { computeModel } from './model.js'
 import { stakeholdersForArchetype } from './valueModel.js'
+import { DEFAULT_BRAND } from './brand.js'
+import PersonLookup from './components/PersonLookup.jsx'
+import usePersonLookup from './usePersonLookup.js'
+import { addPersonToDeal, acceptPersonInput } from './personLookup.js'
 
 const USER_KEY = 'casebuilder.user'
+const THEME_KEY = 'casebuilder.theme'
+
+function initialTheme() {
+  try {
+    const saved = localStorage.getItem(THEME_KEY)
+    if (saved === 'light' || saved === 'dark') return saved
+  } catch {}
+  return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+}
 
 function loadUser() {
   try {
@@ -28,18 +45,46 @@ function loadUser() {
   }
 }
 
-// A sidebar (Projects / Details / Deck) frames the app. Projects is the list;
-// Details and Deck are the open project's two pages. A brand-new project first
-// walks through the stakeholder map and the people step (full screen, no
-// sidebar), then lands on its Details.
+// Global navigation lives in the Projects / Connections sidebar. Opening a
+// project replaces it with Details / Deck tabs and an explicit way back.
 export default function App() {
+  const [theme, setTheme] = useState(initialTheme)
+  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark')
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#f6f8f7' : '#111111')
+    try { localStorage.setItem(THEME_KEY, theme) } catch {}
+  }, [theme])
   const [projects, setProjects] = useState(() => loadProjects().map(hydrate))
+  const saving = useDealSaving(projects)
   const [currentId, setCurrentId] = useState(null)
   const [user, setUser] = useState(loadUser)
   const [view, setView] = useState('projects') // 'projects' | 'details' | 'deck' | 'website'
+  const [connections, setConnections] = useState(loadConnections)
   const [stage, setStage] = useState(null) // 'map' | 'people' while setting up a new project
+  const brandScans = useRef(new Map())
 
-  useEffect(() => saveProjects(projects), [projects])
+  async function scanBrand(id, company, website = '') {
+    const token = Symbol()
+    brandScans.current.set(id, token)
+    setProjects(ps => ps.map(p => p.id === id ? { ...p, brand: { ...DEFAULT_BRAND, ...p.brand, status: 'scanning', message: 'Finding the company website, logo, colors and fonts…' } } : p))
+    try {
+      let code = ''
+      try { code = localStorage.getItem('casebuilder.access') || '' } catch {}
+      const response = await fetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(code ? { 'x-access-code': code } : {}) }, body: JSON.stringify({ company, website: website && !/^https:\/\//i.test(website) ? `https://${website}` : website }), signal: AbortSignal.timeout(55000) })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Brand discovery could not finish.')
+      if (brandScans.current.get(id) !== token) return
+      setProjects(ps => ps.map(p => p.id === id ? { ...p, brand: result } : p))
+    } catch (error) {
+      if (brandScans.current.get(id) !== token) return
+      setProjects(ps => ps.map(p => p.id === id ? { ...p, brand: { ...p.brand, status: 'error', message: error.message || 'Brand discovery could not finish. You can edit everything manually.' } } : p))
+    }
+  }
+
+  useEffect(() => { window.scrollTo(0, 0) }, [view, currentId, stage])
+
+  useEffect(() => saveConnections(connections), [connections])
   useEffect(() => {
     try {
       localStorage.setItem(USER_KEY, user)
@@ -49,12 +94,24 @@ export default function App() {
   }, [user])
 
   const project = projects.find(p => p.id === currentId)
+  const dealConnections = project?.connectors || connections
+  const lookup = usePersonLookup({ project, connections: dealConnections })
+  const [pendingPersonInput, setPendingPersonInput] = useState(null)
+  const lookupPage = <PersonLookup lookup={lookup} project={project}
+    onAdd={person => update(p => addPersonToDeal(p, person))}
+    onInput={suggestion => setPendingPersonInput({ dealId: project.id, suggestion })} />
+  function navigate(next) {
+    setStage(null)
+    if (next === 'projects') { saving.flush(); setCurrentId(null) }
+    setView(next)
+  }
+  const projectSidebar = <Sidebar view={view} project={project} projectMode onNav={navigate} theme={theme} onThemeToggle={toggleTheme} saveStatus={saving.status} />
 
   function update(patch) {
     setProjects(prev =>
       prev.map(p =>
         p.id === currentId
-          ? { ...p, ...(typeof patch === 'function' ? patch(p) : patch), updatedAt: Date.now() }
+          ? { ...p, ...(typeof patch === 'function' ? patch(p) : patch), createdAt: p.createdAt, updatedAt: Date.now() }
           : p
       )
     )
@@ -76,25 +133,32 @@ export default function App() {
   const onFields = fn =>
     update(p => {
       const next = fn(p.fields)
+      const company = next.find(f => f.key === 'companyName')?.value
+      const name = typeof company === 'string' && company.trim() ? company.trim() : p.name
       const arch = fs => fs.find(f => f.key === 'archetype')?.value
       return arch(next) !== arch(p.fields)
-        ? { fields: next, stakeholders: stakeholdersForArchetype(p.stakeholders, arch(next)) }
-        : { fields: next }
+        ? { name, fields: next, stakeholders: stakeholdersForArchetype(p.stakeholders, arch(next)) }
+        : { name, fields: next }
     })
 
   if (project && stage === 'map') {
     return (
+      <div className="layout">
+      {projectSidebar}<main className="content">
       <StakeholderMap
         company={project.name}
         stakeholders={project.stakeholders}
         onChange={onStakeholders}
         onContinue={() => setStage('people')}
       />
+      </main></div>
     )
   }
 
   if (project && stage === 'people') {
     return (
+      <div className="layout">
+      {projectSidebar}<main className="content">
       <People
         showStep
         company={project.name}
@@ -107,35 +171,54 @@ export default function App() {
           setView('details')
         }}
       />
+      </main></div>
     )
   }
 
   // Details and Deck need a project; without one, fall back to the list.
-  const page = project ? view : 'projects'
+  const page = ['connections', 'lookup'].includes(view) ? view : project ? view : 'projects'
+  const insideProject = !!project && page !== 'projects'
 
   return (
     <div className="layout">
-      <Sidebar view={page} project={project} onNav={setView} />
+      <Sidebar view={page} project={project} projectMode={insideProject} onNav={navigate} theme={theme} onThemeToggle={toggleTheme} saveStatus={saving.status} />
 
+      <div className="lookup-content-wrap">
       <main className="content">
         {page === 'details' ? (
           <Details
             project={project}
             model={model}
+            connections={dealConnections}
             onFields={onFields}
             onStakeholders={onStakeholders}
             onPeople={onPeople}
             onReset={() => {
               if (window.confirm('Reset this project’s inputs, stakeholders and deck to the defaults?')) {
-                update({ fields: defaultFields(), stakeholders: defaultStakeholders(), deck: defaultDeck() })
+                update({ fields: defaultFields(), stakeholders: defaultStakeholders(), deck: defaultDeck(), documents: [] })
               }
             }}
           />
+        ) : page === 'connections' ? (
+          <Connections
+            project={project}
+            connections={dealConnections}
+            documents={project ? project.documents : []}
+            onConnections={fn => project ? update(p => ({ connectors: fn(p.connectors) })) : setConnections(fn)}
+            onDocuments={fn => update(p => ({ documents: fn(p.documents) }))}
+          />
+        ) : page === 'lookup' ? (
+          lookupPage
         ) : page === 'deck' ? (
           <Deck
+            key={project.id}
+            brand={project.brand}
+            onBrand={brand => { brandScans.current.delete(project.id); update({ brand: { ...brand, status: 'ready', message: 'Your custom deck design is saved.' } }) }}
+            onScanBrand={website => scanBrand(project.id, project.name, website)}
             inputs={inputs}
             model={model}
             fields={project.fields}
+            connectors={dealConnections}
             stakeholders={project.stakeholders}
             onStakeholders={onStakeholders}
             deck={project.deck}
@@ -150,6 +233,7 @@ export default function App() {
             inputs={inputs}
             onDeck={fn => update(p => ({ deck: fn(p.deck) }))}
             onSite={site => update({ site })}
+            onScenario={fn => update(p => ({ scenario: fn(p.scenario || {}) }))}
             onBack={() => setView('deck')}
           />
         ) : (
@@ -159,27 +243,36 @@ export default function App() {
             projects={projects}
             activeId={currentId}
             onCreate={name => {
-              const p = newProject(name)
+              const p = newProject(name, connections)
               setProjects(prev => [p, ...prev])
               setCurrentId(p.id)
               setStage('map')
+              scanBrand(p.id, name)
             }}
             onOpen={id => {
+              saving.flush()
               setCurrentId(id)
               setView('details')
             }}
-            onImport={p => {
-              setProjects(prev => [p, ...prev])
-              setCurrentId(p.id)
-              setView('details')
-            }}
             onDelete={id => {
+              try { dealStorage.delete(id); saving.forget(id) } catch (e) { saving.reportError(e.message); return }
               setProjects(prev => prev.filter(p => p.id !== id))
               if (id === currentId) setCurrentId(null)
             }}
+            onDuplicate={p => { const copy = duplicateProject(p); setProjects(prev => [copy, ...prev]) }}
           />
         )}
       </main>
+      </div>
+      {pendingPersonInput && project?.id === pendingPersonInput.dealId && <div className="modal-backdrop" onClick={() => setPendingPersonInput(null)}>
+        <section className="modal" role="dialog" aria-modal="true" aria-labelledby="person-input-review" onClick={e => e.stopPropagation()}>
+          <h2 id="person-input-review">Review suggested input</h2>
+          <p>{pendingPersonInput.suggestion.label}: <strong>{pendingPersonInput.suggestion.value}</strong></p>
+          <p>Current value: {String(project.fields.find(f => f.key === pendingPersonInput.suggestion.key)?.value ?? 'not entered') || 'not entered'}. Applying this will replace it and mark the source as a suggestion.</p>
+          <a href={pendingPersonInput.suggestion.sourceUrl} target="_blank" rel="noreferrer noopener">Read source</a>
+          <div className="modal-actions"><button className="primary" onClick={() => { update(p => acceptPersonInput(p, pendingPersonInput.suggestion)); setPendingPersonInput(null) }}>Apply suggestion</button><button className="ghost" onClick={() => setPendingPersonInput(null)}>Cancel</button></div>
+        </section>
+      </div>}
     </div>
   )
 }

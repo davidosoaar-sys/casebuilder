@@ -1,9 +1,20 @@
 import React, { useState } from 'react'
-import { confidence, unconfirmed, ARCHETYPES, INPUT_GROUPS, PAIRS, fmtDec, fmtMoneyFull } from '../valueModel.js'
+import {
+  confidence,
+  unconfirmed,
+  completeness,
+  ARCHETYPES,
+  INPUT_GROUPS,
+  PAIRS,
+  fmtDec,
+  fmtMoneyFull
+} from '../valueModel.js'
+import { stateOf, isBlank, withValue, withState, withOrigin } from '../source.js'
+import { suggestValues, applySuggestions, emptyKeys, fetchAgent } from '../suggest.js'
+import { enabledLabels } from '../connectors.js'
 
-// The inputs. Chris's mechanic, made visible: everything starts as an
-// assumption and flips to a confirmed input once the customer says it on a
-// call. Every figure is recomputed from these on each change.
+// The inputs: CHRIS'S VIEW. Every number shows where it came from, on the face of the
+// field. None of this (states, origins, confidence, gaps) appears on the client deck.
 
 const ACCESS_KEY = 'casebuilder.access'
 const readCode = () => {
@@ -14,7 +25,13 @@ const readCode = () => {
   }
 }
 
-export default function InputSheet({ fields, model, company, onChange, onToggle, onApply, onReset, onAdd, onRemove }) {
+const STATE_LABEL = { empty: 'Empty', input: 'Input', assumption: 'Assumption', suggestion: 'Suggestion' }
+const when = iso => {
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+}
+
+export default function InputSheet({ fields, model, company, connectors, documents, onFields, onAdd, onRemove, onReset }) {
   const groups = INPUT_GROUPS.map(g => [g, fields.filter(f => f.group === g)]).filter(([, items]) => items.length)
   const custom = fields.filter(f => !INPUT_GROUPS.includes(f.group))
   if (custom.length) groups.push(['Custom', custom])
@@ -22,70 +39,68 @@ export default function InputSheet({ fields, model, company, onChange, onToggle,
   const pairBy = Object.fromEntries(PAIRS.map(p => [p.key, p]))
 
   const conf = confidence(fields)
+  const open = unconfirmed(fields)
+  const done = completeness(model)
   const archetype = byKey.archetype?.value
   const warnings = model.warnings
+  const on = enabledLabels(connectors)
 
-  const [suggesting, setSuggesting] = useState(false)
-  const [suggestMsg, setSuggestMsg] = useState('')
+  const [busy, setBusy] = useState('') // '' | 'all' | a field key
+  const [msg, setMsg] = useState('')
 
-  // The only place a model is involved: it proposes starting values for inputs
-  // that are still assumptions. It never touches a figure.
-  async function suggest() {
-    const open = unconfirmed(fields).map(f => f.key)
-    if (!open.length) return setSuggestMsg('Every input is confirmed, so there is nothing to suggest.')
-    setSuggesting(true)
-    setSuggestMsg('')
+  const change = (key, value) => onFields(fs => fs.map(f => (f.key === key ? withValue(f, value) : f)))
+  const setState = (key, state) => onFields(fs => fs.map(f => (f.key === key ? withState(f, state) : f)))
+  const setOrigin = (key, origin) => onFields(fs => fs.map(f => (f.key === key ? withOrigin(f, origin) : f)))
+
+  // The suggestion engine proposes values for inputs. It never touches a figure: the
+  // model does the arithmetic, and the agent is never between an input and a number.
+  async function suggest(keys, scope) {
+    if (!keys.length) return setMsg('Every field already has a value.')
+    setBusy(scope)
+    setMsg('')
+    const labels = Object.fromEntries(fields.map(f => [f.key, `${f.label}${f.unit ? ` (${f.unit})` : ''}`]))
     try {
-      const code = readCode()
-      const res = await fetch('/api/suggest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(code ? { 'x-access-code': code } : {}) },
-        body: JSON.stringify({ company, engineers: model.inputs.engineers, only: open })
+      const result = await suggestValues({
+        company,
+        fields,
+        keys,
+        connectors,
+        documents,
+        model,
+        agent: payload => fetchAgent({ ...payload, labels }, { code: readCode() })
       })
-      const data = await res.json().catch(() => ({}))
-      if (res.status === 503) throw new Error('Suggestions are not set up here (no ANTHROPIC_API_KEY). Your current values are unchanged.')
-      if (res.status === 401) throw new Error('Suggestions need the access code. Enter it on the People page first.')
-      if (!res.ok) throw new Error(data.error || 'Suggestions are unavailable.')
-      const values = data.values || {}
-      const n = Object.keys(values).length
-      if (!n) throw new Error('No usable suggestions came back. Your current values are unchanged.')
-      onApply(values)
-      setSuggestMsg(`Filled ${n} assumption${n === 1 ? '' : 's'}. Confirm each with the customer.`)
-    } catch (err) {
-      // offline or failing: nothing changes, and the case still works
-      setSuggestMsg(
-        err instanceof TypeError ? 'Could not reach the suggestion service. Your current values are unchanged.' : err.message
+      onFields(fs => applySuggestions(fs, result, { keys, now: new Date().toISOString() }))
+      const n = Object.keys(result.suggestions).length
+      const gaps = keys.length - n
+      setMsg(
+        n
+          ? `Filled ${n} field${n === 1 ? '' : 's'}.${gaps ? ` ${gaps} had nothing to suggest, and each says why.` : ''}`
+          : 'Nothing to suggest right now. Each empty field says why.'
       )
+    } catch {
+      setMsg('Suggestions could not run. Your values are unchanged.')
     } finally {
-      setSuggesting(false)
+      setBusy('')
     }
   }
+
+  const fieldProps = { onChange: change, onState: setState, onOrigin: setOrigin, onSuggest: k => suggest([k], k), busy }
 
   function renderItem(f) {
     if (f.pair) {
       if (f.side !== 'today') return null
       const pair = pairBy[f.pair]
-      return (
-        <PairField
-          key={pair.key}
-          pair={pair}
-          today={byKey[pair.today]}
-          portal={byKey[pair.portal]}
-          model={model}
-          onChange={onChange}
-          onToggle={onToggle}
-        />
-      )
+      return <PairField key={pair.key} pair={pair} today={byKey[pair.today]} portal={byKey[pair.portal]} model={model} {...fieldProps} />
     }
-    const row = <Field key={f.key} field={f} onChange={onChange} onToggle={onToggle} onRemove={onRemove} />
+    const row = <Field key={f.key} field={f} onRemove={onRemove} {...fieldProps} />
     if (f.key === 'platformShare') {
       return (
         <React.Fragment key={f.key}>
           {row}
           <div className="derived" data-testid="platform-engineers">
             <span>Platform engineers (derived)</span>
-            <strong>{fmtDec(model.figures.platformEngineers.value, 1)}</strong>
-            <code>{model.figures.platformEngineers.equation}</code>
+            <strong>{model.figures.platformEngineers.incomplete ? '—' : fmtDec(model.figures.platformEngineers.value, 1)}</strong>
+            {!model.figures.platformEngineers.incomplete && <code>{model.figures.platformEngineers.equation}</code>}
           </div>
         </React.Fragment>
       )
@@ -109,22 +124,46 @@ export default function InputSheet({ fields, model, company, onChange, onToggle,
 
   return (
     <div className="inputs-page">
+      <div className="internal-note">Only you see this page. Nothing on it (sources, states, confidence) appears on the client deck.</div>
+
       <div className="confidence">
         <div className="confidence-top">
           <span>Case confidence</span>
           <strong data-testid="confidence">{conf}%</strong>
         </div>
         <div className="bar">
-          <div
-            className="bar-fill"
-            style={{ width: `${conf}%`, background: conf >= 70 ? '#9bf0de' : conf >= 40 ? '#ffba00' : '#e5399a' }}
-          />
+          <div className="bar-fill" style={{ width: `${conf}%`, background: conf >= 70 ? '#9bf0de' : conf >= 40 ? '#ffba00' : '#e5399a' }} />
         </div>
         <p className="confidence-note">
-          {conf >= 70
-            ? 'Enough confirmed inputs to take this to an exec.'
-            : 'Mostly assumptions. Confirm more on the next call before presenting upward.'}
+          Counts inputs only: what the customer stated or a public source shows. Assumptions and suggestions do not count.
         </p>
+      </div>
+
+      <div className="summary-panel" data-testid="summary">
+        <p>
+          <strong>{done.done}</strong> of <strong>{done.total}</strong> figures can be computed
+          {done.total - done.done > 0 ? ` and are in the deck. ${done.total - done.done} still missing, so they are left out of the deck and the total.` : '.'}
+        </p>
+        {done.waiting.length > 0 && (
+          <ul className="waiting-list">
+            {done.waiting.map(w => (
+              <li key={w.key}>
+                <strong>{w.label}</strong> is waiting on {w.missing.map(k => byKey[k]?.label || k).join(', ')}
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="summary-sources">Connections the agent may read: {on.length ? on.join(', ') : 'none (all are off)'}.</p>
+        <details>
+          <summary>Still unconfirmed ({open.length})</summary>
+          <ul className="waiting-list">
+            {open.map(f => (
+              <li key={f.key}>
+                {f.label}: <em>{STATE_LABEL[stateOf(f)].toLowerCase()}</em>
+              </li>
+            ))}
+          </ul>
+        </details>
       </div>
 
       {warnings.length > 0 && (
@@ -147,14 +186,13 @@ export default function InputSheet({ fields, model, company, onChange, onToggle,
       )}
 
       <div className="suggest-row">
-        <button className="ghost" onClick={suggest} disabled={suggesting}>
-          {suggesting ? 'Suggesting…' : 'Suggest starting values'}
+        <button className="ghost" onClick={() => suggest(emptyKeys(fields), 'all')} disabled={!!busy}>
+          {busy === 'all' ? 'Suggesting…' : 'Suggest values'}
         </button>
         <span className="help">
-          Proposes values for unconfirmed inputs from the company and its engineer count. They stay assumptions until you
-          confirm them.
+          Fills the empty fields. The agent can search the web and read only the connections you have allowed. Each value keeps its origin and stays exactly as it is until you ask again.
         </span>
-        {suggestMsg && <p className="help suggest-msg">{suggestMsg}</p>}
+        {msg && <p className="help suggest-msg">{msg}</p>}
       </div>
 
       {archetype && ARCHETYPES[archetype] && (
@@ -189,12 +227,110 @@ export default function InputSheet({ fields, model, company, onChange, onToggle,
   )
 }
 
+// The state, origin and gaps of one number, on the face of its field.
+function SourceLine({ field, onState, onOrigin, onSuggest, busy }) {
+  const state = stateOf(field)
+  const s = field.source || {}
+  const notes = s.notes || []
+  // Default labels repeat the badge. Keep real quotes/references visible, with
+  // an optional note for manually entered numbers instead of boilerplate.
+  const origin = /^(Confirmed by the customer(?: \(saved before sources were tracked\))?|Your own read|Your own number \(edited from a suggestion\))$/i.test(s.origin || '') ? '' : s.origin || ''
+
+  if (state === 'empty') {
+    return (
+      <div className="source source-empty" data-state="empty">
+        <div className="source-row">
+          <span className="state state-empty">Empty</span>
+          <button className="link-btn" onClick={() => onSuggest(field.key)} disabled={!!busy}>
+            {busy === field.key ? 'Suggesting…' : 'Suggest'}
+          </button>
+        </div>
+        {notes.map(n => (
+          <p key={n} className="source-note">
+            {n}
+          </p>
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <div className={`source source-${state}`} data-state={state}>
+      <div className="source-row">
+        {state === 'suggestion' ? (
+          <span className="state state-suggestion">Suggestion</span>
+        ) : (
+          <button
+            type="button"
+            className={`state state-toggle ${state === 'input' ? 'state-verified' : 'state-assumed'}`}
+            aria-pressed={state === 'input'}
+            aria-label={`${field.label}: ${STATE_LABEL[state]}. Click to mark as ${state === 'input' ? 'assumption' : 'input'}`}
+            title={state === 'input' ? 'Click to mark as an assumption' : 'Click when this number is verified'}
+            onClick={() => onState(field.key, state === 'input' ? 'assumption' : 'input')}
+          >
+            {STATE_LABEL[state]}
+          </button>
+        )}
+        {state === 'suggestion' && (
+          <>
+            <button className="link-btn" onClick={() => onState(field.key, 'input')} title="Mark this number as an input">
+              Mark as input
+            </button>
+            <button className="link-btn" onClick={() => onSuggest(field.key)} disabled={!!busy} title="Ask again. It never changes by itself.">
+              {busy === field.key ? 'Refreshing…' : 'Refresh'}
+            </button>
+          </>
+        )}
+      </div>
+      {state === 'suggestion' ? (
+        <p className="source-origin" data-testid="origin">
+          {s.link ? (
+            <>
+              {String(s.origin).split(s.link)[0]}
+              <a href={s.link} target="_blank" rel="noreferrer">
+                {s.link}
+              </a>
+              {String(s.origin).split(s.link)[1] || ''}
+            </>
+          ) : (
+            s.origin
+          )}
+        </p>
+      ) : (
+        <details className="source-details" open={origin ? true : undefined}>
+          <summary>{origin ? 'Source note' : 'Add source note'}</summary>
+          <input className="origin-input" type="text" value={origin} placeholder="Add a source or note" onChange={e => onOrigin(field.key, e.target.value)} aria-label="Origin" />
+        </details>
+      )}
+      {state !== 'assumption' && s.link && state === 'input' && (
+        <p className="source-origin">
+          <a href={s.link} target="_blank" rel="noreferrer">
+            {s.link}
+          </a>
+        </p>
+      )}
+      {s.pinnedAt && (
+        <p className="source-meta">
+          {s.confidence ? `${s.confidence} confidence · ` : ''}Pinned {when(s.pinnedAt)} · connections allowed:{' '}
+          {s.enabled && s.enabled.length ? s.enabled.join(', ') : 'none'}
+        </p>
+      )}
+      {notes.map(n => (
+        <p key={n} className="source-note">
+          {n}
+        </p>
+      ))}
+    </div>
+  )
+}
+
 // Today and with-Portal side by side, with the live difference.
-function PairField({ pair, today, portal, model, onChange, onToggle }) {
+function PairField({ pair, today, portal, model, onChange, ...rest }) {
+  const both = !isBlank(today.value) && !isBlank(portal.value)
   const raw = model.inputs[pair.today] - model.inputs[pair.portal]
   const show = n => (pair.money ? fmtMoneyFull(n) : `${fmtDec(n, 2)}${pair.unit === '%' ? '%' : ''}`)
   const side = (f, label) => (
-    <div className={`pair-side ${f.confirmed ? 'is-input' : 'is-assumption'}`}>
+    <div className={`pair-side is-${stateOf(f)}`}>
       <label htmlFor={f.key}>{label}</label>
       <input
         id={f.key}
@@ -202,19 +338,9 @@ function PairField({ pair, today, portal, model, onChange, onToggle }) {
         min="0"
         step={f.step || 1}
         value={f.value}
-        onChange={e => onChange(f.key, e.target.value === '' ? 0 : Number(e.target.value))}
+        onChange={e => onChange(f.key, e.target.value === '' ? '' : Number(e.target.value))}
       />
-      <button
-        className={`pill ${f.confirmed ? 'pill-on' : ''}`}
-        onClick={() => onToggle(f.key)}
-        title={
-          f.confirmed
-            ? 'Confirmed by the customer. Click to mark as an assumption again.'
-            : 'Still an assumption. Click when the customer confirms it.'
-        }
-      >
-        {f.confirmed ? 'Input' : 'Assumption'}
-      </button>
+      <SourceLine field={f} {...rest} />
     </div>
   )
   return (
@@ -226,21 +352,23 @@ function PairField({ pair, today, portal, model, onChange, onToggle }) {
         {side(today, 'today')}
         {side(portal, 'with Portal')}
       </div>
-      <div className={`pair-diff ${raw < 0 ? 'is-bad' : ''}`} data-testid={`diff-${pair.key}`}>
-        {raw < 0
-          ? 'With Portal is higher than today, so this counts as 0 saved'
-          : `${show(raw)} ${pair.saved}`}
+      <div className={`pair-diff ${both && raw < 0 ? 'is-bad' : ''}`} data-testid={`diff-${pair.key}`}>
+        {!both
+          ? 'Enter both to see the saving'
+          : raw < 0
+            ? 'With Portal is higher than today, so this counts as 0 saved'
+            : `${show(raw)} ${pair.saved}`}
       </div>
       {(today.help || portal.help) && <p className="help">{today.help || portal.help}</p>}
     </div>
   )
 }
 
-function Field({ field, onChange, onToggle, onRemove }) {
-  const toggleable = (field.type === 'number' || field.type === 'percent') && !field.structural
+function Field({ field, onChange, onRemove, ...rest }) {
+  const number = (field.type === 'number' || field.type === 'percent') && !field.structural
 
   return (
-    <div className={`field ${field.confirmed ? 'is-input' : 'is-assumption'}`}>
+    <div className={`field is-${number ? stateOf(field) : 'input'}`}>
       <div className="field-row">
         <label htmlFor={field.key}>
           {field.label}
@@ -249,19 +377,6 @@ function Field({ field, onChange, onToggle, onRemove }) {
         {field.custom && (
           <button className="icon-btn" onClick={() => onRemove(field.key)} title="Remove this input" aria-label={`Remove ${field.label}`}>
             ×
-          </button>
-        )}
-        {toggleable && (
-          <button
-            className={`pill ${field.confirmed ? 'pill-on' : ''}`}
-            onClick={() => onToggle(field.key)}
-            title={
-              field.confirmed
-                ? 'Confirmed by the customer. Click to mark as an assumption again.'
-                : 'Still an assumption. Click when the customer confirms it.'
-            }
-          >
-            {field.confirmed ? 'Input' : 'Assumption'}
           </button>
         )}
       </div>
@@ -283,10 +398,10 @@ function Field({ field, onChange, onToggle, onRemove }) {
             type="range"
             min="0"
             max="100"
-            value={field.value}
+            value={isBlank(field.value) ? 0 : field.value}
             onChange={e => onChange(field.key, Number(e.target.value))}
           />
-          <span className="slider-val">{field.value}%</span>
+          <span className="slider-val">{isBlank(field.value) ? '—' : `${field.value}%`}</span>
         </div>
       ) : (
         <input
@@ -295,10 +410,11 @@ function Field({ field, onChange, onToggle, onRemove }) {
           min="0"
           step={field.step || 1}
           value={field.value}
-          onChange={e => onChange(field.key, e.target.value === '' ? 0 : Number(e.target.value))}
+          onChange={e => onChange(field.key, e.target.value === '' ? '' : Number(e.target.value))}
         />
       )}
 
+      {number && <SourceLine field={field} {...rest} />}
       {field.help && <p className="help">{field.help}</p>}
     </div>
   )
@@ -317,8 +433,7 @@ function AddInput({ onAdd }) {
       label: label.trim(),
       type,
       unit: type === 'number' ? unit.trim() : '',
-      value: type === 'text' ? '' : type === 'percent' ? 50 : 0,
-      confirmed: false
+      value: type === 'text' ? '' : type === 'percent' ? 50 : 0
     })
     setLabel('')
     setUnit('')
@@ -341,9 +456,7 @@ function AddInput({ onAdd }) {
         <option value="percent">Percent</option>
         <option value="text">Text</option>
       </select>
-      {type === 'number' && (
-        <input type="text" placeholder="Unit (optional)" value={unit} onChange={e => setUnit(e.target.value)} />
-      )}
+      {type === 'number' && <input type="text" placeholder="Unit (optional)" value={unit} onChange={e => setUnit(e.target.value)} />}
       <div className="add-actions">
         <button className="primary" type="submit" disabled={!label.trim()}>
           Add

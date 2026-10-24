@@ -7,6 +7,7 @@
 // come in pairs: how it is today, and how it is with Portal.
 
 import { fmtMoney, fmtHours, fmtMonths } from './format.js'
+import { emptySource, stateOf, sourceFromLegacy, validSource, ORIGIN } from './source.js'
 
 export { fmtMoney, fmtMoneyFull, fmtNum, fmtDec, fmtHours, fmtMonths } from './format.js'
 
@@ -27,6 +28,7 @@ export const DRIVERS = [
   { key: 'productivity', label: 'Engineer time recovered', short: 'Productivity', pillar: 'speed', figure: 'productivityValue' },
   { key: 'onboarding', label: 'Faster onboarding', short: 'Onboarding', pillar: 'speed', figure: 'onboardingValue' },
   { key: 'incidents', label: 'Shorter incidents', short: 'Incidents', pillar: 'chaos', figure: 'incidentValue' },
+  { key: 'standards', label: 'Audit and compliance work avoided', short: 'Standards', pillar: 'chaos', figure: 'standardsValue' },
   { key: 'platform', label: 'Platform team maintenance avoided', short: 'Platform load', pillar: 'scale', figure: 'platformValue' },
   { key: 'tooling', label: 'Overlapping tooling retired', short: 'Tooling', pillar: 'scale', figure: 'toolingValue' }
 ].map(d => ({ ...d, color: PILLARS.find(p => p.key === d.pillar).color }))
@@ -34,13 +36,24 @@ export const DRIVERS = [
 // ---------------------------------------------------------------------------
 // Inputs
 // ---------------------------------------------------------------------------
-// `confirmed: false` means this is still an ASSUMPTION. It flips to true when the
-// customer confirms it on a call. `structural` inputs (the calendar) are not
+// Every answer starts empty and carries a `source` (see source.js): an input is
+// something the customer said or a checkable public fact, an assumption is Chris's
+// own read, a suggestion is something the tool proposed. `structural` inputs (the calendar) are not
 // claims about the customer, so they do not count toward confidence.
 
-export const INPUT_GROUPS = ['Account', 'Scale', 'Speed', 'Chaos-control', 'Cost and alternative', 'Calendar']
+export const STRATEGIC_PRIORITIES = ['Audit and compliance', 'AI initiative', 'Migration', 'Cost pressure']
 
-export const INPUT_FIELDS = [
+// What leadership cares about this year decides which drivers lead the deck.
+export const PRIORITY_DRIVERS = {
+  'Audit and compliance': ['standards'],
+  'AI initiative': ['productivity'],
+  Migration: ['productivity'],
+  'Cost pressure': ['platform', 'tooling']
+}
+
+export const INPUT_GROUPS = ['Account', 'Scale', 'Speed', 'Chaos-control', 'Standards and audit', 'Cost and alternative', 'Calendar']
+
+const FIELD_DEFS = [
   // ---- Account
   { key: 'companyName', label: 'Company', group: 'Account', type: 'text', value: 'Northwind Retail', confirmed: true, help: 'Who the case is for.' },
   {
@@ -52,6 +65,17 @@ export const INPUT_FIELDS = [
     value: 'Enterprise',
     confirmed: true,
     help: 'Sets which stakeholder tabs exist and which pillar leads the case.'
+  },
+
+  {
+    key: 'strategicPriority',
+    label: 'What their leadership cares about this year',
+    group: 'Account',
+    type: 'select',
+    options: STRATEGIC_PRIORITIES,
+    value: 'Cost pressure',
+    confirmed: true,
+    help: 'Sets which driver leads the deck. Separate from the archetype: that is the shape of the company, this is what is happening to them this year.'
   },
 
   // ---- Scale
@@ -83,8 +107,8 @@ export const INPUT_FIELDS = [
     key: 'searchHoursPortal', label: 'Time spent searching, with Portal', group: 'Speed', type: 'number', value: 2, unit: 'hrs / eng / week', step: 0.5, confirmed: false, pair: 'search', side: 'portal',
     help: 'The conservatism dial. Chris: the hard part is getting the customer to agree the number is realistic for them.'
   },
-  { key: 'rampDaysToday', label: 'Days for a new hire to first contribution, today', group: 'Speed', type: 'number', value: 14, unit: 'days', confirmed: false, pair: 'ramp', side: 'today' },
-  { key: 'rampDaysPortal', label: 'Days to first contribution, with Portal', group: 'Speed', type: 'number', value: 10, unit: 'days', confirmed: false, pair: 'ramp', side: 'portal' },
+  { key: 'rampDaysToday', label: 'Days for a new hire to first contribution, today', group: 'Speed', type: 'number', value: 30, unit: 'days', confirmed: false, pair: 'ramp', side: 'today' },
+  { key: 'rampDaysPortal', label: 'Days to first contribution, with Portal', group: 'Speed', type: 'number', value: 21, unit: 'days', confirmed: false, pair: 'ramp', side: 'portal' },
   { key: 'newHiresPerYear', label: 'Engineers hired per year', group: 'Speed', type: 'number', value: 80, confirmed: false, help: 'From the hiring plan if you can get it.' },
 
   // ---- Chaos-control
@@ -95,6 +119,15 @@ export const INPUT_FIELDS = [
   { key: 'incidentHoursPortal', label: 'Hours each person spends on an incident, with Portal', group: 'Chaos-control', type: 'number', value: 3.2, unit: 'hrs', step: 0.1, confirmed: false, pair: 'incident', side: 'portal' },
   { key: 'peoplePerIncident', label: 'People pulled into each incident', group: 'Chaos-control', type: 'number', value: 5, confirmed: false },
   { key: 'incidentsPerMonth', label: 'Incidents per month', group: 'Chaos-control', type: 'number', value: 12, confirmed: false },
+
+  // ---- Standards and audit
+  {
+    key: 'auditPrepDaysToday', label: 'Days spent preparing for an audit — today', group: 'Standards and audit', type: 'number', value: 10, unit: 'days', confirmed: false, pair: 'audit', side: 'today',
+    help: 'Per person, per audit: gathering evidence for who owns what and which standards are met.'
+  },
+  { key: 'auditPrepDaysPortal', label: 'Days spent preparing for an audit — with Portal', group: 'Standards and audit', type: 'number', value: 5, unit: 'days', confirmed: false, pair: 'audit', side: 'portal' },
+  { key: 'auditsPerYear', label: 'Audits or compliance reviews per year', group: 'Standards and audit', type: 'number', value: 4, confirmed: false, help: 'Zero if the customer has none: the audit driver then drops off the deck.' },
+  { key: 'peoplePerAudit', label: 'People pulled into each audit', group: 'Standards and audit', type: 'number', value: 6, confirmed: false },
 
   // ---- Cost and alternative
   { key: 'portalCost', label: 'Portal annual subscription', group: 'Cost and alternative', type: 'number', value: 400000, unit: '$/yr', step: 10000, confirmed: false, help: 'A placeholder until there is a quote.' },
@@ -110,26 +143,48 @@ export const INPUT_FIELDS = [
   { key: 'hoursPerYear', label: 'Working hours per year', group: 'Calendar', type: 'number', value: HOURS_PER_YEAR, confirmed: true, structural: true }
 ]
 
+// A numeric input the customer has to answer: it starts blank and unconfirmed, and
+// the deck fills in as soon as there is a value. The calendar (structural) keeps its
+// constants. DEMO_VALUES are the old starting numbers, kept for tests and docs.
+const isAnswer = f => (f.type === 'number' || f.type === 'percent') && !f.structural
+
+export const DEMO_VALUES = Object.fromEntries(FIELD_DEFS.map(f => [f.key, f.value]))
+
+export const INPUT_FIELDS = FIELD_DEFS.map(({ confirmed, ...f }) => {
+  if (isAnswer(f)) return { ...f, value: '', source: emptySource() }
+  if (f.structural) return { ...f, source: { state: 'input', origin: ORIGIN.calendar } }
+  return { ...f, source: { state: 'input', origin: '' } }
+})
+
+// A saved field's source: the one it has, or one worked out from `confirmed`.
+export function sourceOf(saved) {
+  if (validSource(saved.source)) return saved.source
+  return sourceFromLegacy(saved.value, saved.confirmed)
+}
+
 // The today / with-Portal pairs. `valueFigure` is the model figure the saving is worth.
 export const PAIRS = [
   { key: 'search', group: 'Speed', label: 'Time spent searching', unit: 'hrs / eng / week', today: 'searchHoursToday', portal: 'searchHoursPortal', saved: 'saved per engineer per week', valueFigure: 'productivityValue', driver: 'productivity' },
   { key: 'ramp', group: 'Speed', label: 'Days to first contribution', unit: 'days', today: 'rampDaysToday', portal: 'rampDaysPortal', saved: 'saved per new hire', valueFigure: 'onboardingValue', driver: 'onboarding' },
   { key: 'incident', group: 'Chaos-control', label: 'Hours per person per incident', unit: 'hrs', today: 'incidentHoursToday', portal: 'incidentHoursPortal', saved: 'saved per person per incident', valueFigure: 'incidentValue', driver: 'incidents' },
+  { key: 'audit', group: 'Standards and audit', label: 'Days preparing for an audit', unit: 'days', today: 'auditPrepDaysToday', portal: 'auditPrepDaysPortal', saved: 'saved per person per audit', valueFigure: 'standardsValue', driver: 'standards' },
   { key: 'maint', group: 'Scale', label: 'Platform team time on upkeep', unit: '%', today: 'maintPctToday', portal: 'maintPctPortal', saved: 'of the platform team freed up', valueFigure: 'platformValue', driver: 'platform' },
   { key: 'tool', group: 'Scale', label: 'Overlapping tool spend', unit: '$/yr', today: 'toolSpendToday', portal: 'toolSpendPortal', saved: 'a year saved', valueFigure: 'toolingValue', driver: 'tooling', money: true }
 ]
 
 const isClaim = f => (f.type === 'number' || f.type === 'percent') && !f.structural
 
-// Share of the numbers that actually move the case that have been confirmed.
+// Confidence counts INPUTS only: numbers the customer stated or a public source
+// shows. Assumptions and suggestions do not count, and neither do blanks.
 export function confidence(fields) {
   const material = fields.filter(isClaim)
   if (!material.length) return 0
-  return Math.round((material.filter(f => f.confirmed).length / material.length) * 100)
+  return Math.round((material.filter(f => stateOf(f) === 'input').length / material.length) * 100)
 }
 
+// Everything still to confirm: blank, assumed or only suggested.
 export function unconfirmed(fields) {
-  return fields.filter(f => !f.confirmed && isClaim(f))
+  return fields.filter(f => isClaim(f) && stateOf(f) !== 'input')
 }
 
 // ---------------------------------------------------------------------------
@@ -141,7 +196,11 @@ export function unconfirmed(fields) {
 export const hoursBack = model =>
   model.figures.hoursSavedPerEngPerWeek.value * model.inputs.engineers * model.inputs.weeksPerYear
 
-export const costsAvoided = model => model.figures.platformValue.value + model.figures.toolingValue.value
+// What the CTO cares about: the run cost avoided, from whichever of the two can be computed.
+export function costsAvoided(model) {
+  const parts = ['platformValue', 'toolingValue'].map(k => model.figures[k]).filter(f => !f.incomplete)
+  return parts.length ? parts.reduce((s, f) => s + f.value, 0) : null
+}
 
 export const STAKEHOLDERS = [
   {
@@ -150,7 +209,10 @@ export const STAKEHOLDERS = [
     tag: 'Usually the champion',
     cares: 'Their team shipping instead of searching',
     lead: ['productivity', 'onboarding'],
-    headline: m => `${fmtHours(hoursBack(m))} of engineering time back per year`,
+    headline: m =>
+      m.figures.hoursSavedPerEngPerWeek.incomplete || m.blankInputs.includes('engineers')
+        ? null
+        : `${fmtHours(hoursBack(m))} of engineering time back per year`,
     objection: 'My team already knows where things are.',
     counter: 'Ask how a new hire finds the owner of a service during an incident. The cost lands on the people who joined most recently.',
     needsToSee: [
@@ -165,7 +227,10 @@ export const STAKEHOLDERS = [
     tag: 'Often has the opposite goal',
     cares: 'Cutting spend while the org keeps growing',
     lead: ['platform', 'tooling'],
-    headline: m => `${fmtMoney(costsAvoided(m))} of run cost avoided per year`,
+    headline: m => {
+      const avoided = costsAvoided(m)
+      return avoided == null ? null : `${fmtMoney(avoided)} of run cost avoided per year`
+    },
     objection: 'Backstage is open source. Why are we paying for it?',
     counter: 'The licence is free, the operation is not. Self-hosting means a standing platform team for upgrades, patches and infrastructure, permanently.',
     needsToSee: [
@@ -181,6 +246,7 @@ export const STAKEHOLDERS = [
     cares: 'Payback, contract terms, and whether the numbers survive scrutiny',
     lead: ['productivity', 'tooling'],
     headline: m => {
+      if (m.figures.paybackMonths.incomplete) return null
       const months = m.figures.paybackMonths.value
       return months > 0 ? `Payback in ${fmtMonths(months)}` : 'No payback on these figures'
     },
@@ -197,8 +263,11 @@ export const STAKEHOLDERS = [
     role: 'Security / Compliance',
     tag: 'The late arrival that kills timelines',
     cares: 'Proving which services meet which standards, on a date',
-    lead: ['incidents', 'platform'],
-    headline: () => 'Ownership and standards provable on demand',
+    lead: ['standards', 'incidents'],
+    headline: m =>
+      !m.figures.standardsValue.incomplete && m.figures.standardsValue.value > 0
+        ? `${fmtMoney(m.figures.standardsValue.value)} of audit effort avoided per year`
+        : 'Ownership and standards provable on demand',
     objection: 'This is another system holding our service metadata.',
     counter: 'Bring them in during discovery rather than at contract. Chris lost weeks on a deal where procurement rules surfaced only after everyone had agreed.',
     needsToSee: [
@@ -251,7 +320,7 @@ export function stakeholdersForArchetype(current, archetype) {
   const builtinKeys = STAKEHOLDERS.map(s => s.key)
   const kept = Object.fromEntries(current.filter(s => builtinKeys.includes(s.key)).map(s => [s.key, s]))
   const builtin = wanted.map(key => kept[key] || { key, builtin: true })
-  const custom = current.filter(s => !builtinKeys.includes(s.key))
+  const custom = current.filter(s => !builtinKeys.includes(s.key) || (!wanted.includes(s.key) && s.namedPeople?.length))
   return [...builtin, ...custom]
 }
 
@@ -259,22 +328,55 @@ export function stakeholdersForArchetype(current, archetype) {
 // The drivers, as the deck lays them out
 // ---------------------------------------------------------------------------
 
+// A customer who says they have no audits has no audit driver: it is left off rather
+// than shown empty. (A blank is different: that is a gap, not a zero.)
+const hasDriver = (model, d) => !(d.key === 'standards' && model.inputs.auditsPerYear === 0 && !model.blankInputs.includes('auditsPerYear'))
+
+// Every driver this customer has, with whether it can be computed yet.
 export function allDrivers(model) {
-  return DRIVERS.map(d => {
+  return DRIVERS.filter(d => hasDriver(model, d)).map(d => {
     const f = model.figures[d.figure]
-    return { ...d, value: f.value, detail: f.equation, flag: f.flag }
+    return { ...d, value: f.value, detail: f.equation, flag: f.flag, incomplete: f.incomplete, missing: f.missing }
   })
 }
 
-// Drivers grouped under the three pillars, in the archetype's order. The first
-// pillar is the one that leads.
-export function driversByPillar(model, archetype) {
-  const drivers = allDrivers(model)
-  return archetypePillars(archetype).map((key, i) => {
-    const pillar = PILLARS.find(p => p.key === key)
-    const items = drivers.filter(d => d.pillar === key)
-    return { ...pillar, leads: i === 0, items, total: items.reduce((s, d) => s + d.value, 0) }
-  })
+// Only the drivers that can be computed: what the deck is allowed to show.
+export const computableDrivers = model => allDrivers(model).filter(d => !d.incomplete)
+
+// Chris's view: how many drivers are done, and what each unfinished one is waiting on.
+export function completeness(model) {
+  const all = allDrivers(model)
+  return {
+    total: all.length,
+    done: all.filter(d => !d.incomplete).length,
+    waiting: all.filter(d => d.incomplete).map(d => ({ key: d.key, label: d.label, missing: d.missing }))
+  }
+}
+
+// The drivers the strategic priority leads with (only those that can be shown).
+export const priorityDrivers = (model, priority) =>
+  (PRIORITY_DRIVERS[priority] || PRIORITY_DRIVERS['Cost pressure']).filter(k => computableDrivers(model).some(d => d.key === k))
+
+// Drivers that can be computed, grouped under the three pillars. The pillar holding
+// the priority driver leads (then the archetype's order), and priority drivers come
+// first within it. A pillar with nothing to show is left out.
+export function driversByPillar(model, archetype, priority) {
+  const drivers = computableDrivers(model)
+  const lead = priorityDrivers(model, priority)
+  const order = [...archetypePillars(archetype)]
+  const holds = key => drivers.some(d => d.pillar === key && lead.includes(d.key))
+  order.sort((a, b) => Number(holds(b)) - Number(holds(a)))
+  return order
+    .map(key => {
+      const pillar = PILLARS.find(p => p.key === key)
+      const items = drivers
+        .filter(d => d.pillar === key)
+        .map(d => ({ ...d, priority: lead.includes(d.key) }))
+        .sort((a, b) => Number(b.priority) - Number(a.priority))
+      return { ...pillar, items, total: items.reduce((s, d) => s + d.value, 0) }
+    })
+    .filter(g => g.items.length)
+    .map((g, i) => ({ ...g, leads: i === 0 }))
 }
 
 // ---------------------------------------------------------------------------

@@ -41,8 +41,12 @@ async function copyText(text) {
   }
 }
 
-export default function WebsiteView({ project, inputs, onDeck, onSite, onBack }) {
+export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, onScenario }) {
   const frame = useRef(null)
+  const scenarioRef = useRef(null)
+  scenarioRef.current = { saved: project.scenario, onScenario }
+  const detachScenario = useRef(() => {})
+  useEffect(() => () => detachScenario.current(), [])
   const [editing, setEditing] = useState(true)
   const [working, setWorking] = useState('') // '' | 'publish' | 'zip'
   const [problem, setProblem] = useState(null) // { message } | { setup: true } | { codeRequired: true }
@@ -78,6 +82,29 @@ export default function WebsiteView({ project, inputs, onDeck, onSite, onBack })
 
   const sendMode = () => frame.current?.contentWindow?.postMessage({ cb: 'edit-mode', on: editing }, '*')
   useEffect(sendMode, [editing]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function frameReady() {
+    sendMode()
+    detachScenario.current()
+    const doc = frame.current?.contentDocument
+    if (!doc) return
+    const ranges = () => [...doc.querySelectorAll('#sliders input[data-key]')]
+    for (const range of ranges()) {
+      const value = scenarioRef.current.saved?.inputs?.[range.dataset.key]
+      if (Number.isFinite(value)) {
+        range.value = value
+        range.dispatchEvent(new frame.current.contentWindow.Event('input', { bubbles: true }))
+      }
+    }
+    const capture = e => {
+      if (!e.target.matches('#sliders input[data-key], #whatif-reset')) return
+      const values = Object.fromEntries(ranges().map(r => [r.dataset.key, Number(r.value)]))
+      scenarioRef.current.onScenario?.(previous => ({ ...previous, inputs: values }))
+    }
+    doc.addEventListener('input', capture)
+    doc.addEventListener('click', capture)
+    detachScenario.current = () => { doc.removeEventListener('input', capture); doc.removeEventListener('click', capture) }
+  }
 
   function flashCopied() {
     setCopied(true)
@@ -239,7 +266,7 @@ export default function WebsiteView({ project, inputs, onDeck, onSite, onBack })
         ref={frame}
         title="Website"
         srcDoc={shown}
-        onLoad={sendMode}
+        onLoad={frameReady}
         sandbox="allow-scripts allow-same-origin allow-popups allow-modals"
       />
     </div>

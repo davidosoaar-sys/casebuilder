@@ -1,6 +1,8 @@
 {
   "functions": {
+    "api/person.js": { "maxDuration": 60 },
     "api/research.js": { "maxDuration": 60 },
+    "api/brand.js": { "maxDuration": 60 },
     "api/publish.js": { "maxDuration": 60 }
   }
 }

@@ -1,31 +1,20 @@
-import React, { useRef, useState } from 'react'
+import React, { useState } from 'react'
 import { confidence } from '../valueModel.js'
-import { checkCaseFile, caseFileToProject } from '../caseFile.js'
+import { safeAsset } from '../brand.js'
+import { SPOTIFY_LOGO } from '../spotifyLogo.js'
 
 // Landing page: start a new project (company name only), open or delete one.
 
-export default function ProjectList({ user, onUser, projects, activeId, onCreate, onOpen, onDelete, onImport }) {
+export default function ProjectList({ user, onUser, projects, activeId, onCreate, onOpen, onDelete, onDuplicate }) {
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
   const [who, setWho] = useState('')
-  const [problem, setProblem] = useState(null) // { title, lines } when an import fails
-  const fileRef = useRef(null)
-
-  // Import a .case.json made by the CaseBuilder plugin or exported from the app.
-  async function importFile(e) {
-    const file = e.target.files[0]
-    e.target.value = ''
-    if (!file) return
-    try {
-      const raw = JSON.parse(await file.text())
-      const { errors, warnings } = checkCaseFile(raw)
-      if (errors.length) return setProblem({ title: `${file.name} can't be imported`, lines: errors })
-      setProblem(null)
-      onImport(caseFileToProject(raw))
-      if (warnings.length) window.alert(['Imported, with notes:', ...warnings.map(w => `- ${w}`)].join('\n'))
-    } catch (err) {
-      setProblem({ title: `${file.name} is not a case file`, lines: [err.message] })
-    }
+  const [display, setDisplay] = useState(() => {
+    try { return localStorage.getItem('casebuilder.project-view') === 'list' ? 'list' : 'cards' } catch { return 'cards' }
+  })
+  function changeDisplay(value) {
+    setDisplay(value)
+    try { localStorage.setItem('casebuilder.project-view', value) } catch {}
   }
 
   function close() {
@@ -61,10 +50,6 @@ export default function ProjectList({ user, onUser, projects, activeId, onCreate
               <button className="primary" onClick={() => setCreating(true)}>
                 New project
               </button>
-              <button className="ghost" onClick={() => fileRef.current?.click()} title="Open a .case.json from the CaseBuilder plugin or another copy of the app">
-                Import case file
-              </button>
-              <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={importFile} />
               <button className="link-btn" onClick={() => onUser('')}>
                 Not {user}? Change name
               </button>
@@ -99,40 +84,31 @@ export default function ProjectList({ user, onUser, projects, activeId, onCreate
         )}
       </header>
 
-      {problem && (
-        <div className="projects-head import-problem" role="alert">
-          <div className="notice">
-            <strong>{problem.title}.</strong>
-            <ul>
-              {problem.lines.map(l => (
-                <li key={l}>{l}</li>
-              ))}
-            </ul>
-            <button className="ghost" onClick={() => setProblem(null)}>
-              Dismiss
-            </button>
+      <section className="projects-body">
+        <div className="project-list-heading"><p className="mono-label">Your projects · {projects.length}</p>
+          <div className="project-view-switch" role="group" aria-label="Project view">
+            <button className="ghost" aria-pressed={display === 'cards'} onClick={() => changeDisplay('cards')}><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true"><rect x="2" y="2" width="4" height="4" rx=".5"/><rect x="10" y="2" width="4" height="4" rx=".5"/><rect x="2" y="10" width="4" height="4" rx=".5"/><rect x="10" y="10" width="4" height="4" rx=".5"/></svg>Cards</button>
+            <button className="ghost" aria-pressed={display === 'list'} onClick={() => changeDisplay('list')}><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M5 3h9M5 8h9M5 13h9M1 3h1M1 8h1M1 13h1"/></svg>List</button>
           </div>
         </div>
-      )}
-
-      <section className="projects-body">
-        <p className="mono-label">Your projects · {projects.length}</p>
         {projects.length === 0 ? (
           <p className="empty">No projects yet. Start your first one.</p>
         ) : (
-          <ul className="project-grid">
-            {projects.map(p => (
+          <ul className={`project-grid ${display === 'list' ? 'project-list-view' : 'project-cards-view'}`} aria-label={display === 'list' ? 'Projects list' : 'Project cards'}>
+            {[...projects].sort((a, b) => b.updatedAt - a.updatedAt).map(p => {
+              const logo = safeAsset(p.projectLogo) || safeAsset(p.brand?.logo) || (/^spotify$/i.test(p.name) ? SPOTIFY_LOGO : '')
+              return (
               <li key={p.id}>
                 <div
                   className={`project-card ${p.id === activeId ? 'project-card-active' : ''}`}
                   role="button"
                   tabIndex={0}
                   onClick={() => onOpen(p.id)}
-                  onKeyDown={e => e.key === 'Enter' && onOpen(p.id)}
+                  onKeyDown={e => e.target === e.currentTarget && e.key === 'Enter' && onOpen(p.id)}
                 >
                   <div className="project-card-top">
                     <span className="project-meta">
-                      {new Date(p.updatedAt).toLocaleDateString()}
+                      Touched {new Date(p.updatedAt).toLocaleString()}
                     </span>
                     <button
                       className="icon-btn"
@@ -143,14 +119,15 @@ export default function ProjectList({ user, onUser, projects, activeId, onCreate
                       ×
                     </button>
                   </div>
-                  <strong>{p.name}</strong>
+                  <div className="project-identity"><span className="project-company-logo">{logo ? <img src={logo} alt={`${p.name} logo`} /> : <span aria-hidden="true">{p.name.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()}</span>}</span><strong>{p.name}</strong></div>
                   <div className="project-card-foot">
                     <span className="project-meta">{confidence(p.fields)}% confirmed</span>
+                    <button className="link-btn" aria-label={`Duplicate ${p.name}`} onClick={e => { e.stopPropagation(); onDuplicate(p) }}>Duplicate</button>
                     <span className="go">Open →</span>
                   </div>
                 </div>
               </li>
-            ))}
+            )})}
           </ul>
         )}
       </section>

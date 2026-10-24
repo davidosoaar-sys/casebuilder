@@ -2,7 +2,7 @@
 // stringified into the downloaded HTML file, so it must be completely
 // self-contained: no imports, no references to anything outside this function.
 //
-// DATA: { company, slides, stakeholders, activeKey, inputs, openFields, sliders, logo }
+// DATA: { company, slides, stakeholders, activeKey, inputs, sliders, logo }
 // VM:   the model (computeModel), the content around it and the formatters, inlined
 //       from model.js, valueModel.js and format.js. The site recomputes every figure
 //       with the same arithmetic the app uses.
@@ -38,9 +38,13 @@ export function siteMain(DATA, VM) {
   function headlineFor(st) {
     if (st.builtin) {
       const base = VM.STAKEHOLDERS.find(b => b.key === st.key)
-      if (base) return base.headline(M())
+      if (base) {
+        const h = base.headline(M())
+        if (h != null) return h
+      }
     }
-    return VM.fmtMoney(M().figures.totalValue.value) + ' of annual value'
+    const t = M().figures.totalValue
+    return t.incomplete ? '' : VM.fmtMoney(t.value) + ' of annual value'
   }
 
   function numbers() {
@@ -57,8 +61,11 @@ export function siteMain(DATA, VM) {
 
   const monthsText = m => (m > 0 ? VM.fmtMonths(m) : 'n/a')
 
+  // a figure that cannot be computed yet reads as nothing, never as $0
   function context(st) {
     const n = numbers()
+    const F = n.F
+    const when = (f, fn) => (f.incomplete ? '' : fn(f))
     return {
       company: DATA.company,
       role: st.role,
@@ -66,12 +73,12 @@ export function siteMain(DATA, VM) {
       headline: headlineFor(st),
       cares: st.cares,
       tag: st.tag,
-      annual: VM.fmtMoney(n.total),
-      cost: VM.fmtMoney(inputs.portalCost),
-      net: VM.fmtMoney(n.net),
-      payback: monthsText(n.months),
-      roi: n.roi.toFixed(1) + 'x',
-      five: VM.fmtMoney(n.five)
+      annual: when(F.totalValue, f => VM.fmtMoney(f.value)),
+      cost: inputs.portalCost === '' || inputs.portalCost == null ? '' : VM.fmtMoney(Number(inputs.portalCost) || 0),
+      net: when(F.netValue, f => VM.fmtMoney(f.raw)),
+      payback: when(F.paybackMonths, f => monthsText(f.value)),
+      roi: when(F.roiMultiple, f => f.value.toFixed(1) + 'x'),
+      five: when(F.fiveYearValue, f => VM.fmtMoney(f.raw))
     }
   }
 
@@ -112,12 +119,13 @@ export function siteMain(DATA, VM) {
 
   function statItem(key) {
     const n = numbers()
-    if (key === 'annual') return { label: 'Annual value', value: VM.fmtMoney(n.total), eq: n.F.totalValue.equation }
-    if (key === 'cost') return { label: 'Portal cost', value: VM.fmtMoney(inputs.portalCost), eq: '' }
-    if (key === 'net') return { label: 'Net, year one', value: VM.fmtMoney(n.net), tone: n.net > 0 ? 'good' : 'bad', eq: n.F.netValue.equation }
-    if (key === 'payback') return { label: 'Payback', value: monthsText(n.months), eq: n.F.paybackMonths.equation }
-    if (key === 'roi') return { label: 'Return', value: n.roi.toFixed(1) + 'x', eq: n.F.roiMultiple.equation }
-    if (key === 'five') return { label: 'Five-year net', value: VM.fmtMoney(n.five), eq: n.F.fiveYearValue.equation }
+    const F = n.F
+    if (key === 'annual') return F.totalValue.incomplete ? null : { label: 'Annual value', value: VM.fmtMoney(n.total), eq: F.totalValue.equation }
+    if (key === 'cost') return inputs.portalCost === '' || inputs.portalCost == null ? null : { label: 'Portal cost', value: VM.fmtMoney(Number(inputs.portalCost) || 0), eq: '' }
+    if (key === 'net') return F.netValue.incomplete ? null : { label: 'Net, year one', value: VM.fmtMoney(n.net), tone: n.net > 0 ? 'good' : 'bad', eq: F.netValue.equation }
+    if (key === 'payback') return F.paybackMonths.incomplete ? null : { label: 'Payback', value: monthsText(n.months), eq: F.paybackMonths.equation }
+    if (key === 'roi') return F.roiMultiple.incomplete ? null : { label: 'Return', value: n.roi.toFixed(1) + 'x', eq: F.roiMultiple.equation }
+    if (key === 'five') return F.fiveYearValue.incomplete ? null : { label: 'Five-year net', value: VM.fmtMoney(n.five), eq: F.fiveYearValue.equation }
     return null
   }
 
@@ -144,6 +152,7 @@ export function siteMain(DATA, VM) {
         return '<div class="spacer"></div>'
       case 'stats': {
         const keys = b.items || ['annual', 'cost', 'net', 'payback', 'roi', 'five']
+        if (!keys.map(statItem).filter(Boolean).length) return ''
         return (
           '<div class="stats">' +
           keys
@@ -156,7 +165,8 @@ export function siteMain(DATA, VM) {
       }
       case 'drivers': {
         const m = M()
-        const groups = VM.driversByPillar(m, inputs.archetype)
+        const groups = VM.driversByPillar(m, inputs.archetype, inputs.strategicPriority)
+        if (!groups.length) return ''
         const max = Math.max.apply(null, [1].concat(groups.reduce((acc, g) => acc.concat(g.items.map(d => d.value)), [])))
         return (
           '<div class="chart">' +
@@ -166,7 +176,7 @@ export function siteMain(DATA, VM) {
                 '<section class="pillar' + (g.leads ? ' pl' : '') + '"><h3>' + esc(g.label) + '<span>' + esc(VM.fmtMoney(g.total)) + '</span></h3>' +
                 g.items
                   .map(d => {
-                    const lead = st.lead.indexOf(d.key) >= 0
+                    const lead = st.lead.indexOf(d.key) >= 0 || d.priority
                     return (
                       '<div class="bar-row' + (lead ? ' lead' : '') + '">' +
                       '<div class="bar-label">' + esc(d.label) + (lead ? '<i></i>' : '') + '</div>' +
@@ -185,9 +195,11 @@ export function siteMain(DATA, VM) {
       case 'pairs': {
         const m = M()
         const show = (p, n) => (p.money ? VM.fmtMoney(n) : VM.fmtDec(n, 2) + (p.unit === '%' ? '%' : ''))
+        const rowsOf = VM.PAIRS.filter(p => !m.figures[p.valueFigure].incomplete && !(p.key === 'audit' && !(Number(m.inputs.auditsPerYear) > 0)))
+        if (!rowsOf.length) return ''
         return (
           '<div class="pairs"><div class="pr ph"><span></span><span>today</span><span>with Portal</span><span>difference</span></div>' +
-          VM.PAIRS.map(p => {
+          rowsOf.map(p => {
             const t = m.inputs[p.today]
             const q = m.inputs[p.portal]
             return (
@@ -200,6 +212,7 @@ export function siteMain(DATA, VM) {
       }
       case 'versus': {
         const F = M().figures
+        if (F.versusSelfHost.incomplete) return ''
         const selfHost = F.selfHostCost.value
         const portal = inputs.portalCost >= 0 ? Number(inputs.portalCost) || 0 : 0
         const max = Math.max(selfHost, portal, 1)
@@ -216,15 +229,6 @@ export function siteMain(DATA, VM) {
           '</strong></p><p class="eq">' + esc(F.versusSelfHost.equation) + '</p>'
         )
       }
-      case 'assumptions': {
-        const open = DATA.openFields
-        if (!open.length) return '<p class="allgood">Every material input is confirmed. This case is ready to go upward.</p>'
-        return (
-          '<p class="still">' + open.length + ' input' + (open.length === 1 ? '' : 's') + ' still assumed:</p><ul class="assume">' +
-          open.map(f => '<li><strong>' + esc(f.label) + '</strong><span>' + esc(f.assumed) + '</span></li>').join('') +
-          '</ul>'
-        )
-      }
       case 'room':
         return (
           '<div class="cols"><div><h3>What they need to see</h3><ul>' +
@@ -236,26 +240,51 @@ export function siteMain(DATA, VM) {
     }
   }
 
+  function formatAttrs(d = {}) {
+    const styles = [], flags = []
+    if (/^#[0-9a-f]{6}$/i.test(d.color)) { styles.push('color:' + d.color); flags.push('data-custom-color="1"') }
+    if (/^#[0-9a-f]{6}$/i.test(d.badgeBackground)) styles.push('--badge-background:' + d.badgeBackground)
+    if (/^#[0-9a-f]{6}$/i.test(d.background)) styles.push('background-color:' + d.background)
+    if (d.fontSize && Number.isFinite(Number(d.fontSize))) { styles.push('font-size:' + Math.min(120, Math.max(10, Number(d.fontSize))) + 'px'); flags.push('data-custom-size="1"') }
+    if (['left', 'center', 'right'].includes(d.align)) styles.push('text-align:' + d.align)
+    if (['400', '500', '600', '700', '800', '900'].includes(String(d.weight))) { styles.push('font-weight:' + d.weight); flags.push('data-custom-weight="1"') }
+    if (d.font) { styles.push('font-family:' + String(d.font).replace(/[^a-zA-Z0-9 _-]/g, '') + ',sans-serif'); flags.push('data-custom-font="1"') }
+    return (styles.length ? ' style="' + styles.join(';') + '"' : '') + ' ' + flags.join(' ')
+  }
+
   // Blocks whose text can be edited in place when the page is shown inside the
   // CaseBuilder app (edit mode). A published page never enters edit mode.
   const EDITABLE = { text: 1, quote: 1, columns: 1, image: 1 }
   const SINGLE_LINE = { hero: 1, headline: 1, title: 1, label: 1, eyebrow: 1, tag: 1, forwhom: 1 }
   let editing = false
 
+  // Figures that cannot be computed are absent, and a page with none left is dropped.
+  const LIVE = { stats: 1, drivers: 1, pairs: 1, versus: 1 }
+  let shown = []
+
   function render() {
     const st = stakeholder()
     const ctx = context(st)
     const main = $('main')
     const keep = main.scrollTop
-    main.innerHTML = DATA.slides
+    shown = []
+    DATA.slides.forEach((s, i) => {
+      const parts = s.blocks.map((b, j) => ({ b: b, j: j, html: b.type === 'assumptions' ? '' : blockHtml(b, st, ctx) }))
+      const live = parts.filter(p => LIVE[p.b.type])
+      const liveShown = live.filter(p => p.html)
+      const kept = parts.filter(p => (LIVE[p.b.type] ? p.html : p.b.type !== 'assumptions'))
+      if ((live.length && !liveShown.length) || !kept.length) return
+      shown.push({ s: s, i: i, kept: kept })
+    })
+    main.innerHTML = shown
       .map(
-        (s, i) =>
-          '<section class="slide ' + (s.variant === 'hero' ? 'hero-bg' : '') + '" data-i="' + i + '"><div class="inner">' +
-          s.blocks
+        (v, n) =>
+          '<section class="slide ' + (v.s.variant === 'hero' ? 'hero-bg' : '') + '" data-i="' + n + '"' + (/^#[0-9a-f]{6}$/i.test(v.s.design?.background) ? ' style="background:' + v.s.design.background + '!important"' : '') + '><div class="inner">' +
+          v.kept
             .map(
-              (b, j) =>
-                '<div class="blk" data-s="' + i + '" data-b="' + j + '"' + (EDITABLE[b.type] ? ' data-e="1"' : '') + '>' +
-                blockHtml(b, st, ctx) +
+              p =>
+                '<div class="blk" data-s="' + v.i + '" data-b="' + p.j + '"' + (EDITABLE[p.b.type] ? ' data-e="1"' : '') + formatAttrs(p.b.design) + '>' +
+                p.html +
                 '</div>'
             )
             .join('') +
@@ -263,14 +292,15 @@ export function siteMain(DATA, VM) {
       )
       .join('')
     main.scrollTop = keep
+    if (current > shown.length - 1) current = Math.max(0, shown.length - 1)
 
     $('#audience').innerHTML = DATA.stakeholders
       .map(s => '<button class="' + (s.key === st.key ? 'on' : '') + '" data-key="' + esc(s.key) + '">' + esc(s.role) + '</button>')
       .join('')
-    $('#dots').innerHTML = DATA.slides
+    $('#dots').innerHTML = shown
       .map((s, i) => '<button class="dot ' + (i === current ? 'on' : '') + '" data-go="' + i + '" aria-label="Go to page ' + (i + 1) + '"></button>')
       .join('')
-    $('#count').textContent = current + 1 + ' / ' + DATA.slides.length
+    $('#count').textContent = shown.length ? current + 1 + ' / ' + shown.length : ''
   }
 
   function go(i) {

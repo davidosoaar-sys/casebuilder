@@ -2,7 +2,7 @@
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { computeModel, FIGURE_ORDER, NUMERIC_INPUTS, figureValues, SELF_HOST_RANGE } from './model.js'
+import { computeModel, FIGURE_ORDER, NUMERIC_INPUTS, figureValues, SELF_HOST_RANGE, DRIVER_FIGURES } from './model.js'
 
 // A realistic case with every figure comfortably above zero.
 const BASE = {
@@ -18,6 +18,10 @@ const BASE = {
   incidentHoursPortal: 3.2,
   peoplePerIncident: 5,
   incidentsPerMonth: 12,
+  auditPrepDaysToday: 10,
+  auditPrepDaysPortal: 5,
+  auditsPerYear: 4,
+  peoplePerAudit: 6,
   maintPctToday: 4,
   maintPctPortal: 2,
   toolSpendToday: 180000,
@@ -55,7 +59,9 @@ test('every figure follows the spec, in order', () => {
   assert.equal(v('maintHoursSaved'), 150 * 0.02 * 2080) // 6,240
   assert.equal(v('platformValue'), 6240 * 100)
   assert.equal(v('toolingValue'), 90_000)
-  const total = v('productivityValue') + v('onboardingValue') + v('incidentValue') + v('platformValue') + v('toolingValue')
+  assert.equal(v('auditDaysSaved'), 5)
+  assert.equal(v('standardsValue'), 5 * 4 * 6 * 8 * 100) // 96,000
+  const total = v('productivityValue') + v('onboardingValue') + v('incidentValue') + v('standardsValue') + v('platformValue') + v('toolingValue')
   assert.ok(Math.abs(v('totalValue') - total) < 1e-6)
   assert.ok(Math.abs(v('netValue') - (total - 400000)) < 1e-6)
   assert.ok(Math.abs(v('paybackMonths') - 400000 / (total / 12)) < 1e-9)
@@ -82,7 +88,7 @@ test('equations print the formula with the current values substituted', () => {
 
 test('later figures read earlier ones: the roll-up is the sum of the five drivers', () => {
   const m = run({})
-  const drivers = ['productivityValue', 'onboardingValue', 'incidentValue', 'platformValue', 'toolingValue']
+  const drivers = ['productivityValue', 'onboardingValue', 'incidentValue', 'standardsValue', 'platformValue', 'toolingValue']
   assert.ok(Math.abs(value(m, 'totalValue') - drivers.reduce((s, k) => s + value(m, k), 0)) < 1e-6)
 })
 
@@ -90,7 +96,7 @@ test('later figures read earlier ones: the roll-up is the sum of the five driver
 
 test('every division by zero returns 0 (flagged), never NaN or Infinity', () => {
   // payback: totalValue is 0, so the divisor (totalValue / 12) is 0
-  const flat = run({ searchHoursToday: 2, searchHoursPortal: 2, rampDaysToday: 4, rampDaysPortal: 4, incidentHoursToday: 3, incidentHoursPortal: 3, maintPctToday: 2, maintPctPortal: 2, toolSpendToday: 90000, toolSpendPortal: 90000 })
+  const flat = run({ searchHoursToday: 2, searchHoursPortal: 2, rampDaysToday: 4, rampDaysPortal: 4, incidentHoursToday: 3, incidentHoursPortal: 3, maintPctToday: 2, maintPctPortal: 2, toolSpendToday: 90000, toolSpendPortal: 90000, auditsPerYear: 0 })
   assert.equal(value(flat, 'totalValue'), 0)
   assert.equal(value(flat, 'paybackMonths'), 0)
   assert.equal(flat.figures.paybackMonths.flag, 'divide-by-zero')
@@ -157,10 +163,12 @@ const DEPENDS = {
   onboardingValue: ['rampDaysSaved', 'newHiresPerYear', 'hoursPerDay', 'hourlyCost'],
   incidentHoursSaved: ['incidentHoursToday', 'incidentHoursPortal', 'peoplePerIncident', 'incidentsPerMonth'],
   incidentValue: ['incidentHoursSaved', 'hourlyCost'],
+  auditDaysSaved: ['auditPrepDaysToday', 'auditPrepDaysPortal'],
+  standardsValue: ['auditDaysSaved', 'auditsPerYear', 'peoplePerAudit', 'hoursPerDay', 'hourlyCost'],
   maintHoursSaved: ['platformEngineers', 'maintPctToday', 'maintPctPortal', 'hoursPerYear'],
   platformValue: ['maintHoursSaved', 'hourlyCost'],
   toolingValue: ['toolSpendToday', 'toolSpendPortal'],
-  totalValue: ['productivityValue', 'onboardingValue', 'incidentValue', 'platformValue', 'toolingValue'],
+  totalValue: ['productivityValue', 'onboardingValue', 'incidentValue', 'standardsValue', 'platformValue', 'toolingValue'],
   netValue: ['totalValue', 'portalCost'],
   paybackMonths: ['portalCost', 'totalValue'],
   roiMultiple: ['portalCost', 'totalValue'],
@@ -264,4 +272,97 @@ test("self-host headcount outside Spotify's 2 to 5 developers warns", () => {
     assert.ok(w, `${n} should warn`)
     assert.match(w.message, /2 to 5 developers/)
   }
+})
+
+
+// ------------------------------------------------------------ standards and audit
+
+const ROLLUPS = ['totalValue', 'netValue', 'paybackMonths', 'roiMultiple', 'fiveYearValue']
+
+test('standardsValue = (today - with Portal) * audits * people * hours/day * hourly cost, with the working shown', () => {
+  const m = run({})
+  assert.equal(value(m, 'standardsValue'), 96_000)
+  assert.equal(m.figures.standardsValue.equation, '(10 - 5) * 4 * 6 * 8 * $100')
+  assert.equal(m.figures.auditDaysSaved.equation, '10 - 5')
+})
+
+for (const input of ['auditPrepDaysToday', 'auditPrepDaysPortal', 'auditsPerYear', 'peoplePerAudit']) {
+  test(`entering ${input} changes standardsValue and the roll-ups, and no other driver`, () => {
+    const before = figureValues(run({}))
+    // portal days move down so the saving grows; the rest move up
+    const factor = input === 'auditPrepDaysPortal' ? 0.5 : 1.5
+    const after = figureValues(run({ [input]: BASE[input] * factor }))
+    const changed = FIGURE_ORDER.filter(k => before[k] !== after[k])
+    assert.ok(changed.includes('standardsValue') && changed.includes('totalValue'))
+    for (const k of DRIVER_FIGURES.filter(k => k !== 'standardsValue')) assert.equal(after[k], before[k], k)
+    for (const k of ['platformEngineers', 'selfHostCost', 'versusSelfHost']) assert.equal(after[k], before[k], k)
+    for (const k of ROLLUPS) assert.notEqual(after[k], before[k], k)
+  })
+}
+
+test('no audits: the driver is zero and the equation prints without NaN', () => {
+  const m = run({ auditsPerYear: 0 })
+  assert.equal(value(m, 'standardsValue'), 0)
+  assert.equal(m.figures.standardsValue.flag, null)
+  const base = run({})
+  assert.equal(value(m, 'totalValue'), value(base, 'totalValue') - value(base, 'standardsValue'))
+})
+
+test('audit figures are clamped at 0 and never NaN, Infinity or negative', () => {
+  const m = run({ auditPrepDaysToday: 3, auditPrepDaysPortal: 9 })
+  assert.equal(value(m, 'auditDaysSaved'), 0)
+  assert.equal(m.figures.auditDaysSaved.flag, 'clamped')
+  assert.equal(value(m, 'standardsValue'), 0)
+  assert.equal(m.figures.standardsValue.equation, '0 * 4 * 6 * 8 * $100')
+  for (const bad of [NaN, Infinity, -4, 'abc', null]) {
+    const x = run({ auditsPerYear: bad, peoplePerAudit: bad, auditPrepDaysToday: bad, auditPrepDaysPortal: bad })
+    for (const k of FIGURE_ORDER) assert.ok(Number.isFinite(x.figures[k].value) && x.figures[k].value >= 0, `${k} for ${bad}`)
+  }
+})
+
+
+// ------------------------------------------------ blank is not zero: incomplete figures
+
+test('a blank input leaves the figures that need it incomplete, not zero', () => {
+  const m = run({ searchHoursPortal: '' })
+  for (const k of ['hoursSavedPerEngPerWeek', 'productivityValue']) {
+    assert.equal(m.figures[k].incomplete, true, k)
+    assert.deepEqual(m.figures[k].missing, ['searchHoursPortal'])
+  }
+  // nothing else is touched
+  for (const k of ['onboardingValue', 'incidentValue', 'standardsValue', 'platformValue', 'toolingValue', 'selfHostCost']) assert.equal(m.figures[k].incomplete, false, k)
+  assert.deepEqual(m.blankInputs, ['searchHoursPortal'])
+  assert.deepEqual(m.invalidInputs, [])
+  // an entered zero is a value, not a gap
+  const z = run({ searchHoursPortal: 0 })
+  assert.equal(z.figures.productivityValue.incomplete, false)
+  assert.equal(value(z, 'productivityValue'), 3 * 500 * 48 * 100)
+})
+
+test('the total only adds the figures that can be computed, and does not drop when one is missing', () => {
+  const full = run({})
+  const m = run({ incidentHoursPortal: '', toolSpendToday: '' })
+  const left = ['productivityValue', 'onboardingValue', 'standardsValue', 'platformValue']
+  assert.equal(value(m, 'totalValue'), left.reduce((s, k) => s + value(m, k), 0))
+  assert.equal(m.figures.totalValue.incomplete, false)
+  assert.ok(!m.figures.totalValue.equation.includes('$0'))
+  // the figures that exist are unchanged by the ones that do not
+  for (const k of left) assert.equal(value(m, k), value(full, k))
+  // roll-ups still work from what is computable
+  assert.equal(m.figures.netValue.incomplete, false)
+})
+
+test('with nothing entered the whole roll-up is incomplete', () => {
+  const m = computeModel({ weeksPerYear: 48, hoursPerDay: 8, hoursPerYear: 2080 })
+  for (const k of [...DRIVER_FIGURES, 'totalValue', 'netValue', 'paybackMonths', 'roiMultiple', 'fiveYearValue', 'selfHostCost', 'versusSelfHost']) {
+    assert.equal(m.figures[k].incomplete, true, k)
+    assert.equal(m.figures[k].value, 0, k)
+  }
+  assert.deepEqual(m.warnings, [])
+})
+
+test('net, payback and ROI also wait for the subscription cost', () => {
+  const m = run({ portalCost: '' })
+  for (const k of ['netValue', 'paybackMonths', 'roiMultiple', 'fiveYearValue', 'versusSelfHost']) assert.equal(m.figures[k].incomplete, true, k)
+  assert.equal(m.figures.totalValue.incomplete, false)
 })

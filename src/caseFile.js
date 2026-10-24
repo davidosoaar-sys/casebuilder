@@ -1,7 +1,9 @@
-import { INPUT_FIELDS, STAKEHOLDERS, OLD_INPUT_KEYS, migrateOldInputs } from './valueModel.js'
+import { INPUT_FIELDS, STAKEHOLDERS, OLD_INPUT_KEYS, migrateOldInputs, sourceOf } from './valueModel.js'
+import { stateOf, validSource, sourceFromLegacy } from './source.js'
 import { defaultFields, defaultStakeholders } from './projects.js'
 import { defaultDeck, migrateDeck, TEXT_STYLES } from './deck/model.js'
 import { uid } from './uid.js'
+import { normalizeBrand } from './brand.js'
 
 // The case file: a small, readable JSON file that holds one business case. The
 // standalone app imports and exports it, and the Claude plugin reads and writes
@@ -11,7 +13,8 @@ import { uid } from './uid.js'
 // {
 //   "caseBuilder": 1,
 //   "company": "Northwind Retail",
-//   "inputs": { "engineers": { "value": 500, "confirmed": true }, ... },
+//   "inputs": { "engineers": { "value": 500, "confirmed": true, "source": { "state": "input", "origin": "..." } }, ... },
+//                 ("confirmed" is kept for older readers; "source" is what the app uses)
 //   "stakeholders": [ "champion", "cto", { "role": "Head of Data", ... } ],
 //   "people": { "cto": [ { "name": "...", "title": "...", "sources": ["https://..."] } ] },
 //   "deck": [ ...slides... ]        // optional; the standard deck when left out
@@ -33,8 +36,8 @@ export function projectToCaseFile(project) {
   const inputs = {}
   for (const f of project.fields) {
     inputs[f.key] = f.custom
-      ? { label: f.label, type: f.type, unit: f.unit || '', value: f.value, confirmed: !!f.confirmed }
-      : { value: f.value, confirmed: !!f.confirmed }
+      ? { label: f.label, type: f.type, unit: f.unit || '', value: f.value, confirmed: stateOf(f) === 'input', source: f.source }
+      : { value: f.value, confirmed: stateOf(f) === 'input', source: f.source }
   }
   return {
     caseBuilder: CASE_VERSION,
@@ -43,7 +46,8 @@ export function projectToCaseFile(project) {
     inputs,
     stakeholders: project.stakeholders.map(s => (s.builtin && !s.edit && !s.pos ? s.key : s)),
     people: project.people || {},
-    deck: project.deck
+    deck: project.deck,
+    brand: normalizeBrand(project.brand)
   }
 }
 
@@ -74,11 +78,14 @@ export function checkCaseFile(file) {
       const type = base ? base.type : old ? 'number' : v.type
       if (!base && !old && !['number', 'percent', 'text'].includes(v.type)) warn(`inputs.${key} is not a known input; give it "label" and "type" (number, percent or text) to keep it as a custom input.`)
       if (type === 'number' || type === 'percent') {
-        if (typeof v.value !== 'number' || !Number.isFinite(v.value)) err(`inputs.${key}.value must be a number.`)
+        if (v.value === '') {
+          // not entered yet
+        } else if (typeof v.value !== 'number' || !Number.isFinite(v.value)) err(`inputs.${key}.value must be a number.`)
         else if (type === 'percent' && (v.value < 0 || v.value > 100)) err(`inputs.${key}.value is a percent, so it must be between 0 and 100.`)
         else if (v.value < 0) err(`inputs.${key}.value cannot be negative.`)
       }
       if (type === 'select' && base && !base.options.includes(v.value)) err(`inputs.${key}.value must be one of: ${base.options.join(', ')}.`)
+      if ('source' in v && !validSource(v.source)) err(`inputs.${key}.source must be { "state": "empty|input|assumption|suggestion", "origin": "..." }.`)
       if ('confirmed' in v && typeof v.confirmed !== 'boolean') err(`inputs.${key}.confirmed must be true or false.`)
     }
   }
@@ -157,7 +164,7 @@ export function caseFileToProject(file, { id } = {}) {
     if (OLD_INPUT_KEYS.has(key)) continue
     if (f) {
       f.value = v.value
-      if ('confirmed' in v) f.confirmed = v.confirmed
+      f.source = validSource(v.source) ? v.source : sourceFromLegacy(v.value, v.confirmed)
     } else {
       fields.push({
         key,
@@ -167,7 +174,7 @@ export function caseFileToProject(file, { id } = {}) {
         group: 'Custom',
         custom: true,
         value: v.value,
-        confirmed: !!v.confirmed
+        source: validSource(v.source) ? v.source : sourceFromLegacy(v.value, v.confirmed)
       })
     }
   }
@@ -176,7 +183,7 @@ export function caseFileToProject(file, { id } = {}) {
   for (const [key, v] of Object.entries(legacy)) {
     if (byKey[key] && !(file.inputs && key in file.inputs)) {
       byKey[key].value = v.value
-      byKey[key].confirmed = v.confirmed
+      byKey[key].source = sourceOf(v)
     }
   }
   // the company name field always follows the file's company unless set explicitly
@@ -208,7 +215,7 @@ export function caseFileToProject(file, { id } = {}) {
 
   const deck = file.deck ? migrateDeck(withIds(file.deck)) : defaultDeck()
 
-  return { id: id || uid(), name: file.company.trim(), updatedAt: Date.now(), fields, stakeholders, deck, people }
+  return { id: id || uid(), name: file.company.trim(), updatedAt: Date.now(), fields, stakeholders, deck, people, documents: [], brand: normalizeBrand(file.brand) }
 }
 
 // Hand-written decks may leave out ids; the editor needs them.

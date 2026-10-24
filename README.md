@@ -25,6 +25,33 @@ npm run build
 
 Node 18 or newer. Projects live in the browser's local storage.
 
+### Quick person lookup
+
+Click **Person lookup** in the sidebar to open its dedicated page, including when no deal is open. Enter
+a name, `Name at Company`, an email or a LinkedIn profile; paste multiple people
+on separate lines or separate them with semicolons. An open deal supplies the
+default company. Identity streams first, followed by public context. Repeated
+lookups use a session cache; changing deals or connector permissions invalidates
+the visible results. Unsourced claims are discarded.
+
+**Add to this deal** saves a named stakeholder and an explicitly inferred role
+mapping. Existing role framings are reused; missing ones are added. Numerical
+findings require a separate **Review suggested input** and **Apply suggestion**
+step. Searches never write directly to a deal.
+
+The **Demo fixture** checkbox uses a fixed fictional result, without an API call.
+Live search needs the existing `ANTHROPIC_API_KEY` server configuration (and the
+workspace access code on Vercel). Connector toggles control uploaded material;
+only enabled material with source links can be used. These are the app's existing
+uploaded exports, not live OAuth connections.
+
+Provider/search implementation lives in `server/personAgent.js`. The UI calls
+`src/personAgent.js`, which reads NDJSON from `POST /api/person`. Each claim is
+`{ value, sourceUrl, sourceType }`; public signals use `claim` in place of `value`.
+Snapshots contain identity, role match, reporting lines, public signals, likely
+priorities, suggested inputs, ambiguity candidates, and sources used/skipped.
+`src/personAgentStub.js` implements the same streaming interface for UI demos.
+
 - **Projects.** Start a project with just the company name. A new project walks
   through a stakeholder map, then people, then lands on its Details.
 - **Details.** Inputs (each one an *assumption* until the customer confirms it,
@@ -124,10 +151,27 @@ zero gives 0, value figures never go below 0, and nothing is ever NaN or Infinit
 (the figure carries a flag saying why).
 
 Inputs come in *today / with Portal* pairs, so each saving is a difference the
-customer can check. **Suggest starting values** is the only place an AI model is
-involved: it proposes values for unconfirmed inputs from the company and its
-engineer count, they are written as assumptions, and the arithmetic does the rest.
-It needs `ANTHROPIC_API_KEY` and does nothing (and says so) when unavailable.
+customer can check. Nothing is pre-filled. An empty input is **not** zero: a figure
+that needs it is incomplete, is left out of the deck (never a $0 bar) and is left
+out of the total, which adds only the figures that can be computed.
+
+**Every number carries a source** (`input`, `assumption` or `suggestion`, plus its
+origin). Only inputs count toward confidence. Editing a suggestion turns it into an
+assumption. All of that is for you: the client deck, the website, the PowerPoint and
+the one-pager show none of it, only the arithmetic. For you there is an **Internal
+summary** export: every field with its state and origin, and the questions to confirm.
+
+**Suggest values** (per field or for all empty ones) is the only place an AI model
+is involved, and it only proposes values. The agent can always search the public web.
+It can read only the **Connections** you allow (Gong, HubSpot, Slack, Clay, Lemlist;
+the page sits under Projects in the sidebar and everything is off by default). Best
+source first: a figure stated in allowed material (an input, with the quote), a
+checkable public source (an input, with the link), a published benchmark (with its
+publication) and a rule from another input. A connection that is off is never read,
+and a gap says so. A suggestion is pinned with its origin and a timestamp and never
+regenerates by itself. In this build each connection takes pasted or uploaded
+material. The agent needs `ANTHROPIC_API_KEY`; without it the rule-based suggestions
+still work and the field says the agent was unavailable.
 
 `npm test` runs the model and deck tests. The plugin docs and skill text still
 describe the old inputs and will be refreshed when the plugin work resumes.

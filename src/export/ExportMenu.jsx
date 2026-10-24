@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react'
 import logoSvg from '../assets/backstage-logo.svg?raw'
 import faviconSvg from '../../public/favicon.svg?raw'
-import { prepareOnePager, pickAudience } from './prepare.js'
+import { prepareOnePager, prepareInternal, pickAudience } from './prepare.js'
 import { buildEnv, resolveSlides } from '../deck/model.js'
-import { buildOnePager } from './html.js'
+import { buildOnePager, buildInternalSummary } from './html.js'
 import Preview from './Preview.jsx'
+import { normalizeBrand, brandLogoHtml, brandDocument } from '../brand.js'
 
 // Export menu: PDF, PowerPoint, a one-pager, and the website view, all built from
 // the deck on screen for the stakeholder selected in the toolbar.
@@ -12,20 +13,21 @@ import Preview from './Preview.jsx'
 const slug = s => String(s || 'deck').replace(/[^\w\- ]+/g, '').trim() || 'deck'
 
 // Browser helpers the PowerPoint builder needs.
-function rasterLogo() {
+function rasterLogo(brand) {
   return new Promise(resolve => {
     const img = new Image()
-    const ratio = 2079.95 / 456.05
+    if (brand?.hideLogo) return resolve(null)
     img.onload = () => {
       const canvas = document.createElement('canvas')
       canvas.width = 1200
+      const ratio = (img.naturalWidth || 2079.95) / (img.naturalHeight || 456.05)
       canvas.height = Math.round(1200 / ratio)
       canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
       resolve({ data: canvas.toDataURL('image/png'), ratio })
     }
     img.onerror = () => resolve(null)
     const withSize = logoSvg.replace('<svg ', '<svg width="1200" height="263" ')
-    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(withSize)}`
+    img.src = normalizeBrand(brand).logo || `data:image/svg+xml;charset=utf-8,${encodeURIComponent(withSize)}`
   })
 }
 
@@ -38,7 +40,7 @@ function imageSize(src) {
   })
 }
 
-export default function ExportMenu({ company: projectName, deck, inputs, fields, stakeholders, activeKey, onWebsite }) {
+export default function ExportMenu({ company: projectName, deck, inputs, fields, connectors, stakeholders, activeKey, onWebsite, brand }) {
   // The deck itself says {company} from the Company input, so use that name everywhere.
   const company = inputs.companyName || projectName
   const [open, setOpen] = useState(false)
@@ -72,8 +74,9 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
       const env = buildEnv(inputs, fields, who)
       const file = await buildPptx({
         company,
+        brand,
         slides: resolveSlides(deck, env),
-        deps: { PptxGenJS, logoPng: rasterLogo, imageSize }
+        deps: { PptxGenJS, logoPng: () => rasterLogo(brand), imageSize }
       })
       await file.writeFile({ fileName: `${slug(company)} - business case.pptx` })
     } catch (err) {
@@ -87,20 +90,28 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
   function onePager() {
     setOpen(false)
     const facts = prepareOnePager({ inputs, fields, who })
-    setPreview({ kind: 'onepager', title: 'One-pager', file: `${slug(company)} - one-pager.html`, html: buildOnePager({ facts, logoSvg, faviconSvg }) })
+    setPreview({ kind: 'onepager', title: 'One-pager', file: `${slug(company)} - one-pager.html`, html: brandDocument(buildOnePager({ facts, logoSvg: brandLogoHtml(brand, logoSvg), faviconSvg }), brand) })
+  }
+
+  // For Chris, never the client: every input with its state and origin, and the questions to confirm.
+  function internal() {
+    setOpen(false)
+    const facts = prepareInternal({ company, fields, inputs, connectors })
+    setPreview({ kind: 'internal', title: 'Internal summary', for: 'you only', file: `${slug(company)} - inputs and open questions.html`, html: buildInternalSummary({ facts, logoSvg, faviconSvg }) })
   }
 
   const items = [
     { name: 'PDF', note: 'Print or save every page', run: pdf },
-    { name: 'PowerPoint', note: '.pptx, editable', run: pptx },
+    { name: 'PowerPoint', note: 'Download an editable .pptx', run: pptx },
     { name: 'One-pager', note: 'A single A4 summary', run: onePager },
-    { name: 'View as website', note: 'See it, edit it, copy the link', run: () => { setOpen(false); onWebsite() } }
+    { name: 'Internal summary', note: 'For you: sources and open questions', run: internal },
+    { name: 'Interactive website', note: 'See it, edit it, copy the link', run: () => { setOpen(false); onWebsite() } }
   ]
 
   return (
     <div className="export" ref={ref}>
-      <button className="primary" onClick={() => setOpen(o => !o)} aria-expanded={open} disabled={!!busy}>
-        {busy ? 'Working…' : 'Export'} <span aria-hidden="true">▾</span>
+      <button className="primary" onClick={() => setOpen(o => !o)} aria-haspopup="menu" aria-expanded={open} disabled={!!busy}>
+        {busy ? 'Working…' : 'View as'} <span aria-hidden="true">▾</span>
       </button>
 
       {open && (

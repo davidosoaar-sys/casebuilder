@@ -81,11 +81,13 @@ ${iconLink(faviconSvg)}
     <p class="cares">${esc(f.cares)}</p>
   </div>
 
-  <div class="stats">${f.stats
+  <div class="stats" style="${f.stats.length ? '' : 'display:none'}">${f.stats
     .map(s => `<div class="stat ${s.tone || ''}"><span>${esc(s.label)}</span><strong>${esc(s.value)}</strong></div>`)
     .join('')}</div>
 
-  <section>
+  ${
+    f.groups.length
+      ? `<section>
     <h2>Where the value comes from</h2>
     ${f.groups
       .map(
@@ -100,9 +102,13 @@ ${iconLink(faviconSvg)}
       )
       .join('')}
     <div class="total"><span>Total annual value</span><strong>${esc(f.total)}</strong></div>
-  </section>
+  </section>`
+      : ''
+  }
 
-  <section>
+  ${
+    f.versus
+      ? `<section>
     <h2>Against self-hosting Backstage</h2>
     ${f.versus.rows
       .map(
@@ -112,23 +118,105 @@ ${iconLink(faviconSvg)}
       )
       .join('')}
     <p class="vs">${esc(f.versus.lead)} <strong>${esc(f.versus.verdict)}</strong></p>
-  </section>
+  </section>`
+      : ''
+  }
 
   <section class="cols">
     <div><h2>What ${esc(f.role)} needs to see</h2><ul>${f.needs.map(n => `<li>${esc(n)}</li>`).join('')}</ul></div>
     <div><h2>The objection, and the answer</h2><blockquote>${esc(f.objection)}</blockquote><p class="small">${esc(f.counter)}</p></div>
   </section>
 
-  <section>
-    <h2>${f.openCount ? `${f.openCount} input${f.openCount === 1 ? '' : 's'} still to confirm` : 'Every input is confirmed'}</h2>
-    ${
-      f.openCount
-        ? `<ul class="assume">${f.open.map(o => `<li><span style="color:#15171a">${esc(o.label)}</span><span>${esc(o.assumed)}</span></li>`).join('')}</ul>`
-        : '<p class="small">Every material input has been confirmed by the customer.</p>'
-    }
-  </section>
+  <div class="foot"><span>${esc(f.company)} · Spotify Portal for Backstage</span><span>Every figure shows its working.</span></div>
+</div>
+</body></html>`
+}
 
-  <div class="foot"><span>${esc(f.company)} · Spotify Portal for Backstage</span><span>Figures come from the inputs above and the value model.</span></div>
+// ------------------------------------------------------- internal summary (Chris's page)
+
+const STATE_NAME = { empty: 'Empty', input: 'Input', assumption: 'Assumption', suggestion: 'Suggestion' }
+
+// facts: from prepareInternal(). One printed page of everything still open.
+export function buildInternalSummary({ facts: f, logoSvg, faviconSvg }) {
+  const logo = (logoSvg || '').replace(/#7df3e1/gi, '#1f8a76')
+  const when = iso => (iso ? new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '')
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>${esc(f.company)} - inputs and open questions</title>
+${iconLink(faviconSvg)}
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  @page { size: A4; margin: 12mm; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #e9eaec; }
+  body { font-family: ${FONT}; color: #15171a; font-size: 9pt; line-height: 1.45; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page { width: 210mm; margin: 0 auto; background: #fff; padding: 12mm 14mm; }
+  @media print { html, body { background: #fff; } .page { width: auto; margin: 0; padding: 0; } .toolbar { display: none; } }
+  .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4mm; }
+  .top svg { height: 20px; width: auto; display: block; }
+  .meta { font-size: 8pt; color: #5b6168; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+  h1 { font-size: 19pt; margin: 0 0 1mm; line-height: 1.1; }
+  h2 { font-size: 8pt; letter-spacing: .06em; text-transform: uppercase; color: #1f8a76; margin: 5mm 0 2mm; }
+  .facts { display: flex; gap: 6mm; flex-wrap: wrap; margin: 3mm 0; }
+  .fact { border: 1px solid #dfe2e6; border-radius: 6px; padding: 2mm 3mm; background: #f6f8f9; }
+  .fact span { display: block; font-size: 6.5pt; text-transform: uppercase; letter-spacing: .05em; color: #6a7078; font-weight: 600; }
+  .fact strong { font-size: 13pt; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 6.8pt; text-transform: uppercase; letter-spacing: .05em; color: #6a7078; border-bottom: 1px solid #c9ced3; padding: 1mm 1.5mm; }
+  td { padding: 1.1mm 1.5mm; border-bottom: 1px solid #eceff1; vertical-align: top; }
+  tr.grp td { background: #f1f4f6; font-weight: 700; font-size: 7.4pt; text-transform: uppercase; letter-spacing: .05em; }
+  .st { display: inline-block; font-size: 6.8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: .3mm 1.6mm; border-radius: 99px; border: 1px solid #c9ced3; white-space: nowrap; }
+  .st-input { color: #1f8a76; border-color: #1f8a76; }
+  .st-assumption { color: #8a6500; border-color: #c99a00; }
+  .st-suggestion { color: #a3226f; border-color: #e5399a; }
+  .st-empty { color: #6a7078; border-style: dashed; }
+  .origin { color: #3e444a; } .origin a { color: inherit; }
+  ul.q { margin: 0; padding-left: 5mm; } ul.q li { margin-bottom: 1.3mm; }
+  .q em { color: #6a7078; font-style: normal; }
+  .toolbar { position: fixed; top: 12px; right: 16px; }
+  .toolbar button { font: inherit; font-weight: 700; padding: 8px 14px; border-radius: 4px; border: 0; background: #2fc7a8; color: #111; cursor: pointer; }
+</style></head>
+<body>
+<div class="toolbar"><button onclick="window.print()">Print / Save as PDF</button></div>
+<div class="page">
+  <div class="top"><div>${logo}</div><div class="meta">Inputs and open questions · ${esc(f.date)}</div></div>
+  <h1>${esc(f.company)}</h1>
+  <div class="facts">
+    <div class="fact"><span>Case confidence</span><strong>${f.confidence}%</strong></div>
+    <div class="fact"><span>Figures computed</span><strong>${f.figuresDone} of ${f.figuresTotal}</strong></div>
+    <div class="fact"><span>Connections the agent could read</span><strong style="font-size:9.5pt">${f.connections.length ? esc(f.connections.join(', ')) : 'None'}</strong></div>
+  </div>
+  <p style="margin:0;color:#5b6168">Confidence counts inputs only: what the customer stated or a public source shows. Assumptions and suggestions are listed below as questions to confirm. This page is for you; it is not part of the client deck.</p>
+
+  ${
+    f.waiting.length
+      ? `<h2>Figures not yet in the deck</h2><ul class="q">${f.waiting.map(w => `<li><strong>${esc(w.label)}</strong> <em>needs ${esc(w.missing.join(', '))}</em></li>`).join('')}</ul>`
+      : ''
+  }
+
+  <h2>Every input, its state and where it came from</h2>
+  <table>
+    <tr><th>Input</th><th>Value</th><th>State</th><th>Origin</th></tr>
+    ${f.groups
+      .map(
+        g => `<tr class="grp"><td colspan="4">${esc(g.group)}</td></tr>` +
+          g.rows
+            .map(
+              r => `<tr><td>${esc(r.label)}</td><td>${esc(r.value) || '—'}</td><td><span class="st st-${r.state}">${STATE_NAME[r.state]}</span></td><td class="origin">${esc(r.origin)}${r.pinnedAt ? ` <em style="color:#7b838b">· pinned ${esc(when(r.pinnedAt))}</em>` : ''}</td></tr>`
+            )
+            .join('')
+      )
+      .join('')}
+  </table>
+
+  <h2>Questions to confirm (${f.questions.length})</h2>
+  ${
+    f.questions.length
+      ? `<ul class="q">${f.questions
+          .map(q => `<li><strong>${esc(q.label)}</strong> ${q.value ? `<em>We have ${esc(q.value)} (${esc(STATE_NAME[q.state].toLowerCase())}).</em>` : '<em>Not yet known.</em>'}</li>`)
+          .join('')}</ul>`
+      : '<p>Every input is confirmed.</p>'
+  }
 </div>
 </body></html>`
 }
