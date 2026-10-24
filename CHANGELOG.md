@@ -23,7 +23,7 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ---
 
-## v0.5.1 (2026-10-24)
+## v0.5.0 (2026-10-24)
 
 - Combined Amr's accounts, password security, cloud deal storage, dashboard/settings and Hermes worker with David's website framework, previews, deck/input editing, Claude connector and design-agent instructions.
 - Preserved the cloud-backed save lifecycle and project-scoped connector selection. Added explicit sample creation for Nike, Lovable and Fortnite in the cloud-backed project list.
@@ -104,7 +104,7 @@ Checks: 180/180 tests, production build OK, sign-up email test
 
 ## Development milestone history (not separate releases)
 
-The following notes were recorded while David's work was local. Their features are combined in v0.5.1; historical local-only statements describe the state at the time. No release tags are implied.
+The following notes were recorded while David's work was local. Their features are combined in v0.5.0; historical local-only statements describe the state at the time. No release tags are implied.
 
 ### One-pager agent instruction (2026-10-24)
 

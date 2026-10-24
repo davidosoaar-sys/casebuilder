@@ -14,7 +14,7 @@
   Keep local work under an unversioned `Unreleased` heading. A version identifies
   the release actually pushed to `main`, not each local edit or WIP snapshot.
   Assign its dated heading when preparing the push, for example
-  `## v0.5.1 (2026-10-24)`.
+  `## v0.5.0 (2026-10-24)`.
 - Use `vMAJOR.MINOR.PATCH`, with no dot after the `v`.
 - Use PATCH for fixes, styling refinements, and documentation; MINOR for new
   features; follow the existing release policy for MAJOR versions.
