@@ -33,7 +33,7 @@ async function session(acct) {
   await page.waitForSelector('#auth-email')
   await page.type('#auth-email', acct.email); await page.type('#auth-password', acct.pw)
   await page.click('button[type=submit]')
-  await page.waitForSelector('.sidebar-account', { timeout: 15000 })
+  await page.waitForSelector('.side-settings', { timeout: 15000 })
   await toProjects(page)
   return { ctx, page }
 }
@@ -55,12 +55,8 @@ const t2rows = await db(`deals?select=name&owner_id=eq.${t2id}`)
 check('new account sees exactly one Spotify sample', first.filter(n => /spotify/i.test(n)).length === 1, first.join(', '))
 check('sample is a row in Supabase for that account', t2rows.some(r => /spotify/i.test(r.name)))
 
-// 1b. First visit asks for a name; it is saved to the account, not the browser.
-if (await a.page.$('#user-name')) {
-  await a.page.type('#user-name', 'Tester'); await a.page.click('.hello-form button[type=submit]')
-  await a.page.waitForSelector('xpath/.//button[normalize-space()="New project"]', { timeout: 10000 })
-}
-check('name step done, New project available', Boolean((await a.page.$$('xpath/.//button[normalize-space()="New project"]')).length))
+// 1b. Projects page offers New project straight away (name now lives in Settings).
+check('New project available on Projects', Boolean((await a.page.$$('xpath/.//button[normalize-space()="New project"]')).length))
 
 // 2. Create a deal in the UI -> row appears in Supabase.
 const [newBtn] = await a.page.$$('xpath/.//button[normalize-space()="New project"]'); await newBtn.click()
@@ -77,7 +73,7 @@ await a.page.reload({ waitUntil: 'networkidle2' })
 await toProjects(a.page)
 await a.page.waitForSelector('.project-card', { timeout: 15000 })
 const [card] = await a.page.$$(`xpath/.//div[contains(@class,"project-card")][.//strong[normalize-space()="${NAME}"]]`)
-const [dup] = await card.$$('xpath/.//button[normalize-space()="Duplicate"]'); await dup.click()
+const [dup] = await card.$$('button[aria-label^="Duplicate"]'); await dup.click()
 await sleep(800); await waitSaved(a.page)
 rows = await rowsNamed(NAME)
 const copies = await rowsNamed(NAME + ' (copy)')
@@ -112,7 +108,6 @@ check('original row untouched by the duplicate', rows.some(r => r.version === v1
 // 4. Different browser, same account: deals are there (cloud, not this browser).
 const b = await session(T2)
 const fromB = await names(b.page)
-check('name followed the account to a clean browser', !(await b.page.$('#user-name')))
 check('same account in a clean browser sees its deals', fromB.includes(NAME) && fromB.includes(NAME + ' (copy)'), fromB.join(', '))
 await b.page.screenshot({ path: '/tmp/deals-2-other-browser.png' })
 

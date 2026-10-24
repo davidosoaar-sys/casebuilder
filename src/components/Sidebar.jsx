@@ -1,13 +1,12 @@
 import React from 'react'
 import AppLogo from './AppLogo.jsx'
-import ThemeToggle from './ThemeToggle.jsx'
 import SaveIndicator from './SaveIndicator.jsx'
 
 // Global navigation. The project's own tabs are in ProjectNav.
 
 const icon = {
   dashboard: <><rect x="2.5" y="2.5" width="4.5" height="5.5" rx=".8" /><rect x="9" y="2.5" width="4.5" height="3.5" rx=".8" /><rect x="9" y="8" width="4.5" height="5.5" rx=".8" /><rect x="2.5" y="10" width="4.5" height="3.5" rx=".8" /></>,
-  settings: <><circle cx="8" cy="8" r="2" /><path d="M8 1.8v1.6M8 12.6v1.6M1.8 8h1.6M12.6 8h1.6M3.6 3.6l1.1 1.1M11.3 11.3l1.1 1.1M3.6 12.4l1.1-1.1M11.3 4.7l1.1-1.1" strokeLinecap="round" /></>,
+  settings: <><path d="M6.9 1.8h2.2l.35 1.7 1.05.6 1.65-.55 1.1 1.9-1.3 1.15v1.2l1.3 1.15-1.1 1.9-1.65-.55-1.05.6-.35 1.7H6.9l-.35-1.7-1.05-.6-1.65.55-1.1-1.9 1.3-1.15V6.6L2.75 5.45l1.1-1.9 1.65.55 1.05-.6z" strokeLinejoin="round" /><circle cx="8" cy="8" r="2" /></>,
   lookup: <><circle cx="6.5" cy="5" r="2.5" /><path d="M2 13c0-3 9-3 9 0M11 8l3 3M12 7l2 2" /></>,
   projects: (
     <path d="M2.5 4.5h4l1.5 1.8h5.5v6.2h-11z" strokeLinejoin="round" />
@@ -65,7 +64,7 @@ function initialCollapsed() {
   try { return localStorage.getItem(COLLAPSE_KEY) === 'collapsed' } catch { return false }
 }
 
-export default function Sidebar({ view, project, projectMode = false, onNav, theme, onThemeToggle, saveStatus, account, children }) {
+export default function Sidebar({ view, project, projectMode = false, onNav, onSettings, settingsOpen = false, saveStatus, account, children }) {
   const [collapsed, setCollapsed] = React.useState(initialCollapsed)
   React.useEffect(() => {
     document.documentElement.dataset.sidebar = collapsed ? 'collapsed' : 'open'
@@ -91,13 +90,14 @@ export default function Sidebar({ view, project, projectMode = false, onNav, the
         </>}
         {!projectMode && <Item id="connections" label="Connections" view={view} onNav={onNav} title="What the agent is allowed to read" />}
         <Item id="lookup" label="Person lookup" view={view} onNav={onNav} />
-        <Item id="settings" label="Settings" view={view} onNav={onNav} />
       </nav>
       {children}
       <div className="sidebar-footer">
-        {account && <div className="sidebar-account"><span title={account.session.user.email}>{account.session.user.email}</span><button type="button" onClick={account.signOut}>Sign out</button></div>}
         <SaveIndicator status={saveStatus} />
-        <ThemeToggle theme={theme} onToggle={onThemeToggle} />
+        <button type="button" className={`side-item side-settings ${settingsOpen ? 'side-on' : ''}`} onClick={onSettings} title="Settings" aria-label="Settings" aria-haspopup="dialog">
+          <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">{icon.settings}</svg>
+          <span className="side-label side-settings-text"><span>Settings</span>{account && <small>{account.session.user.email}</small>}</span>
+        </button>
       </div>
     </aside>
   )

@@ -34,16 +34,16 @@ await page.screenshot({ path: '/tmp/auth-2-wrong.png' })
 await page.$eval('#auth-password', e => { e.value = '' })
 await page.type('#auth-password', env.TEST_PASSWORD)
 await page.click('button[type=submit]')
-await page.waitForSelector('.sidebar-account', { timeout: 15000 })
+await page.waitForSelector('.side-settings', { timeout: 15000 })
 check('right password opens the app', true)
-check('sidebar shows the signed-in email', (await page.$eval('.sidebar-account span', e => e.textContent)) === EMAIL)
+check('sidebar shows the signed-in email', (await page.$eval('.side-settings small', e => e.textContent)) === EMAIL)
 await page.screenshot({ path: '/tmp/auth-3-in.png' })
 
 await page.reload({ waitUntil: 'networkidle2' })
-await page.waitForSelector('.sidebar-account', { timeout: 15000 }).catch(() => {})
-check('session survives a page reload', Boolean(await page.$('.sidebar-account')))
+await page.waitForSelector('.side-settings', { timeout: 15000 }).catch(() => {})
+check('session survives a page reload', Boolean(await page.$('.side-settings')))
 
-{ const [out] = await page.$$('xpath/.//button[normalize-space()="Sign out"]'); await out.click() }
+{ await page.click('.side-settings'); await page.waitForSelector('.overlay'); const [out] = await page.$$('xpath/.//button[normalize-space()="Sign out"]'); await out.click() }
 await page.waitForSelector('#auth-email', { timeout: 10000 }).catch(() => {})
 check('sign out returns to the sign-in screen', Boolean(await page.$('#auth-email')))
 check('no page errors', errors.length === 0)

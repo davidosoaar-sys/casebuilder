@@ -2,14 +2,22 @@ import React, { useEffect, useState } from 'react'
 import { confidence } from '../valueModel.js'
 import { safeAsset } from '../brand.js'
 import { SPOTIFY_LOGO } from '../spotifyLogo.js'
+import PageHead from './PageHead.jsx'
 
-// Landing page: start a new project (company name only), open or delete one.
+// Projects: a quiet, Claude-style index. Each deal is a compact row-card with
+// its logo and name; Cards (two columns) or List (one column, more detail).
 
-export default function ProjectList({ user, onUser, projects, loading = false, createRequest = 0, activeId, onCreate, onOpen, onDelete, onDuplicate }) {
+const fmtDate = ms => {
+  const d = new Date(ms)
+  const sameYear = d.getFullYear() === new Date().getFullYear()
+  return d.toLocaleDateString(undefined, sameYear ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' })
+}
+const initials = name => name.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()
+
+export default function ProjectList({ projects, loading = false, createRequest = 0, activeId, onCreate, onOpen, onDelete, onDuplicate }) {
   const [creating, setCreating] = useState(createRequest > 0)
   useEffect(() => { if (createRequest > 0) setCreating(true) }, [createRequest])
   const [name, setName] = useState('')
-  const [who, setWho] = useState('')
   const [display, setDisplay] = useState(() => {
     try { return localStorage.getItem('casebuilder.project-view') === 'list' ? 'list' : 'cards' } catch { return 'cards' }
   })
@@ -17,12 +25,7 @@ export default function ProjectList({ user, onUser, projects, loading = false, c
     setDisplay(value)
     try { localStorage.setItem('casebuilder.project-view', value) } catch {}
   }
-
-  function close() {
-    setCreating(false)
-    setName('')
-  }
-
+  function close() { setCreating(false); setName('') }
   function submit(e) {
     e.preventDefault()
     const trimmed = name.trim()
@@ -30,77 +33,39 @@ export default function ProjectList({ user, onUser, projects, loading = false, c
     onCreate(trimmed)
     close()
   }
-
   function confirmDelete(e, p) {
     e.stopPropagation()
     if (window.confirm(`Delete "${p.name}"? This can't be undone.`)) onDelete(p.id)
   }
 
-  return (
-    <div className="projects-page">
-      <header className="projects-head">
-        <p className="mono-label">Technology / Business case</p>
-        {user ? (
-          <>
-            <h1>Hello, {user}.</h1>
-            <p className="sub">
-              Turn a customer's own numbers into an exec-ready business case for
-              Spotify Portal.
-            </p>
-            <div className="head-actions">
-              <button className="primary" onClick={() => setCreating(true)}>
-                New project
-              </button>
-              <button className="link-btn" onClick={() => onUser('')}>
-                Not {user}? Change name
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <h1>Hello.</h1>
-            <form
-              className="hello-form"
-              onSubmit={e => {
-                e.preventDefault()
-                if (who.trim()) onUser(who.trim())
-              }}
-            >
-              <label htmlFor="user-name">What should we call you?</label>
-              <div className="hello-row">
-                <input
-                  id="user-name"
-                  type="text"
-                  placeholder="Your first name"
-                  value={who}
-                  onChange={e => setWho(e.target.value)}
-                  autoFocus
-                />
-                <button className="primary" type="submit" disabled={!who.trim()}>
-                  Continue
-                </button>
-              </div>
-            </form>
-          </>
-        )}
-      </header>
+  const sorted = [...projects].sort((a, b) => b.updatedAt - a.updatedAt)
 
-      <section className="projects-body">
-        <div className="project-list-heading"><p className="mono-label">Your projects · {projects.length}</p>
-          <div className="project-view-switch" role="group" aria-label="Project view">
-            <button className="ghost" aria-pressed={display === 'cards'} onClick={() => changeDisplay('cards')}><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true"><rect x="2" y="2" width="4" height="4" rx=".5"/><rect x="10" y="2" width="4" height="4" rx=".5"/><rect x="2" y="10" width="4" height="4" rx=".5"/><rect x="10" y="10" width="4" height="4" rx=".5"/></svg>Cards</button>
-            <button className="ghost" aria-pressed={display === 'list'} onClick={() => changeDisplay('list')}><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M5 3h9M5 8h9M5 13h9M1 3h1M1 8h1M1 13h1"/></svg>List</button>
-          </div>
+  return (
+    <div className="page projects-page">
+      <PageHead label="Projects" title="Projects">
+        <div className="project-view-switch" role="group" aria-label="Project view">
+          <button className="view-btn" aria-pressed={display === 'cards'} onClick={() => changeDisplay('cards')} title="Cards" aria-label="Cards">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+          </button>
+          <button className="view-btn" aria-pressed={display === 'list'} onClick={() => changeDisplay('list')} title="List" aria-label="List">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M5 3.5h9M5 8h9M5 12.5h9M2 3.5h.5M2 8h.5M2 12.5h.5" strokeLinecap="round"/></svg>
+          </button>
         </div>
-        {loading ? (
-          <p className="empty" aria-busy="true">Loading your projects…</p>
-        ) : projects.length === 0 ? (
-          <p className="empty">No projects yet. Start your first one.</p>
-        ) : (
-          <ul className={`project-grid ${display === 'list' ? 'project-list-view' : 'project-cards-view'}`} aria-label={display === 'list' ? 'Projects list' : 'Project cards'}>
-            {[...projects].sort((a, b) => b.updatedAt - a.updatedAt).map(p => {
-              const logo = safeAsset(p.projectLogo) || safeAsset(p.brand?.logo) || (/^spotify$/i.test(p.name) ? SPOTIFY_LOGO : '')
-              return (
+        <button className="primary" onClick={() => setCreating(true)}>New project</button>
+      </PageHead>
+
+      {loading ? (
+        <p className="empty" aria-busy="true">Loading your projects…</p>
+      ) : sorted.length === 0 ? (
+        <div className="empty-state">
+          <p>No projects yet.</p>
+          <button className="primary" onClick={() => setCreating(true)}>Start your first one</button>
+        </div>
+      ) : (
+        <ul className={`project-grid ${display === 'list' ? 'project-list-view' : 'project-cards-view'}`} aria-label={display === 'list' ? 'Projects list' : 'Project cards'}>
+          {sorted.map(p => {
+            const logo = safeAsset(p.projectLogo) || safeAsset(p.brand?.logo) || (/^spotify$/i.test(p.name) ? SPOTIFY_LOGO : '')
+            return (
               <li key={p.id}>
                 <div
                   className={`project-card ${p.id === activeId ? 'project-card-active' : ''}`}
@@ -109,57 +74,35 @@ export default function ProjectList({ user, onUser, projects, loading = false, c
                   onClick={() => onOpen(p.id)}
                   onKeyDown={e => e.target === e.currentTarget && e.key === 'Enter' && onOpen(p.id)}
                 >
-                  <div className="project-card-top">
-                    <span className="project-meta">
-                      Touched {new Date(p.updatedAt).toLocaleString()}
-                    </span>
-                    <button
-                      className="icon-btn"
-                      onClick={e => confirmDelete(e, p)}
-                      title="Delete project"
-                      aria-label={`Delete ${p.name}`}
-                    >
-                      ×
+                  <span className="project-company-logo">{logo ? <img src={logo} alt="" /> : <span aria-hidden="true">{initials(p.name)}</span>}</span>
+                  <span className="project-text">
+                    <strong>{p.name}</strong>
+                    <span className="project-meta">{fmtDate(p.updatedAt)} · {confidence(p.fields)}% confirmed</span>
+                  </span>
+                  <span className="project-actions">
+                    <button className="icon-btn" aria-label={`Duplicate ${p.name}`} title="Duplicate" onClick={e => { e.stopPropagation(); onDuplicate(p) }}>
+                      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true"><rect x="5" y="5" width="8.5" height="8.5" rx="1.5"/><path d="M10.5 5V3.5A1.5 1.5 0 0 0 9 2H3.5A1.5 1.5 0 0 0 2 3.5V9a1.5 1.5 0 0 0 1.5 1.5H5"/></svg>
                     </button>
-                  </div>
-                  <div className="project-identity"><span className="project-company-logo">{logo ? <img src={logo} alt={`${p.name} logo`} /> : <span aria-hidden="true">{p.name.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()}</span>}</span><strong>{p.name}</strong></div>
-                  <div className="project-card-foot">
-                    <span className="project-meta">{confidence(p.fields)}% confirmed</span>
-                    <button className="link-btn" aria-label={`Duplicate ${p.name}`} onClick={e => { e.stopPropagation(); onDuplicate(p) }}>Duplicate</button>
-                    <span className="go">Open →</span>
-                  </div>
+                    <button className="icon-btn" onClick={e => confirmDelete(e, p)} title="Delete project" aria-label={`Delete ${p.name}`}>
+                      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true"><path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </button>
+                  </span>
                 </div>
               </li>
-            )})}
-          </ul>
-        )}
-      </section>
+            )
+          })}
+        </ul>
+      )}
 
       {creating && (
         <div className="modal-backdrop" onClick={close}>
-          <form
-            className="modal"
-            onClick={e => e.stopPropagation()}
-            onSubmit={submit}
-            onKeyDown={e => e.key === 'Escape' && close()}
-          >
+          <form className="modal" onClick={e => e.stopPropagation()} onSubmit={submit} onKeyDown={e => e.key === 'Escape' && close()}>
             <p className="mono-label">New project</p>
             <label htmlFor="company-name">What is the company called?</label>
-            <input
-              id="company-name"
-              type="text"
-              placeholder="e.g. Northwind Retail"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              autoFocus
-            />
+            <input id="company-name" type="text" placeholder="e.g. Northwind Retail" value={name} onChange={e => setName(e.target.value)} autoFocus />
             <div className="modal-actions">
-              <button className="primary" type="submit" disabled={!name.trim()}>
-                Get started
-              </button>
-              <button className="ghost" type="button" onClick={close}>
-                Cancel
-              </button>
+              <button className="primary" type="submit" disabled={!name.trim()}>Get started</button>
+              <button className="ghost" type="button" onClick={close}>Cancel</button>
             </div>
           </form>
         </div>

@@ -2,6 +2,7 @@
 // The key is written straight to Supabase Vault (set_model_key). Nobody can
 // read it back, including this page: it only ever shows provider + last 4.
 import React, { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../supabase.js'
 import ChangePassword from './ChangePassword.jsx'
 
@@ -20,57 +21,82 @@ export function useModelKeys(userId) {
   return { keys, error, reload: load }
 }
 
-export default function Settings({ account, name, onName }) {
+export default function Settings({ account, name, onName, theme, onTheme, onClose }) {
   const user = account.session.user
   const { keys, error: keysError, reload } = useModelKeys(user.id)
   const [pwOpen, setPwOpen] = useState(false)
   const [draftName, setDraftName] = useState(name || '')
   const [nameSaved, setNameSaved] = useState(false)
   useEffect(() => { setDraftName(name || '') }, [name])
+  // Esc closes (unless the password dialog on top is open); lock page scroll.
+  useEffect(() => {
+    const onKey = e => { if (e.key === 'Escape' && !pwOpen) onClose() }
+    window.addEventListener('keydown', onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prev }
+  }, [onClose, pwOpen])
 
-  return (
-    <div className="settings-page">
-      <header className="page-head">
-        <p className="mono-label">Settings</p>
-        <h1>Your account</h1>
-      </header>
+  return createPortal(
+    <div className="overlay" onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="overlay-card settings-card-overlay" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+        <header className="overlay-head">
+          <h2 id="settings-title">Settings</h2>
+          <button className="overlay-x" type="button" onClick={onClose} aria-label="Close settings" title="Close">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" strokeLinecap="round" /></svg>
+          </button>
+        </header>
+        <div className="overlay-body">
+          <section className="settings-section">
+            <h3>Profile</h3>
+            <form className="settings-row" onSubmit={e => { e.preventDefault(); onName(draftName.trim()); setNameSaved(true); setTimeout(() => setNameSaved(false), 2000) }}>
+              <label htmlFor="settings-name">Name</label>
+              <div className="settings-inline">
+                <input id="settings-name" type="text" value={draftName} onChange={e => setDraftName(e.target.value)} placeholder="Your first name" />
+                <button className="ghost" type="submit" disabled={!draftName.trim() || draftName.trim() === name}>{nameSaved ? 'Saved' : 'Save'}</button>
+              </div>
+            </form>
+            <div className="settings-row">
+              <span className="settings-label">Email</span>
+              <span className="settings-value">{user.email}</span>
+            </div>
+            <div className="settings-row">
+              <span className="settings-label">Password</span>
+              <button className="ghost" type="button" onClick={() => setPwOpen(true)}>Change password</button>
+            </div>
+          </section>
 
-      <section className="settings-card">
-        <h2>Profile</h2>
-        <form className="settings-row" onSubmit={e => { e.preventDefault(); onName(draftName.trim()); setNameSaved(true); setTimeout(() => setNameSaved(false), 2000) }}>
-          <label htmlFor="settings-name">Name</label>
-          <div className="settings-inline">
-            <input id="settings-name" type="text" value={draftName} onChange={e => setDraftName(e.target.value)} placeholder="Your first name" />
-            <button className="ghost" type="submit" disabled={!draftName.trim() || draftName.trim() === name}>{nameSaved ? 'Saved' : 'Save'}</button>
-          </div>
-        </form>
-        <div className="settings-row">
-          <span className="settings-label">Email</span>
-          <span className="settings-value">{user.email}</span>
+          <section className="settings-section">
+            <h3>Appearance</h3>
+            <div className="settings-row">
+              <span className="settings-label">Theme</span>
+              <div className="segmented" role="radiogroup" aria-label="Theme">
+                {[['dark', 'Dark'], ['light', 'Light']].map(([id, label]) => (
+                  <button key={id} type="button" role="radio" aria-checked={theme === id} className={theme === id ? 'seg-on' : ''} onClick={() => onTheme(id)}>{label}</button>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="settings-section" id="api-key">
+            <h3>AI model key</h3>
+            <p className="settings-help">Your agent runs on your own API key. It is stored encrypted and only used for your jobs. Nobody can read it back, including you, so keep your own copy.</p>
+            {keysError && <p className="auth-error" role="alert">Could not load your key status: {keysError}</p>}
+            {PROVIDERS.map(p => <KeyRow key={p.id} provider={p} saved={keys?.find(k => k.provider === p.id)} loading={keys === null} onChange={reload} />)}
+          </section>
+
+          <section className="settings-section">
+            <h3>Session</h3>
+            <div className="settings-row">
+              <span className="settings-label">Signed in as {user.email}</span>
+              <button className="ghost" type="button" onClick={account.signOut}>Sign out</button>
+            </div>
+          </section>
         </div>
-        <div className="settings-row">
-          <span className="settings-label">Password</span>
-          <button className="ghost" type="button" onClick={() => setPwOpen(true)}>Change password</button>
-        </div>
-      </section>
-
-      <section className="settings-card" id="api-key">
-        <h2>AI model key</h2>
-        <p className="settings-help">Your agent runs on your own API key. It is stored encrypted and is only used for your jobs. Nobody can read it back, including you, so keep your own copy.</p>
-        {keysError && <p className="auth-error" role="alert">Could not load your key status: {keysError}</p>}
-        {PROVIDERS.map(p => <KeyRow key={p.id} provider={p} saved={keys?.find(k => k.provider === p.id)} loading={keys === null} onChange={reload} />)}
-      </section>
-
-      <section className="settings-card">
-        <h2>Session</h2>
-        <div className="settings-row">
-          <span className="settings-label">Signed in as {user.email}</span>
-          <button className="ghost" type="button" onClick={account.signOut}>Sign out</button>
-        </div>
-      </section>
-
+      </div>
       {pwOpen && <ChangePassword onClose={() => setPwOpen(false)} />}
-    </div>
+    </div>,
+    document.body
   )
 }
 

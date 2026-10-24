@@ -1,3 +1,4 @@
+import PageHead from './PageHead.jsx'
 import React, { useState } from 'react'
 import { CONNECTORS } from '../connectors.js'
 import { LOGOS } from '../connectionLogos.js'
@@ -12,8 +13,7 @@ export default function Connections({ project, connections, documents, onConnect
   const allowed = CONNECTORS.filter(c => connections[c.key]).length
   return (
     <div className="connections-page" data-testid="connections">
-      <p className="mono-label">Connections</p>
-      <h1>Connections</h1>
+      <PageHead label="Connections" title="Connections" />
       <p className="sub">
         These are permissions for the agent. When you ask it to suggest values, it can only read the connections you switch on here.
         Everything is off until you allow it, and it can always search the public web on its own. {allowed ? `${allowed} allowed.` : 'None allowed yet.'}

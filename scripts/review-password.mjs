@@ -23,11 +23,13 @@ async function signIn(pw) {
   await page.type('#auth-email', EMAIL); await page.type('#auth-password', pw)
   await page.click('button[type=submit]')
   return Promise.race([
-    page.waitForSelector('.sidebar-account', { timeout: 15000 }).then(() => true),
+    page.waitForSelector('.side-settings', { timeout: 15000 }).then(() => true),
     page.waitForSelector('.auth-error', { timeout: 15000 }).then(() => false)
   ])
 }
+async function openSettings() { if (!(await page.$('.overlay'))) { await page.click('.side-settings'); await page.waitForSelector('.overlay') } }
 async function changeTo(pw, shot) {
+  await openSettings()
   const [btn] = await page.$$('xpath/.//button[contains(., "Change password")]')
   await btn.click()
   await page.waitForSelector('#new-password')
@@ -36,8 +38,10 @@ async function changeTo(pw, shot) {
   await page.click('.modal button[type=submit]')
   await page.waitForSelector('.change-pw-done', { timeout: 15000 })
   await page.click('.modal .primary')
+  await page.click('.overlay-x')
 }
 async function signOut() {
+  await openSettings()
   const [btn] = await page.$$('xpath/.//button[contains(., "Sign out")]')
   await btn.click(); await page.waitForSelector('#auth-email')
 }
@@ -46,11 +50,13 @@ check('sign in with original password', await signIn(ORIGINAL))
 await page.screenshot({ path: '/tmp/pw-0-sidebar.png' })
 // mismatch is blocked
 {
+  await openSettings()
   const [btn] = await page.$$('xpath/.//button[contains(., "Change password")]')
   await btn.click(); await page.waitForSelector('#new-password')
   await page.type('#new-password', 'abcdefghijk'); await page.type('#new-password-again', 'abcdefghijX')
   check('mismatched passwords: button disabled + message', await page.$eval('.modal button[type=submit]', b => b.disabled) && Boolean(await page.$('.modal .auth-error')))
   await page.click('.modal .ghost')
+  await page.click('.overlay-x')
 }
 await changeTo(TEMP, '/tmp/pw-1-modal.png')
 check('change password reports success', true)

@@ -50,7 +50,6 @@ function loadUser() {
 // project replaces it with Details / Deck tabs and an explicit way back.
 export default function App({ account }) {
   const [theme, setTheme] = useState(initialTheme)
-  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark')
   useEffect(() => {
     document.documentElement.dataset.theme = theme
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#f6f8f7' : '#111111')
@@ -70,6 +69,8 @@ export default function App({ account }) {
   }
   const [view, setView] = useState('dashboard') // 'dashboard' | 'projects' | 'details' | 'deck' | 'website' | 'settings' | ...
   const [createRequest, setCreateRequest] = useState(0)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const openSettings = () => setSettingsOpen(true)
   const [stage, setStage] = useState(null) // 'map' | 'people' while setting up a new project
   const brandScans = useRef(new Map())
 
@@ -111,10 +112,11 @@ export default function App({ account }) {
     onInput={suggestion => setPendingPersonInput({ dealId: project.id, suggestion })} />
   function navigate(next) {
     setStage(null)
-    if (['projects', 'dashboard', 'settings'].includes(next)) { saving.flush(); setCurrentId(null) }
+    if (next === 'settings') { setSettingsOpen(true); return } // overlay: never leaves the current page
+    if (['projects', 'dashboard'].includes(next)) { saving.flush(); setCurrentId(null) }
     setView(next)
   }
-  const projectSidebar = <Sidebar view={view} project={project} projectMode onNav={navigate} theme={theme} onThemeToggle={toggleTheme} saveStatus={saving.status} account={account} />
+  const projectSidebar = <Sidebar view={view} project={project} projectMode onNav={navigate} onSettings={openSettings} settingsOpen={settingsOpen} saveStatus={saving.status} account={account} />
 
   function update(patch) {
     setProjects(prev =>
@@ -150,6 +152,10 @@ export default function App({ account }) {
         : { name, fields: next }
     })
 
+  const settingsOverlay = settingsOpen && (
+    <Settings account={account} name={user} onName={setUser} theme={theme} onTheme={setTheme} onClose={() => setSettingsOpen(false)} />
+  )
+
   if (project && stage === 'map') {
     return (
       <div className="layout">
@@ -160,7 +166,7 @@ export default function App({ account }) {
         onChange={onStakeholders}
         onContinue={() => setStage('people')}
       />
-      </main></div>
+      </main>{settingsOverlay}</div>
     )
   }
 
@@ -180,17 +186,17 @@ export default function App({ account }) {
           setView('details')
         }}
       />
-      </main></div>
+      </main>{settingsOverlay}</div>
     )
   }
 
   // Details and Deck need a project; without one, fall back to the list.
-  const page = ['connections', 'lookup', 'dashboard', 'settings'].includes(view) ? view : project ? view : 'projects'
+  const page = ['connections', 'lookup', 'dashboard'].includes(view) ? view : project ? view : 'projects'
   const insideProject = !!project && page !== 'projects'
 
   return (
     <div className="layout">
-      <Sidebar view={page} project={project} projectMode={insideProject} onNav={navigate} theme={theme} onThemeToggle={toggleTheme} saveStatus={saving.status} account={account} />
+      <Sidebar view={page} project={project} projectMode={insideProject} onNav={navigate} onSettings={openSettings} settingsOpen={settingsOpen} saveStatus={saving.status} account={account} />
 
       <div className="lookup-content-wrap">
       <main className="content">
@@ -201,11 +207,10 @@ export default function App({ account }) {
             deals={projects}
             loading={dealsLoading}
             onNav={navigate}
+            onSettings={openSettings}
             onOpen={id => { saving.flush(); setCurrentId(id); setView('details') }}
             onCreate={() => { setView('projects'); setCreateRequest(n => n + 1) }}
           />
-        ) : page === 'settings' ? (
-          <Settings account={account} name={user} onName={setUser} />
         ) : page === 'details' ? (
           <Details
             project={project}
@@ -259,8 +264,6 @@ export default function App({ account }) {
           />
         ) : (
           <ProjectList
-            user={user}
-            onUser={setUser}
             projects={projects}
             loading={dealsLoading}
             createRequest={createRequest}
@@ -297,6 +300,7 @@ export default function App({ account }) {
           <div className="modal-actions"><button className="primary" onClick={() => { update(p => acceptPersonInput(p, pendingPersonInput.suggestion)); setPendingPersonInput(null) }}>Apply suggestion</button><button className="ghost" onClick={() => setPendingPersonInput(null)}>Cancel</button></div>
         </section>
       </div>}
+      {settingsOverlay}
     </div>
   )
 }

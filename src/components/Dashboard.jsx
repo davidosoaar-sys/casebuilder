@@ -8,6 +8,7 @@ import { computeModel } from '../model.js'
 import { confidence, unconfirmed } from '../valueModel.js'
 import { fmtMoney } from '../format.js'
 import { useModelKeys } from './Settings.jsx'
+import PageHead from './PageHead.jsx'
 
 function dealStats(deal) {
   const inputs = Object.fromEntries(deal.fields.map(f => [f.key, f.value]))
@@ -28,7 +29,7 @@ const ago = ms => {
   return `${Math.round(s / 86400)} d ago`
 }
 
-export default function Dashboard({ account, name, deals, loading, onOpen, onNav, onCreate }) {
+export default function Dashboard({ account, name, deals, loading, onOpen, onNav, onSettings, onCreate }) {
   const stats = useMemo(() => deals.map(dealStats), [deals])
   const { keys } = useModelKeys(account.session.user.id)
   const [jobs, setJobs] = useState(null)
@@ -47,19 +48,15 @@ export default function Dashboard({ account, name, deals, loading, onOpen, onNav
   const dealName = id => deals.find(d => d.id === id)?.name || 'a deal'
 
   return (
-    <div className="dashboard">
-      <header className="page-head dash-head">
-        <div>
-          <p className="mono-label">Dashboard</p>
-          <h1>{name ? `Hello, ${name}.` : 'Hello.'}</h1>
-        </div>
+    <div className="page dashboard">
+      <PageHead label="Dashboard" title={name ? `Hello, ${name}.` : 'Hello.'}>
         <button className="primary" onClick={onCreate}>New project</button>
-      </header>
+      </PageHead>
 
       {keys && !hasKey && (
         <div className="dash-banner" role="status">
           <span>Your agent needs an API key before it can research or write. </span>
-          <button className="link-btn" onClick={() => onNav('settings')}>Add it in Settings →</button>
+          <button className="link-btn" onClick={onSettings}>Add it in Settings →</button>
         </div>
       )}
 
