@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import Sidebar from './components/Sidebar.jsx'
 import Deck from './components/Deck.jsx'
+import WebsiteView from './components/WebsiteView.jsx'
 import ProjectList from './components/ProjectList.jsx'
 import Details from './components/Details.jsx'
 import StakeholderMap from './components/StakeholderMap.jsx'
@@ -14,6 +15,8 @@ import {
   defaultStakeholders
 } from './projects.js'
 import { defaultDeck } from './deck/model.js'
+import { computeModel } from './model.js'
+import { stakeholdersForArchetype } from './valueModel.js'
 
 const USER_KEY = 'casebuilder.user'
 
@@ -33,7 +36,7 @@ export default function App() {
   const [projects, setProjects] = useState(() => loadProjects().map(hydrate))
   const [currentId, setCurrentId] = useState(null)
   const [user, setUser] = useState(loadUser)
-  const [view, setView] = useState('projects') // 'projects' | 'details' | 'deck'
+  const [view, setView] = useState('projects') // 'projects' | 'details' | 'deck' | 'website'
   const [stage, setStage] = useState(null) // 'map' | 'people' while setting up a new project
 
   useEffect(() => saveProjects(projects), [projects])
@@ -63,9 +66,21 @@ export default function App() {
     [fields]
   )
 
+  // The model is recomputed from the inputs on every change. Nothing downstream
+  // keeps a copy of a figure.
+  const model = useMemo(() => computeModel(inputs), [inputs])
+
   const onStakeholders = fn => update(p => ({ stakeholders: fn(p.stakeholders) }))
   const onPeople = fn => update(p => ({ people: fn(p.people) }))
-  const onFields = fn => update(p => ({ fields: fn(p.fields) }))
+  // Changing the archetype changes who is in the room, immediately.
+  const onFields = fn =>
+    update(p => {
+      const next = fn(p.fields)
+      const arch = fs => fs.find(f => f.key === 'archetype')?.value
+      return arch(next) !== arch(p.fields)
+        ? { fields: next, stakeholders: stakeholdersForArchetype(p.stakeholders, arch(next)) }
+        : { fields: next }
+    })
 
   if (project && stage === 'map') {
     return (
@@ -106,6 +121,7 @@ export default function App() {
         {page === 'details' ? (
           <Details
             project={project}
+            model={model}
             onFields={onFields}
             onStakeholders={onStakeholders}
             onPeople={onPeople}
@@ -118,12 +134,23 @@ export default function App() {
         ) : page === 'deck' ? (
           <Deck
             inputs={inputs}
+            model={model}
             fields={project.fields}
             stakeholders={project.stakeholders}
             onStakeholders={onStakeholders}
             deck={project.deck}
             company={project.name}
             onDeck={fn => update(p => ({ deck: fn(p.deck) }))}
+            onWebsite={() => setView('website')}
+          />
+        ) : page === 'website' ? (
+          <WebsiteView
+            key={project.id}
+            project={project}
+            inputs={inputs}
+            onDeck={fn => update(p => ({ deck: fn(p.deck) }))}
+            onSite={site => update({ site })}
+            onBack={() => setView('deck')}
           />
         ) : (
           <ProjectList

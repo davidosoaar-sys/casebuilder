@@ -3,12 +3,16 @@ import { pathToFileURL } from 'node:url'
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// Serves /api/research during `npm run dev` / `vite preview` by calling the same
-// handler the Vercel function uses, so the agent works locally without the
-// Vercel CLI. Reads ANTHROPIC_API_KEY etc. from .env.local.
+// Serves /api/research and /api/publish during `npm run dev` / `vite preview` by
+// calling the same handlers the Vercel functions use, so the people-finder and
+// "Publish to Vercel" work locally without the Vercel CLI. Reads ANTHROPIC_API_KEY,
+// VERCEL_TOKEN etc. from .env.local.
+const ROUTES = { '/api/research': 'handle', '/api/publish': 'handlePublish', '/api/suggest': 'handleSuggest' }
+
 function localApi() {
-  const makeMiddleware = loadHandler => async (req, res, next) => {
-    if (!req.url?.startsWith('/api/research')) return next()
+  const makeMiddleware = loadHandlers => async (req, res, next) => {
+    const route = Object.keys(ROUTES).find(r => req.url?.startsWith(r))
+    if (!route) return next()
     const chunks = []
     for await (const c of req) chunks.push(c)
     let body = {}
@@ -17,8 +21,8 @@ function localApi() {
     } catch {
       // fall through with an empty body; the handler will reject it
     }
-    const { handle } = await loadHandler()
-    const { status, body: out } = await handle({ body, headers: req.headers })
+    const handlers = await loadHandlers()
+    const { status, body: out } = await handlers[ROUTES[route]]({ body, headers: req.headers })
     res.statusCode = status
     res.setHeader('Content-Type', 'application/json')
     res.end(JSON.stringify(out))

@@ -20,7 +20,7 @@ The same numbers are framed differently for each person who has to approve the d
 - **Who:** Often has the opposite goal
 - **Cares about:** Cutting spend while the org keeps growing
 - **Value drivers to lead with:** platform, tooling
-- **Headline with default inputs:** $402k of run cost avoided per year
+- **Headline with default inputs:** $714k of run cost avoided per year
 - **Needs to see:**
   - Total cost of ownership against self-hosting, not against doing nothing
   - What gets retired, not just what gets added
@@ -32,7 +32,7 @@ The same numbers are framed differently for each person who has to approve the d
 - **Who:** Shows up late and can stall a done deal
 - **Cares about:** Payback, contract terms, and whether the numbers survive scrutiny
 - **Value drivers to lead with:** productivity, tooling
-- **Headline with default inputs:** Payback in 2 months
+- **Headline with default inputs:** Payback in 1 month
 - **Needs to see:**
   - Payback period and five-year value
   - Which inputs are confirmed and which are still assumptions

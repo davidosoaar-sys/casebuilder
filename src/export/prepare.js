@@ -20,7 +20,9 @@ export function prepareOnePager({ inputs, fields, who, date }) {
     headline: env.ctx.headline,
     cares: who.cares,
     stats: block('stats').items,
-    drivers: drivers.rows,
+    groups: drivers.groups,
+    totalEq: drivers.totalEq,
+    pairs: block('pairs').rows,
     total: drivers.total,
     versus: block('versus'),
     needs: room.needs,
@@ -36,8 +38,8 @@ export function prepareOnePager({ inputs, fields, who, date }) {
 const SLIDERS = [
   ['engineers', 'Engineers', '', 1],
   ['hourlyCost', 'Cost per engineer hour', '$', 5],
-  ['hoursLostPerWeek', 'Hours lost per engineer per week', '', 0.5],
-  ['captureRate', 'Share of that time Portal recovers', '%', 1],
+  ['searchHoursToday', 'Search hours per engineer per week, today', '', 0.5],
+  ['searchHoursPortal', 'Search hours per engineer per week, with Portal', '', 0.5],
   ['portalCost', 'Portal annual subscription', '$', 10000]
 ]
 

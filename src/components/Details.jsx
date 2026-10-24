@@ -8,7 +8,7 @@ import { projectToCaseFile } from '../caseFile.js'
 // A project's details: the inputs that feed the deck, the stakeholder map, and
 // the people found for each stakeholder.
 
-export default function Details({ project, onFields, onStakeholders, onPeople, onReset }) {
+export default function Details({ project, model, onFields, onStakeholders, onPeople, onReset }) {
   const [tab, setTab] = useState('inputs')
   const peopleCount = Object.values(project.people || {}).reduce((n, l) => n + l.length, 0)
 
@@ -46,6 +46,11 @@ export default function Details({ project, onFields, onStakeholders, onPeople, o
       {tab === 'inputs' && (
         <InputSheet
           fields={project.fields}
+          model={model}
+          company={project.name}
+          onApply={values =>
+            setFields(fs => fs.map(f => (f.key in values && !f.confirmed ? { ...f, value: values[f.key], confirmed: false } : f)))
+          }
           onChange={(key, value) =>
             setFields(fs => fs.map(f => (f.key === key ? { ...f, value } : f)))
           }

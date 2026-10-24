@@ -1,4 +1,4 @@
-import { STAKEHOLDERS, totalBenefit, fmtMoney } from '../valueModel.js'
+import { STAKEHOLDERS, fmtMoney } from '../valueModel.js'
 
 // Stakeholders as stored are plain data. This turns one into everything the
 // deck needs: built-ins take the model's definition, custom ones get a generic
@@ -10,7 +10,7 @@ export const NO_ONE = {
   tag: 'Add a stakeholder above',
   cares: 'Add the people this case has to convince',
   lead: [],
-  headline: i => `${fmtMoney(totalBenefit(i))} of annual value`,
+  headline: m => `${fmtMoney(m.figures.totalValue.value)} of annual value`,
   objection: '-',
   counter: '-',
   needsToSee: []
@@ -21,7 +21,7 @@ export function resolveStakeholder(s) {
     ? STAKEHOLDERS.find(b => b.key === s.key)
     : {
         lead: ['productivity', 'tooling'],
-        headline: i => `${fmtMoney(totalBenefit(i))} of annual value`,
+        headline: m => `${fmtMoney(m.figures.totalValue.value)} of annual value`,
         needsToSee: [],
         cares: '',
         tag: '',

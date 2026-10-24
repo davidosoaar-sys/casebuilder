@@ -1,16 +1,13 @@
 import { uid } from '../uid.js'
+import { computeModel } from '../model.js'
 import {
-  allDrivers,
-  totalBenefit,
-  netValue,
-  paybackMonths,
-  roiMultiple,
-  fiveYearValue,
-  versusSelfHost,
+  driversByPillar,
   unconfirmed,
+  PAIRS,
   fmtMoney,
   fmtMoneyFull,
-  fmtNum
+  fmtDec,
+  fmtMonths
 } from '../valueModel.js'
 
 // The deck model. A deck is an ordered list of slides; a slide is a list of
@@ -67,28 +64,26 @@ export function fill(str, ctx) {
   return String(str ?? '').replace(/\{(\w+)\}/g, (m, k) => (k in ctx ? ctx[k] : m))
 }
 
-// Everything a slide can be computed from, for one audience.
-export function buildEnv(inputs, fields, active) {
-  const total = totalBenefit(inputs)
-  const net = netValue(inputs)
-  const roi = roiMultiple(inputs)
-  const months = paybackMonths(inputs)
-  const five = fiveYearValue(inputs)
+// Everything a slide can be computed from, for one audience. The deck holds no
+// numbers of its own: `model` is computeModel(inputs), and every figure below is
+// read from it.
+export function buildEnv(inputs, fields, active, model = computeModel(inputs)) {
+  const F = model.figures
   const ctx = {
     company: inputs.companyName || 'Untitled',
     role: active.role,
     archetype: inputs.archetype,
-    headline: active.headline(inputs),
+    headline: active.headline(model),
     cares: active.cares,
     tag: active.tag,
-    annual: fmtMoney(total),
-    cost: fmtMoney(inputs.portalCost),
-    net: fmtMoney(net),
-    payback: `${months} ${months === 1 ? 'month' : 'months'}`,
-    roi: `${roi.toFixed(1)}x`,
-    five: fmtMoney(five)
+    annual: fmtMoney(F.totalValue.value),
+    cost: fmtMoney(model.inputs.portalCost),
+    net: fmtMoney(F.netValue.raw),
+    payback: F.paybackMonths.value > 0 ? fmtMonths(F.paybackMonths.value) : 'n/a',
+    roi: `${F.roiMultiple.value.toFixed(1)}x`,
+    five: fmtMoney(F.fiveYearValue.raw)
   }
-  return { inputs, fields, active, ctx, total, net, roi, months, five }
+  return { inputs, fields, active, ctx, model }
 }
 
 // ----------------------------------------------------- built-in templates
@@ -115,9 +110,16 @@ function builtin(type, ed = {}) {
     case 'drivers':
       return slide('plain', [
         text('label', 'Where the value comes from'),
-        text('title', ed.title ?? 'Five drivers. Their numbers.'),
-        text('note', ed.note ?? 'Ordered by size. The two {role} cares about most are marked.'),
+        text('title', ed.title ?? 'Speed, chaos-control, scale'),
+        text('note', ed.note ?? "Grouped under the three pillars. Under each bar is the arithmetic with this customer's numbers. The two {role} cares about most are marked."),
         block('drivers')
+      ])
+    case 'pairs':
+      return slide('plain', [
+        text('label', 'Today and with Portal'),
+        text('title', ed.title ?? 'What changes, input by input'),
+        text('note', ed.note ?? 'Each pair is a number the customer can check against their own. The difference is what the case is built on.'),
+        block('pairs')
       ])
     case 'versus':
       return slide('plain', [
@@ -154,7 +156,7 @@ function builtin(type, ed = {}) {
   }
 }
 
-export const BUILTIN_TYPES = ['title', 'headline', 'drivers', 'versus', 'stakeholder', 'assumptions']
+export const BUILTIN_TYPES = ['title', 'headline', 'drivers', 'pairs', 'versus', 'stakeholder', 'assumptions']
 
 export const SLIDE_TEMPLATES = [
   { key: 'blank', name: 'Blank page', make: () => slide('plain', [text('label', 'Notes'), text('title', 'New page')]) },
@@ -191,6 +193,7 @@ export const SLIDE_TEMPLATES = [
   { key: 'title', name: 'Title', make: () => builtin('title') },
   { key: 'headline', name: 'The number', make: () => builtin('headline') },
   { key: 'drivers', name: 'Value drivers', make: () => builtin('drivers') },
+  { key: 'pairs', name: 'Today vs with Portal', make: () => builtin('pairs') },
   { key: 'versus', name: 'Against self-hosting', make: () => builtin('versus') },
   { key: 'stakeholder', name: 'This room', make: () => builtin('stakeholder') },
   { key: 'assumptions', name: 'Confirmed vs assumed', make: () => builtin('assumptions') }
@@ -205,6 +208,7 @@ export const BLOCK_MENU = [
   { name: 'Image', make: () => block('image', { src: '', caption: '' }) },
   { name: 'Key numbers', make: () => block('stats', { items: STAT_KEYS.map(([k]) => k) }) },
   { name: 'Value drivers chart', make: () => block('drivers') },
+  { name: 'Today vs with Portal', make: () => block('pairs') },
   { name: 'Portal vs self-hosting', make: () => block('versus') },
   { name: 'Assumptions list', make: () => block('assumptions') },
   { name: 'Stakeholder brief', make: () => block('room') },
@@ -254,20 +258,20 @@ export function parseBody(str) {
 }
 
 export function statValue(key, env) {
-  const { inputs } = env
+  const F = env.model.figures
   switch (key) {
     case 'annual':
-      return { label: 'Annual value', value: fmtMoney(env.total) }
+      return { label: 'Annual value', value: fmtMoney(F.totalValue.value), eq: F.totalValue.equation }
     case 'cost':
-      return { label: 'Portal cost', value: fmtMoney(inputs.portalCost) }
+      return { label: 'Portal cost', value: fmtMoney(env.model.inputs.portalCost), eq: '' }
     case 'net':
-      return { label: 'Net, year one', value: fmtMoney(env.net), tone: env.net > 0 ? 'good' : 'bad' }
+      return { label: 'Net, year one', value: fmtMoney(F.netValue.raw), tone: F.netValue.raw > 0 ? 'good' : 'bad', eq: F.netValue.equation }
     case 'payback':
-      return { label: 'Payback', value: `${env.months} mo` }
+      return { label: 'Payback', value: F.paybackMonths.value > 0 ? fmtMonths(F.paybackMonths.value) : 'n/a', eq: F.paybackMonths.equation }
     case 'roi':
-      return { label: 'Return', value: `${env.roi.toFixed(1)}x` }
+      return { label: 'Return', value: `${F.roiMultiple.value.toFixed(1)}x`, eq: F.roiMultiple.equation }
     case 'five':
-      return { label: 'Five-year net', value: fmtMoney(env.five) }
+      return { label: 'Five-year net', value: fmtMoney(F.fiveYearValue.raw), eq: F.fiveYearValue.equation }
     default:
       return null
   }
@@ -276,7 +280,7 @@ export function statValue(key, env) {
 // A plain, serialisable description of a block for one audience. The editor,
 // the PowerPoint export, the one-pager and the website all read this.
 export function resolveBlock(b, env) {
-  const { ctx, inputs, active } = env
+  const { ctx, inputs, active, model } = env
   switch (b.type) {
     case 'text': {
       const t = fill(b.text, ctx)
@@ -294,37 +298,74 @@ export function resolveBlock(b, env) {
         items: (b.items || STAT_KEYS.map(([k]) => k)).map(k => ({ key: k, ...statValue(k, env) })).filter(i => i.label)
       }
     case 'drivers': {
-      const drivers = allDrivers(inputs)
-      const max = Math.max(...drivers.map(d => d.value), 1)
+      const groups = driversByPillar(model, inputs.archetype)
+      const max = Math.max(...groups.flatMap(g => g.items.map(d => d.value)), 1)
       return {
         kind: 'drivers',
-        rows: drivers.map(d => ({
-          key: d.key,
-          label: d.label,
-          value: d.value,
-          valueStr: fmtMoney(d.value),
-          detail: d.detail,
-          color: d.color,
-          lead: active.lead.includes(d.key),
-          pct: (d.value / max) * 100
+        groups: groups.map(g => ({
+          key: g.key,
+          label: g.label,
+          blurb: g.blurb,
+          leads: g.leads,
+          total: fmtMoney(g.total),
+          rows: g.items.map(d => ({
+            key: d.key,
+            label: d.label,
+            value: d.value,
+            valueStr: fmtMoney(d.value),
+            detail: d.detail,
+            flag: d.flag,
+            color: d.color,
+            lead: active.lead.includes(d.key),
+            pct: (d.value / max) * 100
+          }))
         })),
-        total: fmtMoneyFull(env.total)
+        total: fmtMoneyFull(model.figures.totalValue.value),
+        totalEq: model.figures.totalValue.equation
+      }
+    }
+    case 'pairs': {
+      const I = model.inputs
+      return {
+        kind: 'pairs',
+        rows: PAIRS.map(p => {
+          const today = I[p.today]
+          const portal = I[p.portal]
+          const show = n => (p.money ? fmtMoney(n) : `${fmtDec(n, 2)}${p.unit === '%' ? '%' : ''}`)
+          const f = model.figures[p.valueFigure]
+          return {
+            key: p.key,
+            group: p.group,
+            label: p.label,
+            unit: p.money || p.unit === '%' ? '' : p.unit,
+            today: show(today),
+            portal: show(portal),
+            diff: show(Math.max(0, today - portal)),
+            saved: p.saved,
+            value: fmtMoney(f.value),
+            eq: f.equation
+          }
+        })
       }
     }
     case 'versus': {
-      const v = versusSelfHost(inputs)
-      const max = Math.max(v.selfHost, v.portal, 1)
+      const F = model.figures
+      const selfHost = F.selfHostCost.value
+      const portalCost = model.inputs.portalCost
+      const max = Math.max(selfHost, portalCost, 1)
+      const delta = F.versusSelfHost.raw
       return {
         kind: 'versus',
         rows: [
-          { name: 'Self-host open source', value: v.selfHost, valueStr: `${fmtMoney(v.selfHost)}/yr`, tone: 'bad', pct: (v.selfHost / max) * 100 },
-          { name: 'Spotify Portal', value: v.portal, valueStr: `${fmtMoney(v.portal)}/yr`, tone: 'good', pct: (v.portal / max) * 100 }
+          { name: 'Self-host open source', value: selfHost, valueStr: `${fmtMoney(selfHost)}/yr`, tone: 'bad', pct: (selfHost / max) * 100, eq: F.selfHostCost.equation },
+          { name: 'Spotify Portal', value: portalCost, valueStr: `${fmtMoney(portalCost)}/yr`, tone: 'good', pct: (portalCost / max) * 100, eq: '' }
         ],
-        lead: `${inputs.selfHostEngineers} platform engineers at ${fmtMoney(inputs.selfHostSalary)} fully loaded, permanently, for upgrades, patches and infrastructure.`,
+        lead: `${fmtDec(model.inputs.selfHostEngineers, 1)} platform engineers at ${fmtMoney(model.inputs.selfHostSalary)} fully loaded, permanently, for upgrades, patches and infrastructure.`,
         verdict:
-          v.cheaper === 'portal'
-            ? `Portal is ${fmtMoney(Math.abs(v.delta))}/yr cheaper before any of the value above.`
-            : 'On these figures self-hosting is cheaper. The case has to rest on the value drivers, not on cost avoidance.'
+          delta > 0
+            ? `Portal is ${fmtMoney(delta)}/yr cheaper before any of the value above.`
+            : 'On these figures self-hosting is cheaper. The case has to rest on the value drivers, not on cost avoidance.',
+        eq: F.versusSelfHost.equation
       }
     }
     case 'assumptions': {
@@ -334,7 +375,7 @@ export function resolveBlock(b, env) {
         count: open.length,
         items: open.map(f => ({
           label: f.label,
-          assumed: `assumed at ${f.type === 'percent' ? `${f.value}%` : fmtNum(f.value)}`
+          assumed: `assumed at ${f.type === 'percent' ? `${f.value}%` : fmtDec(f.value, 2)}${f.unit && f.unit !== '%' ? ` ${f.unit}` : ''}`
         }))
       }
     }

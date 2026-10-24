@@ -30,19 +30,20 @@ Below this is written `CB`. Run `CB` with no arguments for the command list. Eve
 |---|---|
 | `CB init "<company>" [--archetype A]` | New case file in the current folder |
 | `CB info [--md]` | Every input (key, label, default, starts as), the archetypes and stakeholders |
-| `CB set <file> key=value ... [--confirmed k,k]` | Change inputs. `--confirmed` means the customer said it |
+| `CB set <file> key=value ... [--confirmed k,k] [--assumed k,k]` | Change inputs. `--confirmed` means the customer said it; `--assumed` flips one back |
 | `CB custom <file> --key k --label L --value V` | Add an input of your own (listed, but not part of the formulas) |
 | `CB stakeholder add\|remove\|restore <file> ...` | Who is in the room |
 | `CB person add\|remove <file> --stakeholder k ...` | Record a researched person (a source URL is required) |
 | `CB validate <file>` | Check the file, in plain words |
 | `CB calc <file> [--stakeholder k] [--md]` | Run the value model |
 | `CB build <file> --format pptx\|onepager\|website\|all [--stakeholder k] [--out dir] [--pdf]` | Build the deliverables |
+| `CB publish <file> [--stakeholder k] [--yes]` | Put the interactive website on Vercel as a live link. **Does nothing without `--yes`** (see step 8) |
 | `CB export <file> [--out f]` | Write the complete case file for the standalone app |
 
 ## Workflow
 
 ### 1. Start or find the case
-Look for an existing `*.case.json` in the working folder. If there is one, read it and continue. Otherwise ask for the company name and its **archetype** (`Fast / AI-native`, `Scaling tech`, `Enterprise`, `Regulated enterprise`; the notes are in `references/value-model.md`) and run `CB init`. The archetype decides which stakeholders start in the room.
+Look for an existing `*.case.json` in the working folder. If there is one, read it and continue. Otherwise ask for the company name and its **archetype** (`Fast / AI-native`, `Scaling tech`, `Enterprise`, `Regulated enterprise`; the notes are in `references/value-model.md`) and run `CB init`. The archetype decides which stakeholders start in the room. A new case starts with **every number an assumption** (case confidence 0%), so confidence only rises as the customer confirms things.
 
 ### 2. Gather the inputs
 Read `references/inputs.md` for what each input means and what it starts as. Ask in **small groups of 3 to 5**, in this order: account and scale (engineers, hourly cost), productivity (hours lost per engineer per week, the share Portal recovers), platform team, onboarding, incidents, tooling, then the Portal subscription and the self-hosting comparison.
@@ -78,7 +79,18 @@ CB build <file> --format all --stakeholder <key> --out <folder> --pdf
 
 The PowerPoint and one-pager are for **one stakeholder**; build again with a different `--stakeholder` for each person. The website lets the viewer switch. Tell the user the file paths the command printed.
 
-### 8. Hand off to the app (optional)
+### 8. Publish the website as a live link (only if the user asks)
+`CB publish` puts the interactive website on **Vercel** at its own address (`https://bc-<company>-<random>.vercel.app`), so it can be sent to the customer as a link. **This puts the customer's numbers on the internet, so never publish on your own initiative.**
+
+1. Run it **without `--yes`** first. It publishes nothing and prints what would happen (the address it would publish to) plus a warning.
+2. Tell the user plainly: anyone with the link can read the numbers. The address is long and unlisted and the page asks search engines not to index it, but it is not locked. Ask which stakeholder the site should open on, if there are several, and whether the numbers are ready for the customer to see (check case confidence and what is still assumed).
+3. Only after the user clearly agrees, run the same command again with `--yes`.
+4. Report the address it prints. If it says `public: false`, Vercel Authentication is turning visitors away; relay the note it gives (turn it off under the project's Deployment Protection settings). If it says it cannot publish, relay what it needs: a `VERCEL_TOKEN` (vercel.com/account/tokens, optionally `VERCEL_TEAM_ID`), or the Vercel CLI installed and logged in (`--scope <team>` if the account has several).
+5. Remind the user that deleting the project in the Vercel dashboard takes the site down, and that the page asks search engines not to index it.
+
+Never publish a case the user has not seen.
+
+### 9. Hand off to the app (optional)
 `CB export <file>` writes a complete case file. In the CaseBuilder web app, **Projects > Import** opens it, where the deck can be edited block by block, the stakeholder map arranged, and more people researched. The app can export the same file format back.
 
 ## Checking your work

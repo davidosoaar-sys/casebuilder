@@ -9,6 +9,7 @@ import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import PptxGenJS from 'pptxgenjs'
 import logoSvg from '../src/assets/backstage-logo.svg'
+import faviconSvg from '../public/favicon.svg'
 import logoPng from '../src/assets/logo-teal.png'
 import vmSource from '../.build/valueModel.txt'
 import {
@@ -16,17 +17,12 @@ import {
   STAKEHOLDERS,
   ARCHETYPES,
   allDrivers,
-  totalBenefit,
-  netValue,
-  paybackMonths,
-  roiMultiple,
-  fiveYearValue,
-  versusSelfHost,
   confidence,
   unconfirmed,
   fmtMoney,
   fmtMoneyFull
 } from '../src/valueModel.js'
+import { computeModel } from '../src/model.js'
 import { projectToCaseFile, caseFileToProject, checkCaseFile, CASE_VERSION } from '../src/caseFile.js'
 import { buildEnv, resolveSlides, TEXT_STYLES } from '../src/deck/model.js'
 import { resolveStakeholder } from '../src/deck/stakeholders.js'
@@ -35,6 +31,7 @@ import { buildPptx } from '../src/export/pptx.js'
 import { prepareOnePager, prepareWebsite, pickAudience } from '../src/export/prepare.js'
 import { dataUrlSize } from '../src/export/imageSize.js'
 import { newProject } from '../src/projects.js'
+import { publishSite, projectName, checkPublic, siteFiles, AUTH_NOTE, PublishError } from '../server/publish.js'
 
 const LOGO_RATIO = 2079.95 / 456.05
 const BUILTIN_KEYS = STAKEHOLDERS.map(s => s.key)
@@ -143,6 +140,11 @@ function cmdInit(pos, flags) {
   const data = projectToCaseFile(newProject(company))
   delete data.deck // left out so the standard deck is used until it is customised
   delete data.exportedAt
+  // The app's demo defaults mark some numbers as confirmed. A real case starts
+  // with every number an assumption until the customer has said it.
+  for (const f of INPUT_FIELDS) {
+    if (f.type === 'number' || f.type === 'percent') data.inputs[f.key].confirmed = false
+  }
   const arch = one(flags, 'archetype')
   if (arch) {
     if (!ARCHETYPES[arch]) fail(`Unknown archetype "${arch}". Choices: ${Object.keys(ARCHETYPES).join(' | ')}`)
@@ -191,9 +193,9 @@ function parseValue(field, raw) {
 function cmdSet(pos, flags) {
   const [file, ...pairs] = pos
   const data = readCase(file)
-  if (!pairs.length) fail('Usage: set <file> key=value [key=value ...] [--confirmed key,key]')
   const confirmed = new Set(many(flags, 'confirmed').flatMap(v => String(v).split(',')).map(s => s.trim()).filter(Boolean))
   const assumed = new Set(many(flags, 'assumed').flatMap(v => String(v).split(',')).map(s => s.trim()).filter(Boolean))
+  if (!pairs.length && !confirmed.size && !assumed.size) fail('Usage: set <file> key=value [key=value ...] [--confirmed key,key] [--assumed key,key]')
   data.inputs ||= {}
   const changed = []
   for (const pair of pairs) {
@@ -214,6 +216,14 @@ function cmdSet(pos, flags) {
     if (!f && !data.inputs[key]) fail(`Unknown input "${key}".`)
     data.inputs[key] = { ...(data.inputs[key] || { value: f.value }), confirmed: true }
     changed.push({ key, value: data.inputs[key].value, confirmed: true })
+  }
+  // flags can also flip an input back to an assumption without changing its value
+  for (const key of assumed) {
+    if (changed.some(c => c.key === key)) continue
+    const f = INPUT_FIELDS.find(x => x.key === key)
+    if (!f && !data.inputs[key]) fail(`Unknown input "${key}".`)
+    data.inputs[key] = { ...(data.inputs[key] || { value: f.value }), confirmed: false }
+    changed.push({ key, value: data.inputs[key].value, confirmed: false })
   }
   const warnings = writeCase(file, data)
   print({ saved: path.resolve(file), changed, warnings })
@@ -322,16 +332,17 @@ function cmdValidate(pos) {
 
 function calcAll(project) {
   const inputs = inputsOf(project.fields)
+  const model = computeModel(inputs)
+  const F = model.figures
   const open = unconfirmed(project.fields)
   const stakeholders = project.stakeholders.map(resolveStakeholder).filter(Boolean)
-  const v = versusSelfHost(inputs)
   const totals = {
-    annualValue: totalBenefit(inputs),
-    portalCost: inputs.portalCost,
-    netYearOne: netValue(inputs),
-    paybackMonths: paybackMonths(inputs),
-    returnMultiple: Number(roiMultiple(inputs).toFixed(2)),
-    fiveYearNet: fiveYearValue(inputs)
+    annualValue: F.totalValue.value,
+    portalCost: model.inputs.portalCost,
+    netYearOne: F.netValue.raw,
+    paybackMonths: Number(F.paybackMonths.value.toFixed(1)),
+    returnMultiple: Number(F.roiMultiple.value.toFixed(2)),
+    fiveYearNet: F.fiveYearValue.raw
   }
   return {
     company: project.name,
@@ -341,17 +352,19 @@ function calcAll(project) {
       annualValue: fmtMoneyFull(totals.annualValue),
       portalCost: fmtMoney(totals.portalCost),
       netYearOne: fmtMoney(totals.netYearOne),
-      payback: `${totals.paybackMonths} ${totals.paybackMonths === 1 ? 'month' : 'months'}`,
+      payback: totals.paybackMonths > 0 ? `${totals.paybackMonths} months` : 'n/a',
       return: `${totals.returnMultiple.toFixed(1)}x`,
       fiveYearNet: fmtMoney(totals.fiveYearNet)
     },
-    drivers: allDrivers(inputs).map(d => ({ key: d.key, label: d.label, value: Math.round(d.value), formatted: fmtMoney(d.value), working: d.detail })),
-    versusSelfHost: { selfHost: v.selfHost, portal: v.portal, portalIsCheaperBy: Math.max(0, v.delta), cheaper: v.cheaper },
+    figures: Object.fromEntries(model.order.map(k => [k, { value: F[k].value, equation: F[k].equation, flag: F[k].flag }])),
+    warnings: model.warnings.map(w => w.message),
+    drivers: allDrivers(model).map(d => ({ key: d.key, label: d.label, value: Math.round(d.value), formatted: fmtMoney(d.value), working: d.detail })),
+    versusSelfHost: { selfHost: F.selfHostCost.value, portal: model.inputs.portalCost, portalIsCheaperBy: Math.max(0, F.versusSelfHost.raw), cheaper: F.versusSelfHost.raw > 0 ? 'portal' : 'self-host' },
     stillAssumed: open.map(f => ({ key: f.key, label: f.label, assumedAt: f.value, unit: f.unit || (f.type === 'percent' ? '%' : ''), askThem: f.help })),
     stakeholders: stakeholders.map(s => ({
       key: s.key,
       role: s.role,
-      headline: s.headline(inputs),
+      headline: s.headline(model),
       cares: s.cares,
       leadsWith: s.lead,
       people: (project.people[s.key] || []).map(p => p.name)
@@ -459,7 +472,7 @@ async function cmdBuild(pos, flags) {
   if (formats.includes('onepager')) {
     const facts = prepareOnePager({ inputs, fields: project.fields, who })
     const out = path.join(outDir, `${name}-one-pager.html`)
-    fs.writeFileSync(out, buildOnePager({ facts, logoSvg }))
+    fs.writeFileSync(out, buildOnePager({ facts, logoSvg, faviconSvg }))
     written.push({ format: 'onepager', file: out, bytes: fs.statSync(out).size, audience: who.role })
     if (has(flags, 'pdf')) {
       const pdf = out.replace(/\.html$/, '.pdf')
@@ -469,13 +482,81 @@ async function cmdBuild(pos, flags) {
   }
 
   if (formats.includes('website')) {
-    const args = prepareWebsite({ company, deck, inputs, fields: project.fields, stakeholders: list, who })
     const out = path.join(outDir, `${name}-business-case.html`)
-    fs.writeFileSync(out, buildWebsite({ ...args, logoSvg, vmSource }))
+    fs.writeFileSync(out, websiteHtml({ company, deck, inputs, project, list, who }))
     written.push({ format: 'website', file: out, bytes: fs.statSync(out).size, audience: 'all stakeholders (switchable)' })
   }
 
   print({ built: written, note: 'The PowerPoint and one-pager are for the selected stakeholder; the website lets the viewer switch.' })
+}
+
+function websiteHtml({ company, deck, inputs, project, list, who }) {
+  const args = prepareWebsite({ company, deck, inputs, fields: project.fields, stakeholders: list, who })
+  return buildWebsite({ ...args, logoSvg, faviconSvg, vmSource })
+}
+
+// Publish the interactive website to its own Vercel project. This puts the
+// customer's numbers at a public address, so it only runs with --yes, which
+// must only be passed after the user has agreed.
+async function cmdPublish(pos, flags) {
+  const file = pos[0]
+  const { project } = loadProject(file)
+  const { list, who } = audienceFor(project, one(flags, 'stakeholder'))
+  const inputs = inputsOf(project.fields)
+  const company = inputs.companyName || project.name
+  const deck = inlineImages(project.deck, path.dirname(path.resolve(file)))
+  const name = one(flags, 'name') || projectName(company)
+  const via = process.env.VERCEL_TOKEN ? 'api' : 'cli'
+
+  if (!has(flags, 'yes')) {
+    return print({
+      published: false,
+      wouldPublish: {
+        company,
+        project: name,
+        address: `https://${name}.vercel.app`,
+        via: via === 'api' ? 'Vercel API (VERCEL_TOKEN)' : 'the Vercel CLI (vercel deploy)',
+        audience: 'all stakeholders (switchable)'
+      },
+      warning: "This puts the customer's numbers at a public address. Anyone with the link can read them. The address is long and unlisted, and the page asks search engines not to index it.",
+      next: 'Nothing was published. Ask the user to confirm, then run the same command again with --yes.'
+    })
+  }
+
+  const html = websiteHtml({ company, deck, inputs, project, list, who })
+
+  if (process.env.VERCEL_TOKEN) {
+    try {
+      const r = await publishSite({ html, company, token: process.env.VERCEL_TOKEN, teamId: process.env.VERCEL_TEAM_ID || undefined, name })
+      return print({ published: true, via: 'api', url: r.url, project: r.name, public: r.public, note: r.note })
+    } catch (e) {
+      if (e instanceof PublishError) fail(e.message)
+      throw e
+    }
+  }
+
+  // No token: use the Vercel CLI the user is already logged in with.
+  const probe = spawnSync('vercel', ['--version'], { shell: true, encoding: 'utf8' })
+  if (probe.status !== 0) {
+    fail('Cannot publish: set VERCEL_TOKEN (create one at vercel.com/account/tokens), or install the Vercel CLI (npm i -g vercel) and run "vercel login". The site is not published.')
+  }
+  const dir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'cb-site-')), name)
+  fs.mkdirSync(dir)
+  for (const f of siteFiles(html)) fs.writeFileSync(path.join(dir, f.file), Buffer.from(f.data, 'base64'))
+  const args = ['deploy', '--prod', '--yes']
+  const scope = one(flags, 'scope') || process.env.VERCEL_SCOPE
+  if (typeof scope === 'string') args.push('--scope', scope)
+  const r = spawnSync('vercel', args, { cwd: dir, shell: true, encoding: 'utf8', timeout: 240000 })
+  fs.rmSync(path.dirname(dir), { recursive: true, force: true })
+  const out = `${r.stdout || ''}\n${r.stderr || ''}`
+  const urls = out.match(/https:\/\/[a-z0-9.-]+\.vercel\.app/g) || []
+  if (r.status !== 0 || !urls.length) {
+    const hint = /missing_scope|--scope/.test(out) ? ' Pass --scope <team-slug> (run "vercel teams ls" to see yours).' : ''
+    fail(`The Vercel CLI did not publish the site.${hint}\n${out.trim().split('\n').slice(-6).join('\n')}`)
+  }
+  const url = urls.find(u => u.startsWith(`https://${name}.`)) || urls[urls.length - 1]
+  const open = await checkPublic(url)
+  print({ published: true, via: 'cli', url, project: name, public: open, note: open === false ? AUTH_NOTE : undefined })
 }
 
 function cmdExport(pos, flags) {
@@ -492,13 +573,14 @@ function help() {
 
   init "<company>" [--archetype A] [--out f]      create a case file
   info [--md]                                      list every input, archetype and stakeholder
-  set <f> key=value ... [--confirmed k,k]          change inputs (confirmed = the customer said it)
+  set <f> key=value ... [--confirmed k,k] [--assumed k,k]   change inputs (confirmed = the customer said it)
   custom <f> --key k --label L --value V           add an input of your own
   stakeholder <add|remove|restore> <f> ...         manage who is in the room
   person <add|remove> <f> --stakeholder k ...      record a researched person (with sources)
   validate <f>                                     check the file, in plain words
   calc <f> [--stakeholder k] [--md]                run the value model
   build <f> [--format pptx|onepager|website|all] [--stakeholder k] [--out dir] [--pdf]
+  publish <f> [--stakeholder k] [--yes]            put the website on Vercel (needs --yes)
   export <f> [--out f]                             write the full case file for the app`)
 }
 
@@ -517,6 +599,7 @@ async function main() {
     case 'validate': return cmdValidate(rest)
     case 'calc': return cmdCalc(rest, flags)
     case 'build': return cmdBuild(rest, flags)
+    case 'publish': return cmdPublish(rest, flags)
     case 'export': return cmdExport(rest, flags)
     case undefined:
     case 'help':

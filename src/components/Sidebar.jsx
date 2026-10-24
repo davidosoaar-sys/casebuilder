@@ -21,6 +21,12 @@ const icon = {
       <rect x="2.5" y="3.5" width="11" height="7.5" rx="1" />
       <path d="M6 13.5h4M8 11v2.5" strokeLinecap="round" />
     </>
+  ),
+  website: (
+    <>
+      <circle cx="8" cy="8" r="5.5" />
+      <path d="M2.5 8h11M8 2.5c1.8 1.6 2.6 3.4 2.6 5.5S9.8 11.9 8 13.5M8 2.5C6.2 4.1 5.4 5.9 5.4 8s.8 3.9 2.6 5.5" />
+    </>
   )
 }
 
@@ -65,6 +71,14 @@ export default function Sidebar({ view, project, onNav }) {
         <Item
           id="deck"
           label="Deck"
+          view={view}
+          onNav={onNav}
+          disabled={none}
+          title={none ? 'Open a project first' : undefined}
+        />
+        <Item
+          id="website"
+          label="Website"
           view={view}
           onNav={onNav}
           disabled={none}

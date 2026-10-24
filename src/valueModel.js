@@ -1,33 +1,48 @@
-// The value model.
+// The content around the model: what the inputs are, how they are grouped under
+// Spotify's three pillars, who the stakeholders are, and how archetypes bias the
+// case. The arithmetic itself lives in model.js; nothing here calculates a figure.
 //
-// Every formula here comes from Chris's written answer to Q8 ("What inputs and
-// KPIs do you use to calculate ROI?"). This file is the part a generic AI deck
-// tool does not have: it encodes how Portal's economics actually work.
-//
-// Nothing here is generated. If a number is wrong, fix it here once and every
-// deck the tool has ever produced is right from then on.
+// Every formula comes from Chris's written answer to Q8 ("What inputs and KPIs
+// do you use to calculate ROI?"). Every saving is a difference, so the inputs
+// come in pairs: how it is today, and how it is with Portal.
 
-export const WORKING_WEEKS = 48 // Chris's worked example uses ~48
+import { fmtMoney, fmtHours, fmtMonths } from './format.js'
+
+export { fmtMoney, fmtMoneyFull, fmtNum, fmtDec, fmtHours, fmtMonths } from './format.js'
+
+export const WORKING_WEEKS = 48 // Chris's worked example uses about 48
 export const HOURS_PER_YEAR = 2080
+
+// ---------------------------------------------------------------------------
+// Spotify's three pillars. Every value driver sits under one of them.
+// ---------------------------------------------------------------------------
+
+export const PILLARS = [
+  { key: 'speed', label: 'Speed', blurb: 'Engineers spend their time building, not searching.', color: '#2fc7a8' },
+  { key: 'chaos', label: 'Chaos-control', blurb: 'Fewer and shorter incidents, with clear owners.', color: '#e5399a' },
+  { key: 'scale', label: 'Scale', blurb: 'The platform grows without growing the upkeep.', color: '#111111' }
+]
+
+export const DRIVERS = [
+  { key: 'productivity', label: 'Engineer time recovered', short: 'Productivity', pillar: 'speed', figure: 'productivityValue' },
+  { key: 'onboarding', label: 'Faster onboarding', short: 'Onboarding', pillar: 'speed', figure: 'onboardingValue' },
+  { key: 'incidents', label: 'Shorter incidents', short: 'Incidents', pillar: 'chaos', figure: 'incidentValue' },
+  { key: 'platform', label: 'Platform team maintenance avoided', short: 'Platform load', pillar: 'scale', figure: 'platformValue' },
+  { key: 'tooling', label: 'Overlapping tooling retired', short: 'Tooling', pillar: 'scale', figure: 'toolingValue' }
+].map(d => ({ ...d, color: PILLARS.find(p => p.key === d.pillar).color }))
 
 // ---------------------------------------------------------------------------
 // Inputs
 // ---------------------------------------------------------------------------
-// `confirmed: false` means this is still an ASSUMPTION. It flips to true when
-// the customer confirms it on a call. That is Chris's actual mechanic: a tab of
-// assumptions that becomes a tab of inputs, and the more confirmed inputs you
-// have, the stronger the case.
+// `confirmed: false` means this is still an ASSUMPTION. It flips to true when the
+// customer confirms it on a call. `structural` inputs (the calendar) are not
+// claims about the customer, so they do not count toward confidence.
+
+export const INPUT_GROUPS = ['Account', 'Scale', 'Speed', 'Chaos-control', 'Cost and alternative', 'Calendar']
 
 export const INPUT_FIELDS = [
-  {
-    key: 'companyName',
-    label: 'Company',
-    group: 'Account',
-    type: 'text',
-    value: 'Northwind Retail',
-    confirmed: true,
-    help: 'Who the case is for.'
-  },
+  // ---- Account
+  { key: 'companyName', label: 'Company', group: 'Account', type: 'text', value: 'Northwind Retail', confirmed: true, help: 'Who the case is for.' },
   {
     key: 'archetype',
     label: 'Archetype',
@@ -36,253 +51,97 @@ export const INPUT_FIELDS = [
     options: ['Fast / AI-native', 'Scaling tech', 'Enterprise', 'Regulated enterprise'],
     value: 'Enterprise',
     confirmed: true,
-    help: 'Sets which value drivers lead and which objection to expect.'
+    help: 'Sets which stakeholder tabs exist and which pillar leads the case.'
   },
+
+  // ---- Scale
+  { key: 'engineers', label: 'Engineers', group: 'Scale', type: 'number', value: 500, confirmed: true, help: 'Usually findable from LinkedIn before the first call.' },
   {
-    key: 'engineers',
-    label: 'Engineers',
+    key: 'platformShare',
+    label: 'Share of engineering that is platform / DevEx',
     group: 'Scale',
-    type: 'number',
-    value: 500,
-    unit: '',
-    confirmed: true,
-    help: 'Usually findable from LinkedIn before the first call.'
-  },
-  {
-    key: 'hourlyCost',
-    label: 'Fully loaded cost per engineer hour',
-    group: 'Scale',
-    type: 'number',
-    value: 100,
-    unit: '$/hr',
-    confirmed: false,
-    help: 'Salary, benefits and overhead. Chris uses $100/hr in his worked example.'
-  },
-  {
-    key: 'hoursLostPerWeek',
-    label: 'Hours lost per engineer per week',
-    group: 'Productivity',
-    type: 'number',
-    value: 3,
-    unit: 'hrs',
-    step: 0.5,
-    confirmed: false,
-    help: 'Hunting for docs, services and owners. Industry estimates put tech debt at 2 to 5 days per engineer per month.'
-  },
-  {
-    key: 'captureRate',
-    label: 'Share of that time Portal recovers',
-    group: 'Productivity',
     type: 'percent',
-    value: 33,
+    value: 30,
     confirmed: false,
+    help: "Chris's rule: roughly 30% of the engineering org is platform or DevEx. The platform headcount is worked out from this."
+  },
+  { key: 'hourlyCost', label: 'Fully loaded cost per engineer hour', group: 'Scale', type: 'number', value: 100, unit: '$/hr', confirmed: false, help: "Salary, benefits and overhead. Chris uses $100/hr in his worked example." },
+  {
+    key: 'maintPctToday', label: 'Platform team time spent maintaining the portal, today', group: 'Scale', type: 'number', value: 4, unit: '%', step: 0.5, confirmed: false, pair: 'maint', side: 'today',
+    help: 'Share of the platform / DevEx team (not all engineers) kept busy upgrading, patching and running their current portal or wiki.'
+  },
+  { key: 'maintPctPortal', label: 'Platform team time spent maintaining the portal, with Portal', group: 'Scale', type: 'number', value: 2, unit: '%', step: 0.5, confirmed: false, pair: 'maint', side: 'portal' },
+  { key: 'toolSpendToday', label: 'Overlapping tool spend, today', group: 'Scale', type: 'number', value: 180000, unit: '$/yr', step: 5000, confirmed: false, pair: 'tool', side: 'today', help: 'What they pay each year for tools Portal would replace or consolidate.' },
+  { key: 'toolSpendPortal', label: 'Overlapping tool spend, with Portal', group: 'Scale', type: 'number', value: 90000, unit: '$/yr', step: 5000, confirmed: false, pair: 'tool', side: 'portal' },
+
+  // ---- Speed
+  {
+    key: 'searchHoursToday', label: 'Time spent searching for docs, services and owners, today', group: 'Speed', type: 'number', value: 3, unit: 'hrs / eng / week', step: 0.5, confirmed: false, pair: 'search', side: 'today',
+    help: 'Hours each engineer loses per week hunting. Industry estimates put tech debt at 2 to 5 days per engineer per month.'
+  },
+  {
+    key: 'searchHoursPortal', label: 'Time spent searching, with Portal', group: 'Speed', type: 'number', value: 2, unit: 'hrs / eng / week', step: 0.5, confirmed: false, pair: 'search', side: 'portal',
     help: 'The conservatism dial. Chris: the hard part is getting the customer to agree the number is realistic for them.'
   },
+  { key: 'rampDaysToday', label: 'Days for a new hire to first contribution, today', group: 'Speed', type: 'number', value: 14, unit: 'days', confirmed: false, pair: 'ramp', side: 'today' },
+  { key: 'rampDaysPortal', label: 'Days to first contribution, with Portal', group: 'Speed', type: 'number', value: 10, unit: 'days', confirmed: false, pair: 'ramp', side: 'portal' },
+  { key: 'newHiresPerYear', label: 'Engineers hired per year', group: 'Speed', type: 'number', value: 80, confirmed: false, help: 'From the hiring plan if you can get it.' },
+
+  // ---- Chaos-control
   {
-    key: 'platformEngineers',
-    label: 'Platform team size',
-    group: 'Platform team',
-    type: 'number',
-    value: 6,
-    confirmed: true,
-    help: 'Drives both the maintenance saving and the self-host comparison.'
+    key: 'incidentHoursToday', label: 'Hours each person spends on an incident, today', group: 'Chaos-control', type: 'number', value: 4, unit: 'hrs', step: 0.1, confirmed: false, pair: 'incident', side: 'today',
+    help: 'Most of it is finding who owns the failing service.'
   },
+  { key: 'incidentHoursPortal', label: 'Hours each person spends on an incident, with Portal', group: 'Chaos-control', type: 'number', value: 3.2, unit: 'hrs', step: 0.1, confirmed: false, pair: 'incident', side: 'portal' },
+  { key: 'peoplePerIncident', label: 'People pulled into each incident', group: 'Chaos-control', type: 'number', value: 5, confirmed: false },
+  { key: 'incidentsPerMonth', label: 'Incidents per month', group: 'Chaos-control', type: 'number', value: 12, confirmed: false },
+
+  // ---- Cost and alternative
+  { key: 'portalCost', label: 'Portal annual subscription', group: 'Cost and alternative', type: 'number', value: 400000, unit: '$/yr', step: 10000, confirmed: false, help: 'A placeholder until there is a quote.' },
   {
-    key: 'pctTimeMaintaining',
-    label: 'Platform time spent maintaining Backstage',
-    group: 'Platform team',
-    type: 'percent',
-    value: 25,
-    confirmed: false,
-    help: 'Upgrades, patches, infrastructure. Zero if they have not adopted OSS Backstage yet.'
+    key: 'selfHostEngineers', label: 'Engineers needed to self-host Backstage', group: 'Cost and alternative', type: 'number', value: 3, step: 0.5, confirmed: false,
+    help: "The comparison that decides most deals. Spotify's own deck puts standing up Backstage at 2 to 5 developers. It should also roughly match the upkeep hours Portal saves."
   },
-  {
-    key: 'newHiresPerYear',
-    label: 'Engineers hired per year',
-    group: 'Onboarding',
-    type: 'number',
-    value: 80,
-    confirmed: false,
-    help: 'Often inferable from open roles plus headcount growth.'
-  },
-  {
-    key: 'daysSavedOnboarding',
-    label: 'Days saved to first contribution',
-    group: 'Onboarding',
-    type: 'number',
-    value: 4,
-    unit: 'days',
-    step: 0.5,
-    confirmed: false,
-    help: 'How much sooner a new hire ships something real.'
-  },
-  {
-    key: 'incidentsPerMonth',
-    label: 'Incidents per month',
-    group: 'Incidents',
-    type: 'number',
-    value: 12,
-    confirmed: false
-  },
-  {
-    key: 'hoursPerIncident',
-    label: 'Hours per incident',
-    group: 'Incidents',
-    type: 'number',
-    value: 4,
-    unit: 'hrs',
-    step: 0.5,
-    confirmed: false
-  },
-  {
-    key: 'peoplePerIncident',
-    label: 'People pulled into each incident',
-    group: 'Incidents',
-    type: 'number',
-    value: 5,
-    confirmed: false
-  },
-  {
-    key: 'incidentReduction',
-    label: 'Incident time reduced by',
-    group: 'Incidents',
-    type: 'percent',
-    value: 20,
-    confirmed: false,
-    help: 'Mostly from knowing who owns the broken service.'
-  },
-  {
-    key: 'currentToolSpend',
-    label: 'Current overlapping tool spend',
-    group: 'Costs',
-    type: 'number',
-    value: 180000,
-    unit: '$/yr',
-    step: 10000,
-    confirmed: false,
-    help: 'Catalogues, docs portals, homegrown tooling Portal would replace.'
-  },
-  {
-    key: 'toolConsolidation',
-    label: 'Share of that spend retired',
-    group: 'Costs',
-    type: 'percent',
-    value: 50,
-    confirmed: false
-  },
-  {
-    key: 'portalCost',
-    label: 'Portal annual subscription',
-    group: 'Costs',
-    type: 'number',
-    value: 400000,
-    unit: '$/yr',
-    step: 25000,
-    confirmed: false,
-    help: 'Pricing is quote-based, so this is a working figure until it is agreed.'
-  },
-  {
-    key: 'selfHostEngineers',
-    label: 'Engineers needed to self-host Backstage',
-    group: 'Alternative',
-    type: 'number',
-    value: 3,
-    step: 0.5,
-    confirmed: false,
-    help: 'The build-it-ourselves alternative. Backstage is free; running it is not.'
-  },
-  {
-    key: 'selfHostSalary',
-    label: 'Fully loaded platform engineer salary',
-    group: 'Alternative',
-    type: 'number',
-    value: 210000,
-    unit: '$/yr',
-    step: 10000,
-    confirmed: false
-  }
+  { key: 'selfHostSalary', label: 'Fully loaded cost per self-host engineer', group: 'Cost and alternative', type: 'number', value: 210000, unit: '$/yr', step: 5000, confirmed: false },
+
+  // ---- Calendar (structural: not claims about the customer)
+  { key: 'weeksPerYear', label: 'Working weeks per year', group: 'Calendar', type: 'number', value: WORKING_WEEKS, confirmed: true, structural: true, help: "Chris's worked example uses about 48." },
+  { key: 'hoursPerDay', label: 'Working hours per day', group: 'Calendar', type: 'number', value: 8, confirmed: true, structural: true },
+  { key: 'hoursPerYear', label: 'Working hours per year', group: 'Calendar', type: 'number', value: HOURS_PER_YEAR, confirmed: true, structural: true }
 ]
 
-// ---------------------------------------------------------------------------
-// Benefit drivers
-// ---------------------------------------------------------------------------
-// Chris's base formula: (hours saved x hourly cost) + costs avoided, minus the
-// subscription. Each driver below is one row of his "how we frame the value"
-// table, turned into arithmetic.
-
-export const DRIVERS = [
-  {
-    key: 'productivity',
-    label: 'Engineer time recovered',
-    short: 'Productivity',
-    color: '#36baa2',
-    compute: i =>
-      i.engineers *
-      i.hoursLostPerWeek *
-      (i.captureRate / 100) *
-      WORKING_WEEKS *
-      i.hourlyCost,
-    explain: i =>
-      `${fmtNum(i.engineers)} engineers x ${i.hoursLostPerWeek} hrs/week lost x ${i.captureRate}% recovered x ${WORKING_WEEKS} weeks x ${fmtMoney(i.hourlyCost)}/hr`
-  },
-  {
-    key: 'platform',
-    label: 'Platform team maintenance avoided',
-    short: 'Platform load',
-    color: '#6c8ebf',
-    compute: i =>
-      i.platformEngineers *
-      (i.pctTimeMaintaining / 100) *
-      HOURS_PER_YEAR *
-      i.hourlyCost,
-    explain: i =>
-      `${i.platformEngineers} platform engineers x ${i.pctTimeMaintaining}% of their time x ${fmtNum(HOURS_PER_YEAR)} hrs x ${fmtMoney(i.hourlyCost)}/hr`
-  },
-  {
-    key: 'onboarding',
-    label: 'Faster onboarding',
-    short: 'Onboarding',
-    color: '#d6b656',
-    compute: i => i.newHiresPerYear * i.daysSavedOnboarding * 8 * i.hourlyCost,
-    explain: i =>
-      `${i.newHiresPerYear} new hires x ${i.daysSavedOnboarding} days saved x 8 hrs x ${fmtMoney(i.hourlyCost)}/hr`
-  },
-  {
-    key: 'incidents',
-    label: 'Shorter incidents',
-    short: 'Incidents',
-    color: '#e0636a',
-    compute: i =>
-      i.incidentsPerMonth *
-      12 *
-      i.hoursPerIncident *
-      i.peoplePerIncident *
-      (i.incidentReduction / 100) *
-      i.hourlyCost,
-    explain: i =>
-      `${i.incidentsPerMonth}/month x 12 x ${i.hoursPerIncident} hrs x ${i.peoplePerIncident} people x ${i.incidentReduction}% shorter x ${fmtMoney(i.hourlyCost)}/hr`
-  },
-  {
-    key: 'tooling',
-    label: 'Overlapping tooling retired',
-    short: 'Tooling',
-    color: '#9673a6',
-    compute: i => i.currentToolSpend * (i.toolConsolidation / 100),
-    explain: i =>
-      `${fmtMoney(i.currentToolSpend)}/yr current spend x ${i.toolConsolidation}% retired`
-  }
+// The today / with-Portal pairs. `valueFigure` is the model figure the saving is worth.
+export const PAIRS = [
+  { key: 'search', group: 'Speed', label: 'Time spent searching', unit: 'hrs / eng / week', today: 'searchHoursToday', portal: 'searchHoursPortal', saved: 'saved per engineer per week', valueFigure: 'productivityValue', driver: 'productivity' },
+  { key: 'ramp', group: 'Speed', label: 'Days to first contribution', unit: 'days', today: 'rampDaysToday', portal: 'rampDaysPortal', saved: 'saved per new hire', valueFigure: 'onboardingValue', driver: 'onboarding' },
+  { key: 'incident', group: 'Chaos-control', label: 'Hours per person per incident', unit: 'hrs', today: 'incidentHoursToday', portal: 'incidentHoursPortal', saved: 'saved per person per incident', valueFigure: 'incidentValue', driver: 'incidents' },
+  { key: 'maint', group: 'Scale', label: 'Platform team time on upkeep', unit: '%', today: 'maintPctToday', portal: 'maintPctPortal', saved: 'of the platform team freed up', valueFigure: 'platformValue', driver: 'platform' },
+  { key: 'tool', group: 'Scale', label: 'Overlapping tool spend', unit: '$/yr', today: 'toolSpendToday', portal: 'toolSpendPortal', saved: 'a year saved', valueFigure: 'toolingValue', driver: 'tooling', money: true }
 ]
+
+const isClaim = f => (f.type === 'number' || f.type === 'percent') && !f.structural
+
+// Share of the numbers that actually move the case that have been confirmed.
+export function confidence(fields) {
+  const material = fields.filter(isClaim)
+  if (!material.length) return 0
+  return Math.round((material.filter(f => f.confirmed).length / material.length) * 100)
+}
+
+export function unconfirmed(fields) {
+  return fields.filter(f => !f.confirmed && isClaim(f))
+}
 
 // ---------------------------------------------------------------------------
 // Stakeholder views
 // ---------------------------------------------------------------------------
-// Q12: a real business case shows the VP of Engineering, finance and security
-// each something different. In the Toronto session Chris went further: their
-// goals actively conflict. A director wants productivity for their org, the CTO
-// wants to cut a million in spend, and you arrive with a $500k tool.
-//
-// REPLACE THE PLACEHOLDER COPY BELOW WITH CHRIS'S OWN WORDS. This is the part
-// of the tool nothing else can produce, and right now it is our guess at it.
+// REPLACE THE PLACEHOLDER COPY BELOW WITH CHRIS'S OWN WORDS. Headlines read the
+// model: headline(model) where model = computeModel(inputs).
+
+export const hoursBack = model =>
+  model.figures.hoursSavedPerEngPerWeek.value * model.inputs.engineers * model.inputs.weeksPerYear
+
+export const costsAvoided = model => model.figures.platformValue.value + model.figures.toolingValue.value
 
 export const STAKEHOLDERS = [
   {
@@ -291,11 +150,9 @@ export const STAKEHOLDERS = [
     tag: 'Usually the champion',
     cares: 'Their team shipping instead of searching',
     lead: ['productivity', 'onboarding'],
-    headline: i =>
-      `${fmtHours(driverHours(i, 'productivity'))} of engineering time back per year`,
+    headline: m => `${fmtHours(hoursBack(m))} of engineering time back per year`,
     objection: 'My team already knows where things are.',
-    counter:
-      'Ask how a new hire finds the owner of a service during an incident. The cost lands on the people who joined most recently.',
+    counter: 'Ask how a new hire finds the owner of a service during an incident. The cost lands on the people who joined most recently.',
     needsToSee: [
       'Time recovered per engineer, not just in aggregate',
       'Onboarding time for the hires they are about to make',
@@ -308,10 +165,9 @@ export const STAKEHOLDERS = [
     tag: 'Often has the opposite goal',
     cares: 'Cutting spend while the org keeps growing',
     lead: ['platform', 'tooling'],
-    headline: i => `${fmtMoney(costsAvoided(i))} of run cost avoided per year`,
+    headline: m => `${fmtMoney(costsAvoided(m))} of run cost avoided per year`,
     objection: 'Backstage is open source. Why are we paying for it?',
-    counter:
-      'The licence is free, the operation is not. Self-hosting means a standing platform team for upgrades, patches and infrastructure, permanently.',
+    counter: 'The licence is free, the operation is not. Self-hosting means a standing platform team for upgrades, patches and infrastructure, permanently.',
     needsToSee: [
       'Total cost of ownership against self-hosting, not against doing nothing',
       'What gets retired, not just what gets added',
@@ -324,10 +180,12 @@ export const STAKEHOLDERS = [
     tag: 'Shows up late and can stall a done deal',
     cares: 'Payback, contract terms, and whether the numbers survive scrutiny',
     lead: ['productivity', 'tooling'],
-    headline: i => `Payback in ${paybackMonths(i)} ${paybackMonths(i) === 1 ? 'month' : 'months'}`,
+    headline: m => {
+      const months = m.figures.paybackMonths.value
+      return months > 0 ? `Payback in ${fmtMonths(months)}` : 'No payback on these figures'
+    },
     objection: 'These savings are soft. Nobody gets laid off because of this.',
-    counter:
-      'Present recovered capacity against hiring plans rather than as cash. The claim is avoided headcount, not reduced headcount.',
+    counter: 'Present recovered capacity against hiring plans rather than as cash. The claim is avoided headcount, not reduced headcount.',
     needsToSee: [
       'Payback period and five-year value',
       'Which inputs are confirmed and which are still assumptions',
@@ -342,8 +200,7 @@ export const STAKEHOLDERS = [
     lead: ['incidents', 'platform'],
     headline: () => 'Ownership and standards provable on demand',
     objection: 'This is another system holding our service metadata.',
-    counter:
-      'Bring them in during discovery rather than at contract. Chris lost weeks on a deal where procurement rules surfaced only after everyone had agreed.',
+    counter: 'Bring them in during discovery rather than at contract. Chris lost weeks on a deal where procurement rules surfaced only after everyone had agreed.',
     needsToSee: [
       'Where the data lives and who can see it',
       'How standards are enforced and evidenced for an audit',
@@ -355,135 +212,122 @@ export const STAKEHOLDERS = [
 // ---------------------------------------------------------------------------
 // Archetype presets
 // ---------------------------------------------------------------------------
-// Small on purpose. These bias which drivers lead and flag the likely
-// alternative. They are not the product.
+// An archetype decides who is in the room (the stakeholder tabs) and which pillar
+// leads the case.
 
 export const ARCHETYPES = {
   'Fast / AI-native': {
     stakeholders: ['champion', 'cto'],
+    pillars: ['speed', 'chaos', 'scale'],
     note: 'Short cycle, few approvers. Lead with speed, not governance.',
     alternative: 'Build something lightweight in-house'
   },
   'Scaling tech': {
     stakeholders: ['champion', 'cto', 'finance'],
+    pillars: ['scale', 'speed', 'chaos'],
     note: 'Informal systems are breaking as headcount grows.',
     alternative: 'Self-host open source Backstage'
   },
   Enterprise: {
     stakeholders: ['champion', 'cto', 'finance', 'security'],
+    pillars: ['scale', 'speed', 'chaos'],
     note: 'Several approvers. Map the path early; procurement surfaces late.',
     alternative: 'Self-host open source Backstage with a funded platform team'
   },
   'Regulated enterprise': {
     stakeholders: ['champion', 'cto', 'finance', 'security'],
+    pillars: ['chaos', 'scale', 'speed'],
     note: 'Long cycle, many layers. Compliance evidence is the lever.',
     alternative: 'Self-host, or defer to the next budget year'
   }
 }
 
+export const archetypePillars = name => (ARCHETYPES[name] || ARCHETYPES.Enterprise).pillars
+
+// The stakeholders that should exist for an archetype: its built-in roles (keeping
+// any edits or positions already made) plus every custom stakeholder the user added.
+export function stakeholdersForArchetype(current, archetype) {
+  const wanted = (ARCHETYPES[archetype] || ARCHETYPES.Enterprise).stakeholders
+  const builtinKeys = STAKEHOLDERS.map(s => s.key)
+  const kept = Object.fromEntries(current.filter(s => builtinKeys.includes(s.key)).map(s => [s.key, s]))
+  const builtin = wanted.map(key => kept[key] || { key, builtin: true })
+  const custom = current.filter(s => !builtinKeys.includes(s.key))
+  return [...builtin, ...custom]
+}
+
 // ---------------------------------------------------------------------------
-// Computation
+// The drivers, as the deck lays them out
 // ---------------------------------------------------------------------------
 
-export function driverValue(inputs, key) {
-  const d = DRIVERS.find(x => x.key === key)
-  return d ? Math.max(0, d.compute(inputs)) : 0
+export function allDrivers(model) {
+  return DRIVERS.map(d => {
+    const f = model.figures[d.figure]
+    return { ...d, value: f.value, detail: f.equation, flag: f.flag }
+  })
 }
 
-export function driverHours(inputs, key) {
-  const v = driverValue(inputs, key)
-  return inputs.hourlyCost > 0 ? v / inputs.hourlyCost : 0
+// Drivers grouped under the three pillars, in the archetype's order. The first
+// pillar is the one that leads.
+export function driversByPillar(model, archetype) {
+  const drivers = allDrivers(model)
+  return archetypePillars(archetype).map((key, i) => {
+    const pillar = PILLARS.find(p => p.key === key)
+    const items = drivers.filter(d => d.pillar === key)
+    return { ...pillar, leads: i === 0, items, total: items.reduce((s, d) => s + d.value, 0) }
+  })
 }
 
-export function allDrivers(inputs) {
-  return DRIVERS.map(d => ({
-    ...d,
-    value: Math.max(0, d.compute(inputs)),
-    detail: d.explain(inputs)
-  })).sort((a, b) => b.value - a.value)
-}
+// ---------------------------------------------------------------------------
+// Projects saved before the inputs were pairs
+// ---------------------------------------------------------------------------
 
-export function totalBenefit(inputs) {
-  return DRIVERS.reduce((sum, d) => sum + Math.max(0, d.compute(inputs)), 0)
-}
+export const OLD_INPUT_KEYS = new Set([
+  'hoursLostPerWeek', 'captureRate', 'platformEngineers', 'pctTimeMaintaining', 'daysSavedOnboarding',
+  'hoursPerIncident', 'incidentReduction', 'currentToolSpend', 'toolConsolidation'
+])
 
-export function costsAvoided(inputs) {
-  return driverValue(inputs, 'platform') + driverValue(inputs, 'tooling')
-}
+const round1 = n => Math.round(n * 10) / 10
 
-export function netValue(inputs) {
-  return totalBenefit(inputs) - inputs.portalCost
-}
+// Takes { key: { value, confirmed } } and returns the new-style keys derived from
+// any old-style ones, so a case built the old way keeps its numbers. Existing
+// new-style keys are never overwritten.
+export function migrateOldInputs(saved) {
+  const out = {}
+  const has = k => saved[k] && saved[k].value != null
+  const val = k => Number(saved[k].value)
+  const ok = k => !!saved[k].confirmed
 
-export function paybackMonths(inputs) {
-  const monthly = totalBenefit(inputs) / 12
-  if (monthly <= 0) return '-'
-  return Math.max(1, Math.round(inputs.portalCost / monthly))
-}
-
-export function roiMultiple(inputs) {
-  if (inputs.portalCost <= 0) return 0
-  return totalBenefit(inputs) / inputs.portalCost
-}
-
-export function fiveYearValue(inputs) {
-  return netValue(inputs) * 5
-}
-
-// The self-host comparison. Chris's own framing: build-it-in-house is the
-// biggest competitor, so the case is never Portal versus nothing.
-export function selfHostCost(inputs) {
-  return inputs.selfHostEngineers * inputs.selfHostSalary
-}
-
-export function versusSelfHost(inputs) {
-  const self = selfHostCost(inputs)
-  return {
-    selfHost: self,
-    portal: inputs.portalCost,
-    delta: self - inputs.portalCost,
-    cheaper: self > inputs.portalCost ? 'portal' : 'selfHost'
+  if (has('hoursLostPerWeek') && !('searchHoursToday' in saved)) {
+    const today = val('hoursLostPerWeek')
+    const capture = has('captureRate') ? val('captureRate') : 33
+    out.searchHoursToday = { value: today, confirmed: ok('hoursLostPerWeek') }
+    out.searchHoursPortal = { value: round1(today * (1 - capture / 100)), confirmed: ok('hoursLostPerWeek') && has('captureRate') && ok('captureRate') }
   }
-}
-
-// Confidence: what share of the inputs that actually move the number have been
-// confirmed. This is the signal Chris described, surfaced instead of implied.
-export function confidence(fields) {
-  const material = fields.filter(f => f.type === 'number' || f.type === 'percent')
-  if (!material.length) return 0
-  return Math.round((material.filter(f => f.confirmed).length / material.length) * 100)
-}
-
-export function unconfirmed(fields) {
-  return fields.filter(
-    f => !f.confirmed && (f.type === 'number' || f.type === 'percent')
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Formatting
-// ---------------------------------------------------------------------------
-
-export function fmtMoney(n) {
-  if (n == null || isNaN(n)) return '-'
-  const abs = Math.abs(n)
-  if (abs >= 1_000_000) return `$${(n / 1_000_000).toFixed(abs >= 10_000_000 ? 0 : 1)}M`
-  if (abs >= 1_000) return `$${Math.round(n / 1000)}k`
-  return `$${Math.round(n)}`
-}
-
-export function fmtMoneyFull(n) {
-  if (n == null || isNaN(n)) return '-'
-  return `$${Math.round(n).toLocaleString('en-US')}`
-}
-
-export function fmtNum(n) {
-  if (n == null || isNaN(n)) return '-'
-  return Math.round(n).toLocaleString('en-US')
-}
-
-export function fmtHours(n) {
-  if (n == null || isNaN(n)) return '-'
-  if (n >= 1000) return `${Math.round(n / 1000)}k hours`
-  return `${Math.round(n)} hours`
+  if (has('daysSavedOnboarding') && !('rampDaysToday' in saved)) {
+    const saving = val('daysSavedOnboarding')
+    const today = Math.max(14, saving)
+    out.rampDaysToday = { value: today, confirmed: false }
+    out.rampDaysPortal = { value: today - saving, confirmed: false }
+  }
+  if (has('hoursPerIncident') && !('incidentHoursToday' in saved)) {
+    const today = val('hoursPerIncident')
+    const cut = has('incidentReduction') ? val('incidentReduction') : 20
+    out.incidentHoursToday = { value: today, confirmed: ok('hoursPerIncident') }
+    out.incidentHoursPortal = { value: round1(today * (1 - cut / 100)), confirmed: ok('hoursPerIncident') && has('incidentReduction') && ok('incidentReduction') }
+  }
+  if (has('currentToolSpend') && !('toolSpendToday' in saved)) {
+    const today = val('currentToolSpend')
+    const cut = has('toolConsolidation') ? val('toolConsolidation') : 50
+    out.toolSpendToday = { value: today, confirmed: ok('currentToolSpend') }
+    out.toolSpendPortal = { value: Math.round(today * (1 - cut / 100)), confirmed: ok('currentToolSpend') && has('toolConsolidation') && ok('toolConsolidation') }
+  }
+  if (has('pctTimeMaintaining') && !('maintPctToday' in saved)) {
+    // The old model assumed Portal removed all of that upkeep.
+    out.maintPctToday = { value: val('pctTimeMaintaining'), confirmed: false }
+    out.maintPctPortal = { value: 0, confirmed: false }
+    if (has('platformEngineers') && has('engineers') && val('engineers') > 0 && !('platformShare' in saved)) {
+      out.platformShare = { value: Math.min(100, round1((val('platformEngineers') / val('engineers')) * 100)), confirmed: false }
+    }
+  }
+  return out
 }

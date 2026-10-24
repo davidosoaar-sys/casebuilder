@@ -7,18 +7,23 @@ import { siteMain } from './siteClient.js'
 const esc = s =>
   String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 
+// The Backstage mark as an inline icon, so a downloaded or published page has it in
+// its tab without needing any other file.
+const iconLink = svg => (svg ? `<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,${encodeURIComponent(svg)}">` : '')
+
 const FONT =
   'system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", sans-serif, BlinkMacSystemFont, Helvetica, Arial'
 
 // ------------------------------------------------------------ one-pager
 
 // facts: { company, role, headline, cares, stats[{label,value,tone}], drivers[{label,valueStr,pct,color,lead}],
-//          total, versus{rows,lead,verdict}, needs[], objection, counter, open[{label,assumed}], openCount, date }
-export function buildOnePager({ facts: f, logoSvg }) {
+//          total, groups[{label,rows[{label,valueStr,pct,color,lead,detail}]}], versus{rows,lead,verdict}, needs[], objection, counter, open[{label,assumed}], openCount, date }
+export function buildOnePager({ facts: f, logoSvg, faviconSvg }) {
   const logo = (logoSvg || '').replace(/#7df3e1/gi, '#1f8a76')
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <title>${esc(f.company)} - business case one-pager</title>
+${iconLink(faviconSvg)}
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   @page { size: A4; margin: 0; }
@@ -30,7 +35,7 @@ export function buildOnePager({ facts: f, logoSvg }) {
   .top { display: flex; justify-content: space-between; align-items: center; }
   .top .logo svg { height: 22px; width: auto; display: block; }
   .top .meta { font-size: 8.5pt; color: #5b6168; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
-  .bar { height: 3px; width: 46px; background: linear-gradient(90deg, #36baa2, rgba(155,240,225,0)); margin-top: 1mm; }
+  .bar { height: 3px; width: 46px; background: linear-gradient(90deg, #2fc7a8, rgba(155,240,225,0)); margin-top: 1mm; }
   .eyebrow { font-size: 8.5pt; letter-spacing: .06em; text-transform: uppercase; color: #1f8a76; font-weight: 700; margin: 0; }
   h1 { font-size: 27pt; line-height: 1.08; margin: 1mm 0 1.5mm; font-weight: 800; letter-spacing: -.01em; }
   .cares { margin: 0; font-size: 11pt; color: #4a5057; }
@@ -40,8 +45,10 @@ export function buildOnePager({ facts: f, logoSvg }) {
   .stat strong { display: block; font-size: 15pt; margin-top: 1mm; font-weight: 800; }
   .stat.good strong { color: #1f8a76; } .stat.bad strong { color: #c8434a; }
   h2 { font-size: 8.5pt; letter-spacing: .06em; text-transform: uppercase; color: #1f8a76; margin: 0 0 2.2mm; font-weight: 700; }
-  .row { display: grid; grid-template-columns: 52mm 1fr 20mm; align-items: center; gap: 3mm; margin-bottom: 1.8mm; font-size: 9pt; }
+  .row { display: grid; grid-template-columns: 52mm 1fr 20mm; align-items: center; gap: 1mm 3mm; margin-bottom: 1.6mm; font-size: 9pt; }
   .row .lbl { font-weight: 600; }
+  .eqline { grid-column: 2 / 4; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 6.6pt; color: #7b838b; margin-top: -1.2mm; }
+  .pgroup { font-size: 7.4pt; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; color: #15171a; margin: 1.5mm 0 1.2mm; }
   .row .lbl.dim { font-weight: 400; color: #5b6168; }
   .track { height: 3.2mm; background: #e8ebee; border-radius: 99px; overflow: hidden; }
   .fill { height: 100%; border-radius: 99px; }
@@ -53,14 +60,14 @@ export function buildOnePager({ facts: f, logoSvg }) {
   .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 8mm; }
   ul { margin: 0; padding-left: 4.5mm; font-size: 9.3pt; line-height: 1.5; color: #2f343a; }
   li { margin-bottom: 1mm; }
-  blockquote { margin: 0 0 2.5mm; padding: 2mm 3mm; border-left: 3px solid #36baa2; background: #f1f8f6; font-style: italic; font-size: 9.5pt; }
+  blockquote { margin: 0 0 2.5mm; padding: 2mm 3mm; border-left: 3px solid #2fc7a8; background: #f1f8f6; font-style: italic; font-size: 9.5pt; }
   p.small { margin: 0; font-size: 9.3pt; line-height: 1.5; color: #2f343a; }
   .assume { columns: 2; column-gap: 8mm; font-size: 8.6pt; list-style: none; padding: 0; }
   .assume li { display: flex; justify-content: space-between; gap: 3mm; border-bottom: 1px solid #eceff1; padding: .8mm 0; break-inside: avoid; margin: 0; }
   .assume span { color: #6a7078; white-space: nowrap; }
   .foot { margin-top: auto; display: flex; justify-content: space-between; font-size: 7.8pt; color: #7b838b; border-top: 1px solid #dfe2e6; padding-top: 2.5mm; }
   .toolbar { position: fixed; top: 12px; right: 16px; }
-  .toolbar button { font: inherit; font-weight: 700; padding: 8px 14px; border-radius: 4px; border: 0; background: #36baa2; color: #111; cursor: pointer; }
+  .toolbar button { font: inherit; font-weight: 700; padding: 8px 14px; border-radius: 4px; border: 0; background: #2fc7a8; color: #111; cursor: pointer; }
   @media print { .toolbar { display: none; } }
 </style></head>
 <body>
@@ -80,11 +87,16 @@ export function buildOnePager({ facts: f, logoSvg }) {
 
   <section>
     <h2>Where the value comes from</h2>
-    ${f.drivers
+    ${f.groups
       .map(
-        d => `<div class="row"><span class="lbl ${d.lead ? '' : 'dim'}">${esc(d.label)}</span>
+        g => `<div class="pgroup">${esc(g.label)}</div>` +
+          g.rows
+            .map(
+              d => `<div class="row"><span class="lbl ${d.lead ? '' : 'dim'}">${esc(d.label)}</span>
           <div class="track"><div class="fill" style="width:${d.pct.toFixed(1)}%;background:${esc(d.color)};opacity:${d.lead ? 1 : 0.5}"></div></div>
-          <span class="val">${esc(d.valueStr)}</span></div>`
+          <span class="val">${esc(d.valueStr)}</span><span class="eqline">${esc(d.detail)}</span></div>`
+            )
+            .join('')
       )
       .join('')}
     <div class="total"><span>Total annual value</span><strong>${esc(f.total)}</strong></div>
@@ -95,7 +107,7 @@ export function buildOnePager({ facts: f, logoSvg }) {
     ${f.versus.rows
       .map(
         r => `<div class="row"><span class="lbl">${esc(r.name)}</span>
-          <div class="track"><div class="fill" style="width:${r.pct.toFixed(1)}%;background:${r.tone === 'bad' ? '#e0636a' : '#36baa2'}"></div></div>
+          <div class="track"><div class="fill" style="width:${r.pct.toFixed(1)}%;background:${r.tone === 'bad' ? '#e0636a' : '#2fc7a8'}"></div></div>
           <span class="val">${esc(r.valueStr)}</span></div>`
       )
       .join('')}
@@ -123,21 +135,35 @@ export function buildOnePager({ facts: f, logoSvg }) {
 
 // -------------------------------------------------------------- website
 
+// The model files are inlined into the page as one script, so their import and
+// export lines are removed (everything lands in one scope).
+export function stripModules(src) {
+  return String(src)
+    .replace(/^import [^\n]*$/gm, '')
+    .replace(/^export \{[^}]*\} from [^\n]*$/gm, '')
+    .replace(/^export /gm, '')
+}
+
+
 // args: { company, slides, stakeholders, activeKey, inputs, openFields, sliders, logoSvg, vmSource }
 //   slides:       the raw deck (blocks hold text templates, so the site can re-fill them)
 //   stakeholders: plain objects { key, role, tag, cares, objection, counter, needsToSee, lead, builtin }
-//   vmSource:     the text of valueModel.js, inlined so the site can recompute live
-export function buildWebsite({ company, slides, stakeholders, activeKey, inputs, openFields, sliders, logoSvg, vmSource }) {
+//   vmSource:     the text of format.js, model.js and valueModel.js joined, inlined so the site can recompute live
+export function buildWebsite({ company, slides, stakeholders, activeKey, inputs, openFields, sliders, logoSvg, faviconSvg, vmSource }) {
   const data = { company, slides, stakeholders, activeKey, inputs, openFields, sliders, logo: logoSvg }
   // JSON inside a <script> must not be able to close the tag.
-  const json = JSON.stringify(data).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029')
+  const safe = obj => JSON.stringify(obj).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029')
+  const json = safe(data)
   // The value model, turned into a function that returns what the site needs.
-  const vm = `(function(){${String(vmSource).replace(/^export /gm, '')}
-return {STAKEHOLDERS:STAKEHOLDERS,allDrivers:allDrivers,totalBenefit:totalBenefit,netValue:netValue,paybackMonths:paybackMonths,roiMultiple:roiMultiple,fiveYearValue:fiveYearValue,versusSelfHost:versusSelfHost,fmtMoney:fmtMoney,fmtMoneyFull:fmtMoneyFull};})()`
+  const vm = `(function(){${stripModules(vmSource)}
+return {computeModel:computeModel,STAKEHOLDERS:STAKEHOLDERS,PAIRS:PAIRS,driversByPillar:driversByPillar,fmtMoney:fmtMoney,fmtMoneyFull:fmtMoneyFull,fmtDec:fmtDec,fmtMonths:fmtMonths};})()`
 
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+${iconLink(faviconSvg)}
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800;900&display=swap">
 <title>${esc(company)} · Business case</title>
 <style>${SITE_CSS}</style></head>
 <body>
@@ -166,7 +192,7 @@ var VM = ${vm};
 }
 
 const SITE_CSS = `
-:root{--bg:#1b1b1d;--panel:#242526;--panel3:#303132;--line:#2e2f31;--line2:#46484b;--ink:#e3e3e3;--strong:#fff;--dim:#a9acb1;--faint:#797c82;--accent:#36baa2;--mint:#9bf0e1;--bad:#f0686d;--warn:#ffba00}
+:root{--bg:#111111;--panel:#242526;--panel3:#303132;--line:#2e2f31;--line2:#46484b;--ink:#e3e3e3;--strong:#fff;--dim:#a9acb1;--faint:#797c82;--accent:#9bf0de;--mint:#9bf0de;--pink:#e5399a;--bad:#e5399a;--warn:#ffba00}
 *{box-sizing:border-box}html,body{margin:0;height:100%}
 body{background:var(--bg);color:var(--ink);font-family:${FONT};font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
 .top{position:fixed;top:0;left:0;right:0;height:56px;display:flex;align-items:center;gap:18px;padding:0 24px;background:var(--bg);border-bottom:1px solid var(--line);z-index:20}
@@ -178,10 +204,11 @@ body{background:var(--bg);color:var(--ink);font-family:${FONT};font-size:15px;li
 .pager button:hover{border-color:var(--ink)}
 main{height:100vh;overflow-y:auto;padding-top:56px;scroll-snap-type:y proximity}
 .slide{min-height:calc(100vh - 56px);scroll-snap-align:start;display:flex;align-items:center;padding:56px 72px 56px 32px;border-bottom:1px solid var(--line)}
-.slide.hero-bg{background:linear-gradient(70.44deg,#1b1b1d 55%,#5d817b)}
+.slide.hero-bg{background:linear-gradient(70.44deg,#111111 55%,#1f3a35)}
 .inner{max-width:1000px;margin:0 auto;width:100%}
 .label{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mint);margin:0 0 16px}
 .eyebrow,.forwhom{font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);margin:0 0 16px}.forwhom{color:var(--faint);margin-top:28px;border-top:1px solid var(--line2);padding-top:14px;display:inline-block}
+h1.hero,h2,.stat strong,.pillar h3{font-family:Outfit,'Avenir Next','Century Gothic',system-ui,sans-serif}
 h1.hero{font-size:clamp(44px,8vw,88px);line-height:1.05;margin:0;color:var(--strong);font-weight:800}
 h2{font-size:clamp(28px,4vw,40px);line-height:1.12;margin:0 0 10px;color:var(--strong);font-weight:700}
 h2.headline{font-size:clamp(34px,6vw,60px);line-height:1.08;font-weight:800;max-width:18ch}
@@ -199,15 +226,20 @@ hr{border:0;border-top:1px solid var(--line2);margin:22px 0}.spacer{height:40px}
 .chart{display:flex;flex-direction:column;gap:18px;margin-top:22px}
 .bar-row{display:grid;grid-template-columns:210px 1fr 80px;grid-template-areas:"l t v" "d d d";gap:4px 16px;align-items:center}
 .bar-label{grid-area:l;color:var(--dim);font-size:14px;display:flex;align-items:center;gap:8px}.bar-row.lead .bar-label{color:var(--strong);font-weight:600}
-.bar-label i{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px rgba(54,186,162,.2);flex:none}
+.bar-label i{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px rgba(155,240,222,.2);flex:none}
 .track{grid-area:t;height:12px;background:var(--panel3);border-radius:99px;overflow:hidden}.fill{height:100%;border-radius:99px}.fill.bad{background:#e0636a}.fill.good{background:var(--accent)}
 .bar-value{grid-area:v;text-align:right;font-variant-numeric:tabular-nums;color:var(--dim)}.bar-row.lead .bar-value{color:var(--strong);font-weight:700}
 .bar-detail{grid-area:d;color:var(--faint);font-size:12px;padding-left:226px}
+.eq{display:block;font-family:ui-monospace,Menlo,Consolas,monospace;font-style:normal;font-size:12px;color:var(--faint);margin-top:6px;overflow-wrap:anywhere}p.eq{margin:8px 0 0}
+.stat .eq{font-size:11px}
+.pillar{margin-bottom:6px}.pillar h3{display:flex;justify-content:space-between;color:var(--strong);border-bottom:1px solid var(--line2);padding-bottom:8px;margin-bottom:12px}.pillar.pl h3{color:var(--accent)}.pillar h3 span{font-variant-numeric:tabular-nums}
+.pairs{display:flex;flex-direction:column;gap:10px;margin-top:20px}.pr{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:12px;align-items:baseline;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 16px}.pr.ph{background:none;border:0;padding:0 16px;color:var(--faint);font-size:11px;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.pr b{font-variant-numeric:tabular-nums;color:var(--strong);text-align:right}.pr .pd{color:var(--accent)}.pr .eq{grid-column:1/-1;margin:0}.pr .pl2 i{color:var(--faint);font-style:normal;font-size:12px}
 .total{display:flex;justify-content:space-between;align-items:baseline;margin-top:26px;padding-top:16px;border-top:1px solid var(--line);color:var(--dim);font-size:12px;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
 .v-row .track{grid-area:auto}.total strong{font-size:32px;text-transform:none;letter-spacing:0;color:var(--strong)}
 .versus{display:flex;flex-direction:column;gap:16px;margin:22px 0}.v-row{display:grid;grid-template-columns:185px 1fr 120px;gap:16px;align-items:center}.v-row .track{height:18px}.v-row b{text-align:right}
 .v-note{color:var(--dim);max-width:68ch}.v-note strong{color:var(--strong);display:block;margin-top:8px}
-.still{color:var(--strong)}.allgood{color:var(--accent);background:rgba(54,186,162,.07);border:1px solid rgba(54,186,162,.25);padding:18px;border-radius:8px}
+.still{color:var(--strong)}.allgood{color:var(--accent);background:rgba(155,240,222,.07);border:1px solid rgba(155,240,222,.25);padding:18px;border-radius:8px}
 .assume{list-style:none;padding:0;margin:14px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:8px}
 .assume li{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:11px 15px;display:flex;justify-content:space-between;gap:12px;font-size:13px}.assume span{color:var(--faint);font-size:12px}
 .dots{position:fixed;right:20px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px;z-index:15}
@@ -217,5 +249,8 @@ hr{border:0;border-top:1px solid var(--line2);margin:22px 0}.spacer{height:40px}
 .whatif.open{display:block}.whatif h3{color:var(--strong);font-size:15px;text-transform:none;letter-spacing:0;margin:0 0 4px}.whatif p{color:var(--dim);font-size:13px}
 .whatif label{display:block;margin:14px 0}.whatif label span{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}.whatif label b{color:var(--accent)}
 .whatif input[type=range]{width:100%;accent-color:var(--accent)}.whatif button{margin-top:6px;background:none;border:1px solid var(--line2);color:var(--ink);border-radius:4px;padding:7px 12px;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.editing .blk[data-e]:hover{outline:1px dashed rgba(155,240,222,.6);outline-offset:6px;cursor:text;border-radius:4px}
+.edit-ta{display:block;width:100%;resize:none;overflow:hidden;font:inherit;color:inherit;letter-spacing:inherit;line-height:inherit;text-transform:inherit;background:rgba(155,240,222,.1);border:1px dashed var(--accent);border-radius:4px;padding:2px 8px;margin:0}
+.edit-ta:focus{outline:none;border-style:solid}
 @media(max-width:780px){.top{gap:10px;padding:0 12px}.co{display:none}.aud-wrap>span{display:none}.slide{padding:40px 36px 40px 16px}.cols,.stats{grid-template-columns:1fr}.bar-row{grid-template-columns:1fr 70px;grid-template-areas:"l v" "t t" "d d"}.bar-detail{padding-left:0}.v-row{grid-template-columns:1fr 90px}.v-row .track{grid-column:1/-1;order:3}.whatif{left:12px;right:12px;width:auto}}
 `

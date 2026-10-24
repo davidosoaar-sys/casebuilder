@@ -23,10 +23,16 @@ From a local checkout instead: `claude --plugin-dir ./plugin`. After editing, `/
 |---|---|
 | `/casebuilder:new <company>` | Start a case: archetype, inputs, stakeholders |
 | `/casebuilder:research [file] [role]` | Find who holds each role, with sources |
-| `/casebuilder:build [file] [stakeholder] [format]` | Build the PowerPoint, one-pager and website |
+| `/casebuilder:build [file] [stakeholder] [format]` | Build the PowerPoint, one-pager and website (ask to publish it for a live link) |
 | `/casebuilder:whatif <file> <changes>` | Before/after if an assumption changes, without touching the case |
 
 You can also just ask: *"Build a business case for Acme. They have about 800 engineers."*
+
+## Sharing the website as a link
+
+Ask Claude to publish it, or run `casebuilder.mjs publish <file>`. It puts the interactive website on Vercel at its own address (`https://bc-<company>-<random>.vercel.app`, unlisted, not indexed by search engines). Because that exposes the customer's numbers, it **does nothing until you confirm**: the first run is a dry run that shows what would happen, and only `--yes` publishes. The link is unguessable and unlisted but not locked, so anyone who has it can read the numbers.
+
+It needs either `VERCEL_TOKEN` (create one at vercel.com/account/tokens; optionally `VERCEL_TEAM_ID`) or the Vercel CLI installed and logged in (`npm i -g vercel`, `vercel login`; add `--scope <team>` if you have several).
 
 ## How it works
 

@@ -1,4 +1,4 @@
-import { INPUT_FIELDS, STAKEHOLDERS } from './valueModel.js'
+import { INPUT_FIELDS, STAKEHOLDERS, OLD_INPUT_KEYS, migrateOldInputs } from './valueModel.js'
 import { defaultFields, defaultStakeholders } from './projects.js'
 import { defaultDeck, migrateDeck, TEXT_STYLES } from './deck/model.js'
 import { uid } from './uid.js'
@@ -22,7 +22,7 @@ export const CASE_VERSION = 1
 const BUILTIN_KEYS = STAKEHOLDERS.map(s => s.key)
 const FIELD_BY_KEY = Object.fromEntries(INPUT_FIELDS.map(f => [f.key, f]))
 const BLOCK_TYPES = [
-  'text', 'quote', 'columns', 'image', 'stats', 'drivers', 'versus', 'assumptions', 'room', 'logo', 'divider', 'spacer'
+  'text', 'quote', 'columns', 'image', 'stats', 'drivers', 'pairs', 'versus', 'assumptions', 'room', 'logo', 'divider', 'spacer'
 ]
 const LINKEDIN = /^https:\/\/([a-z]{2,3}\.)?linkedin\.com\/in\/[^\s?#]+/i
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -70,8 +70,9 @@ export function checkCaseFile(file) {
         continue
       }
       const base = FIELD_BY_KEY[key]
-      const type = base ? base.type : v.type
-      if (!base && !['number', 'percent', 'text'].includes(v.type)) warn(`inputs.${key} is not a known input; give it "label" and "type" (number, percent or text) to keep it as a custom input.`)
+      const old = OLD_INPUT_KEYS.has(key)
+      const type = base ? base.type : old ? 'number' : v.type
+      if (!base && !old && !['number', 'percent', 'text'].includes(v.type)) warn(`inputs.${key} is not a known input; give it "label" and "type" (number, percent or text) to keep it as a custom input.`)
       if (type === 'number' || type === 'percent') {
         if (typeof v.value !== 'number' || !Number.isFinite(v.value)) err(`inputs.${key}.value must be a number.`)
         else if (type === 'percent' && (v.value < 0 || v.value > 100)) err(`inputs.${key}.value is a percent, so it must be between 0 and 100.`)
@@ -153,6 +154,7 @@ export function caseFileToProject(file, { id } = {}) {
   const byKey = Object.fromEntries(fields.map(f => [f.key, f]))
   for (const [key, v] of Object.entries(file.inputs || {})) {
     const f = byKey[key]
+    if (OLD_INPUT_KEYS.has(key)) continue
     if (f) {
       f.value = v.value
       if ('confirmed' in v) f.confirmed = v.confirmed
@@ -167,6 +169,14 @@ export function caseFileToProject(file, { id } = {}) {
         value: v.value,
         confirmed: !!v.confirmed
       })
+    }
+  }
+  // a case file written before the inputs became pairs: carry its numbers over
+  const legacy = migrateOldInputs(file.inputs || {})
+  for (const [key, v] of Object.entries(legacy)) {
+    if (byKey[key] && !(file.inputs && key in file.inputs)) {
+      byKey[key].value = v.value
+      byKey[key].confirmed = v.confirmed
     }
   }
   // the company name field always follows the file's company unless set explicitly

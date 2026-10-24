@@ -1,0 +1,247 @@
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { buildSiteHtml, hashText } from '../export/site.js'
+import { download } from '../export/download.js'
+import { SITE_CONFIG } from '../../server/publish.js'
+
+// "View as website": the project's interactive website, exactly as visitors see
+// it. Click any text on the page to edit it (the change is saved into the deck),
+// then "Copy link" publishes the latest version to Vercel and copies the address.
+// A case keeps the same address when you publish again, so a link you already
+// sent shows your latest edits.
+
+const ACCESS_KEY = 'casebuilder.access'
+const readCode = () => {
+  try {
+    return localStorage.getItem(ACCESS_KEY) || ''
+  } catch {
+    return ''
+  }
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch {
+    // fall back to the old way, which works without clipboard permission
+    const ta = document.createElement('textarea')
+    ta.value = text
+    ta.style.position = 'fixed'
+    ta.style.opacity = '0'
+    document.body.appendChild(ta)
+    ta.select()
+    let ok = false
+    try {
+      ok = document.execCommand('copy')
+    } catch {
+      ok = false
+    }
+    ta.remove()
+    return ok
+  }
+}
+
+export default function WebsiteView({ project, inputs, onDeck, onSite, onBack }) {
+  const frame = useRef(null)
+  const [editing, setEditing] = useState(true)
+  const [working, setWorking] = useState('') // '' | 'publish' | 'zip'
+  const [problem, setProblem] = useState(null) // { message } | { setup: true } | { codeRequired: true }
+  const [needCode, setNeedCode] = useState(false)
+  const [code, setCode] = useState(readCode)
+  const [copied, setCopied] = useState(false)
+
+  const company = inputs.companyName || project.name
+  const site = project.site
+  const slug = String(company).replace(/[^\w\- ]+/g, '').trim() || 'site'
+
+  // What the frame shows is fixed while you edit inside it, so typing never
+  // reloads the page under you. `current` always reflects the latest deck.
+  const shown = useMemo(() => buildSiteHtml({ project, inputs }), [project.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const current = useMemo(() => buildSiteHtml({ project, inputs }), [project.deck, project.fields, project.stakeholders, inputs]) // eslint-disable-line react-hooks/exhaustive-deps
+  const currentHash = useMemo(() => hashText(current), [current])
+  const upToDate = !!site && site.hash === currentHash
+
+  // Edits made on the page arrive as messages and are saved into the deck.
+  useEffect(() => {
+    const onMessage = e => {
+      if (e.source !== frame.current?.contentWindow || e.data?.cb !== 'edit') return
+      const { slideId, blockId, field, value } = e.data
+      onDeck(list =>
+        list.map(s =>
+          s.id === slideId ? { ...s, blocks: s.blocks.map(b => (b.id === blockId ? { ...b, [field]: value } : b)) } : s
+        )
+      )
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [onDeck])
+
+  const sendMode = () => frame.current?.contentWindow?.postMessage({ cb: 'edit-mode', on: editing }, '*')
+  useEffect(sendMode, [editing]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function flashCopied() {
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2200)
+  }
+
+  // Only say "copied" if it really was; otherwise point at the link on screen.
+  function copied_(ok) {
+    if (ok) return flashCopied()
+    setProblem({ message: 'The browser blocked copying. The link is shown above: select it and copy it.' })
+  }
+
+  async function copyLink() {
+    setProblem(null)
+    // Nothing changed since it was published: just copy the address.
+    if (site?.url && upToDate) return copied_(await copyText(site.url))
+    setWorking('publish')
+    try {
+      const res = await fetch('/api/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(code ? { 'x-access-code': code } : {}) },
+        body: JSON.stringify({ company, name: site?.name, html: current })
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.status === 503 && data.error === 'not_configured_publish') return setProblem({ setup: true })
+      if (res.status === 503 && data.error === 'code_required') return setProblem({ codeRequired: true })
+      if (res.status === 401) return setNeedCode(true)
+      if (!res.ok) throw new Error(data.error || 'Publishing failed.')
+      setNeedCode(false)
+      onSite({ name: data.name, url: data.url, hash: currentHash, public: data.public, note: data.note })
+      copied_(await copyText(data.url))
+    } catch (err) {
+      setProblem({ message: err.message || 'Publishing failed.' })
+    } finally {
+      setWorking('')
+    }
+  }
+
+  function saveCode(e) {
+    e.preventDefault()
+    try {
+      localStorage.setItem(ACCESS_KEY, code.trim())
+    } catch {
+      // ignore: the code just won't persist
+    }
+    setCode(code.trim())
+    setNeedCode(false)
+  }
+
+  const openTab = () => window.open(URL.createObjectURL(new Blob([current], { type: 'text/html' })), '_blank')
+  const saveHtml = () => download(`${slug} - business case.html`, new Blob([current], { type: 'text/html' }))
+
+  async function saveProject() {
+    setWorking('zip')
+    try {
+      const { default: JSZip } = await import('jszip')
+      const zip = new JSZip()
+      const dir = `${slug}-site`
+      zip.file(`${dir}/index.html`, current)
+      zip.file(`${dir}/vercel.json`, JSON.stringify(SITE_CONFIG, null, 2))
+      zip.file(
+        `${dir}/README.txt`,
+        'A ready-to-deploy Vercel project: one page, no build.\n\n' +
+          '  1. Install the Vercel CLI:   npm i -g vercel\n' +
+          '  2. From this folder run:     vercel deploy --prod\n\n' +
+          'Or drag this folder onto https://vercel.com/new .\n'
+      )
+      download(`${slug} - vercel project.zip`, await zip.generateAsync({ type: 'blob' }))
+    } finally {
+      setWorking('')
+    }
+  }
+
+  const busy = !!working
+
+  return (
+    <div className="site-view">
+      <div className="site-bar no-print">
+        <div className="site-bar-left">
+          <button className="link-btn" onClick={onBack}>
+            ← Deck
+          </button>
+          <strong>Website</strong>
+          <span className="toolbar-hint">
+            {editing ? 'Click any text on the page to edit it. For layout changes, use the Deck.' : 'Showing it as a visitor sees it.'}
+          </span>
+        </div>
+        <div className="site-bar-actions">
+          <button className={`ghost ${editing ? 'ghost-on' : ''}`} onClick={() => setEditing(e => !e)}>
+            {editing ? 'Editing on' : 'Editing off'}
+          </button>
+          <button className="ghost" onClick={openTab} disabled={busy}>
+            Open in new tab
+          </button>
+          <button className="ghost" onClick={saveHtml} disabled={busy}>
+            Download .html
+          </button>
+          <button className="ghost" onClick={saveProject} disabled={busy} title="A folder you can deploy yourself with `vercel deploy --prod`">
+            Vercel project
+          </button>
+          <button className="primary" onClick={copyLink} disabled={busy}>
+            {working === 'publish' ? 'Publishing…' : copied ? 'Link copied' : 'Copy link'}
+          </button>
+        </div>
+      </div>
+
+      {site?.url && !problem && !needCode && (
+        <div className="preview-note preview-ok no-print" role="status">
+          <strong>Live</strong>
+          <a href={site.url} target="_blank" rel="noreferrer noopener">
+            {site.url}
+          </a>
+          <span className="note-small">
+            {upToDate
+              ? 'Up to date. Anyone with the link can open it. It is unlisted and asks search engines not to index it.'
+              : 'You have edits that are not published yet. Copy link will publish them first; the link stays the same.'}
+          </span>
+          {site.note && <span className="note-warn">{site.note}</span>}
+        </div>
+      )}
+
+      {needCode && (
+        <form className="preview-note no-print" onSubmit={saveCode}>
+          <strong>This app is protected.</strong> Enter the access code to publish.
+          <span className="note-row">
+            <input type="password" value={code} onChange={e => setCode(e.target.value)} placeholder="Access code" autoFocus />
+            <button className="primary" type="submit" disabled={!code.trim()}>
+              Save code
+            </button>
+          </span>
+        </form>
+      )}
+
+      {problem?.setup && (
+        <div className="preview-note no-print">
+          <strong>Copy link needs Vercel connected.</strong> Create a token at{' '}
+          <a href="https://vercel.com/account/tokens" target="_blank" rel="noreferrer noopener">
+            vercel.com/account/tokens
+          </a>
+          , then put <code>VERCEL_TOKEN=…</code> in <code>.env.local</code> and restart the dev server (or add it under Project Settings → Environment
+          Variables on Vercel and redeploy). Until then you can use "Download .html" or "Vercel project".
+        </div>
+      )}
+
+      {problem?.codeRequired && (
+        <div className="preview-note no-print">
+          <strong>Publishing is switched off on this deployed copy.</strong> Set <code>RESEARCH_ACCESS_CODE</code> in the Vercel project's environment variables
+          and redeploy. A deployed app must have an access code before it can publish, so strangers can't put pages on your account.
+        </div>
+      )}
+
+      {problem?.message && (
+        <div className="preview-note preview-error no-print" role="alert">
+          {problem.message}
+        </div>
+      )}
+
+      <iframe
+        ref={frame}
+        title="Website"
+        srcDoc={shown}
+        onLoad={sendMode}
+        sandbox="allow-scripts allow-same-origin allow-popups allow-modals"
+      />
+    </div>
+  )
+}

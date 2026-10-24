@@ -1,4 +1,4 @@
-import { INPUT_FIELDS, STAKEHOLDERS } from './valueModel.js'
+import { INPUT_FIELDS, STAKEHOLDERS, migrateOldInputs } from './valueModel.js'
 import { uid } from './uid.js'
 import { defaultDeck, migrateDeck } from './deck/model.js'
 
@@ -55,7 +55,16 @@ export function newProject(name) {
 export function hydrate(project) {
   const saved = project.fields || []
   const byKey = Object.fromEntries(saved.map(f => [f.key, f]))
-  const base = INPUT_FIELDS.map(f => ({ ...f, ...(byKey[f.key] || {}) }))
+  // projects saved before the inputs became today / with-Portal pairs
+  const migrated = migrateOldInputs(
+    Object.fromEntries(saved.map(f => [f.key, { value: f.value, confirmed: f.confirmed }]))
+  )
+  // Only what the user entered (the value and whether it is confirmed) is taken
+  // from storage. Labels, help and the rest always come from the model.
+  const base = INPUT_FIELDS.map(f => {
+    const mine = byKey[f.key] || migrated[f.key]
+    return mine ? { ...f, value: mine.value ?? f.value, confirmed: f.structural ? f.confirmed : !!mine.confirmed } : { ...f }
+  })
   const custom = saved.filter(f => f.custom)
   return {
     ...project,

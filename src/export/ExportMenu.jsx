@@ -1,25 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react'
 import logoSvg from '../assets/backstage-logo.svg?raw'
-import vmSource from '../valueModel.js?raw'
-import { prepareOnePager, prepareWebsite, pickAudience } from './prepare.js'
+import faviconSvg from '../../public/favicon.svg?raw'
+import { prepareOnePager, pickAudience } from './prepare.js'
 import { buildEnv, resolveSlides } from '../deck/model.js'
-import { buildOnePager, buildWebsite } from './html.js'
+import { buildOnePager } from './html.js'
+import Preview from './Preview.jsx'
 
-// Export menu: PDF, PowerPoint, one-pager and an interactive website, all built
-// from the deck on screen for the stakeholder selected in the toolbar.
+// Export menu: PDF, PowerPoint, a one-pager, and the website view, all built from
+// the deck on screen for the stakeholder selected in the toolbar.
 
 const slug = s => String(s || 'deck').replace(/[^\w\- ]+/g, '').trim() || 'deck'
-
-function download(filename, blob) {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 2000)
-}
 
 // Browser helpers the PowerPoint builder needs.
 function rasterLogo() {
@@ -48,7 +38,7 @@ function imageSize(src) {
   })
 }
 
-export default function ExportMenu({ company: projectName, deck, inputs, fields, stakeholders, activeKey }) {
+export default function ExportMenu({ company: projectName, deck, inputs, fields, stakeholders, activeKey, onWebsite }) {
   // The deck itself says {company} from the Company input, so use that name everywhere.
   const company = inputs.companyName || projectName
   const [open, setOpen] = useState(false)
@@ -97,25 +87,14 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
   function onePager() {
     setOpen(false)
     const facts = prepareOnePager({ inputs, fields, who })
-    setPreview({ kind: 'onepager', title: 'One-pager', file: `${slug(company)} - one-pager.html`, html: buildOnePager({ facts, logoSvg }) })
-  }
-
-  function website() {
-    setOpen(false)
-    const args = prepareWebsite({ company, deck, inputs, fields, stakeholders, who })
-    setPreview({
-      kind: 'website',
-      title: 'Interactive website',
-      file: `${slug(company)} - business case.html`,
-      html: buildWebsite({ ...args, logoSvg, vmSource })
-    })
+    setPreview({ kind: 'onepager', title: 'One-pager', file: `${slug(company)} - one-pager.html`, html: buildOnePager({ facts, logoSvg, faviconSvg }) })
   }
 
   const items = [
     { name: 'PDF', note: 'Print or save every page', run: pdf },
     { name: 'PowerPoint', note: '.pptx, editable', run: pptx },
     { name: 'One-pager', note: 'A single A4 summary', run: onePager },
-    { name: 'Interactive website', note: 'One file, works offline', run: website }
+    { name: 'View as website', note: 'See it, edit it, copy the link', run: () => { setOpen(false); onWebsite() } }
   ]
 
   return (
@@ -149,57 +128,6 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
           audience={who.role}
         />
       )}
-    </div>
-  )
-}
-
-function Preview({ preview, onClose, audience }) {
-  const frame = useRef(null)
-  const isPager = preview.kind === 'onepager'
-
-  useEffect(() => {
-    const onKey = e => e.key === 'Escape' && onClose()
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
-
-  return (
-    <div className="preview-backdrop no-print">
-      <div className="preview" role="dialog" aria-label={preview.title}>
-        <header className="preview-bar">
-          <div>
-            <strong>{preview.title}</strong>
-            <span>For {audience}</span>
-          </div>
-          <div className="preview-actions">
-            {isPager && (
-              <button className="primary" onClick={() => frame.current?.contentWindow?.print()}>
-                Print / Save as PDF
-              </button>
-            )}
-            <button className="ghost" onClick={() => download(preview.file, new Blob([preview.html], { type: 'text/html' }))}>
-              Download .html
-            </button>
-            {!isPager && (
-              <button
-                className="ghost"
-                onClick={() => window.open(URL.createObjectURL(new Blob([preview.html], { type: 'text/html' })), '_blank')}
-              >
-                Open in new tab
-              </button>
-            )}
-            <button className="ghost" onClick={onClose}>
-              Close
-            </button>
-          </div>
-        </header>
-        <iframe
-          ref={frame}
-          title={preview.title}
-          srcDoc={preview.html}
-          sandbox="allow-scripts allow-modals allow-same-origin allow-popups"
-        />
-      </div>
     </div>
   )
 }

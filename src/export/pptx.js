@@ -14,17 +14,17 @@ const BOTTOM = H - 0.55
 const FONT = 'Arial'
 
 const C = {
-  bg: '1B1B1D',
-  panel: '242526',
+  bg: '111111',
+  panel: '1E1E1E',
   track: '323335',
   line: '46484B',
   ink: 'E3E3E3',
   strong: 'FFFFFF',
   dim: 'A9ACB1',
   faint: '797C82',
-  accent: '36BAA2',
-  mint: '9BF0E1',
-  bad: 'F0686D',
+  accent: '9BF0DE',
+  mint: '9BF0DE',
+  bad: 'E5399A',
   warn: 'FFBA00'
 }
 
@@ -172,31 +172,70 @@ async function layoutBlock(b, deps) {
               x: x + 0.2, y: yy + 0.42 * k, w: tw - 0.3, h: 0.55 * k, fontFace: FONT, fontSize: 28 * k, bold: true, margin: 0,
               color: it.tone === 'good' ? C.accent : it.tone === 'bad' ? C.bad : C.strong
             })
+            if (it.eq) s.addText(it.eq, { x: x + 0.2, y: yy + 0.86 * k, w: tw - 0.3, h: 0.2 * k, fontFace: 'Consolas', fontSize: 7 * k, color: C.faint, margin: 0, fit: 'shrink' })
           })
       }
     }
     case 'drivers': {
-      const rh = 0.66
+      // pillar headings and driver rows, in one list
+      const items = []
+      b.groups.forEach(g => {
+        items.push({ head: g })
+        g.rows.forEach(d => items.push({ row: d }))
+      })
+      const hh = 0.42
+      const rh = 0.62
+      const height = items.reduce((t, it) => t + (it.head ? hh : rh), 0)
       return {
-        h: b.rows.length * rh + 0.85,
+        h: height + 0.95,
         draw: (s, y, k) => {
-          b.rows.forEach((d, i) => {
-            const yy = y + i * rh * k
+          let yy = y
+          items.forEach(it => {
+            if (it.head) {
+              const g = it.head
+              s.addText(g.label.toUpperCase(), { x: MX, y: yy, w: 5, h: 0.3 * k, fontFace: FONT, fontSize: 10 * k, bold: true, color: g.leads ? C.accent : C.strong, charSpacing: 1, margin: 0, valign: 'middle' })
+              s.addText(g.total, { x: W - MX - 1.6, y: yy, w: 1.6, h: 0.3 * k, fontFace: FONT, fontSize: 11 * k, bold: true, color: C.dim, align: 'right', margin: 0, valign: 'middle' })
+              yy += hh * k
+              return
+            }
+            const d = it.row
             const trackX = MX + 3.5
             const trackW = CW - 3.5 - 1.7
-            s.addText(d.label, { x: MX, y: yy, w: 3.4, h: 0.3 * k, fontFace: FONT, fontSize: 13 * k, bold: d.lead, color: d.lead ? C.strong : C.dim, margin: 0, valign: 'middle' })
+            s.addText(d.label, { x: MX, y: yy, w: 3.4, h: 0.3 * k, fontFace: FONT, fontSize: 12 * k, bold: d.lead, color: d.lead ? C.strong : C.dim, margin: 0, valign: 'middle' })
             s.addShape('roundRect', { x: trackX, y: yy + 0.07 * k, w: trackW, h: 0.16 * k, rectRadius: 0.08, fill: { color: C.track }, line: { color: C.track, width: 0 } })
             s.addShape('roundRect', {
               x: trackX, y: yy + 0.07 * k, w: Math.max(0.05, trackW * (d.pct / 100)), h: 0.16 * k, rectRadius: 0.08,
-              fill: { color: hex(d.color), transparency: d.lead ? 0 : 55 }, line: { color: hex(d.color), width: 0 }
+              fill: { color: hex(d.key === 'platform' ? C.accent : d.color), transparency: d.lead ? 0 : 55 }, line: { color: hex(d.color), width: 0 }
             })
-            s.addText(d.valueStr, { x: W - MX - 1.6, y: yy, w: 1.6, h: 0.3 * k, fontFace: FONT, fontSize: 13 * k, bold: d.lead, color: d.lead ? C.strong : C.dim, align: 'right', margin: 0, valign: 'middle' })
-            s.addText(d.detail, { x: trackX, y: yy + 0.3 * k, w: CW - 3.5, h: 0.25 * k, fontFace: FONT, fontSize: 9.5 * k, color: C.faint, margin: 0, valign: 'top' })
+            s.addText(d.valueStr, { x: W - MX - 1.6, y: yy, w: 1.6, h: 0.3 * k, fontFace: FONT, fontSize: 12 * k, bold: d.lead, color: d.lead ? C.strong : C.dim, align: 'right', margin: 0, valign: 'middle' })
+            s.addText(d.detail, { x: trackX, y: yy + 0.3 * k, w: CW - 3.5, h: 0.22 * k, fontFace: 'Consolas', fontSize: 8 * k, color: C.faint, margin: 0, valign: 'top', fit: 'shrink' })
+            yy += rh * k
           })
-          const ty = y + b.rows.length * rh * k + 0.1
+          const ty = y + height * k + 0.08
           s.addShape('line', { x: MX, y: ty, w: CW, h: 0, line: { color: C.track, width: 1 } })
-          s.addText('TOTAL ANNUAL VALUE', { x: MX, y: ty + 0.12, w: 5, h: 0.4 * k, fontFace: FONT, fontSize: 10 * k, bold: true, color: C.dim, charSpacing: 1, margin: 0, valign: 'middle' })
-          s.addText(b.total, { x: W - MX - 4, y: ty + 0.08, w: 4, h: 0.5 * k, fontFace: FONT, fontSize: 24 * k, bold: true, color: C.strong, align: 'right', margin: 0, valign: 'middle' })
+          s.addText('TOTAL ANNUAL VALUE', { x: MX, y: ty + 0.1, w: 5, h: 0.4 * k, fontFace: FONT, fontSize: 10 * k, bold: true, color: C.dim, charSpacing: 1, margin: 0, valign: 'middle' })
+          s.addText(b.total, { x: W - MX - 4, y: ty + 0.06, w: 4, h: 0.5 * k, fontFace: FONT, fontSize: 24 * k, bold: true, color: C.strong, align: 'right', margin: 0, valign: 'middle' })
+          s.addText(b.totalEq, { x: MX, y: ty + 0.56 * k, w: CW, h: 0.22 * k, fontFace: 'Consolas', fontSize: 8 * k, color: C.faint, margin: 0, fit: 'shrink' })
+        }
+      }
+    }
+    case 'pairs': {
+      const rh = 0.72
+      return {
+        h: b.rows.length * rh + 0.5,
+        draw: (s, y, k) => {
+          const cx = [MX + 4.2, MX + 6.2, MX + 8.3]
+          ;['TODAY', 'WITH PORTAL', 'DIFFERENCE'].forEach((t, i) =>
+            s.addText(t, { x: cx[i], y, w: 1.9, h: 0.25 * k, fontFace: FONT, fontSize: 9 * k, bold: true, color: C.faint, charSpacing: 1, align: 'right', margin: 0 })
+          )
+          b.rows.forEach((p, i) => {
+            const yy = y + (0.36 + i * rh) * k
+            s.addText(p.label + (p.unit ? ' (' + p.unit + ')' : ''), { x: MX, y: yy, w: 4.1, h: 0.32 * k, fontFace: FONT, fontSize: 12 * k, color: C.ink, margin: 0, valign: 'middle', fit: 'shrink' })
+            ;[p.today, p.portal, p.diff].forEach((v, j) =>
+              s.addText(v, { x: cx[j], y: yy, w: 1.9, h: 0.32 * k, fontFace: FONT, fontSize: 14 * k, bold: j === 2, color: j === 2 ? C.accent : C.strong, align: 'right', margin: 0, valign: 'middle' })
+            )
+            s.addText(p.saved + ': worth ' + p.value, { x: MX, y: yy + 0.33 * k, w: CW, h: 0.22 * k, fontFace: FONT, fontSize: 9 * k, color: C.faint, margin: 0 })
+          })
         }
       }
     }
@@ -217,6 +256,7 @@ async function layoutBlock(b, deps) {
               fill: { color: r.tone === 'bad' ? 'E0636A' : C.accent }, line: { color: C.accent, width: 0 }
             })
             s.addText(r.valueStr, { x: W - MX - 1.6, y: yy, w: 1.6, h: 0.4 * k, fontFace: FONT, fontSize: 15 * k, bold: true, color: C.strong, align: 'right', margin: 0, valign: 'middle' })
+            if (r.eq) s.addText(r.eq, { x: trackX, y: yy + 0.38 * k, w: trackW, h: 0.2 * k, fontFace: 'Consolas', fontSize: 8 * k, color: C.faint, margin: 0, fit: 'shrink' })
           })
           s.addText(
             [
@@ -295,7 +335,7 @@ export async function buildPptx({ company, slides, deps }) {
     s.background = { color: C.bg }
     if (sl.variant === 'hero') {
       // A soft teal glow bottom-right stands in for the gradient.
-      s.addShape('ellipse', { x: W - 6.2, y: H - 5.2, w: 9, h: 9, fill: { color: '5D817B', transparency: 78 }, line: { color: '5D817B', width: 0, transparency: 100 } })
+      s.addShape('ellipse', { x: W - 6.2, y: H - 5.2, w: 9, h: 9, fill: { color: '1F3A35', transparency: 40 }, line: { color: '1F3A35', width: 0, transparency: 100 } })
       s.addShape('ellipse', { x: W - 4.2, y: H - 3.8, w: 6, h: 6, fill: { color: C.accent, transparency: 86 }, line: { color: C.accent, width: 0, transparency: 100 } })
     }
 

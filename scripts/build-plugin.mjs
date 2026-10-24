@@ -21,7 +21,10 @@ const bundle = path.join(skill, 'scripts/casebuilder.mjs')
 // 1. the value model's source, importable as text by the bundle (the website
 //    export inlines it so the downloaded page can recompute live)
 fs.mkdirSync(path.join(root, '.build'), { recursive: true })
-fs.copyFileSync(path.join(root, 'src/valueModel.js'), path.join(root, '.build/valueModel.txt'))
+fs.writeFileSync(
+  path.join(root, '.build/valueModel.txt'),
+  ['src/format.js', 'src/model.js', 'src/valueModel.js'].map(f => fs.readFileSync(path.join(root, f), 'utf8')).join('\n')
+)
 
 // 2. the bundle
 fs.mkdirSync(path.dirname(bundle), { recursive: true })
@@ -65,49 +68,32 @@ const inputsMd = [
 ].join('\n')
 fs.writeFileSync(path.join(refs, 'inputs.md'), inputsMd)
 
-const FORMULAS = {
-  productivity: 'engineers × hoursLostPerWeek × (captureRate ÷ 100) × 48 working weeks × hourlyCost',
-  platform: 'platformEngineers × (pctTimeMaintaining ÷ 100) × 2,080 hours × hourlyCost',
-  onboarding: 'newHiresPerYear × daysSavedOnboarding × 8 hours × hourlyCost',
-  incidents: 'incidentsPerMonth × 12 × hoursPerIncident × peoplePerIncident × (incidentReduction ÷ 100) × hourlyCost',
-  tooling: 'currentToolSpend × (toolConsolidation ÷ 100)'
-}
+const Model = await import(pathToFileURL(path.join(root, 'src/model.js')).href)
+const computed = Model.computeModel(defaults)
 const modelMd = [
   '# The value model',
   '',
-  'Use this when Node is unavailable and you must calculate by hand. Normally run `casebuilder.mjs calc` instead and never do the arithmetic yourself.',
+  'Every figure is plain arithmetic in `src/model.js`; nothing is generated. Normally run `casebuilder.mjs calc` instead and never do the arithmetic yourself. Each saving is a difference between a "today" input and a "with Portal" input.',
   '',
-  'Base formula: **(hours saved × hourly cost) + costs avoided, minus the subscription.** Each driver is one line of the value-framing table.',
+  '## Figures, in order, with the default inputs',
   '',
-  '## The five drivers',
+  '| Figure | Working | Value |',
+  '|---|---|---|',
+  ...Model.FIGURE_ORDER.map(k => `| \`${k}\` | ${computed.figures[k].equation} | ${computed.figures[k].value} |`),
   '',
-  ...M.DRIVERS.flatMap(d => [
-    `### ${d.label} (\`${d.key}\`)`,
-    `\`${FORMULAS[d.key]}\``,
-    `With the default inputs: ${d.explain(defaults)} = **${money(d.compute(defaults))}**`,
-    ''
-  ]),
-  '## Totals',
-  '',
-  '- `annualValue` = sum of the five drivers (each floored at 0).',
-  '- `netYearOne` = annualValue − portalCost.',
-  '- `paybackMonths` = portalCost ÷ (annualValue ÷ 12), rounded, at least 1.',
-  '- `returnMultiple` = annualValue ÷ portalCost.',
-  '- `fiveYearNet` = netYearOne × 5.',
-  '- `costsAvoided` = platform + tooling drivers (what the CTO cares about).',
+  'Division by zero gives 0, every value figure is floored at 0, and no figure is ever NaN or Infinity.',
   '',
   '## Against self-hosting',
   '',
-  '`selfHostCost` = selfHostEngineers × selfHostSalary per year. The comparison that decides most deals is Portal against self-hosting open-source Backstage, never Portal against doing nothing.',
-  `With the defaults: self-hosting ${money(M.selfHostCost(defaults))}/yr vs Portal ${money(defaults.portalCost)}/yr.`,
+  'The comparison that decides most deals is Portal against self-hosting open-source Backstage, never Portal against doing nothing.',
   '',
   '## Case confidence',
   '',
-  'The share of numeric and percent inputs that are **confirmed**. An input is confirmed only when the customer said it. Everything else is an assumption and is listed on the deck\'s honesty page as a question for the next call.',
+  'The share of numeric and percent inputs (excluding the calendar) that are **confirmed**. An input is confirmed only when the customer said it. Everything else is an assumption and is listed on the deck\'s honesty page as a question for the next call.',
   '',
   '## Archetypes',
   '',
-  ...Object.entries(M.ARCHETYPES).map(([k, a]) => `- **${k}**: stakeholders ${a.stakeholders.join(', ')}. ${a.note} Likely alternative: ${a.alternative}.`),
+  ...Object.entries(M.ARCHETYPES).map(([k, a]) => `- **${k}**: stakeholders ${a.stakeholders.join(', ')}; leads with ${a.pillars[0]}. ${a.note} Likely alternative: ${a.alternative}.`),
   ''
 ].join('\n')
 fs.writeFileSync(path.join(refs, 'value-model.md'), modelMd)
@@ -124,7 +110,7 @@ const stakeMd = [
     `- **Who:** ${s.tag}`,
     `- **Cares about:** ${s.cares}`,
     `- **Value drivers to lead with:** ${s.lead.join(', ')}`,
-    `- **Headline with default inputs:** ${s.headline(defaults)}`,
+    `- **Headline with default inputs:** ${s.headline(computed)}`,
     `- **Needs to see:**`,
     ...s.needsToSee.map(n => `  - ${n}`),
     `- **Likely objection:** "${s.objection}"`,

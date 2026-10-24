@@ -15,7 +15,7 @@ import {
   parseBody,
   resolveBlock
 } from '../deck/model.js'
-import { STAKEHOLDERS, totalBenefit, fmtMoney } from '../valueModel.js'
+import { STAKEHOLDERS } from '../valueModel.js'
 
 // The deck editor. A deck is a list of slides and a slide is a list of blocks.
 // Click any text to edit it. Hover a block for its controls, use the bar above
@@ -43,12 +43,12 @@ const TEXT_TAG = {
 }
 const SINGLE_LINE = new Set(['hero', 'headline', 'title', 'label', 'eyebrow', 'tag', 'forwhom'])
 
-export default function Deck({ inputs, fields, stakeholders, onStakeholders, deck, onDeck, company }) {
+export default function Deck({ inputs, model, fields, stakeholders, onStakeholders, deck, onDeck, company, onWebsite }) {
   const available = stakeholders.map(resolve).filter(Boolean)
   const [activeKey, setActiveKey] = useState(available[0]?.key)
   const active = available.find(s => s.key === activeKey) || available[0] || NO_ONE
   const canEditStakeholder = active.key !== 'none'
-  const env = buildEnv(inputs, fields, active)
+  const env = buildEnv(inputs, fields, active, model)
 
   // ---- slide and block operations
   const patchSlide = (id, fn) => onDeck(list => list.map(s => (s.id === id ? fn(s) : s)))
@@ -122,6 +122,9 @@ export default function Deck({ inputs, fields, stakeholders, onStakeholders, dec
         </div>
         <div className="toolbar-actions">
           <span className="toolbar-hint">Click any text to edit</span>
+          <button className="ghost" onClick={onWebsite}>
+            View as website
+          </button>
           <ExportMenu
             company={company}
             deck={deck}
@@ -129,6 +132,7 @@ export default function Deck({ inputs, fields, stakeholders, onStakeholders, dec
             fields={fields}
             stakeholders={available}
             activeKey={active.key}
+            onWebsite={onWebsite}
           />
         </div>
       </nav>
@@ -332,6 +336,7 @@ function BlockEditor({ block: b, first, last, env, canEditStakeholder, onPatch, 
             <div key={i.key} className={`stat ${i.tone ? `stat-${i.tone}` : ''}`}>
               <span className="stat-label">{i.label}</span>
               <strong className="stat-value">{i.value}</strong>
+              {i.eq && <span className="eq">{i.eq}</span>}
             </div>
           ))}
         </div>
@@ -341,25 +346,63 @@ function BlockEditor({ block: b, first, last, env, canEditStakeholder, onPatch, 
       content = (
         <>
           <div className="chart">
-            {r.rows.map(d => (
-              <div key={d.key} className={`bar-row ${d.lead ? 'bar-lead' : ''}`}>
-                <div className="bar-label">
-                  {d.label}
-                  {d.lead && <span className="lead-dot" title="Leads for this stakeholder" />}
-                </div>
-                <div className="bar-track">
-                  <div className="bar-bar" style={{ width: `${d.pct}%`, background: d.color, opacity: d.lead ? 1 : 0.45 }} />
-                </div>
-                <div className="bar-value">{d.valueStr}</div>
-                <div className="bar-detail">{d.detail}</div>
-              </div>
+            {r.groups.map(g => (
+              <section key={g.key} className={`pillar ${g.leads ? 'pillar-lead' : ''}`} data-pillar={g.key}>
+                <h3 className="pillar-head">
+                  {g.label}
+                  <span className="pillar-total">{g.total}</span>
+                </h3>
+                {g.rows.map(d => (
+                  <div key={d.key} className={`bar-row ${d.lead ? 'bar-lead' : ''}`} data-driver={d.key}>
+                    <div className="bar-label">
+                      {d.label}
+                      {d.lead && <span className="lead-dot" title="Leads for this stakeholder" />}
+                    </div>
+                    <div className="bar-track">
+                      <div className="bar-bar" style={{ width: `${d.pct}%`, background: d.color, opacity: d.lead ? 1 : 0.45 }} />
+                    </div>
+                    <div className="bar-value">{d.valueStr}</div>
+                    <div className="bar-detail eq">
+                      {d.detail}
+                      {d.flag && <span className="flag"> ({d.flag})</span>}
+                    </div>
+                  </div>
+                ))}
+              </section>
             ))}
           </div>
           <div className="total-row">
             <span>Total annual value</span>
             <strong>{r.total}</strong>
           </div>
+          <p className="eq eq-total">{r.totalEq}</p>
         </>
+      )
+      break
+    case 'pairs':
+      content = (
+        <div className="pairs-table">
+          <div className="pairs-head">
+            <span />
+            <span>today</span>
+            <span>with Portal</span>
+            <span>difference</span>
+          </div>
+          {r.rows.map(p => (
+            <div className="pairs-row" key={p.key} data-pair={p.key}>
+              <div className="pairs-label">
+                {p.label}
+                {p.unit && <span className="unit"> ({p.unit})</span>}
+              </div>
+              <div className="pairs-num">{p.today}</div>
+              <div className="pairs-num">{p.portal}</div>
+              <div className="pairs-num pairs-diff">{p.diff}</div>
+              <div className="pairs-eq eq">
+                {p.saved}: worth {p.value}
+              </div>
+            </div>
+          ))}
+        </div>
       )
       break
     case 'versus':
@@ -373,12 +416,14 @@ function BlockEditor({ block: b, first, last, env, canEditStakeholder, onPatch, 
                   <div className={`versus-bar versus-${row.tone}`} style={{ width: `${row.pct}%` }} />
                 </div>
                 <span className="versus-num">{row.valueStr}</span>
+                {row.eq && <span className="eq versus-eq">{row.eq}</span>}
               </div>
             ))}
           </div>
           <p className="versus-note">
             {r.lead} <strong>{r.verdict}</strong>
           </p>
+          <p className="eq">{r.eq}</p>
         </>
       )
       break
