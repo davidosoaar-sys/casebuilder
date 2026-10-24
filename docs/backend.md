@@ -77,6 +77,23 @@ server-only, signup trigger present, Realtime publishing `chat_messages` and
 Still to verify: whether the per-minute cron counts as activity for the
 free-tier 7-day pause.
 
+## Model API keys: bring your own, per account (decided 24 Oct 2026, Amr)
+
+Each account adds its own model API key (Anthropic, OpenAI, ...) for its own
+agent. No shared team key. Consequences for the build:
+
+- The key is entered once in Settings, sent to the backend, and stored
+  encrypted (Supabase Vault). It is never returned to the browser again; the
+  UI only shows "key saved, ends in ...abcd" and a replace/remove action.
+- Only the worker (secret key) can decrypt it. RLS does not expose it to any
+  app user, including the account's own session.
+- Per job, the worker loads that account's key into that account's Hermes
+  profile only. One account's key can never be used for another account's job.
+- No key saved = jobs for that account fail fast with a clear "add your API
+  key in Settings" message, never a silent fallback to someone else's key.
+- Cost sits with each account. Demo: Chris's account uses whichever key he (or
+  the team, for him) enters.
+
 ## Next
 
 1. Hermes worker: claim → run Hermes in the account's profile → write back.
