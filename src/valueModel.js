@@ -172,7 +172,7 @@ export const PAIRS = [
   { key: 'tool', group: 'Scale', label: 'Overlapping tool spend', unit: '$/yr', today: 'toolSpendToday', portal: 'toolSpendPortal', saved: 'a year saved', valueFigure: 'toolingValue', driver: 'tooling', money: true }
 ]
 
-const isClaim = f => (f.type === 'number' || f.type === 'percent') && !f.structural
+const isClaim = f => !f.deleted && (f.type === 'number' || f.type === 'percent') && !f.structural
 
 // Confidence counts INPUTS only: numbers the customer stated or a public source
 // shows. Assumptions and suggestions do not count, and neither do blanks.

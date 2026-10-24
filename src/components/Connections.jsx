@@ -8,11 +8,10 @@ import { uid } from '../uid.js'
 // named as an origin. The agent can always search the public web on its own, so that
 // is not a permission.
 
-export default function Connections({ project, connections, documents, onConnections, onDocuments }) {
+export default function Connections({ project, projects=[],selectedProjectId='',onSelectProject,connections, documents, onConnections, onDocuments }) {
   const allowed = CONNECTORS.filter(c => connections[c.key]).length
   return (
     <div className="connections-page" data-testid="connections">
-      <p className="mono-label">Connections</p>
       <h1>Connections</h1>
       <p className="sub">
         These are permissions for the agent. When you ask it to suggest values, it can only read the connections you switch on here.
@@ -21,6 +20,7 @@ export default function Connections({ project, connections, documents, onConnect
       <p className="help conn-build-note">
         In this build each connection takes material you paste or upload; live connections will come later and look the same.
       </p>
+      {onSelectProject && <label className="connection-project-target">Settings and material for <select aria-label="Connection project" value={project?.id || selectedProjectId} onChange={e=>onSelectProject(e.target.value)}><option value="">Default settings for new projects</option>{projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>}
 
       <div className="connector-list">
         {CONNECTORS.map(c => (

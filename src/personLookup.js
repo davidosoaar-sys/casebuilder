@@ -4,7 +4,7 @@ import { INPUT_FIELDS, STAKEHOLDERS } from './valueModel.js'
 import { uid } from './uid.js'
 
 const publicTypes = new Set(['web', 'linkedin', 'github', 'blog', 'conference', 'podcast', 'earnings', 'public'])
-const connectorDomains = { gong: ['gong.io', 'gong.com'], hubspot: ['hubspot.com', 'hubspot.net'], slack: ['slack.com'], clay: ['clay.com'], lemlist: ['lemlist.com'] }
+const connectorDomains = { claude: ['claude.ai'], gong: ['gong.io', 'gong.com'], hubspot: ['hubspot.com', 'hubspot.net'], slack: ['slack.com'], clay: ['clay.com'], lemlist: ['lemlist.com'] }
 export function sourceFor(item, enabledSources = []) {
   if (!item || typeof item.sourceUrl !== 'string') return null
   try {
@@ -92,5 +92,5 @@ export function addPersonToDeal(deal, person, now = Date.now()) {
 
 export function acceptPersonInput(deal, suggestion, now = Date.now()) {
   if (!deal) return deal
-  return { ...deal, updatedAt: now, fields: deal.fields.map(f => f.key === suggestion.key ? { ...f, value: suggestion.value, source: { state: 'suggestion', origin: 'Person lookup — offered by the agent', link: suggestion.sourceUrl, pinnedAt: new Date(now).toISOString(), confidence: 'low' } } : f) }
+  return { ...deal, updatedAt: now, fields: deal.fields.map(f => f.key === suggestion.key && !f.deleted ? { ...f, value: suggestion.value, source: { state: 'suggestion', origin: 'Person lookup — offered by the agent', link: suggestion.sourceUrl, pinnedAt: new Date(now).toISOString(), confidence: 'low' } } : f) }
 }

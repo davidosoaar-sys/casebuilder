@@ -5,7 +5,7 @@
 // deps lets the caller supply the browser-only bits (rasterising the logo,
 // measuring images) so this module can also run under Node for testing.
 
-import { normalizeBrand, blockDesign } from '../brand.js'
+import { normalizeBrand, blockDesign, officeFont } from '../brand.js'
 
 const W = 13.333
 const H = 7.5
@@ -82,6 +82,7 @@ function paraRuns(paras, size, color) {
 // function that draws it at vertical position y, scaled by k.
 async function layoutBlock(b, deps, theme = DEFAULTS) {
   const { colors: C, font: FONT, styles: STYLE } = theme
+  const HEADING = theme.headingFont || FONT
   switch (b.kind) {
     case 'text': {
       const base = STYLE[b.style] || STYLE.body
@@ -103,7 +104,7 @@ async function layoutBlock(b, deps, theme = DEFAULTS) {
         draw: (s, y, k) =>
           s.addText(t, {
             x: MX, y, w: b.style === 'tag' && safeStyle['--badge-background'] ? Math.min(CW, t.length * st.size / 72 * .62 + .3) : CW, h: h * k - st.gap * k, fontFace: FONT, fontSize: st.size * k, bold: !!st.bold,
-            ...(b.style === 'tag' && safeStyle['--badge-background'] ? { fill: { color: hex(safeStyle['--badge-background']) }, margin: 4 } : {}),
+            ...(b.style === 'tag' && /^#[0-9a-f]{6}$/i.test(safeStyle['--badge-background']) ? { fill: { color: hex(safeStyle['--badge-background']) }, margin: 4 } : {}),
             color: st.color, valign: 'top', margin: b.style === 'tag' && safeStyle['--badge-background'] ? 4 : 0, charSpacing: st.spacing || 0, italic: false
           })
       }
@@ -176,7 +177,7 @@ async function layoutBlock(b, deps, theme = DEFAULTS) {
             s.addShape('roundRect', { x, y: yy, w: tw, h: th * k, rectRadius: 0.06, fill: { color: C.panel }, line: { color: C.track, width: 1 } })
             s.addText(it.label.toUpperCase(), { x: x + 0.2, y: yy + 0.14 * k, w: tw - 0.3, h: 0.25, fontFace: FONT, fontSize: 9 * k, bold: true, color: C.faint, charSpacing: 1, margin: 0 })
             s.addText(it.value, {
-              x: x + 0.2, y: yy + 0.42 * k, w: tw - 0.3, h: 0.55 * k, fontFace: FONT, fontSize: 28 * k, bold: true, margin: 0,
+              x: x + 0.2, y: yy + 0.42 * k, w: tw - 0.3, h: 0.55 * k, fontFace: HEADING, fontSize: 28 * k, bold: true, margin: 0,
               color: it.tone === 'good' ? C.accent : it.tone === 'bad' ? C.bad : C.strong
             })
             if (it.eq) s.addText(it.eq, { x: x + 0.2, y: yy + 0.86 * k, w: tw - 0.3, h: 0.2 * k, fontFace: 'Consolas', fontSize: 7 * k, color: C.faint, margin: 0, fit: 'shrink' })
@@ -306,15 +307,15 @@ async function layoutBlock(b, deps, theme = DEFAULTS) {
 // deps: { PptxGenJS, logoPng(): {data, ratio} | null, imageSize(src): {w,h} }
 export async function buildPptx({ company, slides, deps, brand }) {
   const b = normalizeBrand(brand)
-  const officeFont = name => ['system-ui', 'sans-serif'].includes(name) ? 'Arial' : name
   const colors = brand ? { ...DEFAULTS.colors, bg: hex(b.background), panel: hex(b.surface), ink: hex(b.text), strong: hex(b.text), dim: hex(b.muted), faint: hex(b.muted), accent: hex(b.primary), mint: hex(b.primary) } : DEFAULTS.colors
   const styles = Object.fromEntries(Object.entries(DEFAULTS.styles).map(([key, style]) => [key, { ...style, color: style.color === DEFAULTS.colors.strong ? colors.strong : style.color === DEFAULTS.colors.ink ? colors.ink : style.color === DEFAULTS.colors.mint ? colors.mint : style.color === DEFAULTS.colors.faint ? colors.faint : style.color === DEFAULTS.colors.dim ? colors.dim : style.color }]))
-  const theme = { colors, font: brand ? officeFont(b.bodyFont) : DEFAULTS.font, styles }
+  const theme = { colors, font: brand ? officeFont(b.bodyFont) : DEFAULTS.font, headingFont:brand ? officeFont(b.headingFont) : DEFAULTS.font, styles }
   const C = colors, FONT = theme.font
   const pptx = new deps.PptxGenJS()
   pptx.layout = 'LAYOUT_WIDE'
   pptx.title = `${company} - business case`
   pptx.company = 'Spotify'
+  pptx.theme = { headFontFace:theme.headingFont, bodyFontFace:theme.font, lang:'en-US' }
 
   let n = 0
   for (const sl of slides) {
@@ -327,7 +328,7 @@ export async function buildPptx({ company, slides, deps, brand }) {
       const design = blockDesign(activeDesign)
       return nativeText(text, { ...options,
         ...(brand && heading ? { fontFace: officeFont(b.headingFont) } : {}),
-        ...(design.fontFamily ? { fontFace: activeDesign.font } : {}),
+        ...(design.fontFamily ? { fontFace: officeFont(activeDesign.font) } : {}),
         ...(design.color ? { color: hex(design.color) } : {}),
         ...(design.textAlign ? { align: design.textAlign } : {}),
         ...(design.fontWeight ? { bold: Number(design.fontWeight) >= 600 } : {}),

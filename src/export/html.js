@@ -1,4 +1,12 @@
 import { siteMain } from './siteClient.js'
+import { WEBSITE_CSS } from './websiteStyle.js'
+import { createWebsiteMotion } from './websiteMotion.js'
+import { LANDING_CSS, landingArtwork } from './websiteLanding.js'
+import { fontStack } from '../brand.js'
+import { websiteStory } from './websiteStory.js'
+import { renderWebsiteGraphic, GRAPHIC_CSS } from './websiteGraphics.js'
+import { stakeholderJourneyHtml, mountStakeholderJourney } from './stakeholderJourney.js'
+import { websiteSection, websiteBlockDesign, websiteThemeCss } from './websiteFramework.js'
 
 // HTML exports. Both builders are pure: they take plain data and return a
 // complete HTML document as a string, so the same output can be previewed,
@@ -18,119 +26,7 @@ const FONT =
 
 // facts: { company, role, headline, cares, stats[{label,value,tone}], drivers[{label,valueStr,pct,color,lead}],
 //          total, groups[{label,rows[{label,valueStr,pct,color,lead,detail}]}], versus{rows,lead,verdict}, needs[], objection, counter, open[{label,assumed}], openCount, date }
-export function buildOnePager({ facts: f, logoSvg, faviconSvg }) {
-  const logo = (logoSvg || '').replace(/#7df3e1/gi, '#1f8a76')
-  return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
-<title>${esc(f.company)} - business case one-pager</title>
-${iconLink(faviconSvg)}
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-  @page { size: A4; margin: 0; }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; background: #e9eaec; }
-  body { font-family: ${FONT}; color: #15171a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .page { width: 210mm; height: 297mm; margin: 0 auto; background: #fff; padding: 14mm 15mm 12mm; display: flex; flex-direction: column; gap: 5mm; position: relative; overflow: hidden; }
-  @media print { html, body { background: #fff; } .page { margin: 0; } }
-  .top { display: flex; justify-content: space-between; align-items: center; }
-  .top .logo svg { height: 22px; width: auto; display: block; }
-  .top .meta { font-size: 8.5pt; color: #5b6168; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
-  .bar { height: 3px; width: 46px; background: linear-gradient(90deg, #2fc7a8, rgba(155,240,225,0)); margin-top: 1mm; }
-  .eyebrow { font-size: 8.5pt; letter-spacing: .06em; text-transform: uppercase; color: #1f8a76; font-weight: 700; margin: 0; }
-  h1 { font-size: 27pt; line-height: 1.08; margin: 1mm 0 1.5mm; font-weight: 800; letter-spacing: -.01em; }
-  .cares { margin: 0; font-size: 11pt; color: #4a5057; }
-  .stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2.5mm; }
-  .stat { border: 1px solid #dfe2e6; border-radius: 6px; padding: 2.6mm 2.8mm; background: #f6f8f9; }
-  .stat span { display: block; font-size: 6.8pt; letter-spacing: .05em; text-transform: uppercase; color: #6a7078; font-weight: 600; }
-  .stat strong { display: block; font-size: 15pt; margin-top: 1mm; font-weight: 800; }
-  .stat.good strong { color: #1f8a76; } .stat.bad strong { color: #c8434a; }
-  h2 { font-size: 8.5pt; letter-spacing: .06em; text-transform: uppercase; color: #1f8a76; margin: 0 0 2.2mm; font-weight: 700; }
-  .row { display: grid; grid-template-columns: 52mm 1fr 20mm; align-items: center; gap: 1mm 3mm; margin-bottom: 1.6mm; font-size: 9pt; }
-  .row .lbl { font-weight: 600; }
-  .eqline { grid-column: 2 / 4; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 6.6pt; color: #7b838b; margin-top: -1.2mm; }
-  .pgroup { font-size: 7.4pt; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; color: #15171a; margin: 1.5mm 0 1.2mm; }
-  .row .lbl.dim { font-weight: 400; color: #5b6168; }
-  .track { height: 3.2mm; background: #e8ebee; border-radius: 99px; overflow: hidden; }
-  .fill { height: 100%; border-radius: 99px; }
-  .val { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .total { display: flex; justify-content: space-between; border-top: 1px solid #dfe2e6; margin-top: 2mm; padding-top: 2mm; font-size: 9pt; color: #5b6168; }
-  .total strong { font-size: 12pt; color: #15171a; }
-  .vs { font-size: 9pt; line-height: 1.5; color: #3e444a; margin: 1.5mm 0 0; }
-  .vs strong { color: #15171a; }
-  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 8mm; }
-  ul { margin: 0; padding-left: 4.5mm; font-size: 9.3pt; line-height: 1.5; color: #2f343a; }
-  li { margin-bottom: 1mm; }
-  blockquote { margin: 0 0 2.5mm; padding: 2mm 3mm; border-left: 3px solid #2fc7a8; background: #f1f8f6; font-style: italic; font-size: 9.5pt; }
-  p.small { margin: 0; font-size: 9.3pt; line-height: 1.5; color: #2f343a; }
-  .assume { columns: 2; column-gap: 8mm; font-size: 8.6pt; list-style: none; padding: 0; }
-  .assume li { display: flex; justify-content: space-between; gap: 3mm; border-bottom: 1px solid #eceff1; padding: .8mm 0; break-inside: avoid; margin: 0; }
-  .assume span { color: #6a7078; white-space: nowrap; }
-  .foot { margin-top: auto; display: flex; justify-content: space-between; font-size: 7.8pt; color: #7b838b; border-top: 1px solid #dfe2e6; padding-top: 2.5mm; }
-  .toolbar { position: fixed; top: 12px; right: 16px; }
-  .toolbar button { font: inherit; font-weight: 700; padding: 8px 14px; border-radius: 4px; border: 0; background: #2fc7a8; color: #111; cursor: pointer; }
-  @media print { .toolbar { display: none; } }
-</style></head>
-<body>
-<div class="toolbar"><button onclick="window.print()">Print / Save as PDF</button></div>
-<div class="page">
-  <div class="top"><div class="logo">${logo}</div><div class="meta">Business case · ${esc(f.date)}</div></div>
-  <div>
-    <div class="bar"></div>
-    <p class="eyebrow">${esc(f.company)} · prepared for ${esc(f.role)}</p>
-    <h1>${esc(f.headline)}</h1>
-    <p class="cares">${esc(f.cares)}</p>
-  </div>
-
-  <div class="stats" style="${f.stats.length ? '' : 'display:none'}">${f.stats
-    .map(s => `<div class="stat ${s.tone || ''}"><span>${esc(s.label)}</span><strong>${esc(s.value)}</strong></div>`)
-    .join('')}</div>
-
-  ${
-    f.groups.length
-      ? `<section>
-    <h2>Where the value comes from</h2>
-    ${f.groups
-      .map(
-        g => `<div class="pgroup">${esc(g.label)}</div>` +
-          g.rows
-            .map(
-              d => `<div class="row"><span class="lbl ${d.lead ? '' : 'dim'}">${esc(d.label)}</span>
-          <div class="track"><div class="fill" style="width:${d.pct.toFixed(1)}%;background:${esc(d.color)};opacity:${d.lead ? 1 : 0.5}"></div></div>
-          <span class="val">${esc(d.valueStr)}</span><span class="eqline">${esc(d.detail)}</span></div>`
-            )
-            .join('')
-      )
-      .join('')}
-    <div class="total"><span>Total annual value</span><strong>${esc(f.total)}</strong></div>
-  </section>`
-      : ''
-  }
-
-  ${
-    f.versus
-      ? `<section>
-    <h2>Against self-hosting Backstage</h2>
-    ${f.versus.rows
-      .map(
-        r => `<div class="row"><span class="lbl">${esc(r.name)}</span>
-          <div class="track"><div class="fill" style="width:${r.pct.toFixed(1)}%;background:${r.tone === 'bad' ? '#e0636a' : '#2fc7a8'}"></div></div>
-          <span class="val">${esc(r.valueStr)}</span></div>`
-      )
-      .join('')}
-    <p class="vs">${esc(f.versus.lead)} <strong>${esc(f.versus.verdict)}</strong></p>
-  </section>`
-      : ''
-  }
-
-  <section class="cols">
-    <div><h2>What ${esc(f.role)} needs to see</h2><ul>${f.needs.map(n => `<li>${esc(n)}</li>`).join('')}</ul></div>
-    <div><h2>The objection, and the answer</h2><blockquote>${esc(f.objection)}</blockquote><p class="small">${esc(f.counter)}</p></div>
-  </section>
-
-  <div class="foot"><span>${esc(f.company)} · Spotify Portal for Backstage</span><span>Every figure shows its working.</span></div>
-</div>
-</body></html>`
-}
+export { buildOnePager } from './onePager.js'
 
 // ------------------------------------------------------- internal summary (Chris's page)
 
@@ -237,11 +133,16 @@ export function stripModules(src) {
 //   slides:       the raw deck (blocks hold text templates, so the site can re-fill them)
 //   stakeholders: plain objects { key, role, tag, cares, objection, counter, needsToSee, lead, builtin }
 //   vmSource:     the text of format.js, model.js and valueModel.js joined, inlined so the site can recompute live
-export function buildWebsite({ company, slides, stakeholders, activeKey, inputs, openFields, sliders, logoSvg, faviconSvg, vmSource }) {
-  const data = { company, slides, stakeholders, activeKey, inputs, openFields, sliders, logo: logoSvg }
+export function buildWebsite({ company, slides, stakeholders, activeKey, inputs, openFields, sliders, logoSvg, faviconSvg, vmSource, viewMode = 'website', websiteBrand }) {
+  viewMode = ['website', 'pdf', 'slides'].includes(viewMode) ? viewMode : 'website'
+  if (viewMode === 'website') slides = websiteStory(slides).map(s => ({ ...s, blocks: s.blocks.map(b => ({ ...b, design: b.design?.color || b.design?.background ? websiteBlockDesign(b.design, websiteBrand) : b.design })) }))
+  const data = { company, slides, stakeholders, activeKey, inputs, openFields, sliders: sliders || [], logo: logoSvg || '', viewMode, layout: viewMode === 'website' ? slides.map(websiteSection) : [], artwork: viewMode === 'website' ? landingArtwork({ company, logo:logoSvg, roles:stakeholders, cover:true }) : '' }
   // JSON inside a <script> must not be able to close the tag.
   const safe = obj => JSON.stringify(obj).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029')
+  data.fontStacks = Object.fromEntries(slides.flatMap(s=>s.blocks).filter(b=>b.design?.font).map(b=>[b.design.font,fontStack(b.design.font)]))
+  data.journeyHtml = viewMode==='website' ? stakeholderJourneyHtml(company,logoSvg,stakeholders) : ''
   const json = safe(data)
+  const needsOutfit = [websiteBrand?.headingFont || 'Outfit', websiteBrand?.bodyFont, ...Object.keys(data.fontStacks)].some(font=>String(font).split(',').some(name=>name.trim()==='Outfit'))
   // The value model, turned into a function that returns what the site needs.
   const vm = `(function(){${stripModules(vmSource)}
 return {computeModel:computeModel,STAKEHOLDERS:STAKEHOLDERS,PAIRS:PAIRS,driversByPillar:driversByPillar,fmtMoney:fmtMoney,fmtMoneyFull:fmtMoneyFull,fmtDec:fmtDec,fmtMonths:fmtMonths};})()`
@@ -251,22 +152,24 @@ return {computeModel:computeModel,STAKEHOLDERS:STAKEHOLDERS,PAIRS:PAIRS,driversB
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 ${iconLink(faviconSvg)}
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800;900&display=swap">
+${needsOutfit ? '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap">' : ''}
 <title>${esc(company)} · Business case</title>
-<style>${SITE_CSS}</style></head>
-<body>
+<style>${SITE_CSS}\n${VIEW_CSS}\n${viewMode === 'website' ? WEBSITE_CSS + LANDING_CSS + GRAPHIC_CSS + websiteThemeCss(websiteBrand) : ''}</style></head>
+<body class="view-${viewMode}">
 <header class="top">
-  <div class="brand">${logoSvg}</div>
+  <div class="brand">${logoSvg || (viewMode === 'website' ? '<span class="company-monogram">' + esc(String(company || 'C').slice(0, 1).toUpperCase()) + '</span>' : '')}</div>
   <div class="co">${esc(company)}</div>
-  <div class="aud-wrap"><span>View as</span><div id="audience" class="audience"></div></div>
+  <div class="aud-wrap">${viewMode==='website'?'':'<span>Perspective</span>'}<div id="audience" class="audience"></div></div>
   <div class="pager"><button id="prev" aria-label="Previous page">←</button><span id="count"></span><button id="next" aria-label="Next page">→</button></div>
 </header>
 <nav class="dots" id="dots" aria-label="Pages"></nav>
+${viewMode === 'website' ? '<div class="website-progress" aria-hidden="true"><span id="reading-progress"></span></div>' : ''}
 <main></main>
-<button id="whatif-toggle" class="whatif-btn">Adjust the numbers</button>
-<aside id="whatif" class="whatif">
-  <h3>Adjust the numbers</h3>
+<button id="whatif-toggle" class="whatif-btn" aria-controls="whatif" aria-expanded="false">Adjust the numbers</button>
+<aside id="whatif" class="whatif" aria-label="Scenario explorer">
+  <div class="whatif-heading"><h3>Adjust the numbers</h3><button id="whatif-close" class="whatif-close" aria-label="Close scenario explorer">×</button></div>
   <p>Move a slider and every figure on every page updates.</p>
+  <div id="scenario-summary" class="scenario-summary" aria-live="polite"></div>
   <div id="sliders"></div>
   <button id="whatif-reset">Reset to the original</button>
 </aside>
@@ -274,10 +177,47 @@ ${iconLink(faviconSvg)}
 <script>
 var DATA = JSON.parse(document.getElementById('data').textContent);
 var VM = ${vm};
-(${String(siteMain)})(DATA, VM);
+(${String(siteMain)})(DATA, VM, ${viewMode === 'website' ? String(createWebsiteMotion) : 'null'}, ${viewMode === 'website' ? String(mountStakeholderJourney) : 'null'}, ${viewMode === 'website' ? String(renderWebsiteGraphic) : 'null'});
 </script>
 </body></html>`
 }
+
+const VIEW_CSS = `
+button,select{font:inherit}button{transition:background .15s,border-color .15s}button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.view-slides .aud-wrap,.view-slides .whatif-btn,.view-slides .whatif{display:none!important}
+.view-slides .pager{margin-left:auto}.view-slides main{overflow:hidden}
+.view-slides .slide{display:none;height:calc(100dvh - 56px);min-height:0;overflow:auto;align-items:flex-start}
+.view-slides .slide.is-active{display:flex}.view-slides .slide .inner{margin:auto}
+.view-pdf{background:#343638!important}.view-pdf .top,.view-pdf .dots,.view-pdf .whatif,.view-pdf .whatif-btn{display:none!important}
+.view-pdf main{height:100vh;overflow:auto;padding:0;scroll-snap-type:none}
+.pdf-paper{position:relative;width:calc(1122.52px * var(--pdf-scale,1));height:calc(793.70px * var(--pdf-scale,1));margin:24px auto;box-shadow:0 5px 28px #0006;overflow:hidden}
+.view-pdf .pdf-paper>.slide{box-sizing:border-box;width:1122.52px;height:793.70px;min-height:0;display:flex;align-items:flex-start;padding:48px 64px 58px;transform:scale(var(--pdf-scale,1));transform-origin:top left;position:relative;border:0;overflow:hidden}
+.view-pdf .inner{width:100%;max-width:none;margin:0;transform-origin:top left}
+.pdf-footer{position:absolute;bottom:18px;left:64px;right:64px;display:flex;justify-content:space-between;color:var(--faint);font-size:10px}
+.view-website .top{position:relative;min-height:64px;height:auto;gap:18px;padding:14px 28px}
+.view-website .brand{flex:none;min-width:28px}.view-website .brand img{height:28px;width:auto;max-width:160px;object-fit:contain;display:block}.view-website .brand svg{height:26px}
+.view-website .pager{display:none}.view-website .aud-wrap{margin-left:auto}
+.website-audience{max-width:320px;padding:8px 32px 8px 12px;border:1px solid var(--line2);border-radius:9px;background:var(--panel);color:var(--ink);font-size:13px}
+.view-website .dots{position:relative;top:auto;right:auto;transform:none;display:flex;flex-direction:row;gap:8px;padding:10px 28px;overflow-x:auto;border-bottom:1px solid var(--line);background:var(--bg);min-height:54px}
+.view-website .dot{width:auto;height:auto;flex:none;border:1px solid var(--line2);border-radius:99px;padding:6px 14px;font-size:12px;color:var(--dim);white-space:nowrap}
+.view-website .dot.on{color:#111;border-color:var(--accent)}
+.view-website main{height:calc(100dvh - 118px);padding-top:0;scroll-snap-type:none;scroll-behavior:smooth}
+.view-website .slide{min-height:0;scroll-snap-align:none;display:block;padding:64px 48px}
+.view-website .slide:first-child{padding-top:80px;padding-bottom:80px;min-height:440px}
+.view-website .slide .inner{max-width:1100px}.view-website .whatif-btn{border-radius:99px;text-transform:none;letter-spacing:0;box-shadow:0 5px 24px #0004}
+.view-website .whatif{border-radius:16px}.view-website .whatif button{border-radius:8px}
+@media(max-width:780px){.view-website .top{padding:12px 16px}.view-website .dots{padding:10px 16px}.view-website .slide{padding:36px 24px}.website-audience{max-width:220px}.view-website .aud-wrap{margin-left:auto}}
+@page{size:A4 landscape;margin:0}
+@media print{
+ html,body{height:auto!important;background:transparent!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+ .top,.dots,.whatif,.whatif-btn{display:none!important}
+ main{height:auto!important;overflow:visible!important;padding:0!important}
+ .pdf-paper{width:297mm!important;height:210mm!important;margin:0!important;box-shadow:none;break-after:page;page-break-after:always;overflow:hidden}
+ .pdf-paper:last-child{break-after:auto;page-break-after:auto}
+ .view-pdf .pdf-paper>.slide{width:297mm!important;height:210mm!important;transform:none!important}
+ .view-slides .slide{display:flex!important;min-height:210mm;height:210mm;break-after:page;overflow:hidden}
+}
+`
 
 const SITE_CSS = `
 :root{--bg:#111111;--panel:#242526;--panel3:#303132;--line:#2e2f31;--line2:#46484b;--ink:#e3e3e3;--strong:#fff;--dim:#a9acb1;--faint:#797c82;--accent:#9bf0de;--mint:#9bf0de;--pink:#e5399a;--bad:#e5399a;--warn:#ffba00}

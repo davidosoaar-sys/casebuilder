@@ -103,7 +103,6 @@ function builtin(type, ed = {}) {
     case 'title':
       return slide('hero', [
         block('logo'),
-        text('eyebrow', 'Technology / Business case'),
         text('hero', ed.title ?? '{company}'),
         text('lede', ed.lede ?? "Spotify Portal for Backstage, costed against {company}'s own numbers."),
         text('forwhom', ed.forwhom ?? 'Prepared for {role} · {archetype}')
@@ -237,6 +236,7 @@ export function migrateDeck(deck) {
       return made && { ...made, id: s.id || made.id }
     })
     .filter(Boolean)
+    .map(s => ({ ...s, blocks: s.blocks.filter(b => !(b.type === 'text' && /^technology\s*\/\s*business case$/i.test(String(b.text || '').trim()))) }))
 }
 
 // ------------------------------------------------------------- resolving

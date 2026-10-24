@@ -60,7 +60,10 @@ export default function App() {
   const [currentId, setCurrentId] = useState(null)
   const [user, setUser] = useState(loadUser)
   const [view, setView] = useState('projects') // 'projects' | 'details' | 'deck' | 'website'
+  const [websiteAudience, setWebsiteAudience] = useState(null)
+  const [previewRequest, setPreviewRequest] = useState(null)
   const [connections, setConnections] = useState(loadConnections)
+  const [connectionProjectId,setConnectionProjectId] = useState('')
   const [stage, setStage] = useState(null) // 'map' | 'people' while setting up a new project
   const brandScans = useRef(new Map())
 
@@ -95,6 +98,11 @@ export default function App() {
 
   const project = projects.find(p => p.id === currentId)
   const dealConnections = project?.connectors || connections
+  const connectionProject = project || projects.find(p=>p.id===connectionProjectId)
+  function updateConnectionProject(patch) {
+    if (!connectionProject) return
+    setProjects(previous=>previous.map(p=>p.id===connectionProject.id?{...p,...patch(p),createdAt:p.createdAt,updatedAt:Date.now()}:p))
+  }
   const lookup = usePersonLookup({ project, connections: dealConnections })
   const [pendingPersonInput, setPendingPersonInput] = useState(null)
   const lookupPage = <PersonLookup lookup={lookup} project={project}
@@ -201,16 +209,22 @@ export default function App() {
           />
         ) : page === 'connections' ? (
           <Connections
-            project={project}
-            connections={dealConnections}
-            documents={project ? project.documents : []}
-            onConnections={fn => project ? update(p => ({ connectors: fn(p.connectors) })) : setConnections(fn)}
-            onDocuments={fn => update(p => ({ documents: fn(p.documents) }))}
+            project={connectionProject}
+            projects={projects}
+            selectedProjectId={connectionProjectId}
+            onSelectProject={setConnectionProjectId}
+            connections={connectionProject?.connectors || connections}
+            documents={connectionProject?.documents || []}
+            onConnections={fn => connectionProject ? updateConnectionProject(p => ({ connectors: fn(p.connectors || connections) })) : setConnections(fn)}
+            onDocuments={fn => updateConnectionProject(p => ({ documents: fn(p.documents || []) }))}
           />
         ) : page === 'lookup' ? (
           lookupPage
         ) : page === 'deck' ? (
           <Deck
+            initialAudienceKey={websiteAudience}
+            previewRequest={previewRequest}
+            onPreviewOpened={() => setPreviewRequest(null)}
             key={project.id}
             brand={project.brand}
             onBrand={brand => { brandScans.current.delete(project.id); update({ brand: { ...brand, status: 'ready', message: 'Your custom deck design is saved.' } }) }}
@@ -224,12 +238,14 @@ export default function App() {
             deck={project.deck}
             company={project.name}
             onDeck={fn => update(p => ({ deck: fn(p.deck) }))}
-            onWebsite={() => setView('website')}
+            onWebsite={key => { setWebsiteAudience(key); setView('website') }}
           />
         ) : page === 'website' ? (
           <WebsiteView
             key={project.id}
             project={project}
+            audienceKey={websiteAudience}
+            onView={(format, audience) => { setWebsiteAudience(audience); setPreviewRequest(format); setView('deck') }}
             inputs={inputs}
             onDeck={fn => update(p => ({ deck: fn(p.deck) }))}
             onSite={site => update({ site })}

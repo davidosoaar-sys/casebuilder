@@ -9,6 +9,16 @@ const claim = value => ({ value, sourceUrl: url, sourceType: 'web' })
 const identity = { name: claim('Alex Doe'), title: claim('VP Engineering'), company: claim('Acme') }
 const collect = async gen => { const out = []; for await (const v of gen) out.push(v); return out }
 
+test('Claude material reaches the agent only with its permission enabled',async()=>{
+  for(const allowed of [false,true]){
+    let received
+    const snapshots=await collect(searchPerson({name:'Alex',enabledSources:allowed?['claude']:[],documents:[{source:'claude',text:'Alex is VP Engineering.',sourceUrl:url}]},{provider:async args=>{received=args;return {data:{},urls:[]}}}))
+    assert.equal(received.documents.length,allowed?1:0)
+    if(allowed)assert.equal(received.documents[0].sourceType,'claude')
+    else assert.ok(snapshots[0].sourcesSkipped.some(s=>s.source==='claude'&&s.reason==='disabled'))
+  }
+})
+
 test('streams identity before enrichment and rejects invented sources', async () => {
   const phases = []
   const snapshots = await collect(searchPerson({ name: 'Alex', enabledSources: ['web'] }, { provider: async ({ phase }) => {

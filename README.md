@@ -66,14 +66,18 @@ priorities, suggested inputs, ambiguity candidates, and sources used/skipped.
   self-hosting comparison, assumptions, stakeholder brief). Click any text to edit
   it. Text can use tokens like `{company}` and `{headline}` that fill in per
   stakeholder.
-- **Website.** When the deck is done, **View as website** (the Deck toolbar, the
-  Export menu, or *Website* in the sidebar) shows it as the real interactive
-  website: viewers can switch stakeholder and drag sliders to watch every number
-  update. Click any text on the page to edit it (saved into the deck), then
-  **Copy link** publishes the latest version to Vercel and copies the address.
-- **Export.** PDF (print), PowerPoint, and a one-pager. The website can also be
-  downloaded as one offline `.html`, or as a ready-to-deploy Vercel project.
-- **Import / export** a case file to move a case between the app and the plugin.
+- **View as.** PDF opens a paginated A4 landscape layout; Slides opens a presenter
+  with keyboard navigation and fullscreen; One-pager opens an A4 executive brief;
+  Website opens an interactive scrolling page. Switching views never downloads a
+  file or opens a print dialog. Each view has a separate download action. PDF
+  downloads use the browser's Save as PDF dialog; Slides downloads an editable
+  PowerPoint only when **Download PPTX** is clicked.
+- **Website.** Viewers can switch stakeholder perspectives, navigate sections,
+  and adjust scenario sliders to watch figures update. **Edit content** enables
+  editing that saves into the deck. **Copy link** publishes to Vercel. The site
+  can also be downloaded as an offline HTML file or a Vercel project.
+- **Markdown.** Use **Export MD file** on the Input sheet to carry a deal into
+  another assistant, including its inputs, arithmetic and sources.
 
 ### Copy link (publishing the website)
 
@@ -163,7 +167,7 @@ summary** export: every field with its state and origin, and the questions to co
 
 **Suggest values** (per field or for all empty ones) is the only place an AI model
 is involved, and it only proposes values. The agent can always search the public web.
-It can read only the **Connections** you allow (Gong, HubSpot, Slack, Clay, Lemlist;
+It can read only the **Connections** you allow (Claude, Gong, HubSpot, Slack, Clay, Lemlist;
 the page sits under Projects in the sidebar and everything is off by default). Best
 source first: a figure stated in allowed material (an input, with the quote), a
 checkable public source (an input, with the link), a published benchmark (with its

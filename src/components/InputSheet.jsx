@@ -12,6 +12,7 @@ import {
 import { stateOf, isBlank, withValue, withState, withOrigin } from '../source.js'
 import { suggestValues, applySuggestions, emptyKeys, fetchAgent } from '../suggest.js'
 import { enabledLabels } from '../connectors.js'
+import { editInput, restoreInput } from '../inputEditing.js'
 
 // The inputs: CHRIS'S VIEW. Every number shows where it came from, on the face of the
 // field. None of this (states, origins, confidence, gaps) appears on the client deck.
@@ -32,8 +33,9 @@ const when = iso => {
 }
 
 export default function InputSheet({ fields, model, company, connectors, documents, onFields, onAdd, onRemove, onReset }) {
-  const groups = INPUT_GROUPS.map(g => [g, fields.filter(f => f.group === g)]).filter(([, items]) => items.length)
-  const custom = fields.filter(f => !INPUT_GROUPS.includes(f.group))
+  const visible = fields.filter(f => !f.deleted)
+  const groups = INPUT_GROUPS.map(g => [g, visible.filter(f => f.group === g)]).filter(([, items]) => items.length)
+  const custom = visible.filter(f => !INPUT_GROUPS.includes(f.group))
   if (custom.length) groups.push(['Custom', custom])
   const byKey = Object.fromEntries(fields.map(f => [f.key, f]))
   const pairBy = Object.fromEntries(PAIRS.map(p => [p.key, p]))
@@ -84,13 +86,16 @@ export default function InputSheet({ fields, model, company, connectors, documen
     }
   }
 
-  const fieldProps = { onChange: change, onState: setState, onOrigin: setOrigin, onSuggest: k => suggest([k], k), busy }
+  const fieldProps = { onChange: change, onState: setState, onOrigin: setOrigin, onSuggest: k => suggest([k], k), onRemove, onEdit: (key, patch) => onFields(fs => editInput(fs, key, patch)), busy }
 
   function renderItem(f) {
     if (f.pair) {
-      if (f.side !== 'today') return null
       const pair = pairBy[f.pair]
-      return <PairField key={pair.key} pair={pair} today={byKey[pair.today]} portal={byKey[pair.portal]} model={model} {...fieldProps} />
+      const today = byKey[pair.today], portal = byKey[pair.portal]
+      if (today && portal && !today.deleted && !portal.deleted) {
+        if (f.side !== 'today') return null
+        return <PairField key={pair.key} pair={pair} today={today} portal={portal} model={model} {...fieldProps} />
+      }
     }
     const row = <Field key={f.key} field={f} onRemove={onRemove} {...fieldProps} />
     if (f.key === 'platformShare') {
@@ -218,6 +223,7 @@ export default function InputSheet({ fields, model, company, connectors, documen
           Reset project to defaults
         </button>
       </div>
+      {fields.some(f => f.deleted) && <details className="removed-inputs"><summary>Removed inputs ({fields.filter(f => f.deleted).length})</summary>{fields.filter(f => f.deleted).map(f => <div key={f.key}><span>{f.label}</span><button className="ghost" onClick={() => onFields(fs => restoreInput(fs, f.key))}>Restore {f.label}</button></div>)}</details>}
 
       <p className="foot">
         Every figure is plain arithmetic in <code>src/model.js</code>. Nothing is generated: change an input and everything
@@ -325,13 +331,14 @@ function SourceLine({ field, onState, onOrigin, onSuggest, busy }) {
 }
 
 // Today and with-Portal side by side, with the live difference.
-function PairField({ pair, today, portal, model, onChange, ...rest }) {
+function PairField({ pair, today, portal, model, onChange, onEdit, onRemove, ...rest }) {
   const both = !isBlank(today.value) && !isBlank(portal.value)
   const raw = model.inputs[pair.today] - model.inputs[pair.portal]
   const show = n => (pair.money ? fmtMoneyFull(n) : `${fmtDec(n, 2)}${pair.unit === '%' ? '%' : ''}`)
   const side = (f, label) => (
     <div className={`pair-side is-${stateOf(f)}`}>
       <label htmlFor={f.key}>{label}</label>
+      <InputActions field={f} onEdit={onEdit} onRemove={onRemove} />
       <input
         id={f.key}
         type="number"
@@ -364,7 +371,7 @@ function PairField({ pair, today, portal, model, onChange, ...rest }) {
   )
 }
 
-function Field({ field, onChange, onRemove, ...rest }) {
+function Field({ field, onChange, onRemove, onEdit, ...rest }) {
   const number = (field.type === 'number' || field.type === 'percent') && !field.structural
 
   return (
@@ -374,11 +381,7 @@ function Field({ field, onChange, onRemove, ...rest }) {
           {field.label}
           {field.unit ? <span className="unit"> ({field.unit})</span> : null}
         </label>
-        {field.custom && (
-          <button className="icon-btn" onClick={() => onRemove(field.key)} title="Remove this input" aria-label={`Remove ${field.label}`}>
-            ×
-          </button>
-        )}
+        <InputActions field={field} onEdit={onEdit} onRemove={onRemove} />
       </div>
 
       {field.type === 'select' ? (
@@ -418,6 +421,22 @@ function Field({ field, onChange, onRemove, ...rest }) {
       {field.help && <p className="help">{field.help}</p>}
     </div>
   )
+}
+
+function InputActions({ field, onEdit, onRemove }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState({})
+  return <div className="input-field-actions">
+    <button type="button" className="input-action" aria-label={`Edit ${field.label}`} onClick={() => { setDraft({ label: field.label, unit: field.unit || '', help: field.help || '' }); setEditing(true) }}>Edit</button>
+    <button type="button" className="input-action input-action-delete" aria-label={`Delete ${field.label}`} onClick={() => onRemove(field.key)}>Delete</button>
+    {editing && <div className="input-edit-panel" role="group" aria-label={`Edit input ${field.label}`}>
+      <label>Input name<input aria-label="Input name" value={draft.label} onChange={e => setDraft(d => ({ ...d, label: e.target.value }))} /></label>
+      <label>Unit<input aria-label="Input unit" value={draft.unit} onChange={e => setDraft(d => ({ ...d, unit: e.target.value }))} /></label>
+      <label>Description<textarea aria-label="Input description" value={draft.help} onChange={e => setDraft(d => ({ ...d, help: e.target.value }))} /></label>
+      <button type="button" className="primary" disabled={!draft.label.trim()} onClick={() => { onEdit(field.key, draft); setEditing(false) }}>Apply changes</button>
+      <button type="button" className="ghost" onClick={() => setEditing(false)}>Cancel</button>
+    </div>}
+  </div>
 }
 
 function AddInput({ onAdd }) {

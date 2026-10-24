@@ -91,7 +91,7 @@ export async function handlePublish({ body, headers, fetchImpl, wait }) {
 
 // The suggestion agent: reads only the material the caller sends (what Chris switched
 // on) and proposes values for empty inputs. It never produces a figure.
-const DOC_SOURCES = ['gong', 'hubspot', 'slack', 'clay', 'lemlist']
+const DOC_SOURCES = ['claude', 'gong', 'hubspot', 'slack', 'clay', 'lemlist']
 
 export async function handleSuggest({ body, headers }) {
   if (needsCode(headers)) return { status: 401, body: { error: 'access_code' } }

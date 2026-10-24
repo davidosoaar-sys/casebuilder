@@ -47,10 +47,10 @@ const TEXT_TAG = {
 }
 const SINGLE_LINE = new Set(['hero', 'headline', 'title', 'label', 'eyebrow', 'tag', 'forwhom'])
 
-export default function Deck({ inputs, model, fields, connectors, stakeholders, onStakeholders, deck, onDeck, company, onWebsite, brand, onBrand, onScanBrand }) {
+export default function Deck({ inputs, model, fields, connectors, stakeholders, onStakeholders, deck, onDeck, company, onWebsite, brand, onBrand, onScanBrand, initialAudienceKey, previewRequest, onPreviewOpened }) {
   const [designOpen, setDesignOpen] = useState(false)
   const available = stakeholders.map(resolve).filter(Boolean)
-  const [activeKey, setActiveKey] = useState(available[0]?.key)
+  const [activeKey, setActiveKey] = useState(initialAudienceKey || available[0]?.key)
   const active = available.find(s => s.key === activeKey) || available[0] || NO_ONE
   const canEditStakeholder = active.key !== 'none'
   const env = buildEnv(inputs, fields, active, model)
@@ -118,6 +118,8 @@ export default function Deck({ inputs, model, fields, connectors, stakeholders, 
         <div className="toolbar-actions">
           <button className="ghost" onClick={() => setDesignOpen(v => !v)} aria-expanded={designOpen}>Deck design{brand?.status === 'scanning' ? ' · scanning' : ''}</button>
           <ExportMenu
+            requestedView={previewRequest}
+            onViewOpened={onPreviewOpened}
             brand={brand}
             company={company}
             deck={deck}
@@ -126,7 +128,7 @@ export default function Deck({ inputs, model, fields, connectors, stakeholders, 
             connectors={connectors}
             stakeholders={available}
             activeKey={active.key}
-            onWebsite={onWebsite}
+            onWebsite={key => onWebsite(key || active.key)}
           />
         </div>
       </nav>
@@ -272,8 +274,10 @@ function BlockEditor({ block: b, first, last, env, canEditStakeholder, onPatch, 
           {badgeColors && <div className="badge-color-panel no-print" role="group" aria-label="Badge background colors">
             <div className="badge-panel-head"><strong>Text background</strong><button className="tool" aria-label="Close badge colors" onClick={() => setBadgeColors(false)}>×</button></div>
             <div className="badge-swatches">{['#29261F', '#1DB954', '#123D32', '#253453', '#482B54', '#733A22', '#FFFFFF', '#000000'].map(color => <button key={color} type="button" className="badge-swatch" style={{ background: color }} aria-label={`Badge background ${color}`} onClick={() => onPatch(x => ({ ...x, design: { ...x.design, badgeBackground: color } }))} />)}</div>
-            <label className="badge-custom-color">Custom color<input type="color" aria-label="Badge background color" value={b.design?.badgeBackground || '#29261F'} onChange={e => onPatch(x => ({ ...x, design: { ...x.design, badgeBackground: e.target.value } }))} /></label>
+            <button className="ghost transparent-color" aria-pressed={b.design?.badgeBackground === 'transparent'} onClick={() => onPatch(x => ({ ...x, design: { ...x.design, badgeBackground: 'transparent' } }))}><span className="transparency-swatch" />Transparent</button>
+            <label className="badge-custom-color">Custom color<input type="color" aria-label="Badge background color" value={/^#[0-9a-f]{6}$/i.test(b.design?.badgeBackground) ? b.design.badgeBackground : '#29261F'} onChange={e => onPatch(x => ({ ...x, design: { ...x.design, badgeBackground: e.target.value } }))} /></label>
             <button className="ghost" onClick={() => { setBadgeColors(false); setBadgeTextEditing(true) }}>Edit label text</button>
+            <button className="ghost delete-element" onClick={onRemove}>Delete label</button>
           </div>}
         </div>
         break
@@ -506,18 +510,21 @@ function BlockEditor({ block: b, first, last, env, canEditStakeholder, onPatch, 
   }
 
   return (
-    <div className={`block block-${b.type}`}>
+    <div className={`block block-${b.type} ${formatting ? 'block-selected' : ''}`} onClick={e => { if (e.target.closest('.block-content') && !e.target.closest('.tag-color-target, .badge-color-panel, input, textarea, select, a')) setFormatting(true) }}>
       {tools}
       {formatting && (
         <div className="block-settings block-format no-print">
           <label>Text color<input type="color" aria-label="Block text color" value={b.design?.color || normalizeBrand(brand).text} onChange={e => onPatch(x => ({ ...x, design: { ...x.design, color: e.target.value } }))} /></label>
           <label>Color hex<input aria-label="Block text color hex" value={colorDraft} onChange={e => { const color = e.target.value; setColorDraft(color); if (/^#[0-9a-f]{6}$/i.test(color)) onPatch(x => ({ ...x, design: { ...x.design, color } })) }} placeholder="#ffffff" maxLength={7} onBlur={() => setColorDraft(b.design?.color || '')} /></label>
-          <label>Background<input type="color" aria-label="Block background" value={b.design?.[backgroundKey] || normalizeBrand(brand).background} onChange={e => onPatch(x => ({ ...x, design: { ...x.design, [backgroundKey]: e.target.value } }))} /></label>
+          <label>Background<input type="color" aria-label="Block background" value={/^#[0-9a-f]{6}$/i.test(b.design?.[backgroundKey]) ? b.design[backgroundKey] : normalizeBrand(brand).background} onChange={e => onPatch(x => ({ ...x, design: { ...x.design, [backgroundKey]: e.target.value } }))} /></label>
+          <button className="ghost transparent-color" aria-pressed={b.design?.[backgroundKey] === 'transparent'} onClick={() => onPatch(x => ({ ...x, design: { ...x.design, [backgroundKey]: 'transparent' } }))}><span className="transparency-swatch" />Transparent background</button>
           <label>Font size<input type="number" aria-label="Block font size" min="10" max="120" placeholder="Auto" value={b.design?.fontSize || ''} onChange={e => onPatch(x => ({ ...x, design: { ...x.design, fontSize: e.target.value } }))} /></label>
           <label>Font<input aria-label="Block font" placeholder="Use deck font" value={b.design?.font || ''} onChange={e => onPatch(x => ({ ...x, design: { ...x.design, font: e.target.value } }))} /></label>
           <label>Alignment<select aria-label="Block alignment" value={b.design?.align || 'left'} onChange={e => onPatch(x => ({ ...x, design: { ...x.design, align: e.target.value } }))}>{['left', 'center', 'right'].map(a => <option key={a}>{a}</option>)}</select></label>
           <label>Weight<select aria-label="Block font weight" value={b.design?.weight || ''} onChange={e => onPatch(x => ({ ...x, design: { ...x.design, weight: e.target.value } }))}><option value="">Auto</option>{['400', '500', '600', '700', '800', '900'].map(w => <option key={w}>{w}</option>)}</select></label>
           <button className="tool tool-text" onClick={() => onPatch(x => ({ ...x, design: {} }))}>Reset formatting</button>
+          <button className="ghost delete-element" onClick={onRemove}>Delete element</button>
+          <button className="tool" aria-label="Close element styles" onClick={() => setFormatting(false)}>×</button>
         </div>
       )}
       {settings && b.type === 'stats' && (

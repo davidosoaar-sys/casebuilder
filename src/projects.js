@@ -6,6 +6,7 @@ import { dealStorage } from './dealStorage.js'
 import { loadConnections } from './connectors.js'
 import { SPOTIFY_LOGO } from './spotifyLogo.js'
 import { styleSpotifyDeck } from './spotifyDeck.js'
+import { SAMPLE_CASES, createSampleCase } from './sampleCases.js'
 
 export { uid }
 
@@ -25,6 +26,9 @@ export function loadProjects() {
   }
   try {
     dealStorage.seedSample('spotify.v1', () => ({ ...newProject('Spotify'), projectLogo: SPOTIFY_LOGO, sample: true }), p => p.name.toLowerCase() === 'spotify')
+    for (const sample of SAMPLE_CASES) {
+      dealStorage.seedSample('website-'+sample.key+'.v1',()=>createSampleCase(sample,newProject),p=>p.sampleCaseKey===sample.key)
+    }
   } catch (error) {
     loadError = error.message || 'The sample project could not be saved.'
   }

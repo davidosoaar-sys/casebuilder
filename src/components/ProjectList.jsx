@@ -38,7 +38,6 @@ export default function ProjectList({ user, onUser, projects, activeId, onCreate
   return (
     <div className="projects-page">
       <header className="projects-head">
-        <p className="mono-label">Technology / Business case</p>
         {user ? (
           <>
             <h1>Hello, {user}.</h1>

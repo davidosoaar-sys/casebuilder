@@ -1,3 +1,4 @@
+import { websiteThemeCss } from './export/websiteFramework.js'
 // Customer branding is scoped to a deck. It never themes the application chrome.
 export const DEFAULT_BRAND = {
   primary: '#9bf0de', background: '#111111', surface: '#1e1e1e', text: '#e3e3e3',
@@ -7,8 +8,16 @@ export const DEFAULT_BRAND = {
 export const COLOR_KEYS = ['primary', 'background', 'surface', 'text', 'muted']
 export const cleanFont = value => String(value || '').replace(/[^a-zA-Z0-9 ,_-]/g, '').slice(0, 100)
 export const fontStack = value => {
-  const name = cleanFont(value)
-  return ['system-ui', 'sans-serif', 'serif', 'monospace'].includes(name) ? `${name}` : `'${name}',sans-serif`
+  const names = cleanFont(value).split(',').map(n=>n.trim()).filter(Boolean)
+  const generic = ['system-ui', 'sans-serif', 'serif', 'monospace', 'cursive', 'fantasy']
+  if (!names.length) return 'sans-serif'
+  const stack = names.map(name=>generic.includes(name) ? name : `'${name}'`)
+  if (!generic.includes(names.at(-1))) stack.push('sans-serif')
+  return stack.join(',')
+}
+export const officeFont = value => {
+  const name = cleanFont(value).split(',')[0].trim()
+  return ({'system-ui':'Arial','sans-serif':'Arial',serif:'Times New Roman',monospace:'Courier New'})[name] || name || 'Arial'
 }
 export const safeAsset = value => typeof value === 'string' && value.length < 1_200_000 && /^data:image\/(png|jpeg|webp|svg\+xml);base64,[a-zA-Z0-9+/=]+$/.test(value) ? value : ''
 export function normalizeBrand(value) {
@@ -48,7 +57,7 @@ export function brandDocument(html, value) {
   const css = `${fontFaceCss(b)}
     :root{--bg:${b.background};--panel:${b.surface};--ink:${b.text};--strong:${b.text};--dim:${b.muted};--faint:${b.muted};--accent:${b.primary};--mint:${b.primary};--line2:${b.muted};}
     body{font-family:${fontStack(b.bodyFont)}!important}
-    h1,h2,h3,.stat strong,.pillar h3{font-family:${fontStack(b.headingFont)}!important}
+    h1,h2,h3,.stat strong,.pillar h3,.bento-cell strong,.brief-stat strong,.brief-headline{font-family:${fontStack(b.headingFont)}!important}
     .hero-bg{background:linear-gradient(115deg,${b.background},${b.surface})!important}
     .logo img,.brand img{max-height:32px;max-width:220px;object-fit:contain}
     .bar,.fill,.whatif-btn{background-color:${b.primary}}
@@ -60,17 +69,18 @@ export function brandDocument(html, value) {
     .blk[data-custom-color] *{color:inherit!important}
     .blk .tag{background:var(--badge-background,rgba(255,217,126,.08));border-color:var(--badge-background,rgba(255,217,126,.25))}
     .blk[data-custom-size] :is(h1,h2,h3,p,li,blockquote){font-size:inherit!important}
-    .blk[data-custom-font] :is(h1,h2,h3,p,li,blockquote){font-family:inherit!important}
+    .blk[data-custom-font] :is(h1,h2,h3,p,li,blockquote,strong,span,em,figcaption){font-family:inherit!important}
     .blk[data-custom-weight] :is(h1,h2,h3,p,li,blockquote){font-weight:inherit!important}
   `
-  return html.replace('</head>', `<style>${css}</style></head>`)
+  const website = html.includes('<body class="view-website">')
+  return html.replace('</head>', `<style>${css}\n${website ? websiteThemeCss(b) : ''}</style></head>`)
 }
 export function blockDesign(value = {}) {
   value = value && typeof value === 'object' ? value : {}
   const css = {}
   if (/^#[0-9a-f]{6}$/i.test(value.color)) css.color = value.color
-  if (/^#[0-9a-f]{6}$/i.test(value.background)) css.backgroundColor = value.background
-  if (/^#[0-9a-f]{6}$/i.test(value.badgeBackground)) css['--badge-background'] = value.badgeBackground
+  if (value.background === 'transparent' || /^#[0-9a-f]{6}$/i.test(value.background)) css.backgroundColor = value.background
+  if (value.badgeBackground === 'transparent' || /^#[0-9a-f]{6}$/i.test(value.badgeBackground)) css['--badge-background'] = value.badgeBackground
   if (Number.isFinite(Number(value.fontSize)) && value.fontSize !== '') css.fontSize = Math.min(120, Math.max(10, Number(value.fontSize))) + 'px'
   if (['left', 'center', 'right'].includes(value.align)) css.textAlign = value.align
   if (['400', '500', '600', '700', '800', '900'].includes(String(value.weight))) css.fontWeight = value.weight

@@ -6,6 +6,7 @@ import { uid } from '../projects.js'
 import { ORIGIN, emptySource } from '../source.js'
 import { dealMarkdown, markdownFilename } from '../dealReport.js'
 import { download } from '../export/download.js'
+import { removeInput } from '../inputEditing.js'
 
 // A project's details: the inputs that feed the deck (with where every number came
 // from), the stakeholder map and the people found for each stakeholder. All of it is
@@ -74,7 +75,7 @@ export default function Details({
               }
             ])
           }
-          onRemove={key => onFields(fs => fs.filter(f => f.key !== key))}
+          onRemove={key => onFields(fs => removeInput(fs, key))}
           onReset={onReset}
         />
       )}

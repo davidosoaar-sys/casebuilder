@@ -48,7 +48,7 @@ export const SUGGESTIBLE = {
 // Headcount and open roles are facts anyone can check on a public page.
 export const PUBLIC_FACTS = ['engineers', 'newHiresPerYear']
 
-const SOURCE_LABEL = { gong: 'Gong', hubspot: 'HubSpot', slack: 'Slack', clay: 'Clay', lemlist: 'Lemlist' }
+const SOURCE_LABEL = { claude: 'Claude', gong: 'Gong', hubspot: 'HubSpot', slack: 'Slack', clay: 'Clay', lemlist: 'Lemlist' }
 
 const SYSTEM = `You help a B2B salesperson fill in a business case for Spotify Portal for Backstage (a developer portal). You are given a company, the inputs already filled in, a list of inputs to find, and possibly documents (call transcripts, CRM exports, threads) and web search.
 

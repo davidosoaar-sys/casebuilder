@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react'
 import logoSvg from '../assets/backstage-logo.svg?raw'
 import faviconSvg from '../../public/favicon.svg?raw'
-import { prepareOnePager, prepareInternal, pickAudience } from './prepare.js'
+import { prepareOnePager, pickAudience } from './prepare.js'
 import { buildEnv, resolveSlides } from '../deck/model.js'
-import { buildOnePager, buildInternalSummary } from './html.js'
+import { buildOnePager } from './html.js'
+import { buildSiteHtml } from './site.js'
 import Preview from './Preview.jsx'
 import { normalizeBrand, brandLogoHtml, brandDocument } from '../brand.js'
 
@@ -40,7 +41,7 @@ function imageSize(src) {
   })
 }
 
-export default function ExportMenu({ company: projectName, deck, inputs, fields, connectors, stakeholders, activeKey, onWebsite, brand }) {
+export default function ExportMenu({ company: projectName, deck, inputs, fields, connectors, stakeholders, activeKey, onWebsite, brand, requestedView, onViewOpened }) {
   // The deck itself says {company} from the Company input, so use that name everywhere.
   const company = inputs.companyName || projectName
   const [open, setOpen] = useState(false)
@@ -58,11 +59,17 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
 
   // With no stakeholders left, export for "everyone" with a neutral headline.
   const who = pickAudience(stakeholders, activeKey)
+  useEffect(() => {
+    if (!requestedView) return
+    show(requestedView)
+    onViewOpened?.()
+  }, [requestedView]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  function pdf() {
+  function show(kind) {
     setOpen(false)
-    // Let the menu close before the print dialog opens.
-    setTimeout(() => window.print(), 80)
+    if (kind === 'website') { setPreview(null); onWebsite(activeKey); return }
+    if (kind === 'onepager') { onePager(); return }
+    setPreview({ kind, title: kind === 'pdf' ? 'PDF preview' : 'Slides', file: `${slug(company)} - ${kind}.html`, html: buildSiteHtml({ project: { name: company, deck, fields, stakeholders, brand }, inputs, activeKey, mode: kind }) })
   }
 
   async function pptx() {
@@ -93,19 +100,11 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
     setPreview({ kind: 'onepager', title: 'One-pager', file: `${slug(company)} - one-pager.html`, html: brandDocument(buildOnePager({ facts, logoSvg: brandLogoHtml(brand, logoSvg), faviconSvg }), brand) })
   }
 
-  // For Chris, never the client: every input with its state and origin, and the questions to confirm.
-  function internal() {
-    setOpen(false)
-    const facts = prepareInternal({ company, fields, inputs, connectors })
-    setPreview({ kind: 'internal', title: 'Internal summary', for: 'you only', file: `${slug(company)} - inputs and open questions.html`, html: buildInternalSummary({ facts, logoSvg, faviconSvg }) })
-  }
-
   const items = [
-    { name: 'PDF', note: 'Print or save every page', run: pdf },
-    { name: 'PowerPoint', note: 'Download an editable .pptx', run: pptx },
-    { name: 'One-pager', note: 'A single A4 summary', run: onePager },
-    { name: 'Internal summary', note: 'For you: sources and open questions', run: internal },
-    { name: 'Interactive website', note: 'See it, edit it, copy the link', run: () => { setOpen(false); onWebsite() } }
+    { name: 'PDF', note: 'Preview the paginated document', run: () => show('pdf') },
+    { name: 'Slides', note: 'Present one slide at a time', run: () => show('slides') },
+    { name: 'One-pager', note: 'A concise executive brief', run: () => show('onepager') },
+    { name: 'Website', note: 'Explore perspectives and scenarios', run: () => show('website') }
   ]
 
   return (
@@ -137,6 +136,9 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
           preview={preview}
           onClose={() => setPreview(null)}
           audience={who.role}
+          onView={show}
+          onDownloadSlides={pptx}
+          busy={!!busy}
         />
       )}
     </div>

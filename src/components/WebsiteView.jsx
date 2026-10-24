@@ -41,13 +41,13 @@ async function copyText(text) {
   }
 }
 
-export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, onScenario }) {
+export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, onScenario, audienceKey, onView }) {
   const frame = useRef(null)
   const scenarioRef = useRef(null)
   scenarioRef.current = { saved: project.scenario, onScenario }
   const detachScenario = useRef(() => {})
   useEffect(() => () => detachScenario.current(), [])
-  const [editing, setEditing] = useState(true)
+  const [editing, setEditing] = useState(false)
   const [working, setWorking] = useState('') // '' | 'publish' | 'zip'
   const [problem, setProblem] = useState(null) // { message } | { setup: true } | { codeRequired: true }
   const [needCode, setNeedCode] = useState(false)
@@ -60,8 +60,8 @@ export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, o
 
   // What the frame shows is fixed while you edit inside it, so typing never
   // reloads the page under you. `current` always reflects the latest deck.
-  const shown = useMemo(() => buildSiteHtml({ project, inputs }), [project.id]) // eslint-disable-line react-hooks/exhaustive-deps
-  const current = useMemo(() => buildSiteHtml({ project, inputs }), [project.deck, project.fields, project.stakeholders, inputs]) // eslint-disable-line react-hooks/exhaustive-deps
+  const shown = useMemo(() => buildSiteHtml({ project, inputs, activeKey: audienceKey }), [project.id, audienceKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  const current = useMemo(() => buildSiteHtml({ project, inputs, activeKey: audienceKey }), [project.deck, project.fields, project.stakeholders, project.brand, inputs, audienceKey])
   const currentHash = useMemo(() => hashText(current), [current])
   const upToDate = !!site && site.hash === currentHash
 
@@ -193,8 +193,9 @@ export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, o
           </span>
         </div>
         <div className="site-bar-actions">
+          <select className="website-view-format" aria-label="View as format" value="website" onChange={e => onView?.(e.target.value, frame.current?.contentDocument?.querySelector('#audience select')?.value || audienceKey)}><option value="pdf">PDF</option><option value="slides">Slides</option><option value="onepager">One-pager</option><option value="website">Website</option></select>
           <button className={`ghost ${editing ? 'ghost-on' : ''}`} onClick={() => setEditing(e => !e)}>
-            {editing ? 'Editing on' : 'Editing off'}
+            {editing ? 'Finish editing' : 'Edit content'}
           </button>
           <button className="ghost" onClick={openTab} disabled={busy}>
             Open in new tab

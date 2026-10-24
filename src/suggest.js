@@ -21,6 +21,7 @@ import { isBlank, withSuggestion, withGap } from './source.js'
 export const RANK = { transcript: 1, public: 2, benchmark: 3, derived: 4 }
 
 const WHAT = {
+  claude: 'conversation notes',
   gong: 'call figures',
   hubspot: 'CRM records',
   slack: 'internal threads',
@@ -157,7 +158,7 @@ export async function suggestValues({ company, fields, keys, connectors, documen
 export function applySuggestions(fields, result, { keys, now }) {
   const ctx = { now, enabled: result.enabled }
   return fields.map(f => {
-    if (!keys.includes(f.key)) return f
+    if (f.deleted || !keys.includes(f.key)) return f
     const s = result.suggestions[f.key]
     if (s) return withSuggestion(f, s, ctx)
     const notes = result.gaps[f.key]
@@ -166,7 +167,7 @@ export function applySuggestions(fields, result, { keys, now }) {
 }
 
 // The fields a "Suggest values" for everything should fill: the empty ones.
-export const emptyKeys = fields => fields.filter(f => NUMERIC_INPUTS.includes(f.key) && isBlank(f.value)).map(f => f.key)
+export const emptyKeys = fields => fields.filter(f => !f.deleted && NUMERIC_INPUTS.includes(f.key) && isBlank(f.value)).map(f => f.key)
 
 // ------------------------------------------------------------------ the server call
 

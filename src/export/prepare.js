@@ -19,6 +19,8 @@ export function prepareOnePager({ inputs, fields, who, date }) {
   return {
     company: env.ctx.company,
     role: who.role,
+    archetype: inputs.archetype || '',
+    priority: inputs.strategicPriority || '',
     headline: env.ctx.headline,
     cares: who.cares,
     stats: block('stats').items,
@@ -52,6 +54,8 @@ export function prepareWebsite({ company, deck, inputs, fields, stakeholders, wh
     stakeholders: stakeholders.map(s => ({
       key: s.key,
       role: s.role,
+        namedPeople: (s.namedPeople || []).map(p=>({name:p.name,title:p.title})),
+        pos:s.pos,
       tag: s.tag || '',
       cares: s.cares || '',
       objection: s.objection || '',

@@ -54,7 +54,7 @@ export function buildDealReport(deal, date = new Date()) {
   const byKey = Object.fromEntries(fields.map(f => [f.key, f]))
   const inputs = Object.fromEntries(fields.map(f => [f.key, f.value]))
   const model = computeModel(inputs)
-  const countable = fields.filter(f => ['number', 'percent'].includes(f.type) && !f.structural)
+  const countable = fields.filter(f => !f.deleted && ['number', 'percent'].includes(f.type) && !f.structural)
   const format = (key, f) => {
     if (key === 'paybackMonths') return f.flag === 'divide-by-zero' ? 'Not reached' : fmtMonths(f.value)
     if (key === 'roiMultiple') return f.flag === 'divide-by-zero' ? 'Not defined' : `${fmtDec(f.value, 2)}x`
@@ -68,7 +68,7 @@ export function buildDealReport(deal, date = new Date()) {
   const active = (deal.stakeholders || []).map(resolveStakeholder).find(Boolean)
   const annual = figureByKey.totalValue
   const headline = annual ? active?.headline(model) || `${annual.value} of annual value` : ''
-  const rows = fields.map(f => ({ key: f.key, label: f.label || f.key, value: showInput(f), state: stateOf(f), origin: sourceText(f.source), source: f.source || {} }))
+  const rows = fields.filter(f => !f.deleted).map(f => ({ key: f.key, label: f.label || f.key, value: showInput(f), state: stateOf(f), origin: sourceText(f.source), source: f.source || {} }))
   return {
     company: inputs.companyName || deal.name,
     archetype: inputs.archetype || 'Not specified', priority: inputs.strategicPriority || 'Not specified',
