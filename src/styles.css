@@ -1223,6 +1223,9 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .auth-switch .link-btn { font-size: 13px; margin: 0; color: var(--accent); }
 .auth-hint { margin: 2px 0 0; font-size: 12px; color: var(--ink-faint); }
 .auth-note-top { margin: 0 0 6px; font-size: 13.5px; color: var(--ink-dim); }
+.auth-forgot { margin: 2px 0 0; text-align: right; }
+.auth-forgot .link-btn { margin: 0; font-size: 12px; color: var(--ink-dim); }
+.auth-forgot .link-btn:hover { color: var(--accent); }
 .auth-code { font-family: var(--mono); font-size: 22px !important; letter-spacing: 0.35em; text-align: center; }
 
 /* ---------- collapsible sidebar */

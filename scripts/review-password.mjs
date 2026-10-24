@@ -1,4 +1,6 @@
-// Real-browser check: change password, old one stops working, new one works.
+// Real-browser check: change password (current password required), old one
+// stops working, new one works. Wrong-current and email checks live in
+// review-password-email.mjs.
 // Uses the TEST account only and restores its original password at the end.
 import puppeteer from 'puppeteer'
 import fs from 'node:fs'
@@ -28,11 +30,12 @@ async function signIn(pw) {
   ])
 }
 async function openSettings() { if (!(await page.$('.overlay'))) { await page.click('.side-settings'); await page.waitForSelector('.overlay') } }
-async function changeTo(pw, shot) {
+async function changeTo(pw, current, shot) {
   await openSettings()
   const [btn] = await page.$$('xpath/.//button[contains(., "Change password")]')
   await btn.click()
   await page.waitForSelector('#new-password')
+  await page.type('#current-password', current)
   await page.type('#new-password', pw); await page.type('#new-password-again', pw)
   if (shot) await page.screenshot({ path: shot })
   await page.click('.modal button[type=submit]')
@@ -58,12 +61,12 @@ await page.screenshot({ path: '/tmp/pw-0-sidebar.png' })
   await page.click('.modal .ghost')
   await page.click('.overlay-x')
 }
-await changeTo(TEMP, '/tmp/pw-1-modal.png')
+await changeTo(TEMP, ORIGINAL, '/tmp/pw-1-modal.png')
 check('change password reports success', true)
 await signOut()
 check('old password no longer works', !(await signIn(ORIGINAL)))
 check('new password works', await signIn(TEMP))
-await changeTo(ORIGINAL)
+await changeTo(ORIGINAL, TEMP)
 await signOut()
 check('restored: original password works again', await signIn(ORIGINAL))
 check('no page errors', errors.length === 0)

@@ -22,6 +22,35 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ---
 
+## v0.4.1 (2026-10-25)
+
+Fixed: password security.
+- Change password now asks for your **current password**. Supabase enforces
+  it on the server (`security_update_password_require_current_password`), so
+  the form cannot be skipped.
+- A **"Your CaseBuilder password was changed"** email goes out after every
+  change, from casebuilder.app@gmail.com, telling the owner what to do if it
+  was not them.
+- **Forgot password?** on the sign-in screen: email -> 6-digit reset code ->
+  new password, all on one screen, no links. The screen says the same thing
+  whether or not the email has an account, so it cannot be used to check who
+  is signed up. The app only opens once the new password is saved.
+- Supabase's minimum password length raised from 6 to 10, matching the forms.
+- Auth settings are applied by script: `scripts/supabase-auth-settings.py`.
+
+Correction to v0.4.0: it said the old password was "checked and rejected
+when wrong". It was not; the test only checked that the old password stopped
+working after a change. That check now exists, in this version.
+
+Checks: 180/180 tests, production build OK. New real end-to-end test
+`scripts/review-password-email.mjs` (fresh account, real Gmail inbox): wrong
+current password rejected, right one accepted, change email arrives, reset
+code arrives with no link, wrong reset code rejected, right one sets the new
+password, only the newest password signs in. ALL PASS, two runs in a row.
+`scripts/review-password.mjs` updated and ALL PASS.
+
+---
+
 ## v0.4.0 (2026-10-25)
 
 Added: accounts, saved deals, the app shell, and the Hermes worker. This is
