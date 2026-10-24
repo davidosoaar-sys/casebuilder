@@ -22,6 +22,50 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ---
 
+## v0.4.0 (2026-10-25)
+
+Added: accounts, saved deals, the app shell, and the Hermes worker. This is
+the first version where CaseBuilder is a real multi-user app.
+
+Accounts
+- Sign in with email + password (Supabase auth). Signed-in email and Sign out
+  in the sidebar.
+- Create account with a 6-digit email code (no link). Sent from
+  casebuilder.app@gmail.com through Gmail SMTP, so no domain is needed.
+  Verified end to end: code arrives in ~11s, account opens on the Dashboard.
+- Change password from Settings; the old password is checked and rejected
+  when wrong.
+- Admin role on accounts (David has one).
+
+Deals
+- Deals are saved to Supabase per account, not the browser. Versioned saves
+  (stale writes refused), offline-safe write-ahead copy, one sample deal per
+  new account.
+
+App shell
+- CaseBuilder wordmark (Case white, Builder mint, Outfit 600) matching the
+  landing site; B mark fixed (was cropped at the bottom).
+- Collapsible sidebar, Dashboard, Claude-style Projects index, unified page
+  headers.
+- Settings is a blurred overlay (gear, bottom-left) with Appearance and the
+  API key box inside. Fixed: opening Settings no longer kicks you out of a
+  project.
+- "Connections" renamed to "Connectors" everywhere (menu, page title, input
+  sheet, exported deck).
+
+Backend
+- Hermes worker: Supabase job queue -> one isolated Hermes profile per
+  account -> answer back into chat. Runs on the Oracle VM under systemd
+  (`worker/`, `infra/`).
+- Per-account model keys stored in Supabase Vault
+  (`supabase/migrations/0003_model_keys.sql`), with tests.
+- Search key passed per job and shredded with the profile `.env`.
+
+Checks: 180/180 tests, production build OK, sign-up email test
+(`scripts/review-signup-email.mjs`) ALL PASS.
+
+---
+
 ## v0.3.0 (2026-10-24)
 
 Added: Supabase backend, database layer (not yet wired into the app; nothing
