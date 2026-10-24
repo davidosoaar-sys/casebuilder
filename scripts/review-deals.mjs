@@ -34,8 +34,15 @@ async function session(acct) {
   await page.type('#auth-email', acct.email); await page.type('#auth-password', acct.pw)
   await page.click('button[type=submit]')
   await page.waitForSelector('.sidebar-account', { timeout: 15000 })
-  await page.waitForFunction(() => !document.querySelector('[aria-busy="true"]'), { timeout: 15000 })
+  await toProjects(page)
   return { ctx, page }
+}
+// Sign-in lands on the Dashboard; deal tests work from the Projects page.
+async function toProjects(page) {
+  await page.waitForSelector('button[aria-label="Projects"]', { timeout: 15000 })
+  await page.click('button[aria-label="Projects"]')
+  await page.waitForSelector('.projects-page', { timeout: 15000 })
+  await page.waitForFunction(() => !document.querySelector('[aria-busy="true"]'), { timeout: 15000 })
 }
 const names = page => page.$$eval('.project-card strong', els => els.map(e => e.textContent))
 const waitSaved = page => page.waitForSelector('.save-indicator.save-saved', { timeout: 20000 })
@@ -67,6 +74,7 @@ await a.page.screenshot({ path: '/tmp/deals-1-created.png' })
 // 3. Edits save (version goes up).
 const v1 = rows[0]?.version
 await a.page.reload({ waitUntil: 'networkidle2' })
+await toProjects(a.page)
 await a.page.waitForSelector('.project-card', { timeout: 15000 })
 const [card] = await a.page.$$(`xpath/.//div[contains(@class,"project-card")][.//strong[normalize-space()="${NAME}"]]`)
 const [dup] = await card.$$('xpath/.//button[normalize-space()="Duplicate"]'); await dup.click()
@@ -98,7 +106,7 @@ check('original row untouched by the duplicate', rows.some(r => r.version === v1
   await o2.click(); await d.page.waitForSelector(`#${fieldId}`, { timeout: 15000 })
   check('the edit shows in another browser', (await d.page.$eval(`#${fieldId}`, e => e.value)) === MARK)
   await d.ctx.close()
-  await a.page.goto(base, { waitUntil: 'networkidle2' }); await a.page.waitForSelector('.project-card', { timeout: 15000 })
+  await a.page.goto(base, { waitUntil: 'networkidle2' }); await toProjects(a.page); await a.page.waitForSelector('.project-card', { timeout: 15000 })
 }
 
 // 4. Different browser, same account: deals are there (cloud, not this browser).
@@ -132,6 +140,7 @@ check('back online: offline deal reaches Supabase on its own', rows.length === 1
 
 // 7. Delete in the UI -> rows gone.
 await a.page.goto(base, { waitUntil: 'networkidle2' })
+await toProjects(a.page)
 await a.page.waitForSelector('.project-card', { timeout: 15000 })
 a.page.on('dialog', d => d.accept())
 for (const n of [NAME, NAME + ' (copy)', NAME + ' offline']) {

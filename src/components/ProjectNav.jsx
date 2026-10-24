@@ -1,5 +1,5 @@
 import React from 'react'
-import Logo from './Logo.jsx'
+import AppLogo from './AppLogo.jsx'
 import ThemeToggle from './ThemeToggle.jsx'
 import SaveIndicator from './SaveIndicator.jsx'
 
@@ -7,7 +7,7 @@ export default function ProjectNav({ project, view, onNav, onBack, theme, onThem
   return (
     <header className="project-nav no-print">
       <div className="project-nav-context">
-        <Logo height={23} />
+        <AppLogo height={23} />
         <button className="ghost project-back" onClick={onBack}>← All deals</button>
         <span className="project-nav-name" title={project.name}>{project.name}</span>
       </div>

@@ -18,6 +18,8 @@ import {
 import { defaultDeck } from './deck/model.js'
 import { loadConnections, saveConnections } from './connectors.js'
 import Connections from './components/Connections.jsx'
+import Dashboard from './components/Dashboard.jsx'
+import Settings from './components/Settings.jsx'
 import { computeModel } from './model.js'
 import { stakeholdersForArchetype } from './valueModel.js'
 import { DEFAULT_BRAND } from './brand.js'
@@ -66,7 +68,8 @@ export default function App({ account }) {
     setUserState(name)
     supabase.auth.updateUser({ data: { name } }).catch(() => {})
   }
-  const [view, setView] = useState('projects') // 'projects' | 'details' | 'deck' | 'website'
+  const [view, setView] = useState('dashboard') // 'dashboard' | 'projects' | 'details' | 'deck' | 'website' | 'settings' | ...
+  const [createRequest, setCreateRequest] = useState(0)
   const [stage, setStage] = useState(null) // 'map' | 'people' while setting up a new project
   const brandScans = useRef(new Map())
 
@@ -108,7 +111,7 @@ export default function App({ account }) {
     onInput={suggestion => setPendingPersonInput({ dealId: project.id, suggestion })} />
   function navigate(next) {
     setStage(null)
-    if (next === 'projects') { saving.flush(); setCurrentId(null) }
+    if (['projects', 'dashboard', 'settings'].includes(next)) { saving.flush(); setCurrentId(null) }
     setView(next)
   }
   const projectSidebar = <Sidebar view={view} project={project} projectMode onNav={navigate} theme={theme} onThemeToggle={toggleTheme} saveStatus={saving.status} account={account} />
@@ -182,7 +185,7 @@ export default function App({ account }) {
   }
 
   // Details and Deck need a project; without one, fall back to the list.
-  const page = ['connections', 'lookup'].includes(view) ? view : project ? view : 'projects'
+  const page = ['connections', 'lookup', 'dashboard', 'settings'].includes(view) ? view : project ? view : 'projects'
   const insideProject = !!project && page !== 'projects'
 
   return (
@@ -191,7 +194,19 @@ export default function App({ account }) {
 
       <div className="lookup-content-wrap">
       <main className="content">
-        {page === 'details' ? (
+        {page === 'dashboard' ? (
+          <Dashboard
+            account={account}
+            name={user}
+            deals={projects}
+            loading={dealsLoading}
+            onNav={navigate}
+            onOpen={id => { saving.flush(); setCurrentId(id); setView('details') }}
+            onCreate={() => { setView('projects'); setCreateRequest(n => n + 1) }}
+          />
+        ) : page === 'settings' ? (
+          <Settings account={account} name={user} onName={setUser} />
+        ) : page === 'details' ? (
           <Details
             project={project}
             model={model}
@@ -248,6 +263,7 @@ export default function App({ account }) {
             onUser={setUser}
             projects={projects}
             loading={dealsLoading}
+            createRequest={createRequest}
             activeId={currentId}
             onCreate={name => {
               const p = newProject(name, connections)

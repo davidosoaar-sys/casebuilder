@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { resolve } from './Deck.jsx'
-import Logo from './Logo.jsx'
+import AppLogo from './AppLogo.jsx'
 import { uid } from '../projects.js'
 
 // The people step. For each stakeholder role an AI agent searches the public
@@ -93,7 +93,7 @@ export default function People({
       ) : (
         <>
           <div className="topbar topbar-flush">
-            <Logo height={26} />
+            <AppLogo height={26} />
           </div>
           <p className="mono-label">{showStep ? 'Step 3 of 3 · ' : ''}People</p>
           <h1>Who are they at {company}?</h1>

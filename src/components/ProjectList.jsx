@@ -1,12 +1,13 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { confidence } from '../valueModel.js'
 import { safeAsset } from '../brand.js'
 import { SPOTIFY_LOGO } from '../spotifyLogo.js'
 
 // Landing page: start a new project (company name only), open or delete one.
 
-export default function ProjectList({ user, onUser, projects, loading = false, activeId, onCreate, onOpen, onDelete, onDuplicate }) {
-  const [creating, setCreating] = useState(false)
+export default function ProjectList({ user, onUser, projects, loading = false, createRequest = 0, activeId, onCreate, onOpen, onDelete, onDuplicate }) {
+  const [creating, setCreating] = useState(createRequest > 0)
+  useEffect(() => { if (createRequest > 0) setCreating(true) }, [createRequest])
   const [name, setName] = useState('')
   const [who, setWho] = useState('')
   const [display, setDisplay] = useState(() => {
