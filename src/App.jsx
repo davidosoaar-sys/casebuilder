@@ -7,6 +7,8 @@ import Details from './components/Details.jsx'
 import StakeholderMap from './components/StakeholderMap.jsx'
 import People from './components/People.jsx'
 import useCloudDeals from './useCloudDeals.js'
+import ChatPanel from './components/ChatPanel.jsx'
+import { applyAgentEdits, undoAgentEdits } from './agentEdits.js'
 import { supabase } from './supabase.js'
 import {
   duplicateProject,
@@ -70,6 +72,8 @@ export default function App({ account }) {
   const [view, setView] = useState('dashboard') // 'dashboard' | 'projects' | 'details' | 'deck' | 'website' | 'settings' | ...
   const [createRequest, setCreateRequest] = useState(0)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [chatOpen, setChatOpen] = useState(() => { try { return localStorage.getItem('casebuilder.chat-open') !== '0' } catch { return true } })
+  useEffect(() => { try { localStorage.setItem('casebuilder.chat-open', chatOpen ? '1' : '0') } catch {} }, [chatOpen])
   const openSettings = () => setSettingsOpen(true)
   const [websiteAudience, setWebsiteAudience] = useState(null)
   const [previewRequest, setPreviewRequest] = useState(null)
@@ -160,6 +164,23 @@ export default function App({ account }) {
         : { name, fields: next }
     })
 
+  // Agent edits: applied straight away, once per reply (agentLog is keyed by
+  // the chat message id and saved with the deal), and undoable.
+  const applyFromChat = (messageId, edits) =>
+    update(p => {
+      if (p.agentLog?.[messageId]) return {}
+      const r = applyAgentEdits(p.fields, edits)
+      const entry = { changes: r.changes, refused: r.refused, at: Date.now() }
+      return { fields: r.fields, agentLog: { ...(p.agentLog || {}), [messageId]: entry } }
+    })
+  const undoFromChat = messageId =>
+    update(p => {
+      const entry = p.agentLog?.[messageId]
+      if (!entry || entry.undone) return {}
+      const r = undoAgentEdits(p.fields, entry.changes)
+      return { fields: r.fields, agentLog: { ...p.agentLog, [messageId]: { ...entry, undone: true, skipped: r.skipped } } }
+    })
+
   const settingsOverlay = settingsOpen && (
     <Settings account={account} name={user} onName={setUser} theme={theme} onTheme={setTheme} onClose={() => setSettingsOpen(false)} />
   )
@@ -206,7 +227,7 @@ export default function App({ account }) {
     <div className="layout">
       <Sidebar view={page} project={project} projectMode={insideProject} onNav={navigate} onSettings={openSettings} settingsOpen={settingsOpen} saveStatus={saving.status} account={account} />
 
-      <div className="lookup-content-wrap">
+      <div className={`lookup-content-wrap${insideProject && chatOpen ? ' with-chat' : ''}`}>
       <main className="content">
         {page === 'dashboard' ? (
           <Dashboard
@@ -315,6 +336,9 @@ export default function App({ account }) {
           />
         )}
       </main>
+      {insideProject && (chatOpen
+        ? <ChatPanel key={project.id} project={project} userId={account.session.user.id} onApply={applyFromChat} onUndo={undoFromChat} onClose={() => setChatOpen(false)} onSettings={openSettings} />
+        : <button type="button" className="chat-open primary" onClick={() => setChatOpen(true)}>Ask the agent</button>)}
       </div>
       {pendingPersonInput && project?.id === pendingPersonInput.dealId && <div className="modal-backdrop" onClick={() => setPendingPersonInput(null)}>
         <section className="modal" role="dialog" aria-modal="true" aria-labelledby="person-input-review" onClick={e => e.stopPropagation()}>
