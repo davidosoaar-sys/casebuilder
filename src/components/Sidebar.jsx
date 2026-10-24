@@ -88,7 +88,7 @@ export default function Sidebar({ view, project, projectMode = false, onNav, onS
           <Item id="dashboard" label="Dashboard" view={view} onNav={onNav} />
           <Item id="projects" label="Projects" view={view} onNav={onNav} />
         </>}
-        {!projectMode && <Item id="connections" label="Connections" view={view} onNav={onNav} title="What the agent is allowed to read" />}
+        {!projectMode && <Item id="connections" label="Connectors" view={view} onNav={onNav} title="What the agent is allowed to read" />}
         <Item id="lookup" label="Person lookup" view={view} onNav={onNav} />
       </nav>
       {children}

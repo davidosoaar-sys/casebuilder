@@ -62,7 +62,7 @@ const heads = {}
 heads.Dashboard = await headOf()
 await nav('Projects'); await page.waitForSelector('.projects-page .page-head'); heads.Projects = await headOf()
 await shot('6-projects')
-await nav('Connections'); await page.waitForSelector('.connections-page .page-head'); heads.Connections = await headOf()
+await nav('Connectors'); await page.waitForSelector('.connections-page .page-head'); heads.Connectors = await headOf()
 await nav('Person lookup'); await page.waitForSelector('.lookup-page .page-head'); heads['Person lookup'] = await headOf()
 console.log('      heads', JSON.stringify(heads))
 check('every page has the mint label naming the page', Object.entries(heads).every(([k, h]) => h.label === k))

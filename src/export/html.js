@@ -184,7 +184,7 @@ ${iconLink(faviconSvg)}
   <div class="facts">
     <div class="fact"><span>Case confidence</span><strong>${f.confidence}%</strong></div>
     <div class="fact"><span>Figures computed</span><strong>${f.figuresDone} of ${f.figuresTotal}</strong></div>
-    <div class="fact"><span>Connections the agent could read</span><strong style="font-size:9.5pt">${f.connections.length ? esc(f.connections.join(', ')) : 'None'}</strong></div>
+    <div class="fact"><span>Connectors the agent could read</span><strong style="font-size:9.5pt">${f.connections.length ? esc(f.connections.join(', ')) : 'None'}</strong></div>
   </div>
   <p style="margin:0;color:#5b6168">Confidence counts inputs only: what the customer stated or a public source shows. Assumptions and suggestions are listed below as questions to confirm. This page is for you; it is not part of the client deck.</p>
 
