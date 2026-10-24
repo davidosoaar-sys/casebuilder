@@ -22,6 +22,23 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ---
 
+## v0.3.0 (2026-10-24)
+
+Added: Supabase backend, database layer (not yet wired into the app; nothing
+user-visible changes, the app still saves to the browser).
+- `supabase/migrations/0001_init.sql`: 5 tables (profiles, deals, chat_messages,
+  jobs, schedules), row-level security per account, admin role, versioned
+  deal saves (`save_deal` refuses stale writes), job queue for the Hermes
+  worker (exactly-once claiming, retries with backoff, crash recovery, rate
+  limit), per-user schedules.
+- `supabase/migrations/0002_cron.sql`: pg_cron runs `enqueue_due_schedules`
+  every minute.
+- `supabase/schema.test.js`: 18 database tests on real Postgres (PGlite).
+- `docs/backend.md`: backend design and guarantees.
+- Live project: Supabase `ca-central-1`, both migrations applied and verified.
+
+Tests: 170 passing, 0 failing.
+
 ## v0.2.0 (2026-10-24)
 
 Added (not yet wired into the app; nothing user-visible changes):
