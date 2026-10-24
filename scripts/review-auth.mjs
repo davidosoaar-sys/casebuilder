@@ -43,7 +43,7 @@ await page.reload({ waitUntil: 'networkidle2' })
 await page.waitForSelector('.sidebar-account', { timeout: 15000 }).catch(() => {})
 check('session survives a page reload', Boolean(await page.$('.sidebar-account')))
 
-await page.click('.sidebar-account button')
+{ const [out] = await page.$$('xpath/.//button[normalize-space()="Sign out"]'); await out.click() }
 await page.waitForSelector('#auth-email', { timeout: 10000 }).catch(() => {})
 check('sign out returns to the sign-in screen', Boolean(await page.$('#auth-email')))
 check('no page errors', errors.length === 0)

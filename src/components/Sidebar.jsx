@@ -1,6 +1,7 @@
 import React from 'react'
 import Logo from './Logo.jsx'
 import ThemeToggle from './ThemeToggle.jsx'
+import ChangePassword from './ChangePassword.jsx'
 import SaveIndicator from './SaveIndicator.jsx'
 
 // Global navigation. The project's own tabs are in ProjectNav.
@@ -58,6 +59,7 @@ function Item({ id, label, view, onNav, disabled, title }) {
 }
 
 export default function Sidebar({ view, project, projectMode = false, onNav, theme, onThemeToggle, saveStatus, account, children }) {
+  const [pwOpen, setPwOpen] = React.useState(false)
   return (
     <aside className="sidebar no-print">
       <div className="sidebar-logo">
@@ -75,7 +77,7 @@ export default function Sidebar({ view, project, projectMode = false, onNav, the
 
       </nav>
       {children}
-      <div className="sidebar-footer">{account && <div className="sidebar-account"><span title={account.session.user.email}>{account.session.user.email}</span><button type="button" onClick={account.signOut}>Sign out</button></div>}<SaveIndicator status={saveStatus} /><ThemeToggle theme={theme} onToggle={onThemeToggle} /></div>
+      {pwOpen && <ChangePassword onClose={() => setPwOpen(false)} />}<div className="sidebar-footer">{account && <div className="sidebar-account"><span title={account.session.user.email}>{account.session.user.email}</span><div className="sidebar-account-actions"><button type="button" onClick={() => setPwOpen(true)}>Change password</button><button type="button" onClick={account.signOut}>Sign out</button></div></div>}<SaveIndicator status={saveStatus} /><ThemeToggle theme={theme} onToggle={onThemeToggle} /></div>
     </aside>
   )
 }
