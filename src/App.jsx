@@ -47,7 +47,7 @@ function loadUser() {
 
 // Global navigation lives in the Projects / Connections sidebar. Opening a
 // project replaces it with Details / Deck tabs and an explicit way back.
-export default function App() {
+export default function App({ account }) {
   const [theme, setTheme] = useState(initialTheme)
   const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark')
   useEffect(() => {
@@ -105,7 +105,7 @@ export default function App() {
     if (next === 'projects') { saving.flush(); setCurrentId(null) }
     setView(next)
   }
-  const projectSidebar = <Sidebar view={view} project={project} projectMode onNav={navigate} theme={theme} onThemeToggle={toggleTheme} saveStatus={saving.status} />
+  const projectSidebar = <Sidebar view={view} project={project} projectMode onNav={navigate} theme={theme} onThemeToggle={toggleTheme} saveStatus={saving.status} account={account} />
 
   function update(patch) {
     setProjects(prev =>
@@ -181,7 +181,7 @@ export default function App() {
 
   return (
     <div className="layout">
-      <Sidebar view={page} project={project} projectMode={insideProject} onNav={navigate} theme={theme} onThemeToggle={toggleTheme} saveStatus={saving.status} />
+      <Sidebar view={page} project={project} projectMode={insideProject} onNav={navigate} theme={theme} onThemeToggle={toggleTheme} saveStatus={saving.status} account={account} />
 
       <div className="lookup-content-wrap">
       <main className="content">

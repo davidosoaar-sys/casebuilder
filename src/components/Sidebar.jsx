@@ -57,7 +57,7 @@ function Item({ id, label, view, onNav, disabled, title }) {
   )
 }
 
-export default function Sidebar({ view, project, projectMode = false, onNav, theme, onThemeToggle, saveStatus, children }) {
+export default function Sidebar({ view, project, projectMode = false, onNav, theme, onThemeToggle, saveStatus, account, children }) {
   return (
     <aside className="sidebar no-print">
       <div className="sidebar-logo">
@@ -75,7 +75,7 @@ export default function Sidebar({ view, project, projectMode = false, onNav, the
 
       </nav>
       {children}
-      <div className="sidebar-footer"><SaveIndicator status={saveStatus} /><ThemeToggle theme={theme} onToggle={onThemeToggle} /></div>
+      <div className="sidebar-footer">{account && <div className="sidebar-account"><span title={account.session.user.email}>{account.session.user.email}</span><button type="button" onClick={account.signOut}>Sign out</button></div>}<SaveIndicator status={saveStatus} /><ThemeToggle theme={theme} onToggle={onThemeToggle} /></div>
     </aside>
   )
 }
