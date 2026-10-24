@@ -1,4 +1,5 @@
 import React from 'react'
+import PageHead from './PageHead.jsx'
 
 function Evidence({ claim }) {
   if (!claim) return <span className="lookup-missing">not found</span>
@@ -6,8 +7,8 @@ function Evidence({ claim }) {
 }
 export default function PersonLookup({ lookup, project, onAdd, onInput }) {
   const { query, setQuery, demo, setDemo, results, run, choose, busy } = lookup
-  return <section className="person-lookup lookup-page no-print" aria-label="Person lookup">
-    <h1>Person lookup</h1>
+  return <section className="page person-lookup lookup-page no-print" aria-label="Person lookup">
+    <PageHead label="Person lookup" title="Person lookup" />
     <div className="lookup-body">
       <form onSubmit={e => { e.preventDefault(); run() }}>
         <div className="lookup-search-line">

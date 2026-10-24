@@ -158,7 +158,7 @@ export default function InputSheet({ fields, model, company, connectors, documen
             ))}
           </ul>
         )}
-        <p className="summary-sources">Connections the agent may read: {on.length ? on.join(', ') : 'none (all are off)'}.</p>
+        <p className="summary-sources">Connectors the agent may read: {on.length ? on.join(', ') : 'none (all are off)'}.</p>
         <details>
           <summary>Still unconfirmed ({open.length})</summary>
           <ul className="waiting-list">

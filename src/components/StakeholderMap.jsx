@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react'
 import { resolve, AddStakeholder } from './Deck.jsx'
-import Logo from './Logo.jsx'
+import AppLogo from './AppLogo.jsx'
 import { defaultPositions } from '../deck/mapLayout.js'
 
 // A map of who has to say yes. The company sits in the middle, stakeholders
@@ -74,7 +74,7 @@ export default function StakeholderMap({
       ) : (
         <>
           <div className="topbar topbar-flush">
-            <Logo height={26} />
+            <AppLogo height={26} />
           </div>
           <p className="mono-label">{showStep ? 'Step 2 of 3 · ' : ''}Stakeholder map</p>
           <h1>Who has to say yes at {company}?</h1>

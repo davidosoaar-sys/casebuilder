@@ -22,6 +22,14 @@ const SUPABASE_STUB = `
   create function auth.uid() returns uuid language sql stable as
     $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
   grant execute on function auth.uid() to anon, authenticated, service_role;
+  -- Minimal Supabase Vault: same function signatures, no real encryption.
+  create schema vault;
+  create table vault.secrets (id uuid primary key default gen_random_uuid(), name text unique, description text, secret text);
+  create function vault.create_secret(new_secret text, new_name text default null, new_description text default '', new_key_id uuid default null)
+    returns uuid language sql as $$ insert into vault.secrets (secret, name, description) values (new_secret, new_name, new_description) returning id $$;
+  create function vault.update_secret(secret_id uuid, new_secret text default null, new_name text default null, new_description text default null, new_key_id uuid default null)
+    returns void language sql as $$ update vault.secrets set secret = coalesce(new_secret, secret) where id = secret_id $$;
+  create view vault.decrypted_secrets as select id, name, secret as decrypted_secret from vault.secrets;
 `
 
 // Run fn as a given Supabase identity, inside a transaction that resets role.
@@ -44,6 +52,7 @@ before(async () => {
   db = new PGlite()
   await db.exec(SUPABASE_STUB)
   await db.exec(readFileSync(new URL('./migrations/0001_init.sql', import.meta.url), 'utf8'))
+  await db.exec(readFileSync(new URL('./migrations/0003_model_keys.sql', import.meta.url), 'utf8'))
   await db.exec(`insert into auth.users (id, email) values
     ('${A}', 'a@x.com'), ('${B}', 'b@x.com'), ('${ADMIN}', 'admin@x.com')`)
   await db.exec(`update public.profiles set role = 'admin' where id = '${ADMIN}'`)
@@ -197,4 +206,41 @@ test('schedules: no sub-hourly schedules, no month intervals, max 20 per account
 test('schedules: one account cannot attach a schedule to another account\'s deal', async () => {
   await rejects(user(A, tx => tx.query(
     `insert into public.schedules (owner_id, deal_id, title, kind, every, next_run_at) values ($1, 'deal-b', 't', 'chat', '1 day', now())`, [A])), /row-level security/)
+})
+
+const KEY_A = 'sk-ant-api03-' + 'a'.repeat(40) + 'WXYZ'
+const KEY_B = 'sk-ant-api03-' + 'b'.repeat(40) + 'BBBB'
+
+test('model keys: a user saves a key and sees only the last 4, never the key', async () => {
+  const { rows } = await user(A, tx => tx.query(`select public.set_model_key('anthropic', $1) as l4`, [KEY_A]))
+  assert.equal(rows[0].l4, 'WXYZ')
+  const meta = await user(A, tx => tx.query('select provider, last4 from public.model_keys'))
+  assert.deepEqual(meta.rows, [{ provider: 'anthropic', last4: 'WXYZ' }])
+  await rejects(user(A, tx => tx.query('select secret_id from public.model_keys')), /permission denied/)
+  await rejects(user(A, tx => tx.query('select * from vault.secrets')), /permission denied/)
+  await rejects(user(A, tx => tx.query(`select public.get_model_key($1, 'anthropic')`, [A])), /permission denied/)
+})
+
+test('model keys: one account never sees or uses another account\'s key', async () => {
+  await user(B, tx => tx.query(`select public.set_model_key('anthropic', $1)`, [KEY_B]))
+  const seen = await user(B, tx => tx.query('select owner_id from public.model_keys'))
+  assert.deepEqual(seen.rows.map(r => r.owner_id), [B])
+  const a = await service(tx => tx.query(`select public.get_model_key($1, 'anthropic') as k`, [A]))
+  const b = await service(tx => tx.query(`select public.get_model_key($1, 'anthropic') as k`, [B]))
+  assert.equal(a.rows[0].k, KEY_A)
+  assert.equal(b.rows[0].k, KEY_B)
+})
+
+test('model keys: replace updates in place, remove deletes the secret, junk is refused', async () => {
+  const NEW = 'sk-ant-api03-' + 'c'.repeat(40) + 'NEW1'
+  await user(A, tx => tx.query(`select public.set_model_key('anthropic', $1)`, [NEW]))
+  const k = await service(tx => tx.query(`select public.get_model_key($1, 'anthropic') as k`, [A]))
+  assert.equal(k.rows[0].k, NEW)
+  assert.equal((await db.query(`select count(*)::int as n from vault.secrets where name like $1`, [`model_key:${A}:%`])).rows[0].n, 1)
+  await rejects(user(A, tx => tx.query(`select public.set_model_key('anthropic', 'hello')`)), /does not look like an API key/)
+  await rejects(user(A, tx => tx.query(`select public.set_model_key('anthropic', $1)`, ['sk-proj-' + 'x'.repeat(40)])), /start with sk-ant-/)
+  await user(A, tx => tx.query(`select public.delete_model_key('anthropic')`))
+  const gone = await service(tx => tx.query(`select public.get_model_key($1, 'anthropic') as k`, [A]))
+  assert.equal(gone.rows[0].k, null)
+  assert.equal((await db.query(`select count(*)::int as n from vault.secrets where name like $1`, [`model_key:${A}:%`])).rows[0].n, 0)
 })

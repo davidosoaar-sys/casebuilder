@@ -18,12 +18,18 @@ A case started in one can be finished in the other: both read and write the same
 ## The app
 
 ```bash
-npm install
+npm install        # run again after every pull that changes package.json
+cp .env.example .env.local   # then fill in VITE_SUPABASE_URL + VITE_SUPABASE_PUBLISHABLE_KEY
 npm run dev        # http://localhost:5173 (fails instead of switching ports if it is taken)
 npm run build
 ```
 
-Node 18 or newer. Projects live in the browser's local storage.
+Node 18 or newer. You sign in with a CaseBuilder account; deals are saved to
+Supabase per account (see `docs/backend.md`).
+
+If Vite says `Failed to resolve import "@supabase/supabase-js"` (or any other
+package) after a pull, run `npm install`: the pull added a dependency your
+`node_modules` does not have yet.
 
 ### Quick person lookup
 

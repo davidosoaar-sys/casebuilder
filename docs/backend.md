@@ -77,6 +77,69 @@ server-only, signup trigger present, Realtime publishing `chat_messages` and
 Still to verify: whether the per-minute cron counts as activity for the
 free-tier 7-day pause.
 
+## Model API keys: bring your own, per account (decided 24 Oct 2026, Amr)
+
+Each account adds its own model API key (Anthropic, OpenAI, ...) for its own
+agent. No shared team key. Consequences for the build:
+
+- The key is entered once in Settings, sent to the backend, and stored
+  encrypted (Supabase Vault). It is never returned to the browser again; the
+  UI only shows "key saved, ends in ...abcd" and a replace/remove action.
+- Only the worker (secret key) can decrypt it. RLS does not expose it to any
+  app user, including the account's own session.
+- Per job, the worker loads that account's key into that account's Hermes
+  profile only. One account's key can never be used for another account's job.
+- No key saved = jobs for that account fail fast with a clear "add your API
+  key in Settings" message, never a silent fallback to someone else's key.
+- Cost sits with each account. Demo: Chris's account uses whichever key he (or
+  the team, for him) enters.
+
+## Worker (live 24 Oct 2026)
+
+`worker/worker.py`, stdlib Python, systemd service `casebuilder-worker` on the
+Oracle VM (Toronto, `VM.Standard.E2.1.Micro`, 1 GB + 4 GB swap). Deploy with
+`infra/deploy-worker.sh`; server setup is `infra/vps-harden.sh` then
+`infra/vps-hermes.sh`.
+
+Per job: `claim_job` → `get_model_key(owner)` → run `hermes -z` with
+`HERMES_HOME` set to that account's own profile (`acct-<uid>`) → post the reply
+to `chat_messages` → `complete_job`. Failures go through `fail_job` (retry with
+backoff, then `failed`).
+
+- **Key handling.** Hermes one-shot (v0.22.5) ignores `ANTHROPIC_API_KEY` from
+  the process env but reads the profile `.env`, so the worker writes the
+  account's key there (0600) for the length of the job and shreds it after.
+  Jobs run one at a time, so the file only ever holds the current account's
+  key. Supabase credentials are stripped from the agent's environment.
+- **Tools.** `web,memory,todo` only. Terminal, file, code execution and
+  browser are refused at startup: every profile runs as the same Unix user,
+  so those would let one account's agent reach another's files.
+- **Verified live:** first job end to end (retry path exercised too: two
+  credential failures, success on attempt 3); second job through the service
+  round-trips in 10 s app-to-app, 5.5 s of it the model. Service peak memory
+  78 MB. Key file absent after jobs.
+
+## App on Supabase (24 Oct 2026)
+
+- **Sign-in:** email + password (`AuthGate`), no sign-up page; pilot accounts are
+  made with `worker/create_account.py` (random password to a 0600 file on the
+  Mac). Users change their own password from the sidebar.
+- **Deals:** `src/cloudDeals.js` + `useCloudDeals`. Loads the account's own rows
+  (admins can read all rows under RLS, so the list filters by owner explicitly).
+  Inserts new deals; updates go through `save_deal` with the last-read version,
+  so a stale tab gets a conflict instead of overwriting.
+- **No lost edits:** every queued edit is first copied to browser storage (keyed
+  per account) and removed only after Supabase confirms. Offline saves show
+  "Not saved", retry every 5 s, and land when the network returns; a tab closed
+  mid-save is replayed on next load.
+- **Sample deal:** one Spotify sample per new account, with a fixed id so two
+  racing loads cannot create two (a real bug the browser test caught).
+- **Display name** is stored on the account, so it follows the person.
+- **Verified:** `scripts/review-deals.mjs`, 16 checks in a real browser against
+  the live database (create, edit, duplicate, reload, second browser, other
+  account isolation, offline and back, delete). Plus 7 unit tests in
+  `src/cloudDeals.test.js` (conflicts, offline retry, replay).
+
 ## Next
 
 1. Hermes worker: claim → run Hermes in the account's profile → write back.
