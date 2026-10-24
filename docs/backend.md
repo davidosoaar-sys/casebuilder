@@ -63,12 +63,19 @@ stand-in for Supabase's `auth` schema. No Docker, no cloud project needed.
 node --test supabase/schema.test.js
 ```
 
-## Not yet verified against a live Supabase project
+## Live project
 
-- `pg_cron` availability on the free plan (`0002_cron.sql`).
-- Realtime publication on `chat_messages` and `jobs`.
-- Whether the per-minute cron counts as activity for the free-tier 7-day
-  pause.
+Supabase project `casebuilder`, region `ca-central-1` (Canada Central, near
+the Toronto demo audience), free plan. `0001_init.sql` applied 2026-10-24 and
+verified in the live database: 5 tables with RLS on, 4 worker functions
+server-only, signup trigger present, Realtime publishing `chat_messages` and
+`jobs`, `pg_cron` available.
+
+`0002_cron.sql` applied: cron job 1 runs every minute, verified in
+`cron.job_run_details` (3 consecutive `succeeded` runs, 12:52 to 12:54 UTC).
+
+Still to verify: whether the per-minute cron counts as activity for the
+free-tier 7-day pause.
 
 ## Next
 
