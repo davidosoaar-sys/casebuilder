@@ -11,7 +11,7 @@ export default function AppLogo({ height = 26, compact = false }) {
   return (
     <span className={`app-logo ${compact ? 'app-logo-compact' : ''}`} style={{ height }} role="img" aria-label="CaseBuilder">
       <span className="app-logo-mark" style={{ height }} dangerouslySetInnerHTML={{ __html: mark }} />
-      {!compact && <span className="app-logo-word" style={{ fontSize: height * 0.86 }}>CaseBuilder</span>}
+      {!compact && <span className="app-logo-word" style={{ fontSize: height * 0.8 }}>Case<span>Builder</span></span>}
     </span>
   )
 }

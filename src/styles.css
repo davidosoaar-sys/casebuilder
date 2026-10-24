@@ -1217,7 +1217,8 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .topbar .app-logo, .project-nav .app-logo { --logo-bg: var(--bg); }
 .app-logo-mark { display: inline-block; line-height: 0; }
 .app-logo-mark svg { display: block; height: 100%; width: auto; }
-.app-logo-word { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 400; letter-spacing: -0.01em; color: var(--accent-mint); }
+.app-logo-word { font-family: var(--heading); font-weight: 600; letter-spacing: 0; color: var(--ink-strong); }
+.app-logo-word span { color: var(--accent-mint); }
 .auth-switch { margin: 10px 0 0; font-size: 13px; color: var(--ink-dim); text-align: center; }
 .auth-switch .link-btn { font-size: 13px; margin: 0; color: var(--accent); }
 .auth-hint { margin: 2px 0 0; font-size: 12px; color: var(--ink-faint); }
@@ -1297,3 +1298,4 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .key-missing { color: var(--warn); }
 :root[data-sidebar="collapsed"] .sidebar .theme-toggle-label { display: none; }
 :root[data-sidebar="collapsed"] .sidebar .theme-toggle { padding: 8px; gap: 0; justify-content: center; }
+[data-theme="light"] .app-logo-mark svg path { fill: var(--accent-mint); }
