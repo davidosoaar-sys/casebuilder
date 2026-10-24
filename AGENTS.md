@@ -10,12 +10,16 @@
 
 ## Change notes and versions
 
-- Every completed logical change needs a concise change note in `CHANGELOG.md`,
-  under a dated version heading, for example `## v0.2.1 (2026-10-24)`.
+- Every completed logical change needs a concise note in `CHANGELOG.md`.
+  Keep local work under an unversioned `Unreleased` heading. A version identifies
+  the release actually pushed to `main`, not each local edit or WIP snapshot.
+  Assign its dated heading when preparing the push, for example
+  `## v0.5.1 (2026-10-24)`.
 - Use `vMAJOR.MINOR.PATCH`, with no dot after the `v`.
 - Use PATCH for fixes, styling refinements, and documentation; MINOR for new
   features; follow the existing release policy for MAJOR versions.
-- Keep the version in `package.json` and both root version fields in
+- Update release versions only when preparing a release push. Keep the version
+  in `package.json` and both root version fields in
   `package-lock.json` consistent. JSON versions omit the `v` prefix.
 - Record the final user-visible change and relevant validation. Do not claim a
   working-tree change has been released or deployed.

@@ -8,7 +8,8 @@ Every version that lands on `main` gets a line here and a git tag.
   - **PATCH** (`0.2.0` → `0.2.1`): bug fix, nothing new.
   - **MINOR** (`0.2.0` → `0.3.0`): new feature.
   - **MAJOR**: stays `0` until CaseBuilder is a real product.
-- Only `main` gets versions. Work-in-progress branches do not.
+- A version identifies a release pushed to `main`, not each local edit or milestone.
+- Keep local work under an unversioned `Unreleased` heading; assign the next version when preparing the actual push. Work-in-progress snapshots do not count as releases.
 - Each release: bump `version` in `package.json`, add an entry below, commit,
   then `git tag -a vX.Y.Z -m "..."` and `git push origin main --tags`.
 
@@ -22,7 +23,7 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ---
 
-## v0.10.0 (2026-10-24)
+## v0.5.1 (2026-10-24)
 
 - Combined Amr's accounts, password security, cloud deal storage, dashboard/settings and Hermes worker with David's website framework, previews, deck/input editing, Claude connector and design-agent instructions.
 - Preserved the cloud-backed save lifecycle and project-scoped connector selection. Added explicit sample creation for Nike, Lovable and Fortnite in the cloud-backed project list.
@@ -103,41 +104,41 @@ Checks: 180/180 tests, production build OK, sign-up email test
 
 ## Development milestone history (not separate releases)
 
-The following notes were recorded while David's work was local. Their features are combined in v0.10.0; historical local-only statements describe the state at the time. No release tags are implied.
+The following notes were recorded while David's work was local. Their features are combined in v0.5.1; historical local-only statements describe the state at the time. No release tags are implied.
 
-### v0.9.2 (2026-10-24)
+### One-pager agent instruction (2026-10-24)
 
 - Added a fixed ORGANIZE_ONE_PAGER agent instruction for arranging existing inputs and model results into a branded A4 executive brief, with clear content slots, missing-data handling and legibility rules.
 - Documentation only; current equations, website, deck and one-pager renderer remain unchanged. Validated instruction structure and package version consistency.
 - Required pull was blocked by incoming changes overlapping the existing uncommitted working tree; Git preserved all local work. Local only, not committed, pushed or deployed.
 
-### v0.9.1 (2026-10-24)
+### Design-agent contract (2026-10-24)
 
 - Added a reference-backed, provider-neutral DESIGN_CASE instruction for the future design agent: brand/surface inspection, dark/light hierarchy, evidence-driven compositions, distinct website/deck layouts and visual QA gates.
 - Added an allowlisted design-plan JSON schema and host handoff guide. This documents the future agent boundary; no live agent integration or current renderer/deck changes are claimed.
 - Updated website framework notes to reflect removal of Explore actions. Validation: schema JSON/internal references, documentation links and consistent package versions. Local only; not committed, pushed or deployed.
 
-### v0.9.0 (2026-10-24)
+### Branded sample cases (2026-10-24)
 
 - Added editable Nike, Lovable and Fortnite sample projects with distinct illustrative inputs, company logos and branded website previews. All sample inputs are marked assumptions, with a clear fictional-case notice; existing projects are preserved and sample seeding runs once.
 - Embedded public Nike and Lovable heading fonts. Fortnite explicitly uses Arial because its public font download was unavailable. Added a repeatable local preview generator at `scripts/preview-samples.mjs`.
 - Fixed the website scroll hint overlapping the cover identity and improved logo sizing for wordmarks. Validation: sample data/provenance tests, full suite, production build and three browser previews.
 - Local working-tree update; no commit, push or deployment.
 
-### v0.8.1 (2026-10-24)
+### Website design refinement (2026-10-24)
 
 - Refined the website template using Impeccable guidance: distinct section compositions, stronger heading hierarchy, clearer chart labels and accessible focus states, preserving company fonts and colors.
 - Removed the cover and header “Explore” actions; the logo/name opening now leads into natural scrolling. Removed redundant website section labels without editing the client deck or other output formats.
 - Validation: full test suite, production build and dark/light browser previews. Local working-tree update; not deployed.
 
-### v0.8.0 (2026-10-24)
+### Website diagrams and template (2026-10-24)
 
 - Website template opens with the company logo and name, followed by Overview, Business impact, Value drivers, What changes, The alternative and Stakeholders, using saved company branding and fonts.
 - Added responsive annual-value/cost charts, proportional driver breakdowns, before/after diagrams and a self-hosting cost flow; scenario changes refresh the graphics. Missing figures remain unavailable and arithmetic stays expandable.
 - Website-only change: model equations, client deck, PDF, Slides and one-pager remain unchanged. Validation: graphics/branding/export isolation tests, full test suite, production build and populated/empty browser previews.
 - Working-tree update; not released or deployed.
 
-### v0.7.0 (2026-10-24)
+### Stakeholder scroll journey (2026-10-24)
 
 Working-tree update; not released.
 
@@ -152,7 +153,7 @@ Working-tree update; not released.
 - Validation: 202 tests pass; production build passes. Browser checks cover
   company-colored covers, navigation, radial layout and alternating scroll stops.
 
-### v0.6.0 (2026-10-24)
+### Claude connector and website story (2026-10-24)
 
 Working-tree update; not released.
 
@@ -168,7 +169,7 @@ Working-tree update; not released.
 - Validation: 197 tests pass; production build passes. Browser checks cover the
   map interaction, required section order, missing inputs and Claude listing.
 
-### v0.5.3 (2026-10-24)
+### Brand typography across outputs (2026-10-24)
 
 Working-tree update; not released.
 
@@ -180,7 +181,7 @@ Working-tree update; not released.
 - Validation: 192 tests pass, including editable PPTX XML/theme checks and
   Website/PDF/Slides/One-pager font regression checks. Production build passes.
 
-### v0.5.2 (2026-10-24)
+### Website identity layout (2026-10-24)
 
 Working-tree update; not released.
 
@@ -194,7 +195,7 @@ Working-tree update; not released.
 - Validation: 188 tests pass; production build passes. Browser checks cover
   centered branding, mobile overflow, role selection, navigation and reveals.
 
-### v0.5.1 (2026-10-24)
+### Website interaction refinement (2026-10-24)
 
 Working-tree update; not released.
 
@@ -207,7 +208,7 @@ Working-tree update; not released.
 - Validation: 185 tests pass; production build passes. Browser checks confirm
   offscreen reveals and interactive scenario-panel controls.
 
-### v0.5.0 (2026-10-24)
+### Website framework (2026-10-24)
 
 Working-tree update; not released.
 
@@ -222,7 +223,7 @@ Working-tree update; not released.
   checks; browser checks cover light/dark palettes, long names, missing figures,
   navigation and arithmetic disclosure. Production build passes.
 
-### v0.4.1 (2026-10-24)
+### Preview polish (2026-10-24)
 
 Working-tree update; not released.
 
@@ -234,7 +235,7 @@ Working-tree update; not released.
 - Validation: 178 tests pass; production build passes. Browser checks confirm
   scenario recalculation/reset and stakeholder perspective switching.
 
-### v0.4.0 (2026-10-24)
+### Output previews (2026-10-24)
 
 Working-tree update; not released.
 
