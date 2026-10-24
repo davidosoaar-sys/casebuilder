@@ -94,6 +94,31 @@ agent. No shared team key. Consequences for the build:
 - Cost sits with each account. Demo: Chris's account uses whichever key he (or
   the team, for him) enters.
 
+## Worker (live 24 Oct 2026)
+
+`worker/worker.py`, stdlib Python, systemd service `casebuilder-worker` on the
+Oracle VM (Toronto, `VM.Standard.E2.1.Micro`, 1 GB + 4 GB swap). Deploy with
+`infra/deploy-worker.sh`; server setup is `infra/vps-harden.sh` then
+`infra/vps-hermes.sh`.
+
+Per job: `claim_job` → `get_model_key(owner)` → run `hermes -z` with
+`HERMES_HOME` set to that account's own profile (`acct-<uid>`) → post the reply
+to `chat_messages` → `complete_job`. Failures go through `fail_job` (retry with
+backoff, then `failed`).
+
+- **Key handling.** Hermes one-shot (v0.22.5) ignores `ANTHROPIC_API_KEY` from
+  the process env but reads the profile `.env`, so the worker writes the
+  account's key there (0600) for the length of the job and shreds it after.
+  Jobs run one at a time, so the file only ever holds the current account's
+  key. Supabase credentials are stripped from the agent's environment.
+- **Tools.** `web,memory,todo` only. Terminal, file, code execution and
+  browser are refused at startup: every profile runs as the same Unix user,
+  so those would let one account's agent reach another's files.
+- **Verified live:** first job end to end (retry path exercised too: two
+  credential failures, success on attempt 3); second job through the service
+  round-trips in 10 s app-to-app, 5.5 s of it the model. Service peak memory
+  78 MB. Key file absent after jobs.
+
 ## Next
 
 1. Hermes worker: claim → run Hermes in the account's profile → write back.
