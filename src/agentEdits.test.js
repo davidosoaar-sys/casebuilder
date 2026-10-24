@@ -91,3 +91,10 @@ test('values read naturally in the change card', () => {
   assert.equal(describeValue(180000, '$/yr'), '$180,000/yr')
   assert.equal(describeValue('', ''), 'blank')
 })
+
+test('an input Chris removed cannot be changed by the agent', () => {
+  const fs = fields().map(f => f.key === 'hourlyCost' ? { ...f, deleted: true, value: '' } : f)
+  const { changes, refused } = applyAgentEdits(fs, [{ key: 'hourlyCost', value: 95 }], { now: NOW })
+  assert.equal(changes.length, 0)
+  assert.equal(refused.length, 1)
+})

@@ -75,7 +75,7 @@ MAX_EDITS = 20
 def editable_fields(deal):
     out = []
     for f in ((deal or {}).get("data") or {}).get("fields") or []:
-        if not isinstance(f, dict) or f.get("structural") or f.get("custom"):
+        if not isinstance(f, dict) or f.get("structural") or f.get("custom") or f.get("deleted"):
             continue
         t = f.get("type")
         if t in ("number", "percent") or (t == "select" and f.get("key") in EDITABLE_SELECTS):
@@ -122,6 +122,9 @@ def build_prompt(job, deal, history=()):
                 "the reason must say where the figure comes from. Do not change a value the user "
                 "did not ask about. If nothing should change, do not include the block. "
                 "In the text of your reply, say in one or two sentences what you changed and why. "
+                "The user can undo your changes or edit values themselves, so if a value is not what "
+                "you set earlier, they changed it on purpose: never say an earlier update failed or "
+                "did not save, just work from the current values. "
                 "The deck, one-pager and summary recalculate from these inputs by themselves.")
     if history:
         lines = [f"{m.get('role')}: {(m.get('content') or '')[:600]}" for m in history]

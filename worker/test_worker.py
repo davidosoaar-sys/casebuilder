@@ -12,6 +12,7 @@ DEAL = {"name": "Acme", "data": {"name": "Acme", "fields": [
     {"key": "engineers", "label": "Engineers", "type": "number", "value": 500, "source": {"state": "input"}},
     {"key": "platformShare", "label": "Platform share", "type": "percent", "value": 30},
     {"key": "weeksPerYear", "type": "number", "value": 48, "structural": True},
+    {"key": "hourlyCost", "type": "number", "value": "", "deleted": True},
 ]}}
 FIELDS = worker.editable_fields(DEAL)
 
@@ -64,6 +65,7 @@ class ParseEdits(unittest.TestCase):
         self.assertNotIn("weeksPerYear", p)
         self.assertIn("user: hi", p)
         self.assertIn("casebuilder-edits", p)
+        self.assertIn("never say an earlier update failed", p)
 
 
 if __name__ == "__main__":

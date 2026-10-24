@@ -23,6 +23,35 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ---
 
+## Unreleased
+
+Added: the agent can change the deal (planned as v0.6.0).
+- Chat panel docked on the right of every project page (Input sheet, Deck,
+  Person lookup). Close it with ×; "Ask the agent" brings it back. Chat
+  history is saved per deal in Supabase.
+- Ask in plain words ("They have 1,200 engineers"). The Hermes worker
+  returns structured edits; the app checks each one again and applies it
+  straight away. The deck, one-pager and summaries recalculate from the
+  inputs.
+- Every reply that changed something shows a card: old value -> new value,
+  and Undo. Undo restores the exact value and source; if you edited that
+  field since, your number is kept.
+- A figure you stated in chat is saved as your own number (assumption,
+  "You said it in chat"). A figure the agent proposed is saved as a
+  suggestion with its reason. Neither counts as confirmed.
+- The agent can only change numeric inputs and the archetype / priority.
+  It cannot change the company name, calendar constants, custom inputs or
+  inputs you removed. Unknown fields, non-numbers, negatives and
+  percentages over 100 are refused and listed on the card.
+- Each reply's edits apply exactly once (recorded on the deal), so a
+  reload or a second tab never applies them twice.
+
+Checks: 230 app tests (12 new for edits and undo), 9 worker tests, build
+OK. Real end-to-end test `scripts/review-agent-chat.mjs` (browser ->
+Supabase -> Hermes worker on the VM -> model -> deal -> Supabase): change
+applied, saved, deck renders, Undo restores and saves, reload does not
+re-apply. ALL PASS.
+
 ## v0.5.0 (2026-10-24)
 
 - Combined Amr's accounts, password security, cloud deal storage, dashboard/settings and Hermes worker with David's website framework, previews, deck/input editing, Claude connector and design-agent instructions.

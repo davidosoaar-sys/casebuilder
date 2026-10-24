@@ -10,7 +10,7 @@ import { isBlank, stateOf } from './source.js'
 export const AGENT_SELECTS = ['archetype', 'strategicPriority']
 
 export function isAgentEditable(field) {
-  if (!field || field.structural || field.custom) return false
+  if (!field || field.structural || field.custom || field.deleted) return false
   if (field.type === 'number' || field.type === 'percent') return true
   return field.type === 'select' && AGENT_SELECTS.includes(field.key)
 }
