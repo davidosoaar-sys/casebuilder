@@ -25,6 +25,8 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
+## v0.12.0 (2026-10-25): Case inputs, Case artifacts and Live room, Research in the project, new connectors
+
 - Project menu renamed from Ali's feedback: "Input sheet" is now **Case inputs**;
   "Deck" is now **Case artifacts** and opens on the **Live room** (was "Website"),
   with "Edit deck" to reach the slides.
