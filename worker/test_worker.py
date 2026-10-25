@@ -302,6 +302,71 @@ class ProjectFiles(unittest.TestCase):
         self.assertEqual(worker.project_files_context(None, "u"), ("", []))
 
 
+
+class StakeholderBrief(unittest.TestCase):
+    MATERIAL = "--- File: call 1.txt ---\nDana (CFO): We need payback inside nine months, or this does not go to the board."
+
+    def block(self, obj):
+        import json as _j
+        return f"Here it is.\n```{worker.BRIEF_FENCE}\n{_j.dumps(obj)}\n```"
+
+    def test_valid_brief_keeps_real_quote(self):
+        b, dropped = worker.parse_brief(self.block({
+            "summary": "Supportive if payback is fast.", "stance": "supportive",
+            "cares_about": ["payback"], "concerns": ["board approval"],
+            "decisions": [{"text": "Payback target is 9 months", "date": "2026-10-20", "source": "call 1.txt"}],
+            "open_asks": [{"text": "Send the payback maths", "owner": "us", "status": "open", "source": "call 1.txt"}],
+            "quotes": [{"text": "We need payback inside nine months", "source": "call 1.txt"}],
+            "next_step": "Lead with payback."}), self.MATERIAL)
+        self.assertEqual(dropped, 0)
+        self.assertEqual(b["stance"], "supportive")
+        self.assertEqual(b["quotes"], [{"text": "We need payback inside nine months", "source": "call 1.txt"}])
+        self.assertEqual(b["open_asks"][0]["owner"], "us")
+
+    def test_people_must_appear_in_the_material(self):
+        b, _ = worker.parse_brief(self.block({"summary": "x", "people": ["Dana (CFO)", "Ghost Person (CFO)"]}), self.MATERIAL)
+        self.assertEqual(b["people"], ["Dana (CFO)"])
+
+    def test_invented_quote_is_dropped(self):
+        b, dropped = worker.parse_brief(self.block({"summary": "x", "quotes": [
+            {"text": "We will sign this week", "source": "call 1.txt"},
+            {"text": "or this does not go to the board", "source": "call 1.txt"}]}), self.MATERIAL)
+        self.assertEqual(dropped, 1)
+        self.assertEqual([q["text"] for q in b["quotes"]], ["or this does not go to the board"])
+
+    def test_quote_matching_ignores_curly_quotes_and_spacing(self):
+        b, dropped = worker.parse_brief(self.block({"summary": "x", "quotes": [{"text": "\u201cWe  need payback\u201d", "source": "f"}]}), self.MATERIAL)
+        self.assertEqual(dropped, 0)
+        self.assertEqual(len(b["quotes"]), 1)
+
+    def test_bad_values_are_normalised(self):
+        b, _ = worker.parse_brief(self.block({"summary": "x", "stance": "LOVES US",
+            "open_asks": [{"text": "a", "status": "whenever", "owner": "?"}]}), "")
+        self.assertEqual(b["stance"], "unknown")
+        self.assertEqual(b["open_asks"][0], {"text": "a", "owner": "us", "status": "open", "source": ""})
+
+    def test_unreadable_or_empty_brief_is_none(self):
+        self.assertEqual(worker.parse_brief("no json here", "")[0], None)
+        self.assertEqual(worker.parse_brief(self.block({"summary": ""}), "")[0], None)
+
+    def test_brief_leaves_out_project_instructions(self):
+        rows = [{"kind": "instructions", "name": "Project instructions", "text": "Open with the CFO cost target."},
+                {"kind": "context", "name": "call.txt", "text": "Priya: payback under 12 months."}]
+        with_i, _ = worker.files_prompt(rows)
+        without, _ = worker.files_prompt([r for r in rows if r.get("kind") != "instructions"])
+        self.assertIn("CFO cost target", with_i)
+        self.assertNotIn("CFO cost target", without)
+        self.assertIn("call.txt", without)
+
+    def test_prompt_is_about_one_stakeholder_and_says_synthesis(self):
+        deal = {"name": "Acme", "data": {"name": "Acme", "connectors": {"granola": True},
+                "documents": [{"source": "granola", "name": "Kickoff", "text": "notes"}]}}
+        p = worker.build_brief_prompt({"payload": {"role": "CFO", "people": ["Dana Whitlock"]}}, deal, "")
+        self.assertIn("the CFO (Dana Whitlock) at Acme", p)
+        self.assertIn("not a transcript", p)
+        self.assertIn("Granola: Kickoff", p)
+        self.assertIn(worker.BRIEF_FENCE, p)
+
 if __name__ == "__main__":
     unittest.main()
 
