@@ -25,7 +25,9 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
-## v0.15.0 (2026-10-26): headshots on found people
+## v0.14.2 (2026-10-26): headshots on found people now actually show (fix)
+
+- Released as v0.15.0 by mistake and retagged v0.14.2: this fixes a feature that was already meant to work, it is not a new one.
 
 - People search now adds headshots: when the agent returns no photo, a fallback searches "<name> <company>" and takes a portrait from a public page that names both (exact or suffixed alt text, a file named after the person, or the share image on the person's own page). Skips LinkedIn, social and podcast sites, group shots, signatures and icons; falls back to initials. Checks the pages the agent cited first, so it works without a search key (Tavily widens it). Spot check: 7 of 8 real execs got a correct headshot, checked by eye. 356/356 tests.
 
