@@ -65,6 +65,12 @@ def main():
         print("account already exists; password unchanged")
     else:
         pw = secrets.token_urlsafe(18)
+        # Accounts need an invite (waitlist gate, migration 0005): add it first.
+        s, d = call("POST", "/rest/v1/waitlist?on_conflict=email", {"email": email, "status": "invited", "source": "team-created"},
+                    prefer="resolution=ignore-duplicates,return=minimal")
+        if s not in (200, 201, 204, 409):
+            sys.exit(f"could not add {email} to the waitlist: {s} {d}")
+        call("PATCH", f"/rest/v1/waitlist?email=eq.{email}&status=eq.waiting", {"status": "invited"}, prefer="return=minimal")
         s, d = call("POST", "/auth/v1/admin/users", {"email": email, "password": pw, "email_confirm": True})
         if s not in (200, 201):
             sys.exit(f"create failed: {s} {d}")

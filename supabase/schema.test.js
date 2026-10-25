@@ -57,6 +57,8 @@ before(async () => {
   await db.exec(`insert into auth.users (id, email) values
     ('${A}', 'a@x.com'), ('${B}', 'b@x.com'), ('${ADMIN}', 'admin@x.com')`)
   await db.exec(`update public.profiles set role = 'admin' where id = '${ADMIN}'`)
+  // The waitlist gate goes on after the seed accounts exist, as it did in production.
+  await db.exec(readFileSync(new URL('./migrations/0005_waitlist.sql', import.meta.url), 'utf8'))
   for (const [uid, id] of [[A, 'deal-a'], [B, 'deal-b']]) {
     await user(uid, tx => tx.query(
       'insert into public.deals (id, owner_id, name, data) values ($1, $2, $3, $4)',
@@ -269,4 +271,39 @@ test('project files: kind is checked and a project is capped', async () => {
     `insert into public.project_files (owner_id, deal_id, name, kind, text) values ($1, 'deal-a', 'x', 'secret', 'x')`, [A])), /check constraint/)
   await rejects(user(A, tx => tx.query(
     `insert into public.project_files (owner_id, deal_id, name, text) values ($1, 'deal-a', 'big', repeat('x', 300001))`, [A])), /check constraint/)
+})
+
+const anon = fn => as('anon', null, fn)
+const C = '00000000-0000-0000-0000-00000000000c'
+
+test('waitlist: existing accounts were carried over as joined, nobody locked out', async () => {
+  const { rows } = await service(tx => tx.query(`select email, status from public.waitlist order by email`))
+  assert.deepEqual(rows.map(r => [r.email, r.status]), [['a@x.com', 'joined'], ['admin@x.com', 'joined'], ['b@x.com', 'joined']])
+})
+
+test('waitlist: a signed-out visitor can join, twice is silent, and cannot read the list', async () => {
+  await anon(tx => tx.query(`select public.join_waitlist('New.Person@Example.com', 'New Person', 'Acme', 'AE', 'business cases', 'aleena')`))
+  await anon(tx => tx.query(`select public.join_waitlist('new.person@example.com')`))
+  const { rows } = await service(tx => tx.query(`select email, company, status from public.waitlist where email like 'new.person%'`))
+  assert.deepEqual(rows, [{ email: 'new.person@example.com', company: 'Acme', status: 'waiting' }])
+  await rejects(anon(tx => tx.query(`select email from public.waitlist`)), /permission denied/)
+  const seen = await user(A, tx => tx.query(`select email from public.waitlist`))
+  assert.equal(seen.rows.length, 0)
+  await rejects(anon(tx => tx.query(`select public.join_waitlist('not-an-email')`)), /valid email/)
+  await rejects(anon(tx => tx.query(`insert into public.waitlist (email, status) values ('x@y.com', 'invited')`)), /permission denied|row-level/)
+})
+
+test('waitlist: only invited emails can create an account; admins invite', async () => {
+  // Supabase Auth writes auth.users as the database owner, not as service_role.
+  await rejects(db.query(`insert into auth.users (id, email) values ($1, 'new.person@example.com')`, [C]), /waitlist_only/)
+  const id = (await service(tx => tx.query(`select id from public.waitlist where email = 'new.person@example.com'`))).rows[0].id
+  await rejects(user(A, tx => tx.query(`select public.invite_from_waitlist($1)`, [id])), /only an admin/)
+  const admin = await user(ADMIN, tx => tx.query(`select email, status from public.waitlist where email = 'new.person@example.com'`))
+  assert.equal(admin.rows[0].status, 'waiting')
+  await user(ADMIN, tx => tx.query(`select public.invite_from_waitlist($1)`, [id]))
+  await db.query(`insert into auth.users (id, email) values ($1, 'New.Person@example.com')`, [C])
+  const after = await service(tx => tx.query(`select status, joined_at is not null as j from public.waitlist where id = $1`, [id]))
+  assert.deepEqual(after.rows[0], { status: 'joined', j: true })
+  const prof = await service(tx => tx.query(`select role from public.profiles where id = $1`, [C]))
+  assert.equal(prof.rows[0].role, 'user')
 })

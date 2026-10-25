@@ -9,6 +9,7 @@ const icon = {
   settings: <><path d="M6.9 1.8h2.2l.35 1.7 1.05.6 1.65-.55 1.1 1.9-1.3 1.15v1.2l1.3 1.15-1.1 1.9-1.65-.55-1.05.6-.35 1.7H6.9l-.35-1.7-1.05-.6-1.65.55-1.1-1.9 1.3-1.15V6.6L2.75 5.45l1.1-1.9 1.65.55 1.05-.6z" strokeLinejoin="round" /><circle cx="8" cy="8" r="2" /></>,
   agent: <><path d="M3 3.5h10v7H8.5L5.5 13v-2.5H3z" strokeLinejoin="round" /><path d="M6 7h.01M8 7h.01M10 7h.01" strokeWidth="2" strokeLinecap="round" /></>,
   lookup: <><circle cx="6.5" cy="5" r="2.5" /><path d="M2 13c0-3 9-3 9 0M11 8l3 3M12 7l2 2" /></>,
+  waitlist: <><circle cx="6" cy="5.5" r="2.3" /><path d="M1.8 13c.4-2.8 8-2.8 8.4 0" /><path d="M11 5h3.5M11 8h3.5M12 11h2.5" strokeLinecap="round" /></>,
   files: <><path d="M3 2.5h6l4 4v7H3z" strokeLinejoin="round" /><path d="M9 2.5v4h4M5.5 9h5M5.5 11.5h3.5" strokeLinecap="round" /></>,
   research: <><circle cx="7" cy="7" r="4.5" /><path d="M10.4 10.4l3.6 3.6M5 7h4M7 5v4" strokeLinecap="round" /></>,
   projects: (
@@ -67,7 +68,7 @@ function initialCollapsed() {
   try { return localStorage.getItem(COLLAPSE_KEY) === 'collapsed' } catch { return false }
 }
 
-export default function Sidebar({ view, project, projectMode = false, onNav, onSettings, settingsOpen = false, saveStatus, account, children }) {
+export default function Sidebar({ view, project, projectMode = false, onNav, onSettings, settingsOpen = false, saveStatus, account, admin = false, children }) {
   const [collapsed, setCollapsed] = React.useState(initialCollapsed)
   React.useEffect(() => {
     document.documentElement.dataset.sidebar = collapsed ? 'collapsed' : 'open'
@@ -99,6 +100,7 @@ export default function Sidebar({ view, project, projectMode = false, onNav, onS
         {projectMode
           ? <Item id="lookup" label="Person lookup" view={view} onNav={onNav} />
           : <Item id="research" label="Research" view={view} onNav={onNav} title="Research anything, with sources" />}
+        {!projectMode && admin && <Item id="waitlist" label="Waitlist" view={view} onNav={onNav} title="Who asked for access" />}
       </nav>
       {children}
       <div className="sidebar-footer">

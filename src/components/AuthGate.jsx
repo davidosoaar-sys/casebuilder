@@ -30,13 +30,19 @@ export default function AuthGate({ children }) {
   return children({ session, signOut: () => supabase.auth.signOut() })
 }
 
+// ?waitlist (or the old ?signup link) opens the waitlist; ?invited opens Create account.
 const initialMode = () => {
-  try { return new URLSearchParams(window.location.search).has('signup') ? 'signup' : 'signin' } catch { return 'signin' }
+  try {
+    const q = new URLSearchParams(window.location.search)
+    return q.has('invited') ? 'signup' : (q.has('waitlist') || q.has('signup')) ? 'waitlist' : 'signin'
+  } catch { return 'signin' }
 }
+const initialEmail = () => { try { return new URLSearchParams(window.location.search).get('email') || '' } catch { return '' } }
+const sourceParam = () => { try { return (new URLSearchParams(window.location.search).get('ref') || '').slice(0, 60) } catch { return '' } }
 
 function AuthScreens({ onReset = () => {} }) {
-  const [mode, setMode] = useState(initialMode) // 'signin' | 'signup' | 'code' | 'forgot' | 'reset'
-  const [email, setEmail] = useState('')
+  const [mode, setMode] = useState(initialMode) // 'signin' | 'waitlist' | 'joined' | 'signup' | 'code' | 'forgot' | 'reset'
+  const [email, setEmail] = useState(initialEmail)
   const [password, setPassword] = useState('')
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
@@ -100,7 +106,13 @@ function AuthScreens({ onReset = () => {} }) {
     setBusy(true); setError('')
     const { data, error } = await supabase.auth.signUp({ email: email.trim(), password })
     setBusy(false)
-    if (error) { setError(friendly(error)); return }
+    if (error) {
+      if (/waitlist_only|database error saving new user/i.test(error.message)) {
+        setError('This email has not been invited yet. Join the waitlist and we will let you know.')
+        return
+      }
+      setError(friendly(error)); return
+    }
     // Supabase returns a user with no identities when the email is already registered.
     if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
       setError('There is already an account with this email. Sign in instead.')
@@ -182,6 +194,8 @@ function AuthScreens({ onReset = () => {} }) {
     )
   }
 
+  if (mode === 'waitlist' || mode === 'joined') return <Waitlist email={email} setEmail={setEmail} joined={mode === 'joined'} onJoined={() => setMode('joined')} onSignIn={() => go('signin')} onInvited={() => go('signup')} />
+
   const signup = mode === 'signup'
   return (
     <main className="auth-screen">
@@ -193,7 +207,7 @@ function AuthScreens({ onReset = () => {} }) {
         <label htmlFor="auth-password">Password</label>
         <input id="auth-password" type="password" autoComplete={signup ? 'new-password' : 'current-password'} value={password} onChange={e => setPassword(e.target.value)} required />
         {signup
-          ? <p className="auth-hint">At least 10 characters.</p>
+          ? <p className="auth-hint">At least 10 characters. Use the email you were invited with.</p>
           : <p className="auth-forgot"><button type="button" className="link-btn" onClick={() => { setError(''); setNotice(''); setMode('forgot') }}>Forgot password?</button></p>}
         {error && <p className="auth-error" role="alert">{error}</p>}
         <button className="primary" type="submit" disabled={busy || !email.trim() || !password}>
@@ -202,8 +216,61 @@ function AuthScreens({ onReset = () => {} }) {
         <p className="auth-switch">
           {signup
             ? <>Already have an account? <button type="button" className="link-btn" onClick={() => go('signin')}>Sign in</button></>
-            : <>New to CaseBuilder? <button type="button" className="link-btn" onClick={() => go('signup')}>Create an account</button></>}
+            : <>New to CaseBuilder? <button type="button" className="link-btn" onClick={() => go('waitlist')}>Join the waitlist</button></>}
         </p>
+      </form>
+    </main>
+  )
+}
+
+function Waitlist({ email, setEmail, joined, onJoined, onSignIn, onInvited }) {
+  const [name, setName] = useState('')
+  const [company, setCompany] = useState('')
+  const [role, setRole] = useState('')
+  const [useCase, setUseCase] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  async function join(e) {
+    e.preventDefault()
+    setBusy(true); setError('')
+    const { error } = await supabase.rpc('join_waitlist', { p_email: email.trim(), p_name: name, p_company: company, p_role: role, p_use_case: useCase, p_source: sourceParam() })
+    setBusy(false)
+    if (error) { setError(/valid email/.test(error.message) ? 'Enter a valid email.' : /too many/.test(error.message) ? 'Too many sign-ups right now. Try again in a little while.' : error.message); return }
+    onJoined()
+  }
+
+  if (joined) return (
+    <main className="auth-screen">
+      <div className="auth-card waitlist-card">
+        <AppLogo />
+        <h1>You're on the list</h1>
+        <p className="waitlist-lede">Thanks{name.trim() ? `, ${name.trim().split(' ')[0]}` : ''}. We're letting people in by hand while we test with real sellers. We'll email {email.trim()} when your account is ready.</p>
+        <p className="auth-switch">Already invited? <button type="button" className="link-btn" onClick={onInvited}>Create your account</button></p>
+      </div>
+    </main>
+  )
+
+  return (
+    <main className="auth-screen">
+      <form className="auth-card waitlist-card" onSubmit={join}>
+        <AppLogo />
+        <h1>Join the waitlist</h1>
+        <p className="waitlist-lede">CaseBuilder turns what you know about a deal into a business case each stakeholder can say yes to. We're opening it to a small group first.</p>
+        <label htmlFor="wl-email">Work email</label>
+        <input id="wl-email" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} required autoFocus />
+        <div className="waitlist-row">
+          <div><label htmlFor="wl-name">Name</label><input id="wl-name" autoComplete="name" value={name} onChange={e => setName(e.target.value)} maxLength={120} /></div>
+          <div><label htmlFor="wl-company">Company</label><input id="wl-company" autoComplete="organization" value={company} onChange={e => setCompany(e.target.value)} maxLength={120} /></div>
+        </div>
+        <label htmlFor="wl-role">Role</label>
+        <input id="wl-role" autoComplete="organization-title" value={role} onChange={e => setRole(e.target.value)} maxLength={120} placeholder="e.g. Account Executive, Solutions Engineer" />
+        <label htmlFor="wl-use">What would you use it for? <span className="auth-optional">optional</span></label>
+        <textarea id="wl-use" rows={3} value={useCase} onChange={e => setUseCase(e.target.value)} maxLength={1000} placeholder="The deal or business case you'd try it on first." />
+        {error && <p className="auth-error" role="alert">{error}</p>}
+        <button className="primary" type="submit" disabled={busy || !email.trim()}>{busy ? 'Joining…' : 'Join the waitlist'}</button>
+        <p className="auth-switch">Already have an account? <button type="button" className="link-btn" onClick={onSignIn}>Sign in</button></p>
+        <p className="auth-switch waitlist-invited">Got an invite? <button type="button" className="link-btn" onClick={onInvited}>Create your account</button></p>
       </form>
     </main>
   )
