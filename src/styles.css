@@ -1391,7 +1391,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
 /* ================= sidebar footer: Settings at bottom left */
 .sidebar-footer { width: 100%; }
-.platform-version { display: block; padding: 0 8px; color: var(--muted, #777); font-size: 11px; line-height: 1.5; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.platform-version { display: block; padding: 4px 10px 0; color: var(--muted, #777); font-size: 11px; line-height: 1.5; white-space: nowrap; font-variant-numeric: tabular-nums; }
 :root[data-sidebar="collapsed"] .platform-version { padding: 0; font-size: 9px; }
 .side-settings { margin: 0; }
 .side-settings-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }

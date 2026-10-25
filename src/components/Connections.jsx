@@ -25,7 +25,7 @@ export default function Connections({ project, projects=[],selectedProjectId='',
       {onSelectProject && <label className="connection-project-target">Settings and material for <select aria-label="Connection project" value={project?.id || selectedProjectId} onChange={e=>onSelectProject(e.target.value)}><option value="">Default settings for new projects</option>{projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>}
 
       <div className="connector-list">
-        {CONNECTORS.map(c => (
+        {[...CONNECTORS].sort((a, b) => a.label.localeCompare(b.label)).map(c => (
           <section key={c.key} className={`connector ${connections[c.key] ? 'connector-on' : ''}`} data-connector={c.key}>
             <div className="connector-head">
               <img className="connector-logo" src={LOGOS[c.key]} alt="" width="36" height="36" />

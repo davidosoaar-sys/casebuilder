@@ -59,6 +59,8 @@ function loadUser() {
 
 // Global navigation lives in the Projects / Connections sidebar. Opening a
 // project replaces it with Details / Deck tabs and an explicit way back.
+const ADMIN_VIEW_KEY = 'casebuilder.adminView'
+
 export default function App({ account }) {
   const [theme, setTheme] = useState(initialTheme)
   useEffect(() => {
@@ -66,8 +68,13 @@ export default function App({ account }) {
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#f6f8f7' : '#111111')
     try { localStorage.setItem(THEME_KEY, theme) } catch {}
   }, [theme])
-  const [admin, setAdmin] = useState(false)
-  useEffect(() => { isAdmin(account.session.user.id).then(setAdmin).catch(() => setAdmin(false)) }, [account.session.user.id])
+  // isAdminAccount = what the database says. admin = what the UI shows: an admin can
+  // switch to the regular view (Settings) to see the app as everyone else does.
+  const [isAdminAccount, setAdminAccount] = useState(false)
+  useEffect(() => { isAdmin(account.session.user.id).then(setAdminAccount).catch(() => setAdminAccount(false)) }, [account.session.user.id])
+  const [adminView, setAdminViewState] = useState(() => { try { return localStorage.getItem(ADMIN_VIEW_KEY) !== 'regular' } catch { return true } })
+  const setAdminView = on => { setAdminViewState(on); try { localStorage.setItem(ADMIN_VIEW_KEY, on ? 'admin' : 'regular') } catch {} }
+  const admin = isAdminAccount && adminView
   const [connections, setConnections] = useState(loadConnections)
   const cloud = useCloudDeals(account.session.user.id, connections)
   const { deals: projects, setDeals: setProjects, loading: dealsLoading } = cloud
@@ -247,7 +254,7 @@ export default function App({ account }) {
   }
 
   const settingsOverlay = settingsOpen && (
-    <Settings account={account} name={user} onName={setUser} theme={theme} onTheme={setTheme} onClose={() => setSettingsOpen(false)} />
+    <Settings account={account} name={user} onName={setUser} theme={theme} onTheme={setTheme} isAdminAccount={isAdminAccount} adminView={adminView} onAdminView={setAdminView} onClose={() => setSettingsOpen(false)} />
   )
 
   if (project && stage === 'map') {

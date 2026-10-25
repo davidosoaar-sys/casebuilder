@@ -103,14 +103,14 @@ export default function Sidebar({ view, project, projectMode = false, onNav, onS
       </nav>
       {children}
       <div className="sidebar-footer">
-        <small className="platform-version" title={`CaseBuilder v${version}${import.meta.env.DEV ? ' · Local development, unreleased changes may be present' : ' · Installed release'}`}>
-          v{version}<span className="side-label">{import.meta.env.DEV ? ' · Local' : ''}</span>
-        </small>
         <SaveIndicator status={saveStatus} />
         <button type="button" className={`side-item side-settings ${settingsOpen ? 'side-on' : ''}`} onClick={onSettings} title="Settings" aria-label="Settings" aria-haspopup="dialog">
           <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">{icon.settings}</svg>
           <span className="side-label side-settings-text"><span>Settings</span>{account && <small>{account.session.user.email}</small>}</span>
         </button>
+        <small className="platform-version" title={`CaseBuilder v${version}${import.meta.env.DEV ? ' · Local development, unreleased changes may be present' : ' · Installed release'}`}>
+          v{version}<span className="side-label">{import.meta.env.DEV ? ' · Local' : ''}</span>
+        </small>
       </div>
     </aside>
   )

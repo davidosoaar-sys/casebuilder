@@ -21,7 +21,7 @@ export function useModelKeys(userId) {
   return { keys, error, reload: load }
 }
 
-export default function Settings({ account, name, onName, theme, onTheme, onClose }) {
+export default function Settings({ account, name, onName, theme, onTheme, onClose, isAdminAccount = false, adminView = true, onAdminView}) {
   const user = account.session.user
   const { keys, error: keysError, reload } = useModelKeys(user.id)
   const [pwOpen, setPwOpen] = useState(false)
@@ -77,6 +77,21 @@ export default function Settings({ account, name, onName, theme, onTheme, onClos
               </div>
             </div>
           </section>
+
+          {isAdminAccount && (
+            <section className="settings-section">
+              <h3>Admin</h3>
+              <div className="settings-row">
+                <span className="settings-label">View</span>
+                <div className="segmented" role="radiogroup" aria-label="Admin view">
+                  {[[true, 'Admin'], [false, 'Regular user']].map(([on, label]) => (
+                    <button key={label} type="button" role="radio" aria-checked={adminView === on} className={adminView === on ? 'seg-on' : ''} onClick={() => onAdminView(on)}>{label}</button>
+                  ))}
+                </div>
+              </div>
+              <p className="settings-help">Regular user hides admin-only pages (like Waitlist) so you see what everyone else sees. Only you see this switch.</p>
+            </section>
+          )}
 
           <section className="settings-section" id="api-key">
             <h3>AI model key</h3>
