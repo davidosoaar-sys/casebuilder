@@ -53,6 +53,7 @@ export default function People({
       })
       const data = await res.json().catch(() => ({}))
       if (res.status === 503 && data.error === 'no_key') throw new Error('Add your Anthropic API key in Settings to use the AI agent.')
+      if (res.status === 503 && data.error === 'account_keys_unavailable') throw new Error(data.message)
       if (res.status === 503) return setSetup(true)
       if (res.status === 401) return setNeedCode(true)
       if (!res.ok) throw new Error(data.error || 'The search failed.')

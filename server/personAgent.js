@@ -137,6 +137,7 @@ export async function servePerson(req, res, { provider, timeoutMs = 54_000, env 
   if (!provider) {
     const codeWrong = h => !!env.RESEARCH_ACCESS_CODE && h?.['x-access-code'] !== env.RESEARCH_ACCESS_CODE
     const who = await anthropicFor(req.headers, { env, needsCode: codeWrong })
+    if (who.error?.body?.error === 'account_keys_unavailable') return json(503, who.error.body.message)
     // A deployment must not hand out its shared key without an access code.
     if (who.source !== 'account' && env.VERCEL && !env.RESEARCH_ACCESS_CODE) return json(503, 'Person lookup needs a workspace access code configured on the server, or sign in and add your own API key.')
     if (who.error) return json(who.error.status, who.error.status === 401 ? 'Enter the correct workspace access code to look up a person.' : who.error.body.message || 'Person lookup needs an Anthropic API key. Add yours in Settings.')

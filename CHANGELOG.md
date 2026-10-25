@@ -25,6 +25,14 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
+## v0.14.1 (2026-10-26): clear error when the server cannot read saved API keys
+
+- Fixed: a signed-in user with an API key saved in Settings was asked for the workspace
+  access code when the deployment had no `SUPABASE_SECRET_KEY`. The server could not
+  read the saved key, treated the user as signed out and fell back to the code prompt.
+  It now says the server is missing `SUPABASE_SECRET_KEY` (Find people, agent commands,
+  person lookup). Signed-out users still get the access-code prompt. Tests 350/350.
+
 ## v0.14.0 (2026-10-26): stakeholder briefs, brand lookup fixed, the Agent sees project research
 
 - Fixed: finding a company's branding failed for many names (Apple, Visa and others)

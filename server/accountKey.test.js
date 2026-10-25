@@ -72,3 +72,17 @@ test('without the service key the server cannot read account keys', async () => 
   assert.equal(r, null)
   assert.equal(calls.length, 0)
 })
+
+test('signed in but the server lacks SUPABASE_SECRET_KEY: says so, not "access code"', async () => {
+  const { fetchImpl } = fakeSupabase()
+  const env = { VITE_SUPABASE_URL: ENV.VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY: 'pub', ANTHROPIC_API_KEY: 'sk-server' }
+  for (const e of [env, { ...env, ANTHROPIC_API_KEY: '' }]) {
+    const r = await anthropicFor({ authorization: 'Bearer good' }, { env: e, fetchImpl, needsCode: () => true })
+    assert.equal(r.error.status, 503)
+    assert.equal(r.error.body.error, 'account_keys_unavailable')
+    assert.match(r.error.body.message, /SUPABASE_SECRET_KEY/)
+  }
+  // Signed out on the same server: still the access-code gate.
+  const out = await anthropicFor({}, { env, fetchImpl, needsCode: () => true })
+  assert.equal(out.error.body.error, 'access_code')
+})
