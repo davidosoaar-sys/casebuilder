@@ -23,6 +23,25 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ---
 
+## v0.9.1 (2026-10-25): research on Tavily, brand icon, deck colour fixes
+
+- Research (Find people, Suggest values, Person lookup, brand website lookup) now
+  searches through Tavily via our own search loop (server/agentSearch.js), not
+  Anthropic's built-in search. Every source is still checked against what the
+  search returned. With no search key configured it falls back to Anthropic
+  search and reports search: "anthropic".
+- The chat agent's Hermes is pinned to Tavily (web.backend: tavily) per account.
+- Brand discovery also finds the square icon (no wordmark) from the site's icon
+  links; project cards use it. Brand settings can upload/remove the icon. Deck
+  title logos are sized by height so wide wordmarks are readable.
+- Deck: the objection box used the app's dark background and was unreadable on
+  light decks until hovered; it now uses the deck colours. The title page no
+  longer fades to a different grey; cards use a shade of the page colour.
+- Deploy needs TAVILY_API_KEY and SUPABASE_SECRET_KEY in Vercel (server-only).
+
+Checks: 269 app tests, 18 worker tests, build OK; end-to-end agent commands
+ALL PASS with Tavily; one Find people run made 1 Tavily + 2 Anthropic requests.
+
 ## v0.9.0 (2026-10-25)
 
 - Added company brand review after stakeholder setup, with logo/palette/type preview, correction controls and a deliberate continue-without-logo option. Discovered logos also appear on the setup map.
