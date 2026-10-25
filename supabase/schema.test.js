@@ -53,6 +53,7 @@ before(async () => {
   await db.exec(SUPABASE_STUB)
   await db.exec(readFileSync(new URL('./migrations/0001_init.sql', import.meta.url), 'utf8'))
   await db.exec(readFileSync(new URL('./migrations/0003_model_keys.sql', import.meta.url), 'utf8'))
+  await db.exec(readFileSync(new URL('./migrations/0004_project_files.sql', import.meta.url), 'utf8'))
   await db.exec(`insert into auth.users (id, email) values
     ('${A}', 'a@x.com'), ('${B}', 'b@x.com'), ('${ADMIN}', 'admin@x.com')`)
   await db.exec(`update public.profiles set role = 'admin' where id = '${ADMIN}'`)
@@ -243,4 +244,29 @@ test('model keys: replace updates in place, remove deletes the secret, junk is r
   const gone = await service(tx => tx.query(`select public.get_model_key($1, 'anthropic') as k`, [A]))
   assert.equal(gone.rows[0].k, null)
   assert.equal((await db.query(`select count(*)::int as n from vault.secrets where name like $1`, [`model_key:${A}:%`])).rows[0].n, 0)
+})
+
+test('project files: owner adds, reads and removes files on their own deal only', async () => {
+  const ins = await user(A, tx => tx.query(
+    `insert into public.project_files (owner_id, deal_id, name, kind, text) values ($1, 'deal-a', 'Nike FY26.pdf', 'context', 'Revenue 51bn') returning id`, [A]))
+  const id = ins.rows[0].id
+  const mine = await user(A, tx => tx.query('select name from public.project_files'))
+  assert.deepEqual(mine.rows.map(r => r.name), ['Nike FY26.pdf'])
+  const theirs = await user(B, tx => tx.query('select id from public.project_files'))
+  assert.equal(theirs.rows.length, 0)
+  await rejects(user(B, tx => tx.query(
+    `insert into public.project_files (owner_id, deal_id, name, text) values ($1, 'deal-a', 'x', 'x')`, [B])), /row-level security/)
+  await rejects(user(A, tx => tx.query(
+    `insert into public.project_files (owner_id, deal_id, name, text) values ($1, 'deal-b', 'x', 'x')`, [A])), /row-level security/)
+  const del = await user(B, tx => tx.query('delete from public.project_files where id = $1', [id]))
+  assert.equal(del.rowCount, 0)
+  await user(A, tx => tx.query('delete from public.project_files where id = $1', [id]))
+  assert.equal((await service(tx => tx.query('select count(*)::int as n from public.project_files'))).rows[0].n, 0)
+})
+
+test('project files: kind is checked and a project is capped', async () => {
+  await rejects(user(A, tx => tx.query(
+    `insert into public.project_files (owner_id, deal_id, name, kind, text) values ($1, 'deal-a', 'x', 'secret', 'x')`, [A])), /check constraint/)
+  await rejects(user(A, tx => tx.query(
+    `insert into public.project_files (owner_id, deal_id, name, text) values ($1, 'deal-a', 'big', repeat('x', 300001))`, [A])), /check constraint/)
 })

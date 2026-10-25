@@ -274,5 +274,33 @@ class Research(unittest.TestCase):
         self.assertEqual(worker.parse_sources("plain answer", self.TRACE), ("plain answer", [], 0))
 
 
+class ProjectFiles(unittest.TestCase):
+    ROWS = [{"name": "Project instructions", "kind": "instructions", "text": "Always open with the CFO cost target."},
+            {"name": "Nike FY26 report.pdf", "kind": "context", "text": "Nike employs 1,400 software engineers."},
+            {"name": "Best deck.pptx", "kind": "deck_inspiration", "text": "--- Slide 1 ---\nThe number"}]
+
+    def test_instructions_files_and_inspiration_in_prompt(self):
+        text, steps = worker.files_prompt(self.ROWS)
+        self.assertIn("Always open with the CFO cost target.", text)
+        self.assertIn("--- Context file: Nike FY26 report.pdf ---", text)
+        self.assertIn("--- Deck inspiration file: Best deck.pptx ---", text)
+        self.assertIn("never their numbers", text)
+        self.assertEqual([s["title"] for s in steps], ["Read the project instructions", "Read Nike FY26 report.pdf", "Read Best deck.pptx"])
+
+    def test_budget_cuts_and_says_so(self):
+        big = [{"name": f"f{i}.txt", "kind": "context", "text": "x" * 70000} for i in range(3)]
+        text, steps = worker.files_prompt(big)
+        self.assertLessEqual(text.count("x" * 1000), worker.MAX_FILE_CHARS // 1000)
+        self.assertIn("Too long to read in full: f1.txt, f2.txt", text)
+
+    def test_chat_prompt_carries_files(self):
+        text, _ = worker.files_prompt(self.ROWS)
+        p = worker.build_prompt({"kind": "chat", "payload": {"message": "how many engineers?"}}, DEAL, (), text)
+        self.assertIn("1,400 software engineers", p)
+
+    def test_no_deal_no_files(self):
+        self.assertEqual(worker.project_files_context(None, "u"), ("", []))
+
+
 if __name__ == "__main__":
     unittest.main()

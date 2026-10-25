@@ -23,6 +23,22 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ---
 
+## Unreleased
+
+- Project Files: each project has a Files page, like a Claude Project's files.
+  Instructions (how to work on this account), Context files and Deck inspiration
+  (decks the user liked; the agent copies structure and tone, never numbers).
+  Reads PDF, Word, PowerPoint (with speaker notes), Excel and text in the browser;
+  each file can be switched off, relabelled or previewed as the text the agent
+  reads. Every chat and research run for the project reads the enabled files and
+  lists each one in "Used N tools". New table project_files (migration 0004),
+  owner-only under RLS, 50 files / 2M characters per project.
+
+Checks: 330 app tests, 34 worker tests, build OK. scripts/review-files.mjs on the
+real worker: 15/15 (four real files uploaded and read; agent answered three facts
+that exist only in the PDF, Word and Excel files, with Search off, and followed
+the saved instructions).
+
 ## v0.10.0 (2026-10-25): verified brand assets and sourced agent research
 
 - Added official brand/media resource discovery and bounded agent asset selection. Rejects main-logo favicons, invalid/tiny images and unsafe/empty SVGs. Onboarding and chat check logo decoding, full-mark visibility, published variants and embedded font loading automatically; failed marks fall back to the company name. Genuine company ambiguity offers sourced choices.

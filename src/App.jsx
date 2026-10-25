@@ -33,6 +33,7 @@ import { DEFAULT_BRAND } from './brand.js'
 import { AGENT_COMMANDS } from './agentCommands.js'
 import PersonLookup from './components/PersonLookup.jsx'
 import Research from './components/Research.jsx'
+import ProjectFiles from './components/ProjectFiles.jsx'
 import usePersonLookup from './usePersonLookup.js'
 import { addPersonToDeal, acceptPersonInput } from './personLookup.js'
 
@@ -334,6 +335,8 @@ export default function App({ account }) {
             onConnections={fn => connectionProject ? updateConnectionProject(p => ({ connectors: fn(p.connectors || connections) })) : setConnections(fn)}
             onDocuments={fn => updateConnectionProject(p => ({ documents: fn(p.documents || []) }))}
           />
+        ) : page === 'files' && project ? (
+          <ProjectFiles key={project.id} project={project} userId={account.session.user.id} />
         ) : page === 'research' ? (
           <Research userId={account.session.user.id} projects={projects} project={project}
             personPage={<PersonLookup embedded lookup={lookup} project={project}

@@ -9,6 +9,7 @@ const icon = {
   settings: <><path d="M6.9 1.8h2.2l.35 1.7 1.05.6 1.65-.55 1.1 1.9-1.3 1.15v1.2l1.3 1.15-1.1 1.9-1.65-.55-1.05.6-.35 1.7H6.9l-.35-1.7-1.05-.6-1.65.55-1.1-1.9 1.3-1.15V6.6L2.75 5.45l1.1-1.9 1.65.55 1.05-.6z" strokeLinejoin="round" /><circle cx="8" cy="8" r="2" /></>,
   agent: <><path d="M3 3.5h10v7H8.5L5.5 13v-2.5H3z" strokeLinejoin="round" /><path d="M6 7h.01M8 7h.01M10 7h.01" strokeWidth="2" strokeLinecap="round" /></>,
   lookup: <><circle cx="6.5" cy="5" r="2.5" /><path d="M2 13c0-3 9-3 9 0M11 8l3 3M12 7l2 2" /></>,
+  files: <><path d="M3 2.5h6l4 4v7H3z" strokeLinejoin="round" /><path d="M9 2.5v4h4M5.5 9h5M5.5 11.5h3.5" strokeLinecap="round" /></>,
   research: <><circle cx="7" cy="7" r="4.5" /><path d="M10.4 10.4l3.6 3.6M5 7h4M7 5v4" strokeLinecap="round" /></>,
   projects: (
     <path d="M2.5 4.5h4l1.5 1.8h5.5v6.2h-11z" strokeLinejoin="round" />
@@ -89,6 +90,7 @@ export default function Sidebar({ view, project, projectMode = false, onNav, onS
           <Item id="details" label="Input sheet" view={view} onNav={onNav} />
           <Item id="deck" label="Deck" view={view === 'website' ? 'deck' : view} onNav={onNav} />
           <Item id="agent" label="Agent" view={view} onNav={onNav} />
+          <Item id="files" label="Files" view={view} onNav={onNav} title="Context the agent reads for this project" />
         </> : <>
           <Item id="dashboard" label="Dashboard" view={view} onNav={onNav} />
           <Item id="projects" label="Projects" view={view} onNav={onNav} />
