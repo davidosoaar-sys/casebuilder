@@ -25,6 +25,18 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
+## v0.14.3 (2026-10-26): approval emails, admin view switch, tidier sidebar and connectors
+
+- Approving someone on the Waitlist now emails them a confirmation from the CaseBuilder
+  Gmail, naming the exact address to sign up with. One email per approval; each approved
+  row shows Email queued / sent / failed. Needs migration 0008 (applied) and the worker
+  redeployed with the Gmail app password.
+- Admins get an Admin / Regular user switch in Settings. Regular user hides admin-only
+  pages (Waitlist) to see the app as everyone else does; the choice is remembered.
+- Connectors are listed alphabetically, and Claude shows its real logo.
+- The version number moved under Settings in the bottom-left corner.
+- Tests 358/358; shell review script 10/10 (scripts/review-v0143-shell.mjs).
+
 ## v0.14.2 (2026-10-26): headshots on found people now actually show (fix)
 
 - Released as v0.15.0 by mistake and retagged v0.14.2: this fixes a feature that was already meant to work, it is not a new one.
