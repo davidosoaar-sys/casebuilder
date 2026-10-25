@@ -24,6 +24,11 @@ MODEL = os.environ.get("CB_MODEL", "claude-sonnet-5-5")
 # Models the app may pick per message (anything else falls back to MODEL).
 MODELS = ("claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5")
 MAX_ATTACH_CHARS = 60000
+# Messages of the current chat the agent sees (plus the new one). Was 8 when a
+# project had one endless chat; with chat history a new chat is the reset.
+HISTORY_MSG_CHARS = 4000      # one earlier message, at most
+HISTORY_TOTAL_CHARS = 60000   # all of them together; the oldest are dropped first
+HISTORY_MESSAGES = int(os.environ.get("CB_HISTORY_MESSAGES", "40"))
 # Bring your own key, any provider (migration 0009). For each provider: the
 # Hermes --provider id, the env var Hermes reads the key from, and the model
 # used for each tier the app can pick (the app's picker names Claude tiers).
@@ -372,6 +377,21 @@ def field_table(fields):
     return "\n".join(rows)
 
 
+def history_lines(history):
+    """Earlier messages of this chat, oldest first, each capped, newest kept
+    when the total is over budget."""
+    out, total = [], 0
+    for m in reversed(list(history)):
+        text = (m.get("content") or "")
+        if len(text) > HISTORY_MSG_CHARS:
+            text = text[:HISTORY_MSG_CHARS] + " [...]"
+        line = f"{m.get('role')}: {text}"
+        if total + len(line) > HISTORY_TOTAL_CHARS:
+            break
+        out.append(line); total += len(line)
+    return list(reversed(out))
+
+
 def build_prompt(job, deal, history=(), files_text="", research_text=""):
     p = job.get("payload") or {}
     msg = (p.get("message") or p.get("prompt") or "").strip()
@@ -442,7 +462,7 @@ def build_prompt(job, deal, history=(), files_text="", research_text=""):
     if research_text:
         parts.append(research_text)
     if history:
-        lines = [f"{m.get('role')}: {(m.get('content') or '')[:600]}" for m in history]
+        lines = history_lines(history)
         parts.append("Earlier in this chat:\n" + "\n".join(lines))
     atts = [a for a in (p.get("attachments") or []) if isinstance(a, dict) and a.get("text")]
     if atts:
@@ -876,7 +896,7 @@ def handle(job):
         # History comes from this chat only (migration 0010); old jobs without a chat id use the deal.
         scope = f"chat_id=eq.{chat_id}" if chat_id else f"deal_id=eq.{job['deal_id']}"
         history = api("GET", f"/rest/v1/chat_messages?{scope}&owner_id=eq.{owner}"
-                             "&role=in.(user,assistant)&select=role,content&order=id.desc&limit=9") or []
+                             f"&role=in.(user,assistant)&select=role,content&order=id.desc&limit={HISTORY_MESSAGES + 1}") or []
         history = list(reversed(history))[:-1]  # oldest first, minus the request itself
     profile = profile_for(owner)
     t0 = time.time()

@@ -483,3 +483,21 @@ class ChatHistory(unittest.TestCase):
             self.assertIsNone(worker.chat_for({"payload": {}, "owner_id": "o"}))
         finally:
             worker.api = old
+
+
+class HistoryWindow(unittest.TestCase):
+    def test_long_messages_are_kept_far_past_600_chars_and_capped(self):
+        lines = worker.history_lines([{"role": "user", "content": "a" * 3000}, {"role": "assistant", "content": "b" * 9000}])
+        self.assertEqual(len(lines[0]), len("user: ") + 3000)
+        self.assertTrue(lines[1].endswith(" [...]"))
+        self.assertLess(len(lines[1]), 4100)
+
+    def test_over_budget_drops_the_oldest_keeps_order(self):
+        h = [{"role": "user", "content": f"m{i} " + "x" * 3990} for i in range(40)]
+        lines = worker.history_lines(h)
+        self.assertLessEqual(sum(map(len, lines)), worker.HISTORY_TOTAL_CHARS)
+        self.assertTrue(lines[-1].startswith("user: m39 "))
+        self.assertTrue(lines[0].startswith(f"user: m{40 - len(lines)} "))
+
+    def test_default_window_is_40(self):
+        self.assertEqual(worker.HISTORY_MESSAGES, 40)

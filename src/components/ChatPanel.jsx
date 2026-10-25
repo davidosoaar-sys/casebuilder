@@ -17,6 +17,7 @@ import ToolTrace from './ToolTrace.jsx'
 import { resolveStakeholder } from '../deck/stakeholders.js'
 
 const POLL_MS = 3000
+const CHAT_PAGE = 50
 const SELECT = 'id, role, content, meta, job_id, created_at'
 
 const Icon = ({ d, size = 15 }) => (
@@ -70,11 +71,18 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
   const noKey = keys && keys.length === 0
   const provider = activeKey(keys)?.provider || 'anthropic'
 
-  const loadChats = async () => {
-    const { data, error } = await supabase.from('chats').select('id, title, kind, updated_at').eq('deal_id', dealId).order('updated_at', { ascending: false }).limit(200)
+  // The list loads a page at a time; "Show older" fetches the next page.
+  const [chatLimit, setChatLimit] = useState(CHAT_PAGE)
+  const [moreChats, setMoreChats] = useState(false)
+  const loadChats = async (limit = chatLimit) => {
+    const { data, error } = await supabase.from('chats').select('id, title, kind, updated_at').eq('deal_id', dealId).order('updated_at', { ascending: false }).limit(limit + 1)
     if (error) { setError(error.message); setChats([]); return [] }
-    setChats(data); return data
+    setMoreChats(data.length > limit)
+    const page = data.slice(0, limit)
+    setChats(page); return page
   }
+  const loadChatsRef = useRef(loadChats); loadChatsRef.current = () => loadChats()
+  const showOlder = () => { const n = chatLimit + CHAT_PAGE; setChatLimit(n); loadChats(n) }
   const reload = async (id = chatId) => {
     if (!id) { setMessages([]); return [] }
     const { data, error } = await supabase.from('chat_messages').select(SELECT).eq('chat_id', id).order('id', { ascending: true }).limit(300)
@@ -86,15 +94,15 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
   // Open the chat used last on this project, else the most recent, else a new one.
   useEffect(() => {
     let alive = true
-    setChats(null); setChatIdState(null)
+    setChats(null); setChatIdState(null); setChatLimit(CHAT_PAGE)
     ;(async () => {
-      const list = await loadChats()
+      const list = await loadChats(CHAT_PAGE)
       if (!alive) return
       let last = null; try { last = localStorage.getItem(lastKey) } catch {}
       setChatIdState(list.find(c => c.id === last)?.id || list[0]?.id || null)
     })()
     const ch = supabase.channel(`chats-${dealId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'chats', filter: `deal_id=eq.${dealId}` }, () => loadChats())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chats', filter: `deal_id=eq.${dealId}` }, () => loadChatsRef.current())
       .subscribe()
     return () => { alive = false; supabase.removeChannel(ch) }
   }, [dealId]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -217,11 +225,11 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
   const visible = messages.filter(m => m.role !== 'status')
 
   const panel = (
-    <section className={`chat-panel chat-${mode}${!loading && visible.length === 0 ? ' is-empty' : ''}`} aria-label="Agent chat">
+    <section className={`chat-panel chat-${mode}${!loading && visible.length === 0 ? ' is-empty' : ''}`} aria-label="Agent chat" data-deal={dealId}>
       <header className="chat-head">
         <div className="chat-title"><span className="chat-dot" aria-hidden="true" /><h2>Agent</h2>
           {mode === 'full' ? <span className="chat-deal">{chat?.title || project.name}</span>
-            : <ChatMenu chats={chats} chatId={chatId} onPick={setChatId} onNew={() => setChatId(null)} onRename={renameChat} onDelete={deleteChat} label={chat?.title || 'New chat'} />}
+            : <ChatMenu chats={chats} chatId={chatId} more={moreChats} onOlder={showOlder} onPick={setChatId} onNew={() => setChatId(null)} onRename={renameChat} onDelete={deleteChat} label={chat?.title || 'New chat'} />}
         </div>
         <div className="chat-head-actions">
           <button type="button" className="icon-btn" onClick={() => setChatId(null)} disabled={!chatId} title="New chat" aria-label="New chat"><Icon d={icons.plus} /></button>
@@ -289,7 +297,7 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
   if (mode !== 'full') return panel
   return (
     <div className="chat-shell">
-      <ChatRail chats={chats} chatId={chatId} onPick={setChatId} onNew={() => setChatId(null)} onRename={renameChat} onDelete={deleteChat} />
+      <ChatRail chats={chats} chatId={chatId} more={moreChats} onOlder={showOlder} onPick={setChatId} onNew={() => setChatId(null)} onRename={renameChat} onDelete={deleteChat} />
       {panel}
     </div>
   )
@@ -330,10 +338,13 @@ function ChatRow({ c, on, onPick, onRename, onDelete }) {
   )
 }
 
-function ChatList({ chats, chatId, onPick, onRename, onDelete }) {
+function ChatList({ chats, chatId, onPick, onRename, onDelete, more, onOlder }) {
   if (chats === null) return <p className="chat-rail-empty">Loading…</p>
   if (!chats.length) return <p className="chat-rail-empty">No chats yet. Your first message starts one.</p>
-  return <ul className="chat-rows">{chats.map(c => <ChatRow key={c.id} c={c} on={c.id === chatId} onPick={onPick} onRename={onRename} onDelete={onDelete} />)}</ul>
+  return <>
+    <ul className="chat-rows">{chats.map(c => <ChatRow key={c.id} c={c} on={c.id === chatId} onPick={onPick} onRename={onRename} onDelete={onDelete} />)}</ul>
+    {more && <button type="button" className="link-btn chat-older" onClick={onOlder}>Show older chats</button>}
+  </>
 }
 
 // Full page: the list sits on the left, like Claude.
