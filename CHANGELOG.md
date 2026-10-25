@@ -12,6 +12,8 @@ Every version that lands on `main` gets a line here and a git tag.
 - Keep local work under an unversioned `Unreleased` heading; assign the next version when preparing the actual push. Work-in-progress snapshots do not count as releases.
 - Each release: bump `version` in `package.json`, add an entry below, commit,
   then `git tag -a vX.Y.Z -m "..."` and `git push origin main --tags`.
+- Then publish it on GitHub Releases: `python3 scripts/publish-releases.py`
+  (creates a release for every tag that has none, notes taken from this file).
 
 ## Rolling back
 
