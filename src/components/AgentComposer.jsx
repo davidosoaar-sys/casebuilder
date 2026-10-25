@@ -44,6 +44,7 @@ const ic = {
   check: <path d="M3.2 8.4l3 3 6.6-6.6" />,
   x: <path d="M4.3 4.3l7.4 7.4M11.7 4.3l-7.4 7.4" />,
   file: <><path d="M4 1.8h5l3 3v9.4H4z" /><path d="M9 1.8v3h3" /></>,
+  research: <><circle cx="7" cy="7" r="4.5" /><path d="M10.4 10.4l3.6 3.6M5 7h4M7 5v4" strokeLinecap="round" /></>,
   globe: <><circle cx="8" cy="8" r="6.2" /><path d="M1.8 8h12.4M8 1.8c1.8 1.9 2.6 3.9 2.6 6.2S9.8 12.3 8 14.2C6.2 12.3 5.4 10.3 5.4 8S6.2 3.7 8 1.8z" /></>,
   anthropic: <path d="M11.5 2.4H9.1l4.4 11.2H16zM4.5 2.4L0 13.6h2.5l.9-2.4h4.6l.9 2.4h2.5L7 2.4zm-.3 6.8l1.5-3.9 1.5 3.9z" />
 }
@@ -98,7 +99,7 @@ function Eye({ emotion, blink, x, y }) {
 }
 
 // ---------- the composer ----------
-export default function AgentComposer({ onSend, busy = false, disabled = false, provider = 'anthropic', showWelcome = false, title = 'What should we work on?', subtitle = 'Ask about this deal, or tell the agent what to change' }) {
+export default function AgentComposer({ onSend, busy = false, disabled = false, provider = 'anthropic', research = false, onResearch, showWelcome = false, title = 'What should we work on?', subtitle = 'Ask about this deal, or tell the agent what to change' }) {
   const [text, setText] = useState('')
   const [files, setFiles] = useState([])
   const [fileError, setFileError] = useState('')
@@ -152,7 +153,7 @@ export default function AgentComposer({ onSend, busy = false, disabled = false, 
   async function send() {
     if (disabled || busy || (!text.trim() && !files.length)) return
     stopListening()
-    const ok = await onSend({ text: text.trim(), attachments: files, model: model.id, effort: level.id, web })
+    const ok = await onSend({ text: text.trim(), attachments: files, model: model.id, effort: level.id, web, research })
     if (ok) { setText(''); setFiles([]) }
   }
 
@@ -198,7 +199,7 @@ export default function AgentComposer({ onSend, busy = false, disabled = false, 
 
             onChange={e => setText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
-            placeholder={listening ? 'Listening… speak your mind' : busy ? (web ? 'Searching and thinking…' : 'Thinking…') : 'Ask about this deal, or tell the agent what to change'} />
+            placeholder={listening ? 'Listening… speak your mind' : busy ? (research ? 'Researching…' : web ? 'Searching and thinking…' : 'Thinking…') : research ? 'What should the agent research? It searches widely and cites every source.' : 'Ask about this deal, or tell the agent what to change'} />
           {fileError && <p className="mascot-error">{fileError}</p>}
 
           <div className="mascot-bar">
@@ -239,8 +240,10 @@ export default function AgentComposer({ onSend, busy = false, disabled = false, 
 
               <input ref={fileInput} type="file" multiple accept={ACCEPT} hidden disabled={disabled} onChange={e => { addFiles(Array.from(e.target.files)); e.target.value = '' }} />
               <button type="button" className="mascot-icon" onClick={() => fileInput.current?.click()} disabled={disabled} title="Attach files (PDF, Word, PowerPoint, Excel, notes, transcripts)" aria-label="Attach files"><I d={ic.clip} /></button>
-              <button type="button" className={`mascot-search${web ? ' is-on' : ''}`} onClick={() => setWeb(w => !w)} disabled={disabled} aria-pressed={web}
-                title={web ? 'The agent may search the web' : 'Let the agent search the web'}><I d={ic.globe} size={15} /><span>{web ? 'Search on' : 'Search'}</span></button>
+              {!research && <button type="button" className={`mascot-search${web ? ' is-on' : ''}`} onClick={() => setWeb(w => !w)} disabled={disabled} aria-pressed={web}
+                title={web ? 'The agent may search the web' : 'Let the agent search the web'}><I d={ic.globe} size={15} /><span>{web ? 'Search on' : 'Search'}</span></button>}
+              {onResearch && <button type="button" className={`mascot-search mascot-research${research ? ' is-on' : ''}`} onClick={() => onResearch(!research)} disabled={disabled} aria-pressed={research}
+                title={research ? 'Deep research is on: the next message is researched in depth, with numbered sources' : 'Deep research: search widely, read pages in full, cite every source. Usually 30 to 90 seconds.'}><I d={ic.research} size={15} /><span>Deep research</span></button>}
             </div>
 
             <div className="mascot-right">

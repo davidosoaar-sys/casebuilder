@@ -92,7 +92,7 @@ export default function Sidebar({ view, project, projectMode = false, onNav, onS
           <Item id="details" label="Case inputs" view={view} onNav={onNav} />
           <Item id="website" icon="deck" label="Case artifacts" view={view === 'deck' ? 'website' : view} onNav={onNav} title="Live room, deck, PDF and one-pager" />
           <Item id="agent" label="Agent" view={view} onNav={onNav} />
-          <Item id="research" label="Research" view={view} onNav={onNav} title="Research this account, with sources" />
+          <Item id="people-lookup" icon="research" label="Person lookup" view={view} onNav={onNav} title="Who is this? Look up one person before a call" />
           <Item id="files" label="Files" view={view} onNav={onNav} title="Context the agent reads for this project" />
         </> : <>
           <Item id="dashboard" label="Dashboard" view={view} onNav={onNav} />

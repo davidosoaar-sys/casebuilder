@@ -471,9 +471,20 @@ class AnyProvider(unittest.TestCase):
 
 
 class ChatHistory(unittest.TestCase):
-    def test_reply_goes_to_the_payload_chat(self):
+    def test_reply_goes_to_the_payload_chat_only_if_the_owner_owns_it(self):
         cid = "11111111-2222-3333-4444-555555555555"
-        self.assertEqual(worker.chat_for({"payload": {"chat_id": cid}, "deal_id": "d", "owner_id": "o"}), cid)
+        old = worker.api
+        try:
+            def fake(m, p, b=None, prefer=None):
+                if p.startswith("/rest/v1/chats?"):
+                    return [{"id": cid}] if "owner_id=eq.o&" in p else []
+                return [{"chat_id": "latest"}]
+            worker.api = fake
+            self.assertEqual(worker.chat_for({"payload": {"chat_id": cid}, "deal_id": "d", "owner_id": "o"}), cid)
+            # Someone else's chat id in the payload: ignored, falls back to the owner's latest chat.
+            self.assertEqual(worker.chat_for({"payload": {"chat_id": cid}, "deal_id": "d", "owner_id": "intruder"}), "latest")
+        finally:
+            worker.api = old
 
     def test_old_jobs_fall_back_to_the_latest_user_message_chat(self):
         old = worker.api
@@ -501,3 +512,30 @@ class HistoryWindow(unittest.TestCase):
 
     def test_default_window_is_40(self):
         self.assertEqual(worker.HISTORY_MESSAGES, 40)
+
+
+class DeepResearchInChat(unittest.TestCase):
+    def test_follow_up_research_sees_the_chat(self):
+        p = worker.build_research_prompt({"payload": {"question": "and their competitors?"}}, None, "",
+                                         [{"role": "user", "content": "How big is Spotify's platform team?"}, {"role": "assistant", "content": "About 400 engineers [1]."}])
+        self.assertIn("Earlier in this chat", p)
+        self.assertIn("Spotify's platform team", p)
+        self.assertTrue(p.rstrip().endswith("and their competitors?"))
+
+
+class ResearchChatScope(unittest.TestCase):
+    def test_old_research_page_job_never_posts_into_a_chat(self):
+        posted = []
+        def fake_api(m, p, b=None, prefer=None):
+            if m == "POST": posted.append(p)
+            if "/rest/v1/chats?" in p: return []
+            if "role=eq.user" in p: return [{"chat_id": "latest-chat"}]
+            return []
+        old = (worker.api, worker.rpc)
+        worker.api = fake_api
+        worker.rpc = lambda name, **kw: [] if name == "get_active_model_key" else None
+        try:
+            worker.handle({"id": "j", "owner_id": "o", "deal_id": "d", "kind": "research", "attempts": 1, "payload": {"question": "q"}})
+        finally:
+            worker.api, worker.rpc = old
+        self.assertNotIn("/rest/v1/chat_messages", posted)  # no-key path for a non-chat research job stays off the chat

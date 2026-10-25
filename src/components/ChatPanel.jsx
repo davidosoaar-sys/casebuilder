@@ -14,6 +14,8 @@ import { activeKey } from '../modelProviders.js'
 import AgentComposer, { AGENT_MODELS } from './AgentComposer.jsx'
 import CommandCards from './CommandCards.jsx'
 import ToolTrace from './ToolTrace.jsx'
+import { Answer, Sources } from './Research.jsx'
+import { MAX_QUESTION } from '../research.js'
 import { resolveStakeholder } from '../deck/stakeholders.js'
 
 const POLL_MS = 3000
@@ -67,6 +69,10 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
   const lastKey = `casebuilder.chat.${dealId}`
   const setChatId = id => { setChatIdState(id); try { id ? localStorage.setItem(lastKey, id) : localStorage.removeItem(lastKey) } catch {} }
   const chat = chats?.find(c => c.id === chatId) || null
+  // Deep research: per chat. A chat started in research mode stays in it; you can
+  // switch either way at any time (each message records how it was asked).
+  const [researchOn, setResearchOn] = useState(false)
+  useEffect(() => { setResearchOn(chat?.kind === 'research') }, [chatId, chat?.kind])
   const applied = project.agentLog || {}
   const noKey = keys && keys.length === 0
   const provider = activeKey(keys)?.provider || 'anthropic'
@@ -175,7 +181,7 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
     firstScroll.current = false
   }, [messages.length, pending, loading])
 
-  async function send({ text, attachments = [], model, effort, web }) {
+  async function send({ text, attachments = [], model, effort, web, research = false }) {
     if (noKey) { setError('Add an AI model key in Settings first.'); return false }
     if (pending) return false
     setError('')
@@ -183,7 +189,7 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
     let id = chatId
     if (!id) {
       const title = (text || attachments[0]?.name || 'New chat').replace(/\s+/g, ' ').trim().slice(0, 60) || 'New chat'
-      const { data: c, error: ec } = await supabase.from('chats').insert({ deal_id: dealId, owner_id: userId, title }).select('id, title, kind, updated_at').single()
+      const { data: c, error: ec } = await supabase.from('chats').insert({ deal_id: dealId, owner_id: userId, title, kind: research ? 'research' : 'chat' }).select('id, title, kind, updated_at').single()
       if (ec) { setError(/foreign key|not present|violates row-level/i.test(ec.message) ? 'This deal has not finished saving yet. Try again in a second.' : ec.message); return false }
       id = c.id
       setChats(cs => [c, ...(cs || []).filter(x => x.id !== c.id)])
@@ -192,14 +198,18 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
     const meta = attachments.length ? { attachments: attachments.map(a => ({ name: a.name, size: a.text.length })) } : {}
     if (model) meta.model = model
     if (effort) meta.effort = effort
-    if (web === false) meta.web = false
+    if (web === false && !research) meta.web = false
+    if (research) meta.research = true
     const { data: msg, error: e1 } = await supabase.from('chat_messages')
       .insert({ deal_id: dealId, owner_id: userId, chat_id: id, role: 'user', content: text || '(attached files)', meta }).select(SELECT).single()
     if (e1) { setError(/foreign key|not present|violates row-level/i.test(e1.message) ? 'This deal has not finished saving yet. Try again in a second.' : e1.message); return false }
     setMessages(ms => ms.some(m => m.id === msg.id) ? ms : [...ms, msg])
     const roles = (project.stakeholders || []).map(s => { const r = resolveStakeholder(s); return r ? { key: s.key, role: r.role || '', tag: r.tag || '' } : null }).filter(Boolean)
-    const payload = { chat_id: id, message: text, model, effort, web: web !== false, roles, user_name: userName || '', attachments: attachments.map(a => ({ name: a.name, text: a.text })) }
-    const { data: job, error: e2 } = await supabase.from('jobs').insert({ owner_id: userId, deal_id: dealId, kind: 'chat', payload }).select('id').single()
+    const files = attachments.map(a => ({ name: a.name, text: a.text }))
+    const payload = research
+      ? { chat_id: id, question: [text, ...files.map(f => `Attached ${f.name}:\n${f.text.slice(0, 8000)}`)].filter(Boolean).join('\n\n').slice(0, MAX_QUESTION), model, effort }
+      : { chat_id: id, message: text, model, effort, web: web !== false, roles, user_name: userName || '', attachments: files }
+    const { data: job, error: e2 } = await supabase.from('jobs').insert({ owner_id: userId, deal_id: dealId, kind: research ? 'research' : 'chat', payload }).select('id').single()
     if (e2) { setError(/rate|limit/i.test(e2.message) ? 'Too many requests just now. Wait a minute and try again.' : e2.message); return false }
     setPending(job.id)
     return true
@@ -257,10 +267,10 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
             <div key={m.id} className="chat-msg chat-user">
               {editing?.id === m.id ? (
                 <EditBox initial={editing.text} onCancel={() => setEditing(null)}
-                  onSave={async t => { if (await send({ text: t, model: m.meta?.model, effort: m.meta?.effort, web: m.meta?.web })) setEditing(null) }} disabled={!!pending} />
+                  onSave={async t => { if (await send({ text: t, model: m.meta?.model, effort: m.meta?.effort, web: m.meta?.web, research: !!m.meta?.research })) setEditing(null) }} disabled={!!pending} />
               ) : <>
                 {m.meta?.attachments?.length > 0 && <div className="chat-files">{m.meta.attachments.map((a, i) => <span key={i} className="chat-file"><Icon d={icons.file} size={13} />{a.name}</span>)}</div>}
-                <div className="chat-bubble">{m.content}</div>
+                <div className="chat-bubble">{m.meta?.research && <span className="chat-research-ask">Deep research</span>}{m.content}</div>
                 <div className="msg-actions on-hover">
                   <button type="button" className="icon-btn sm" onClick={() => copy(m.id, m.content)} title="Copy" aria-label="Copy message"><Icon d={copied === m.id ? icons.check : icons.copy} size={14} /></button>
                   <button type="button" className="icon-btn sm" onClick={() => setEditing({ id: m.id, text: m.content })} disabled={!!pending} title="Edit and resend" aria-label="Edit message"><Icon d={icons.edit} size={14} /></button>
@@ -270,14 +280,16 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
           ) : (
             <div key={m.id} className={`chat-msg chat-assistant${m.meta?.error ? ' is-error' : ''}`}>
               <ToolTrace steps={m.meta?.trace} />
-              <div className="chat-bubble">{m.content}</div>
+              {m.meta?.research
+                ? <div className="chat-bubble chat-research"><p className="mono-label chat-research-tag">Deep research</p><Answer text={m.content} sources={m.meta.sources || []} /><Sources sources={m.meta.sources || []} dropped={m.meta.dropped_sources || 0} /></div>
+                : <div className="chat-bubble">{m.content}</div>}
               <ChangeCard log={applied[m.id]} meta={m.meta} onUndo={() => onUndo(m.id)} />
               {m.meta?.commands?.length > 0 && (runs[m.id]
                 ? <CommandCards run={runs[m.id]} commands={m.meta.commands} project={project} onPick={onPick} messageId={m.id} />
                 : <div className="cmd-cards"><div className="cmd-card"><p className="cmd-note">This research was not run. <button type="button" className="link-btn" onClick={() => onRun?.(m.id, m.meta.commands)}>Run it now</button></p></div></div>)}
               <div className="msg-actions">
                 <button type="button" className="icon-btn sm" onClick={() => copy(m.id, m.content)} title="Copy" aria-label="Copy reply"><Icon d={copied === m.id ? icons.check : icons.copy} size={14} /></button>
-                {m.meta?.model && <span className="msg-meta">{AGENT_MODELS.find(x => x.id === m.meta.model)?.name || m.meta.model}{m.meta.seconds ? ` · ${Math.round(m.meta.seconds)}s` : ''}{m.meta.web === false ? ' · search off' : ''}</span>}
+                {m.meta?.model && <span className="msg-meta">{AGENT_MODELS.find(x => x.id === m.meta.model)?.name || m.meta.model}{m.meta.seconds ? ` · ${Math.round(m.meta.seconds)}s` : ''}{m.meta.web === false ? ' · search off' : ''}{m.meta.research ? ` · ${(m.meta.sources || []).length} sources` : ''}</span>}
               </div>
             </div>
           ))}
@@ -288,9 +300,9 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
       <div className="chat-bottom">
         {noKey && <p className="chat-note">The agent needs an AI model key first (Anthropic, OpenAI, Gemini or OpenRouter). <button type="button" className="link-btn" onClick={onSettings}>Add it in Settings</button></p>}
         {error && <p className="auth-error chat-error" role="alert">{error}</p>}
-        <AgentComposer provider={provider} disabled={noKey} busy={!!pending} onSend={send} showWelcome={!loading && visible.length === 0}
-          title={`What should we work on${userName ? ', ' + userName.split(' ')[0] : ''}?`}
-          subtitle={`Ask about ${project.name || 'this deal'}, or tell the agent what to change. Every change can be undone.`} />
+        <AgentComposer provider={provider} research={researchOn} onResearch={setResearchOn} disabled={noKey} busy={!!pending} onSend={send} showWelcome={!loading && visible.length === 0}
+          title={researchOn ? 'What should we research?' : `What should we work on${userName ? ', ' + userName.split(' ')[0] : ''}?`}
+          subtitle={researchOn ? `Deep research searches widely, reads pages in full and cites every source. It reads ${project.name || 'this project'}'s files and connectors, and you can ask follow-ups.` : `Ask about ${project.name || 'this deal'}, or tell the agent what to change. Every change can be undone.`} />
       </div>
     </section>
   )

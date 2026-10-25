@@ -48,7 +48,7 @@ export function Answer({ text, sources = [] }) {
   )
 }
 
-function Sources({ sources, dropped }) {
+export function Sources({ sources, dropped }) {
   if (!sources.length && !dropped) return null
   return (
     <section className="research-sources" aria-label="Sources">

@@ -493,8 +493,10 @@ SOURCES_FENCE = "casebuilder-sources"
 MAX_QUESTION = 2000
 
 
-def build_research_prompt(job, deal, files_text=""):
-    """General research: a question, optionally in the context of one deal."""
+def build_research_prompt(job, deal, files_text="", history=()):
+    """Deep research: a question, optionally in the context of one deal. In a chat
+    (v0.15.0) the earlier messages come along, so a follow-up like "and their
+    competitors?" is understood."""
     p = job.get("payload") or {}
     q = str(p.get("question") or p.get("message") or "").strip()[:MAX_QUESTION]
     parts = ["You are CaseBuilder's research assistant for a B2B salesperson. Answer the question "
@@ -520,6 +522,8 @@ def build_research_prompt(job, deal, files_text=""):
         f"```{SOURCES_FENCE}\n"
         '[{"n": 1, "url": "https://example.com/page", "title": "Page title"}]\n'
         "```")
+    if history:
+        parts.append("Earlier in this chat (use it to understand a follow-up question):\n" + "\n".join(history_lines(history)))
     parts.append("Question:\n" + (q or "(no question given)"))
     return "\n\n".join(parts)
 
@@ -862,11 +866,15 @@ def run_hermes(profile, prompt, api_key, model=MODEL, effort=None, web=True, pro
 def chat_for(job):
     """The chat a job's reply belongs to: the payload's chat_id, else the chat of
     the user message that started it (jobs queued before migration 0010)."""
-    cid = (job.get("payload") or {}).get("chat_id")
-    if cid and re.fullmatch(r"[0-9a-f-]{36}", str(cid)):
-        return cid
     if not job.get("deal_id"):
         return None
+    cid = (job.get("payload") or {}).get("chat_id")
+    if cid and re.fullmatch(r"[0-9a-f-]{36}", str(cid)):
+        # The payload is user-written: only trust a chat this job's owner owns on this deal.
+        ok = api("GET", f"/rest/v1/chats?id=eq.{cid}&owner_id=eq.{job['owner_id']}&deal_id=eq.{job['deal_id']}&select=id") or []
+        if ok:
+            return cid
+        log("ignored chat_id not owned by the job owner", job.get("id"))
     rows = api("GET", f"/rest/v1/chat_messages?deal_id=eq.{job['deal_id']}&owner_id=eq.{job['owner_id']}"
                       "&role=eq.user&select=chat_id&order=id.desc&limit=1") or []
     return rows[0]["chat_id"] if rows else None
@@ -875,24 +883,28 @@ def chat_for(job):
 def handle(job):
     jid, owner = job["id"], job["owner_id"]
     log("claimed", jid, job["kind"], "attempt", job["attempts"])
+    chat_id = chat_for(job)
+    # Research only posts into a chat it was asked from (payload chat_id). A research
+    # job from the old Research page has none and must not land in some chat.
+    if job["kind"] == "research" and chat_id and chat_id != (job.get("payload") or {}).get("chat_id"):
+        chat_id = None
     active = rpc("get_active_model_key", p_owner=owner) or []
     provider, key = (active[0]["provider"], active[0]["key"]) if active and active[0].get("provider") in PROVIDERS else (None, None)
     if not key:
         # Not worth retrying: tell the user in the chat and finish the job.
         msg = "I can't answer yet: there is no AI model key on your account. Add one in Settings (Anthropic, OpenAI, Google Gemini or OpenRouter), then send your message again."
-        if job.get("deal_id") and job["kind"] == "chat":
+        if job.get("deal_id") and (job["kind"] == "chat" or (job["kind"] == "research" and chat_id)):
             api("POST", "/rest/v1/chat_messages", {"deal_id": job["deal_id"], "owner_id": owner, "role": "assistant",
-                "chat_id": chat_for(job), "content": msg, "job_id": jid, "meta": {"error": "no_key"}}, prefer="return=minimal")
+                "chat_id": chat_id, "content": msg, "job_id": jid, "meta": {"error": "no_key"}}, prefer="return=minimal")
         rpc("complete_job", p_id=jid, p_worker=WORKER_ID, p_result={"error": "no_key"})
         log("done", jid, "no key")
         return
-    chat_id = chat_for(job)
     deal = None
     if job.get("deal_id"):
         rows = api("GET", f"/rest/v1/deals?id=eq.{job['deal_id']}&owner_id=eq.{owner}&select=id,name,data")
         deal = rows[0] if rows else None
     history = []
-    if job["kind"] == "chat" and job.get("deal_id") and deal:
+    if job["kind"] in ("chat", "research") and job.get("deal_id") and deal and (chat_id or job["kind"] == "chat"):
         # History comes from this chat only (migration 0010); old jobs without a chat id use the deal.
         scope = f"chat_id=eq.{chat_id}" if chat_id else f"deal_id=eq.{job['deal_id']}"
         history = api("GET", f"/rest/v1/chat_messages?{scope}&owner_id=eq.{owner}"
@@ -906,13 +918,14 @@ def handle(job):
     web = pl.get("web") is not False
     research = job["kind"] == "research"
     brief = job["kind"] == "stakeholder_brief"
-    # A brief reads the material only: project instructions are about decks and chat.
-    files_text, file_steps = project_files_context(job.get("deal_id"), owner, instructions=not brief) if deal else ("", [])
+    # Briefs and research read the material only: project instructions are about decks and chat
+    # (a research answer once ended with "I found no CFO cost target", from a deck instruction).
+    files_text, file_steps = project_files_context(job.get("deal_id"), owner, instructions=not (brief or research)) if deal else ("", [])
     research_text, research_steps = project_research_context(job.get("deal_id"), owner) if (deal and job["kind"] == "chat") else ("", [])
     if brief:
         prompt = build_brief_prompt(job, deal, files_text)
     else:
-        prompt = build_research_prompt(job, deal, files_text) if research else build_prompt(job, deal, history, files_text, research_text)
+        prompt = build_research_prompt(job, deal, files_text, history) if research else build_prompt(job, deal, history, files_text, research_text)
     conn_steps = connector_context(deal)[1] + file_steps + research_steps
     with Progress(jid, profile, t0, conn_steps):
         raw, usage = run_hermes(profile, prompt, key, model, effort, False if brief else (True if research else web), provider)
@@ -932,6 +945,11 @@ def handle(job):
         text, sources, dropped = parse_sources(raw, trace)
         result = {"text": text, "sources": sources, "dropped_sources": dropped, "trace": trace,
                   "model": model, "seconds": secs, "usage": usage}
+        if chat_id and deal:
+            api("POST", "/rest/v1/chat_messages", {"deal_id": job["deal_id"], "owner_id": owner, "chat_id": chat_id,
+                "role": "assistant", "content": text, "job_id": jid,
+                "meta": {"research": True, "sources": sources, "dropped_sources": dropped, "model": model,
+                         "effort": effort, "seconds": secs, "trace": trace}}, prefer="return=minimal")
         rpc("complete_job", p_id=jid, p_worker=WORKER_ID, p_result=result)
         log("done", jid, f"{secs}s research", f"tools={len(trace)} sources={len(sources)} dropped={dropped}")
         return
@@ -1029,7 +1047,8 @@ def main():
             except Exception as e2:
                 status = f"(fail_job error: {e2})"
             log("failed", job["id"], status, msg)
-            if job.get("kind") == "chat" and job.get("deal_id") and job.get("attempts", 0) >= job.get("max_attempts", 3):
+            if job.get("kind") in ("chat", "research") and job.get("deal_id") and job.get("attempts", 0) >= job.get("max_attempts", 3) \
+                    and (job.get("kind") == "chat" or (job.get("payload") or {}).get("chat_id")):
                 try:
                     api("POST", "/rest/v1/chat_messages", {"deal_id": job["deal_id"], "owner_id": job["owner_id"],
                         "chat_id": chat_for(job), "role": "assistant", "job_id": job["id"], "meta": {"error": "failed"},

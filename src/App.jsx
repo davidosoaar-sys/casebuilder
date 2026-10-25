@@ -32,7 +32,6 @@ import { stakeholdersForArchetype } from './valueModel.js'
 import { DEFAULT_BRAND } from './brand.js'
 import { AGENT_COMMANDS } from './agentCommands.js'
 import PersonLookup from './components/PersonLookup.jsx'
-import Research from './components/Research.jsx'
 import ProjectFiles from './components/ProjectFiles.jsx'
 import WaitlistAdmin, { isAdmin } from './components/WaitlistAdmin.jsx'
 import usePersonLookup from './usePersonLookup.js'
@@ -352,12 +351,11 @@ export default function App({ account }) {
           <WaitlistAdmin />
         ) : page === 'files' && project ? (
           <ProjectFiles key={project.id} project={project} userId={account.session.user.id} />
-        ) : page === 'research' && project ? (
-          <Research key={project.id} userId={account.session.user.id} projects={projects} project={project}
-            personPage={<PersonLookup embedded lookup={lookup} project={project}
-              onAdd={person => update(p => addPersonToDeal(p, person))}
-              onInput={suggestion => setPendingPersonInput({ dealId: project.id, suggestion })} />}
-            onSettings={openSettings} />
+        ) : (page === 'people-lookup' || page === 'research') && project ? (
+          // Research moved into the Agent as "Deep research" (v0.15.0); this page keeps the person lookup.
+          <PersonLookup lookup={lookup} project={project}
+            onAdd={person => update(p => addPersonToDeal(p, person))}
+            onInput={suggestion => setPendingPersonInput({ dealId: project.id, suggestion })} />
         ) : page === 'lookup' ? (
           lookupPage
         ) : page === 'deck' ? (
