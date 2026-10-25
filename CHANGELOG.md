@@ -28,7 +28,8 @@ Every version that lands on `main` gets a line here and a git tag.
 ## v0.10.0 (2026-10-25) — local preparation, not released
 
 - Merged Amr’s v0.9.1 Tavily research, separate company icons and deck color fixes with the unfinished agent-command, sourced-profile and brand-selection work. Research uses the shared search loop and expanded command contracts; source evidence and both sets of branding controls are preserved.
-- Validation: 306 app/server tests, 18 worker tests, 11 offline command evaluations, production build and plugin packaging pass. Shared-search regression checks preserve sourced evidence for both Tavily and Anthropic fallback. Branding verification remains work in progress; this version has not been pushed, tagged or deployed.
+- Also merged Amr’s v0.9.2 Research page, live tool-use traces, chat search toggle and connector-context updates while retaining sourced profile media.
+- Merge validation: all 311 app/server tests, 30 worker tests and production build pass. Branding verification remains work in progress; this version has not been pushed, tagged or deployed.
 
 - 2026-10-25: Translated the manually refined sample workflow into an executable brand-selection phase and a research-to-design playbook. The agent selects only sourced candidate IDs; code checks choices/contrast and records fallbacks for preview review. Added separate heading/body font embedding and a neutral logo field when no appropriate official variant is available, reused across previews/exports. Full layout generation and server-side visual approval remain explicitly unsupported.
 
@@ -38,6 +39,28 @@ Every version that lands on `main` gets a line here and a git tag.
 
 - 2026-10-25: Expanded all seven command briefs with explicit triggers, real input/source limits, processing, fictional output examples, quality gates, deterministic boundaries and judgment criteria. The four live services now share an inspectable full prompt builder and separate provider response contracts; future design contracts remain inactive. Preserved the v0.9.0 prompt snapshot and added generated current prompt documentation and a human scorecard.
 - Added an offline command evaluation suite and regression checks. Fixed chat LinkedIn lookup payload naming, restricted suggestion searches to blank fields, and protected manually entered values from late suggestion responses. Existing model equations and client deck are unchanged. Validation: all 277 tests, 11 offline command evaluations and the production build pass. Live model search quality has not been evaluated for this prompt revision.
+
+## v0.9.2 (2026-10-25): Research page, "Used N tools" trace, search toggle
+
+- Research: the main menu's "Person lookup" is now "Research". Ask any question,
+  optionally for one project; the account's own agent researches it (Tavily search
+  and full-page reads, plus connectors switched on for that project) and answers
+  with inline numbered citations and a sources list. A cited link the agent's
+  searches never returned is removed and the count is shown. Past research is
+  listed and reopens after reload. A "Person" tab runs the existing person lookup.
+  Inside a project, Person lookup stays in the project menu.
+- "Used N tools" on chat replies and research answers: a timeline of every search
+  (query and results), page read and connector, read from the agent's own session
+  log on the worker, not from the model's account. Steps appear live while it works.
+- Chat search toggle: with Search on the agent is told to search for anything that
+  can change; with Search off it has no search tools and the reply is marked
+  "search off". Connector material switched on for a deal is now given to the chat
+  agent too; switched-off connectors are never read.
+
+Checks: 274 app tests (5 new), 30 worker tests (13 new), build OK.
+`scripts/review-research.mjs` against the real worker: 15/15 (research answer with
+Tavily trace and sources, live steps, reopen after reload, chat trace with Search
+on, no web tools with Search off, mobile width, no page or Supabase errors).
 
 ## v0.9.1 (2026-10-25): research on Tavily, brand icon, deck colour fixes
 

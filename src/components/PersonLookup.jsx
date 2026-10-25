@@ -13,10 +13,10 @@ function Evidence({claim,label}){
 }
 const identityText=request=>request.name||request.email||request.linkedinUrl||'Person'
 
-export default function PersonLookup({lookup,project,onAdd,onInput}){
+export default function PersonLookup({lookup,project,onAdd,onInput,embedded=false}){
   const {query,setQuery,demo,setDemo,results,run,choose,busy}=lookup
-  return <section className="page person-lookup lookup-page no-print" aria-label="Person lookup">
-    <PageHead title="Person lookup" sub="A little context before the conversation."/>
+  return <section className={embedded?'person-lookup lookup-page lookup-embedded':'page person-lookup lookup-page no-print'} aria-label="Person lookup">
+    {!embedded&&<PageHead title="Person lookup" sub="A little context before the conversation."/>}
     <div className="lookup-body">
       <form className="lookup-search" onSubmit={e=>{e.preventDefault();run()}}>
         <div className="lookup-search-line">
