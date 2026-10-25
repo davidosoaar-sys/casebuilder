@@ -248,11 +248,7 @@ export function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, na
         )
       }
       case 'room':
-        return (
-          '<div class="cols"><div><h3>What they need to see</h3><ul>' +
-          (st.needsToSee || []).filter(Boolean).map(n => '<li>' + esc(n) + '</li>').join('') +
-          '</ul></div><div><h3>The objection</h3><blockquote>' + esc(st.objection) + '</blockquote><h3>The counter</h3><p>' + esc(st.counter) + '</p></div></div>'
-        )
+        return '<section class="client-requirements"><h3>Requirements</h3>'+((st.requirements||[]).length?'<ul>'+st.requirements.map(r=>'<li><span aria-hidden="true" class="requirement-box '+(r.status==='Actioned'?'is-done':'')+'"></span><span>'+esc(r.text)+'</span><small>'+esc(r.status)+'</small></li>').join('')+'</ul>':'<p>No requirements recorded yet.</p>')+'</section>'
       default:
         return ''
     }

@@ -235,3 +235,7 @@ scripts/build-plugin.mjs   bundles it and regenerates the reference docs
 - The PowerPoint is generated, not tested in PowerPoint itself; text heights are estimated.
 - The one-pager is built from the model and the selected stakeholder, not from edits made to deck text.
 - No Spotify or Backstage trademark clearance has been sought for the logo use.
+
+## Product and working process
+
+Start with [PRODUCT.md](PRODUCT.md) for the plain-language purpose and current scope, [DESIGN.md](DESIGN.md) for the existing visual system, and [WORKING_AGREEMENT.md](WORKING_AGREEMENT.md) for Git pulls, versions, patch notes and validation. Update the product brief with each completed scope change. [The product storyboard](docs/product-storyboard.md) describes the Chris-focused demonstration; it does not claim automatic shared-link synchronization.

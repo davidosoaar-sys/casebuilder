@@ -16,7 +16,7 @@ test('scroll stops start at the full map, then advance through every stakeholder
 })
 
 test('website map reuses the original radial layout and retains saved positions',()=>{
-  const people=[{key:'a',role:'Engineering',pos:{x:28,y:20},needsToSee:['Capacity'],objection:'Budget',counter:'Hiring plan'},{key:'b',role:'Security'}]
+  const people=[{key:'a',role:'Engineering',pos:{x:28,y:20},requirements:[{id:'r',text:'Capacity',status:'In progress'}],needsToSee:['Private inferred need'],objection:'Budget',counter:'Hiring plan'},{key:'b',role:'Security'}]
   const before=structuredClone(people),positions=defaultPositions(2)
   const html=stakeholderJourneyHtml('Example','',people)
   assert.ok(html.includes('data-x="28" data-y="20"'))
@@ -30,7 +30,7 @@ test('stakeholder narrative escapes user text and handles missing briefing field
   const html=stakeholderJourneyHtml('<Acme>','',[{key:'a',role:'<Finance>',namedPeople:[{name:'A & B'}]}])
   assert.equal(html.includes('<Finance>'),false)
   assert.ok(html.includes('A &amp; B'))
-  assert.ok(html.includes('Not yet specified.'))
+  assert.ok(html.includes('No requirements recorded yet.'))
   assert.equal(stakeholderJourneyHtml('Empty','',[]).includes('data-journey-node='),false)
 })
 

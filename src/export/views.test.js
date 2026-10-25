@@ -53,7 +53,7 @@ test('one-pager rearranges model figures, driver arithmetic and stakeholder need
   const html = buildOnePager({ facts })
   assert.ok(html.includes('A4 portrait'))
   assert.ok(html.includes('onepager-content'))
-  assert.ok(html.includes('Where the value comes from'))
+  assert.ok(html.includes('Value drivers'))
   assert.ok(html.includes('Portal versus self-hosting'))
   for (const stat of facts.stats) assert.ok(html.includes(stat.value))
   for (const group of facts.groups) for (const row of group.rows) assert.ok(html.includes(row.valueStr))

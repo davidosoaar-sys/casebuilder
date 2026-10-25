@@ -60,7 +60,7 @@ export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, o
 
   // What the frame shows is fixed while you edit inside it, so typing never
   // reloads the page under you. `current` always reflects the latest deck.
-  const shown = useMemo(() => buildSiteHtml({ project, inputs, activeKey: audienceKey }), [project.id, audienceKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  const [shown,setShown] = useState(() => buildSiteHtml({ project, inputs, activeKey: audienceKey })) // eslint-disable-line react-hooks/exhaustive-deps
   const current = useMemo(() => buildSiteHtml({ project, inputs, activeKey: audienceKey }), [project.deck, project.fields, project.stakeholders, project.brand, inputs, audienceKey])
   const currentHash = useMemo(() => hashText(current), [current])
   const upToDate = !!site && site.hash === currentHash
@@ -185,16 +185,16 @@ export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, o
       <div className="site-bar no-print">
         <div className="site-bar-left">
           <button className="link-btn" onClick={onBack}>
-            ← Deck
+            Edit slides
           </button>
-          <strong>Website</strong>
+          <strong>Live Room</strong>
           <span className="toolbar-hint">
-            {editing ? 'Click any text on the page to edit it. For layout changes, use the Deck.' : 'Showing it as a visitor sees it.'}
+            {editing ? 'Click any text on the page to edit it. For layout changes, use Edit slides.' : 'Showing it as a visitor sees it.'}
           </span>
         </div>
         <div className="site-bar-actions">
-          <select className="website-view-format" aria-label="View as format" value="website" onChange={e => onView?.(e.target.value, frame.current?.contentDocument?.querySelector('#audience select')?.value || audienceKey)}><option value="pdf">PDF</option><option value="slides">Slides</option><option value="onepager">One-pager</option><option value="website">Website</option></select>
-          <button className={`ghost ${editing ? 'ghost-on' : ''}`} onClick={() => setEditing(e => !e)}>
+          <select className="website-view-format" aria-label="View as format" value="website" onChange={e => onView?.(e.target.value, frame.current?.contentDocument?.querySelector('#audience select')?.value || audienceKey)}><option value="pdf">PDF</option><option value="slides">Slides</option><option value="onepager">One-pager</option><option value="website">Live Room</option><option value="editor">Slide editor</option></select>
+          <button className={`ghost ${editing ? 'ghost-on' : ''}`} onClick={() => {if(!editing)setShown(current);setEditing(e => !e)}}>
             {editing ? 'Finish editing' : 'Edit content'}
           </button>
           <button className="ghost" onClick={openTab} disabled={busy}>
@@ -265,8 +265,8 @@ export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, o
 
       <iframe
         ref={frame}
-        title="Website"
-        srcDoc={shown}
+        title="Live Room"
+        srcDoc={editing ? shown : current}
         onLoad={frameReady}
         sandbox="allow-scripts allow-same-origin allow-popups allow-modals"
       />

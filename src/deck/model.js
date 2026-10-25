@@ -383,6 +383,7 @@ export function resolveBlock(b, env) {
       return {
         kind: 'room',
         needs: (active.needsToSee || []).filter(Boolean),
+        clientFacing:active.clientFacing===true, requirements:active.requirements||[],
         objection: active.objection,
         counter: active.counter
       }

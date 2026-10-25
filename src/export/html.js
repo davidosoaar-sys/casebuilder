@@ -1,3 +1,4 @@
+import {clientStakeholder,REQUIREMENTS_CSS} from '../stakeholderRequirements.js'
 import {caseNarrative} from '../caseNarrative.js'
 import { siteMain } from './siteClient.js'
 import { WEBSITE_CSS } from './websiteStyle.js'
@@ -137,7 +138,8 @@ export function stripModules(src) {
 export function buildWebsite({ company, slides, stakeholders, activeKey, inputs, openFields, sliders, logoSvg, faviconSvg, vmSource, viewMode = 'website', websiteBrand }) {
   viewMode = ['website', 'pdf', 'slides'].includes(viewMode) ? viewMode : 'website'
   if (viewMode === 'website') slides = websiteStory(slides).map(s => ({ ...s, blocks: s.blocks.map(b => ({ ...b, design: b.design?.color || b.design?.background ? websiteBlockDesign(b.design, websiteBrand) : b.design })) }))
-  const data = { company, slides, stakeholders, activeKey, inputs, openFields, sliders: sliders || [], logo: logoSvg || '', viewMode, layout: viewMode === 'website' ? slides.map(websiteSection) : [], artwork: viewMode === 'website' ? landingArtwork({ company, logo:logoSvg, roles:stakeholders, cover:true }) : '' }
+  stakeholders=stakeholders.map(clientStakeholder)
+  const data = { company, slides, stakeholders, activeKey, inputs, openFields, sliders: sliders || [], logo: logoSvg || '', viewMode, layout: viewMode === 'website' ? slides.map(websiteSection) : [], artwork: viewMode === 'website' ? landingArtwork({ company, logo:logoSvg, roles:stakeholders, brand:websiteBrand, cover:true }) : '' }
   // JSON inside a <script> must not be able to close the tag.
   const safe = obj => JSON.stringify(obj).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029')
   data.fontStacks = Object.fromEntries(slides.flatMap(s=>s.blocks).filter(b=>b.design?.font).map(b=>[b.design.font,fontStack(b.design.font)]))
@@ -155,7 +157,7 @@ return {computeModel:computeModel,STAKEHOLDERS:STAKEHOLDERS,PAIRS:PAIRS,driversB
 ${iconLink(faviconSvg)}
 ${needsOutfit ? '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap">' : ''}
 <title>${esc(company)} · Business case</title>
-<style>${SITE_CSS}\n${VIEW_CSS}\n${viewMode === 'website' ? WEBSITE_CSS + LANDING_CSS + GRAPHIC_CSS + websiteThemeCss(websiteBrand) : ''}</style></head>
+<style>${REQUIREMENTS_CSS}\n${SITE_CSS}\n${VIEW_CSS}\n${viewMode === 'website' ? WEBSITE_CSS + LANDING_CSS + GRAPHIC_CSS + websiteThemeCss(websiteBrand) : ''}</style></head>
 <body class="view-${viewMode}">
 <header class="top">
   <div class="brand">${logoSvg || (viewMode === 'website' ? '<span class="company-monogram">' + esc(String(company || 'C').slice(0, 1).toUpperCase()) + '</span>' : '')}</div>

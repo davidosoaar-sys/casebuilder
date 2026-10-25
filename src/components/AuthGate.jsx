@@ -268,7 +268,7 @@ function Waitlist({ email, setEmail, joined, onJoined, onSignIn, onApproved }) {
       <form className="auth-card waitlist-card" onSubmit={join}>
         <AppLogo />
         <h1>Join the waitlist</h1>
-        <p className="waitlist-lede">CaseBuilder turns what you know about a deal into a business case each stakeholder can say yes to. We're opening it to a small group first.</p>
+        <p className="waitlist-lede">Keep the deal’s research, numbers and client-ready case aligned as the conversation changes. We're opening it to a small group first.</p>
         <label htmlFor="wl-name">Name</label>
         <input id="wl-name" autoComplete="name" value={name} onChange={e => setName(e.target.value)} maxLength={120} required autoFocus />
         <label htmlFor="wl-email">Email</label>

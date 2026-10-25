@@ -1,10 +1,25 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { SAMPLE_CASES,createSampleCase } from './sampleCases.js'
+import { SAMPLE_CASES,createSampleCase,refreshNikeSample } from './sampleCases.js'
 import { newProject } from './projects.js'
 import { computeModel } from './model.js'
 import { confidence } from './valueModel.js'
 import { normalizeBrand } from './brand.js'
+
+test('Nike sample upgrades once while preserving saved case edits',()=>{
+  const p=createSampleCase(SAMPLE_CASES[0],newProject)
+  assert.ok(p.brand.heroImage.startsWith('data:image/'))
+  assert.ok(p.stakeholders.some(s=>s.requirements.some(r=>r.status==='Waiting for approval')))
+  const old={...p,nikePresentationVersion:undefined,brand:{...p.brand,heroImage:''}}
+  old.fields.find(f=>f.key==='engineers').value=123
+  old.stakeholders[0].requirements=[{id:'mine',text:'Keep my requirement',status:'Actioned'}]
+  const updated=refreshNikeSample(old)
+  assert.equal(updated.fields,old.fields)
+  assert.equal(updated.deck,old.deck)
+  assert.deepEqual(updated.stakeholders[0].requirements,old.stakeholders[0].requirements)
+  assert.equal(refreshNikeSample(updated),updated)
+  assert.equal(refreshNikeSample({...old,sample:false}).brand.heroImage,'')
+})
 
 test('three branded sample cases have distinct complete models and no verified company claims',()=>{
   const cases=SAMPLE_CASES.map(d=>createSampleCase(d,newProject))

@@ -46,3 +46,18 @@ export function brandKitDownloads(html,website,company){
     try{const u=new URL(href.replace(/&amp;/g,'&'),website);return u.protocol==='https:'&&/\.(svg|png|webp|jpe?g)(?:\?|$)/i.test(u.href)&&(/download|primary|full[- ]?logo/i.test(label)||label.replace(/[^a-z0-9]/g,'').includes(key))?[{url:u.href,score:115,sourcePage:website,authority:'official-brand-kit'}]:[]}catch{return []}
   }).slice(0,8)
 }
+export function brandHeroCandidates(html,website,company=''){
+ const key=company.toLowerCase().replace(/[^a-z0-9]/g,'')
+ const candidates=[]
+ for(const tag of html.match(/<(?:img|meta)\b[^>]*>/gi)||[]){
+  const meta=/^<meta/i.test(tag),src=meta?(/^(?:og:image|twitter:image)$/i.test(attr(tag,'property')||attr(tag,'name'))?attr(tag,'content'):''):attr(tag,'src')||attr(tag,'data-src')
+  if(!src)continue
+  const label=(src+' '+attr(tag,'alt')+' '+attr(tag,'class')).toLowerCase()
+  if(/logo|favicon|icon|avatar|portrait|shoe|sneaker|jordan|sprite|product-detail|download-page|opengraph|screenshot/i.test(label))continue
+  const campaign=/hero|masthead|banner|campaign|just-do-it/i.test(label)
+  const named=key&&label.replace(/[^a-z0-9]/g,'').includes(key)
+  if(!campaign&&!meta&&!named)continue
+  try{const url=new URL(src.replace(/&amp;/g,'&'),website);if(url.protocol==='https:')candidates.push({url:url.href,alt:attr(tag,'alt'),score:campaign?100:meta?80:60})}catch{}
+ }
+ return candidates.sort((a,b)=>b.score-a.score).filter((c,i,list)=>list.findIndex(x=>x.url===c.url)===i).slice(0,2)
+}

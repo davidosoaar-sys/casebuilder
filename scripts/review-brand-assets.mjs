@@ -18,7 +18,7 @@ for(const company of ['microsoft','adidas','shopify','spotify','nike','lovable']
  const docs=await page.evaluate(async({company,brand})=>{
   const {newProject}=await import('/src/projects.js'),{DEMO_VALUES}=await import('/src/valueModel.js'),{buildSiteHtml}=await import('/src/export/site.js'),{prepareOnePager,pickAudience}=await import('/src/export/prepare.js'),{resolveStakeholder}=await import('/src/deck/stakeholders.js'),{buildOnePager}=await import('/src/export/html.js'),{brandDocument,brandLogoHtml}=await import('/src/brand.js');
   const project=newProject(company,{});project.brand=brand;project.deck.forEach(s=>{delete s.design});project.fields=project.fields.map(f=>({...f,value:f.key==='companyName'?company:DEMO_VALUES[f.key]??f.value}));const inputs=Object.fromEntries(project.fields.map(f=>[f.key,f.value]));const docs={};for(const mode of ['website','pdf','slides'])docs[mode]=buildSiteHtml({project,inputs,mode});
-  const who=pickAudience(project.stakeholders.map(resolveStakeholder).filter(Boolean));docs.onepager=brandDocument(buildOnePager({facts:prepareOnePager({inputs,fields:project.fields,who}),logoSvg:brandLogoHtml(brand)}),brand);return docs
+  const who=pickAudience(project.stakeholders.map(resolveStakeholder).filter(Boolean));docs.onepager=brandDocument(buildOnePager({brand,facts:prepareOnePager({inputs,fields:project.fields,who}),logoSvg:brandLogoHtml(brand)}),brand);return docs
  },{company,brand:checked});
  const result={company,logoPassed:checked.review?.checks.logoVisible,status:checked.status,font:checked.headingFont,body:checked.bodyFont,fontFilesLoaded:checked.review?.checks.fontFilesLoaded,views:[]};
  for(const[mode,html]of Object.entries(docs)){

@@ -9750,6 +9750,48 @@ var require_lib3 = __commonJS({
   }
 });
 
+// src/profileMedia.js
+function publicProfileUrl(value) {
+  try {
+    const u = new URL(value);
+    if (u.protocol !== "https:" || u.username || u.password || u.port || u.hostname === "localhost" || !u.hostname.includes(".") || /^\d+\.\d+\.\d+\.\d+$/.test(u.hostname)) return "";
+    return u.href;
+  } catch {
+    return "";
+  }
+}
+var profilePhotoData = (value) => typeof value === "string" && value.length < 8e5 && /^data:image\/(png|jpeg|webp);base64,[a-zA-Z0-9+/=]+$/.test(value) ? value : "";
+
+// src/stakeholderRequirements.js
+var REQUIREMENT_STATUS = ["Not started", "In progress", "Waiting for approval", "Actioned"];
+var REQUIREMENTS_CSS = '.client-requirements,.client-requirements ul{list-style:none;padding:0}.client-requirements li{display:grid;grid-template-columns:18px 1fr;gap:10px;padding:12px 0;border-bottom:1px solid var(--line2);align-items:start}.client-requirements small{grid-column:2;color:var(--dim);font-size:11px}.requirement-box{display:inline-block;width:14px;height:14px;border:1px solid currentColor;margin-top:4px}.requirement-box.is-done:after{content:"";display:block;width:7px;height:4px;border-left:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);margin:3px 2px}';
+function clientRequirements(stakeholder) {
+  return (Array.isArray(stakeholder?.requirements) ? stakeholder.requirements : []).filter((r) => r && typeof r.text === "string" && r.text.trim()).slice(0, 30).map((r, index) => ({ id: String(r.id || "requirement-" + index).slice(0, 80), text: r.text.slice(0, 1e3), status: REQUIREMENT_STATUS.includes(r.status) ? r.status : "Not started" }));
+}
+function clientStakeholder(s = {}) {
+  return {
+    key: s.key,
+    role: s.role || "Stakeholder",
+    pos: s.pos,
+    requirements: clientRequirements(s),
+    namedPeople: (s.namedPeople || []).map((p) => ({ name: p.name, title: p.title, photo: p.photo && profilePhotoData(p.photo.dataUrl) && publicProfileUrl(p.photo.sourceUrl) ? { dataUrl: profilePhotoData(p.photo.dataUrl), sourceUrl: publicProfileUrl(p.photo.sourceUrl) } : null })),
+    builtin: !!s.builtin,
+    lead: s.lead || [],
+    headline: s.headline,
+    needsToSee: clientRequirements(s).map((r) => r.text),
+    cares: "",
+    tag: "",
+    objection: "",
+    counter: "",
+    clientFacing: true
+  };
+}
+function requirementListHtml(s) {
+  const esc5 = (value) => String(value || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const rows = clientRequirements(s);
+  return rows.length ? '<ul class="client-requirements">' + rows.map((r) => '<li><span class="requirement-box ' + (r.status === "Actioned" ? "is-done" : "") + '" aria-hidden="true"></span><span>' + esc5(r.text) + "</span><small>" + esc5(r.status) + "</small></li>").join("") + "</ul>" : "<p>No requirements recorded yet.</p>";
+}
+
 // plugin-src/cli.mjs
 import fs from "node:fs";
 import os from "node:os";
@@ -16000,6 +16042,8 @@ function resolveBlock(b, env) {
       return {
         kind: "room",
         needs: (active.needsToSee || []).filter(Boolean),
+        clientFacing: active.clientFacing === true,
+        requirements: active.requirements || [],
         objection: active.objection,
         counter: active.counter
       };
@@ -16018,17 +16062,6 @@ function resolveSlides(deck, env) {
     const dropped = live.length > 0 && shown === 0 || blocks.length === 0;
     return { id: s.id, variant: s.variant || "plain", blocks, dropped, ...s.design ? { design: s.design } : {} };
   }).filter((s) => !s.dropped).map(({ dropped, ...s }) => s);
-}
-
-// src/profileMedia.js
-function publicProfileUrl(value) {
-  try {
-    const u = new URL(value);
-    if (u.protocol !== "https:" || u.username || u.password || u.port || u.hostname === "localhost" || !u.hostname.includes(".") || /^\d+\.\d+\.\d+\.\d+$/.test(u.hostname)) return "";
-    return u.href;
-  } catch {
-    return "";
-  }
 }
 
 // src/export/websiteFramework.js
@@ -16126,6 +16159,9 @@ function normalizeBrand(value) {
       const website = publicProfileUrl(c?.website);
       return website ? [{ name: String(c.name || "").slice(0, 120), website }] : [];
     }),
+    heroImage: safeAsset(b.heroImage),
+    heroAlt: typeof b.heroAlt === "string" ? b.heroAlt.slice(0, 240) : "",
+    heroSource: publicProfileUrl(b.heroSource),
     logo: safeAsset(b.logo),
     logoVariants: (Array.isArray(b.logoVariants) ? b.logoVariants : []).slice(0, 3).flatMap((v) => safeAsset(v?.logo) && v.logo.length < 25e4 ? [{ logo: safeAsset(v.logo), sourceUrl: publicProfileUrl(v.sourceUrl), authority: v.authority === "company-profile" ? "company-profile" : "official-site" }] : []),
     icon: safeAsset(b.icon),
@@ -16407,7 +16443,7 @@ function projectToCaseFile(project) {
     company: project.name,
     exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
     inputs,
-    stakeholders: project.stakeholders.map((s) => s.builtin && !s.edit && !s.pos && !s.namedPeople?.length ? s.key : s),
+    stakeholders: project.stakeholders.map((s) => s.builtin && !s.edit && !s.pos && !s.namedPeople?.length && !s.requirements?.length && !s.privateNotes ? s.key : s),
     people: project.people || {},
     deck: project.deck,
     brand: normalizeBrand(project.brand)
@@ -16592,7 +16628,7 @@ function resolveStakeholder(s) {
     counter: "-",
     ...s
   };
-  return base && { ...base, ...s.edit || {} };
+  return base && { ...base, ...s.edit || {}, requirements: s.requirements || [], namedPeople: s.namedPeople || [], privateNotes: s.privateNotes || "" };
 }
 
 // src/export/siteClient.js
@@ -16767,7 +16803,7 @@ function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, narrative
         return (DATA.viewMode === "website" ? graphic("alternative", [{ label: "Self-host open source", value: selfHost, display: VM.fmtMoney(selfHost) + "/yr" }, { label: "Spotify Portal", value: portal, display: VM.fmtMoney(portal) + "/yr" }]) + '<div class="alternative-flow" aria-label="Self-hosting annual cost calculation"><div><small>Platform engineers</small><strong>' + esc5(VM.fmtDec(Number(inputs.selfHostEngineers), 1)) + "</strong></div><span>\xD7</span><div><small>Fully loaded salary</small><strong>" + esc5(VM.fmtMoney(Number(inputs.selfHostSalary))) + "</strong></div><span>\u2192</span><div><small>Annual self-host cost</small><strong>" + esc5(VM.fmtMoney(selfHost)) + "</strong></div></div>" : '<div class="versus">' + row("Self-host open source", selfHost, "bad", F.selfHostCost.equation) + row("Spotify Portal", portal, "good", "") + "</div>") + '<p class="v-note">' + esc5(VM.fmtDec(Number(inputs.selfHostEngineers) || 0, 1)) + " platform engineers at " + esc5(VM.fmtMoney(Number(inputs.selfHostSalary) || 0)) + " fully loaded, permanently, for upgrades, patches and infrastructure. <strong>" + esc5(delta > 0 ? "Portal is " + VM.fmtMoney(delta) + "/yr cheaper before any of the value above." : "On these figures self-hosting is cheaper. The case has to rest on the value drivers, not on cost avoidance.") + '</strong></p><p class="eq">' + esc5(F.versusSelfHost.equation) + "</p>";
       }
       case "room":
-        return '<div class="cols"><div><h3>What they need to see</h3><ul>' + (st.needsToSee || []).filter(Boolean).map((n) => "<li>" + esc5(n) + "</li>").join("") + "</ul></div><div><h3>The objection</h3><blockquote>" + esc5(st.objection) + "</blockquote><h3>The counter</h3><p>" + esc5(st.counter) + "</p></div></div>";
+        return '<section class="client-requirements"><h3>Requirements</h3>' + ((st.requirements || []).length ? "<ul>" + st.requirements.map((r) => '<li><span aria-hidden="true" class="requirement-box ' + (r.status === "Actioned" ? "is-done" : "") + '"></span><span>' + esc5(r.text) + "</span><small>" + esc5(r.status) + "</small></li>").join("") + "</ul>" : "<p>No requirements recorded yet.</p>") + "</section>";
       default:
         return "";
     }
@@ -17233,6 +17269,8 @@ function createWebsiteMotion(root, env = window, { pageScroll = false } = {}) {
 
 // src/export/websiteEditorial.js
 var EDITORIAL_CSS = `
+.landing-art.cover-art.has-brand-image{position:relative;width:min(1120px,88vw);margin:0 auto 24px}.cover-art .brand-logo-overlay{position:absolute;left:24px;bottom:24px;background:var(--bg);padding:18px 24px}.brand-cover-image{width:min(1120px,88vw);height:clamp(220px,38vw,480px);margin:0 auto 44px;position:relative;overflow:hidden}.brand-cover-image img{width:100%;height:100%;object-fit:cover}.cover-art.has-brand-image .brand-cover-image{margin:0;width:100%}.brand-cover-image figcaption{position:absolute;bottom:8px;right:12px;font-size:10px;background:var(--bg);color:var(--ink);padding:4px 8px}.brand-cover-image a{color:inherit}.view-website .slide[data-kind="cover"]:has(.brand-cover-image){padding-top:56px;min-height:100svh}.view-website .slide[data-kind="cover"]:has(.brand-cover-image) .landing-logo img{height:72px!important;max-height:72px!important;max-width:220px!important;width:auto!important}.client-requirements{list-style:none!important;padding:0!important;margin:16px 0}.client-requirements li{display:grid;grid-template-columns:18px 1fr;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);align-items:start}.client-requirements small{grid-column:2;color:var(--dim);font-size:11px}.requirement-box{display:inline-block;width:14px;height:14px;border:1px solid currentColor;margin-top:4px;flex:none}.requirement-box.is-done:after{content:'';display:block;width:7px;height:4px;border-left:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);margin:3px 2px}@media(max-width:799px){.relation-center{width:88px;padding:8px}.relation-node{width:116px}}.relation-badge img{width:100%;height:100%;object-fit:cover;border-radius:50%}.view-website .slide[data-kind="overview"] h2{font-size:clamp(32px,4.5vw,60px);max-width:19ch}.view-website .overview-bento{border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+
 html:has(.view-website){height:auto;scroll-behavior:smooth;scroll-padding-top:120px}
 body.view-website{display:block;height:auto;min-height:100svh;overflow:visible;background:var(--bg)}
 .view-website main{height:auto!important;overflow:visible;padding:0;min-height:0}
@@ -17351,8 +17389,10 @@ body.view-website{display:block;height:auto;min-height:100svh;overflow:visible;b
 
 // src/export/websiteLanding.js
 var esc = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-function landingArtwork({ company, logo }) {
+function landingArtwork({ company, logo, brand }) {
   const identity = logo || '<span class="landing-initial">' + esc(String(company || "C").slice(0, 1)) + "</span>";
+  const b = normalizeBrand(brand);
+  if (b.heroImage) return '<div class="landing-art cover-art has-brand-image"><figure class="brand-cover-image"><img src="' + b.heroImage + '" alt="' + esc(b.heroAlt || company + " brand image") + '">' + (b.heroSource ? '<figcaption><a href="' + esc(b.heroSource) + '" target="_blank" rel="noreferrer noopener">Image source</a></figcaption>' : "") + '</figure><div class="landing-logo brand-logo-overlay">' + identity + "</div></div>";
   return '<div class="landing-art cover-art"><div class="landing-logo">' + identity + "</div></div>";
 }
 
@@ -17491,6 +17531,7 @@ var GUIDE_RINGS = [
 // src/export/stakeholderJourney.js
 var esc2 = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 function stakeholderJourneyHtml(company, logo, stakeholders) {
+  stakeholders = stakeholders.map(clientStakeholder);
   const positions = defaultPositions(stakeholders.length);
   const nodes = stakeholders.map((s, i) => {
     const pos = s.pos && Number.isFinite(s.pos.x) && Number.isFinite(s.pos.y) ? s.pos : positions[i];
@@ -17499,8 +17540,8 @@ function stakeholderJourneyHtml(company, logo, stakeholders) {
     return { s, i, x, y, name };
   });
   const initial = (s) => String(s).split(/[^a-zA-Z]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
-  const diagram = '<div class="relation-map" aria-label="Stakeholder map"><svg class="relation-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' + nodes.map((n) => '<line data-line="' + n.i + '" x1="50" y1="50" x2="' + n.x + '" y2="' + n.y + '" vector-effect="non-scaling-stroke"/>').join("") + '</svg><div class="relation-center">' + (logo ? "<div>" + logo + "</div>" : "") + "<small>Customer</small><strong>" + esc2(company) + "</strong></div>" + nodes.map((n) => '<button class="relation-node" data-journey-node="' + n.i + '" data-x="' + n.x + '" data-y="' + n.y + '" style="left:' + n.x + "%;top:" + n.y + '%" aria-label="Explore ' + esc2(n.name || n.s.role) + '" aria-pressed="false"><span class="relation-badge" aria-hidden="true">' + esc2(initial(n.s.role)) + "</span><span><strong>" + esc2(n.name || n.s.role) + "</strong>" + (n.name ? "<small>" + esc2(n.s.role) + "</small>" : "") + "</span></button>").join("") + "</div>";
-  const briefs = nodes.map((n) => '<template data-journey-brief="' + n.i + '"><article class="journey-brief"><p class="label">' + esc2(n.s.role) + "</p><h3>" + esc2(n.name || n.s.role) + '</h3><p class="journey-cares">' + esc2(n.s.cares || "Priorities not yet specified.") + "</p><h4>What they need to see</h4>" + ((n.s.needsToSee || []).length ? "<ul>" + n.s.needsToSee.map((v) => "<li>" + esc2(v) + "</li>").join("") + "</ul>" : "<p>Not yet specified.</p>") + '<details class="journey-response"><summary>Objection &amp; response</summary><h4>Likely objection</h4><p>' + esc2(n.s.objection && n.s.objection !== "-" ? n.s.objection : "Not yet specified.") + "</p><h4>The response</h4><p>" + esc2(n.s.counter && n.s.counter !== "-" ? n.s.counter : "Not yet specified.") + "</p></details></article></template>").join("");
+  const diagram = '<div class="relation-map" aria-label="Stakeholder map"><svg class="relation-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' + nodes.map((n) => '<line data-line="' + n.i + '" x1="50" y1="50" x2="' + n.x + '" y2="' + n.y + '" vector-effect="non-scaling-stroke"/>').join("") + '</svg><div class="relation-center">' + (logo ? "<div>" + logo + "</div>" : "") + "<small>Customer</small><strong>" + esc2(company) + "</strong></div>" + nodes.map((n) => '<button class="relation-node" data-journey-node="' + n.i + '" data-x="' + n.x + '" data-y="' + n.y + '" style="left:' + n.x + "%;top:" + n.y + '%" aria-label="Explore ' + esc2(n.name || n.s.role) + '" aria-pressed="false"><span class="relation-badge" aria-hidden="true">' + ((n.s.namedPeople || []).find((p) => p.photo)?.photo ? '<img src="' + n.s.namedPeople.find((p) => p.photo).photo.dataUrl + '" alt="' + esc2(n.name) + '">' : esc2(initial(n.s.role))) + "</span><span><strong>" + esc2(n.name || n.s.role) + "</strong>" + (n.name ? "<small>" + esc2(n.s.role) + "</small>" : "") + "</span></button>").join("") + "</div>";
+  const briefs = nodes.map((n) => '<template data-journey-brief="' + n.i + '"><article class="journey-brief"><h3>' + esc2(n.name || n.s.role) + "</h3><p>" + esc2(n.s.role) + "</p><h4>Requirements</h4>" + requirementListHtml(n.s) + "</article></template>").join("");
   return '<div class="stakeholder-journey" data-count="' + nodes.length + '" style="--journey-stops:' + Math.max(1, nodes.length + 1) + '"><div class="journey-stage"><div class="journey-map">' + diagram + '</div><div class="journey-copy" tabindex="-1" aria-label="Stakeholder brief"></div><div class="journey-controls"><button data-journey-reset>Full map</button><span class="journey-step-label">Scroll to explore</span><button data-journey-next>Next stakeholder \u2193</button></div></div>' + briefs + "</div>";
 }
 function mountStakeholderJourney(root, env = window) {
@@ -17533,14 +17574,14 @@ function mountStakeholderJourney(root, env = window) {
     copy.hidden = index < 0;
     nodes.forEach((node, i) => {
       const selected = i === index, right = index % 2 === 1;
-      const x = index < 0 ? Number(node.dataset.x) : selected ? right ? 14 : 86 : Math.min(84, Math.max(16, Number(node.dataset.x) + (right ? 7 : -7)));
+      const x = index < 0 || mobile() ? Number(node.dataset.x) : selected ? right ? 14 : 86 : Math.min(84, Math.max(16, Number(node.dataset.x) + (right ? 7 : -7)));
       node.style.left = x + "%";
-      node.style.top = (selected ? 50 : Number(node.dataset.y)) + "%";
+      node.style.top = (selected && !mobile() ? 50 : Number(node.dataset.y)) + "%";
       node.classList.toggle("is-selected", selected);
       node.setAttribute("aria-pressed", String(selected));
       const line = journey.querySelector('[data-line="' + i + '"]');
       line?.setAttribute("x2", String(x));
-      line?.setAttribute("y2", selected ? "50" : node.dataset.y);
+      line?.setAttribute("y2", selected && !mobile() ? "50" : node.dataset.y);
       line?.classList.toggle("is-selected", selected);
     });
     journey.querySelector(".journey-step-label").textContent = index < 0 ? "Scroll to explore" : String(index + 1).padStart(2, "0") + " / " + String(nodes.length).padStart(2, "0");
@@ -17615,9 +17656,12 @@ function mountStakeholderJourney(root, env = window) {
 
 // src/export/onePager.js
 var esc3 = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-function buildOnePager({ facts: f, logoSvg = "", faviconSvg = "" }) {
+function buildOnePager({ facts: f, logoSvg = "", faviconSvg = "", brand }) {
   const rows = (f.groups || []).flatMap((g) => g.rows);
   const alternative = f.versus;
+  const b = normalizeBrand(brand);
+  const accentText = brand ? contrast(b.primary, b.background) >= 4.5 ? b.primary : b.text : "currentColor";
+  const requirements = clientRequirements({ requirements: f.requirements });
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc3(f.company)} \xB7 One-pager</title>
 ${faviconSvg ? `<link rel="icon" href="data:image/svg+xml,${encodeURIComponent(faviconSvg)}">` : ""}
 <style>
@@ -17635,12 +17679,13 @@ h1{font-size:34px;line-height:1.05;letter-spacing:-.03em;margin:0 0 10px;font-we
 .brief-audience{border-top:1px solid var(--line2,#dce5df);padding-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:20px}.brief-audience ul{margin:0;padding-left:15px;font-size:10px;line-height:1.6}.brief-audience li{margin-bottom:5px}blockquote{font-size:11px;margin:0 0 10px;padding-left:11px;border-left:3px solid var(--accent,#16896c);font-style:italic}.brief-counter{font-size:10px;margin:0;line-height:1.6}
 .brief-footer{position:absolute;bottom:7mm;left:12mm;right:12mm;display:flex;justify-content:space-between;gap:20px;font-size:8px;color:var(--dim,#607168);padding-top:8px;border-top:1px solid var(--line2,#dce5df)}
 @media print{html,body{background:transparent!important;height:auto}.onepager-paper{width:210mm!important;height:297mm!important;margin:0;box-shadow:none}.page{transform:none!important}}
+:root{--brief-accent-text:${accentText}}.page h2,.page .brief-stat.good strong,.page .brief-total strong{color:var(--brief-accent-text)!important}.brief-driver .fill{background:var(--brief-accent-text)!important}.brief-brand-image{margin:0 0 12px;height:32mm;overflow:hidden}.brief-brand-image img{width:100%;height:100%;object-fit:cover;object-position:center 22%}.brief-top{border-bottom:2px solid var(--accent)}.brief-hero h1{font-size:38px}.brief-stats{gap:0;border-top:1px solid var(--line2);border-bottom:1px solid var(--line2);margin-bottom:18px}.brief-stat{border:0;border-radius:0;background:transparent;padding:12px 8px;border-right:1px solid var(--line2)}.brief-stat:last-child{border-right:0}.brief-comparison{border:0;border-radius:0;border-top:2px solid var(--accent);padding:12px;background:var(--panel)}.brief-requirements{list-style:none!important;padding:0!important}.brief-requirements li{display:grid;grid-template-columns:12px 1fr;gap:6px;margin:6px 0}.brief-requirements small{grid-column:2;font-size:8px;color:var(--dim)}.requirement-box{display:block;border:1px solid currentColor;width:9px;height:9px;margin-top:3px}.requirement-box.is-done{background:var(--accent)}.brief-audience{gap:18px}.brief-driver .track,.brief-driver .fill{border-radius:0}
 </style></head><body><div class="onepager-paper"><article class="page"><div class="onepager-content">
 <header class="brief-top"><div class="brief-logo">${logoSvg}</div><span>Executive brief<br>${esc3(f.date)}</span></header>
-<section class="brief-hero"><p class="eyebrow">Spotify Portal for Backstage \xB7 ${esc3(f.role)}</p><h1>${esc3(f.company)}</h1>${f.headline ? `<p class="brief-headline">${esc3(f.headline)}</p>` : ""}<p class="cares">${esc3(f.cares)}</p>${f.caseContext ? `<p class="cares">Scope for this case: ${esc3(f.caseContext)}</p>` : ""}${f.priority || f.archetype ? `<div class="brief-context">${f.priority ? `<span>Priority: ${esc3(f.priority)}</span>` : ""}${f.archetype ? `<span>${esc3(f.archetype)}</span>` : ""}</div>` : ""}</section>
+${b.heroImage ? `<figure class="brief-brand-image"><img src="${b.heroImage}" alt="${esc3(b.heroAlt || f.company + " brand image")}"></figure>` : ""}<section class="brief-hero"><p class="eyebrow">Spotify Portal for Backstage \xB7 ${esc3(f.role)}</p><h1>${esc3(f.company)}</h1>${f.headline ? `<p class="brief-headline">${esc3(f.headline)}</p>` : ""}<p class="cares">${esc3(f.cares)}</p>${f.caseContext ? `<p class="cares">Scope for this case: ${esc3(f.caseContext)}</p>` : ""}${f.priority || f.archetype ? `<div class="brief-context">${f.priority ? `<span>Priority: ${esc3(f.priority)}</span>` : ""}${f.archetype ? `<span>${esc3(f.archetype)}</span>` : ""}</div>` : ""}</section>
 ${f.stats.length ? `<p class="cares" style="margin-bottom:10px">Modeled value includes engineering capacity; it is not automatically a cash saving.</p><section class="brief-stats" aria-label="Business impact">${f.stats.map((s) => `<div class="brief-stat ${s.tone || ""}"><span>${esc3(s.label)}</span><strong>${esc3(s.value)}</strong></div>`).join("")}</section>` : ""}
-${rows.length || alternative ? `<div class="brief-main">${rows.length ? `<section class="brief-section"><h2>Where the value comes from</h2>${rows.map((d) => `<div class="brief-driver"><div class="brief-driver-top"><span>${esc3(d.label)}</span><strong>${esc3(d.valueStr)}</strong></div><div class="track"><div class="fill" style="width:${Math.max(0, Math.min(100, d.pct)).toFixed(1)}%"></div></div><p class="brief-equation">${esc3(d.detail)}</p></div>`).join("")}<div class="brief-total"><span>Total annual value</span><strong>${esc3(f.total)}</strong></div></section>` : ""}${alternative ? `<section class="brief-section brief-comparison"><h2>Portal versus self-hosting</h2>${alternative.rows.map((r) => `<div class="brief-comparison-row"><span>${esc3(r.name)}</span><strong>${esc3(r.valueStr)}</strong></div>`).join("")}<p>${esc3(alternative.lead)}</p><p class="verdict">${esc3(alternative.verdict)}</p></section>` : ""}</div>` : ""}
-<section class="brief-audience"><div><h2>What ${esc3(f.role)} needs to see</h2><ul>${f.needs.map((n) => `<li>${esc3(n)}</li>`).join("")}</ul></div><div><h2>The objection</h2><blockquote>${esc3(f.objection)}</blockquote><h2>The response</h2><p class="brief-counter">${esc3(f.counter)}</p></div></section>
+${rows.length || alternative ? `<div class="brief-main">${rows.length ? `<section class="brief-section"><h2>Value drivers</h2>${rows.map((d) => `<div class="brief-driver"><div class="brief-driver-top"><span>${esc3(d.label)}</span><strong>${esc3(d.valueStr)}</strong></div><div class="track"><div class="fill" style="width:${Math.max(0, Math.min(100, d.pct)).toFixed(1)}%"></div></div><p class="brief-equation">${esc3(d.detail)}</p></div>`).join("")}<div class="brief-total"><span>Total annual value</span><strong>${esc3(f.total)}</strong></div></section>` : ""}${alternative ? `<section class="brief-section brief-comparison"><h2>Portal versus self-hosting</h2>${alternative.rows.map((r) => `<div class="brief-comparison-row"><span>${esc3(r.name)}</span><strong>${esc3(r.valueStr)}</strong></div>`).join("")}<p>${esc3(alternative.lead)}</p><p class="verdict">${esc3(alternative.verdict)}</p></section>` : ""}</div>` : ""}
+<section class="brief-audience"><div><h2>Requirements \xB7 ${esc3(f.role)}</h2>${requirements.length ? '<ul class="brief-requirements">' + requirements.slice(0, 3).map((r) => '<li><span class="requirement-box ' + (r.status === "Actioned" ? "is-done" : "") + '" aria-hidden="true"></span><span>' + esc3(r.text.length > 180 ? r.text.slice(0, 177) + "\u2026" : r.text) + "</span><small>" + esc3(r.status) + "</small></li>").join("") + "</ul>" + (requirements.length > 3 ? '<p class="brief-counter">' + (requirements.length - 3) + " more requirements in the Live Room.</p>" : "") : '<p class="brief-counter">No requirements recorded yet.</p>'}</div><div><h2>The decision</h2><p class="brief-counter">Compare the proposed operating model with running Backstage in-house, using the scope and figures above. Engineering capacity is valued separately from any confirmed cash saving.</p></div></section>
 </div><footer class="brief-footer"><span>${esc3(f.company)} \xB7 Spotify Portal for Backstage</span><span>Business case \xB7 1 / 1</span></footer></article></div>
 <script>
 (function(){function fit(){var page=document.querySelector('.page'),content=document.querySelector('.onepager-content');document.documentElement.style.setProperty('--paper-scale',Math.min(1,Math.max(.15,(window.innerWidth-32)/793.7)));document.documentElement.style.setProperty('--content-fit','1');for(var i=0;i<3;i++){var available=page.clientHeight-120,ratio=Math.min(1,available/Math.max(1,content.scrollHeight));document.documentElement.style.setProperty('--content-fit',String(ratio));}}window.addEventListener('resize',fit);window.addEventListener('beforeprint',fit);if(document.fonts)document.fonts.ready.then(fit);fit();})();
@@ -17657,7 +17702,8 @@ function stripModules(src) {
 function buildWebsite({ company, slides, stakeholders, activeKey, inputs, openFields, sliders, logoSvg, faviconSvg, vmSource, viewMode = "website", websiteBrand }) {
   viewMode = ["website", "pdf", "slides"].includes(viewMode) ? viewMode : "website";
   if (viewMode === "website") slides = websiteStory(slides).map((s) => ({ ...s, blocks: s.blocks.map((b) => ({ ...b, design: b.design?.color || b.design?.background ? websiteBlockDesign(b.design, websiteBrand) : b.design })) }));
-  const data = { company, slides, stakeholders, activeKey, inputs, openFields, sliders: sliders || [], logo: logoSvg || "", viewMode, layout: viewMode === "website" ? slides.map(websiteSection) : [], artwork: viewMode === "website" ? landingArtwork({ company, logo: logoSvg, roles: stakeholders, cover: true }) : "" };
+  stakeholders = stakeholders.map(clientStakeholder);
+  const data = { company, slides, stakeholders, activeKey, inputs, openFields, sliders: sliders || [], logo: logoSvg || "", viewMode, layout: viewMode === "website" ? slides.map(websiteSection) : [], artwork: viewMode === "website" ? landingArtwork({ company, logo: logoSvg, roles: stakeholders, brand: websiteBrand, cover: true }) : "" };
   const safe = (obj) => JSON.stringify(obj).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
   data.fontStacks = Object.fromEntries(slides.flatMap((s) => s.blocks).filter((b) => b.design?.font).map((b) => [b.design.font, fontStack(b.design.font)]));
   data.journeyHtml = viewMode === "website" ? stakeholderJourneyHtml(company, logoSvg, stakeholders) : "";
@@ -17672,7 +17718,8 @@ return {computeModel:computeModel,STAKEHOLDERS:STAKEHOLDERS,PAIRS:PAIRS,driversB
 ${iconLink(faviconSvg)}
 ${needsOutfit ? '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap">' : ""}
 <title>${esc4(company)} \xB7 Business case</title>
-<style>${SITE_CSS}
+<style>${REQUIREMENTS_CSS}
+${SITE_CSS}
 ${VIEW_CSS}
 ${viewMode === "website" ? WEBSITE_CSS + EDITORIAL_CSS + GRAPHIC_CSS + websiteThemeCss(websiteBrand) : ""}</style></head>
 <body class="view-${viewMode}">
@@ -18089,27 +18136,8 @@ async function layoutBlock(b, deps, theme = DEFAULTS) {
       };
     }
     case "room": {
-      const colW = (CW - 0.6) / 2;
-      const left = b.needs.reduce((h, n) => h + textHeight(n, 15, colW - 0.3) + 0.08, 0) + 0.45;
-      const right = 0.45 + textHeight(b.objection, 16, colW - 0.4) + 0.3 + 0.45 + textHeight(b.counter, 15, colW) + 0.1;
-      return {
-        h: Math.max(left, right) + 0.2,
-        draw: (s, y, k) => {
-          s.addText("WHAT THEY NEED TO SEE", { x: MX, y, w: colW, h: 0.3 * k, fontFace: FONT3, fontSize: 10 * k, bold: true, color: C2.dim, charSpacing: 1, margin: 0 });
-          s.addText(
-            b.needs.map((n) => ({ text: n, options: { bullet: { indent: 18 }, breakLine: true, fontSize: 15 * k, color: C2.ink, paraSpaceAfter: 5 } })),
-            { x: MX, y: y + 0.4 * k, w: colW, h: (left - 0.4) * k, fontFace: FONT3, valign: "top", margin: 0 }
-          );
-          const rx = MX + colW + 0.6;
-          s.addText("THE OBJECTION", { x: rx, y, w: colW, h: 0.3 * k, fontFace: FONT3, fontSize: 10 * k, bold: true, color: C2.dim, charSpacing: 1, margin: 0 });
-          const qh = textHeight(b.objection, 16, colW - 0.4) + 0.2;
-          s.addShape("rect", { x: rx, y: y + 0.4 * k, w: 0.05, h: qh * k, fill: { color: C2.accent }, line: { color: C2.accent, width: 0 } });
-          s.addText(b.objection, { x: rx + 0.2, y: y + 0.4 * k, w: colW - 0.2, h: qh * k, fontFace: FONT3, fontSize: 16 * k, italic: true, color: C2.strong, valign: "middle", margin: 0 });
-          const cy = y + (0.4 + qh + 0.3) * k;
-          s.addText("THE COUNTER", { x: rx, y: cy, w: colW, h: 0.3 * k, fontFace: FONT3, fontSize: 10 * k, bold: true, color: C2.dim, charSpacing: 1, margin: 0 });
-          s.addText(b.counter, { x: rx, y: cy + 0.4 * k, w: colW, h: textHeight(b.counter, 15, colW) * k, fontFace: FONT3, fontSize: 15 * k, color: C2.ink, valign: "top", margin: 0 });
-        }
-      };
+      const lines = (b.requirements || []).map((r) => r.text + " \u2014 " + r.status), copy = "Requirements\n" + (lines.join("\n") || "No requirements recorded yet.");
+      return { h: Math.max(0.8, textHeight(copy, 15, CW)), draw: (s, y, k) => s.addText(copy, { x: MX, y, w: CW, h: Math.max(0.8, textHeight(copy, 15, CW)) * k, fontFace: FONT3, fontSize: 15 * k, color: C2.ink, margin: 0 }) };
     }
     default:
       return { h: 0, draw: () => {
@@ -18174,6 +18202,7 @@ async function buildPptx({ company, slides, deps, brand }) {
 // src/export/prepare.js
 var pickAudience = (stakeholders, key) => stakeholders.find((s) => s.key === key) || stakeholders[0] || NO_ONE;
 function prepareOnePager({ inputs, fields, who, date }) {
+  who = clientStakeholder(who);
   const env = buildEnv(inputs, fields, who);
   const block2 = (type) => resolveBlock({ type }, env);
   const room = block2("room");
@@ -18184,7 +18213,7 @@ function prepareOnePager({ inputs, fields, who, date }) {
     role: who.role,
     archetype: inputs.archetype || "",
     priority: inputs.strategicPriority || "",
-    headline: env.ctx.headline,
+    headline: !env.model.figures.versusSelfHost.incomplete ? env.ctx.decisionHeadline : !env.model.figures.totalValue.incomplete ? env.ctx.valueHeadline : "",
     cares: who.cares,
     stats: block2("stats").items,
     groups: drivers.groups,
@@ -18193,6 +18222,7 @@ function prepareOnePager({ inputs, fields, who, date }) {
     total: drivers.total,
     versus: ((v) => v.incomplete ? null : v)(block2("versus")),
     needs: room.needs,
+    requirements: who.requirements,
     objection: room.objection,
     counter: room.counter,
     date: date || (/* @__PURE__ */ new Date()).toLocaleDateString(void 0, { year: "numeric", month: "long", day: "numeric" })
@@ -18211,16 +18241,17 @@ function prepareWebsite({ company, deck, inputs, fields, stakeholders, who }) {
   return {
     company,
     slides: deck,
-    stakeholders: stakeholders.map((s) => ({
+    stakeholders: stakeholders.map(clientStakeholder).map((s) => ({
       key: s.key,
       role: s.role,
-      namedPeople: (s.namedPeople || []).map((p) => ({ name: p.name, title: p.title })),
+      namedPeople: s.namedPeople || [],
       pos: s.pos,
       tag: s.tag || "",
       cares: s.cares || "",
       objection: s.objection || "",
       counter: s.counter || "",
       needsToSee: s.needsToSee || [],
+      requirements: s.requirements || [],
       lead: s.lead || [],
       builtin: STAKEHOLDERS.some((b) => b.key === s.key)
     })),
@@ -18821,7 +18852,7 @@ async function cmdBuild(pos, flags) {
   const warnings = [];
   if (hasCompanyLogo && !rasterLogo && formats.includes("pptx")) warnings.push("The company logo is not PNG/JPEG. PPTX omits it; supply a PNG/JPEG variant for an embedded logo. HTML outputs retain the original asset.");
   if (formats.includes("pptx")) {
-    const env = buildEnv(inputs, project.fields, who);
+    const env = buildEnv(inputs, project.fields, clientStakeholder(who));
     const pptx = await buildPptx({
       company,
       brand,
@@ -18839,7 +18870,7 @@ async function cmdBuild(pos, flags) {
   if (formats.includes("onepager")) {
     const facts = prepareOnePager({ inputs, fields: project.fields, who });
     const out = path.join(outDir, `${name}-one-pager.html`);
-    fs.writeFileSync(out, brandDocument(buildOnePager({ facts, logoSvg: companyLogo, faviconSvg: favicon_default }), brand));
+    fs.writeFileSync(out, brandDocument(buildOnePager({ facts, brand: project.brand, logoSvg: companyLogo, faviconSvg: favicon_default }), brand));
     written.push({ format: "onepager", file: out, bytes: fs.statSync(out).size, audience: who.role });
     if (has(flags, "pdf")) {
       const pdf = out.replace(/\.html$/, ".pdf");

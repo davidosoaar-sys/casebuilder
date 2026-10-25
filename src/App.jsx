@@ -145,6 +145,7 @@ export default function App({ account }) {
     onAdd={person => update(p => addPersonToDeal(p, person))}
     onInput={suggestion => setPendingPersonInput({ dealId: project.id, suggestion })} />
   function navigate(next) {
+    if(next==='deck')next='website' // Case Artifacts opens the Live Room; editor remains available.
     setStage(null)
     if (next === 'settings') { setSettingsOpen(true); return } // overlay: never leaves the current page
     if (['projects', 'dashboard', 'research', 'waitlist'].includes(next)) { saving.flush(); setCurrentId(null) }
@@ -375,7 +376,7 @@ export default function App({ account }) {
             key={project.id}
             project={project}
             audienceKey={websiteAudience}
-            onView={(format, audience) => { setWebsiteAudience(audience); setPreviewRequest(format); setView('deck') }}
+            onView={(format, audience) => { setWebsiteAudience(audience); setPreviewRequest(format==='editor'?null:format); setView('deck') }}
             inputs={inputs}
             onDeck={fn => update(p => ({ deck: fn(p.deck) }))}
             onSite={site => update({ site })}

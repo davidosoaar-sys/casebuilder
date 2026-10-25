@@ -1,3 +1,4 @@
+import {clientStakeholder} from '../src/stakeholderRequirements.js'
 // casebuilder: the command line behind the Claude plugin. It reads and writes
 // a case file (see src/caseFile.js), runs the value model, and builds the
 // deliverables with exactly the code the standalone app uses. It is bundled into
@@ -468,7 +469,7 @@ async function cmdBuild(pos, flags) {
   if(hasCompanyLogo&&!rasterLogo&&formats.includes('pptx'))warnings.push('The company logo is not PNG/JPEG. PPTX omits it; supply a PNG/JPEG variant for an embedded logo. HTML outputs retain the original asset.')
 
   if (formats.includes('pptx')) {
-    const env = buildEnv(inputs, project.fields, who)
+    const env = buildEnv(inputs, project.fields, clientStakeholder(who))
     const pptx = await buildPptx({
       company,
       brand,
@@ -483,7 +484,7 @@ async function cmdBuild(pos, flags) {
   if (formats.includes('onepager')) {
     const facts = prepareOnePager({ inputs, fields: project.fields, who })
     const out = path.join(outDir, `${name}-one-pager.html`)
-    fs.writeFileSync(out, brandDocument(buildOnePager({ facts, logoSvg:companyLogo, faviconSvg }),brand))
+    fs.writeFileSync(out, brandDocument(buildOnePager({ facts, brand:project.brand, logoSvg:companyLogo, faviconSvg }),brand))
     written.push({ format: 'onepager', file: out, bytes: fs.statSync(out).size, audience: who.role })
     if (has(flags, 'pdf')) {
       const pdf = out.replace(/\.html$/, '.pdf')

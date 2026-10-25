@@ -29,5 +29,5 @@ export function resolveStakeholder(s) {
         counter: '-',
         ...s
       }
-  return base && { ...base, ...(s.edit || {}) }
+  return base && { ...base, ...(s.edit || {}), requirements:s.requirements||[], namedPeople:s.namedPeople||[], privateNotes:s.privateNotes||'' }
 }

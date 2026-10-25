@@ -1391,6 +1391,8 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
 /* ================= sidebar footer: Settings at bottom left */
 .sidebar-footer { width: 100%; }
+.platform-version { display: block; padding: 0 8px; color: var(--muted, #777); font-size: 11px; line-height: 1.5; white-space: nowrap; font-variant-numeric: tabular-nums; }
+:root[data-sidebar="collapsed"] .platform-version { padding: 0; font-size: 9px; }
 .side-settings { margin: 0; }
 .side-settings-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
 .side-settings-text small { font-size: 11px; font-weight: 400; color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1983,3 +1985,5 @@ a.research-cite:hover { background: var(--accent); color: var(--accent-ink) !imp
 
 .wl-approve-input { flex: 1; min-width: 220px; width: auto !important; }
 .wl-approved { margin: 10px 0 0 !important; color: var(--accent) !important; }
+
+.stakeholder-requirements{margin:28px 0}.stakeholder-requirements article{padding:20px 0;border-top:1px solid var(--line)}.requirement-edit{display:flex;align-items:center;gap:12px;margin:12px 0;flex-wrap:wrap}.requirement-edit>span{flex:1;min-width:160px;overflow-wrap:anywhere}.stakeholder-requirements form{display:flex;gap:10px;margin:12px 0}.stakeholder-requirements form input{flex:1;min-width:0}.stakeholder-requirements input:not([type=checkbox]),.stakeholder-requirements select,.stakeholder-requirements textarea{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:9px;font:inherit}.stakeholder-requirements label{display:block;font-size:12px;color:var(--ink-dim);margin-top:16px}.stakeholder-requirements textarea{display:block;width:100%;margin-top:8px;resize:vertical}.map-badge img{width:100%;height:100%;border-radius:50%;object-fit:cover}

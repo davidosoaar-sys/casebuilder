@@ -1,3 +1,4 @@
+import {profilePhotoData} from '../profileMedia.js'
 import React, { useMemo, useRef, useState } from 'react'
 import { resolve, AddStakeholder } from './Deck.jsx'
 import AppLogo from './AppLogo.jsx'
@@ -34,7 +35,7 @@ export default function StakeholderMap({
   const items = stakeholders
     .map(s => {
       const r = resolve(s)
-      return r && { ...r, pos: s.pos }
+      return r && { ...r, pos: s.pos, namedPeople:s.namedPeople||[] }
     })
     .filter(Boolean)
   const n = items.length
@@ -121,7 +122,7 @@ export default function StakeholderMap({
               >
                 ×
               </button>
-              <span className="map-badge" aria-hidden="true">{initials(s.role)}</span>
+              <span className="map-badge" aria-hidden="true">{s.namedPeople?.find(p=>profilePhotoData(p.photo?.dataUrl))?<img src={s.namedPeople.find(p=>profilePhotoData(p.photo?.dataUrl)).photo.dataUrl} alt=""/>:initials(s.role)}</span>
               <span className="map-text">
                 <strong>{s.role}</strong>
                 <span className="map-people">

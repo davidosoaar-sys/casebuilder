@@ -17,7 +17,7 @@ export function buildSiteHtml({ project, inputs, activeKey, mode = 'website' }) 
   const company = inputs.companyName || project.name
   const stakeholders = project.stakeholders.map(s=>{
     const resolved=resolveStakeholder(s)
-    return resolved ? {...resolved,pos:s.pos,namedPeople:(s.namedPeople||[]).map(p=>({name:p.name,title:p.title}))} : null
+    return resolved ? {...resolved,pos:s.pos,namedPeople:s.namedPeople||[],requirements:s.requirements||[]} : null
   }).filter(Boolean)
   const who = pickAudience(stakeholders, activeKey)
   const args = prepareWebsite({ company, deck: project.deck, inputs, fields: project.fields, stakeholders, who })

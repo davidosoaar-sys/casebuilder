@@ -1,4 +1,5 @@
 import assets from './sampleBrandAssets.js'
+import nikeImagery from './sampleNikeImagery.json' with { type: 'json' }
 import { DEMO_VALUES } from './valueModel.js'
 import { normalizeBrand } from './brand.js'
 
@@ -37,5 +38,20 @@ export function createSampleCase(definition, createProject) {
     if(b.style==='note'&&b.text.startsWith('Grouped under'))text='Compare where the modeled annual value comes from. Open the arithmetic to inspect every driver, or adjust assumptions to test a different case.'
     return {...b,text,design:{...b.design,font:['hero','headline','title'].includes(b.style)?project.brand.headingFont:d.bodyFont,color:['hero','headline'].includes(b.style)?d.primary:d.text}}
   })}))
-  return project
+  return refreshNikeSample(project)
+}
+
+// Add the new sample presentation without replacing saved inputs or authored slides.
+export function refreshNikeSample(project) {
+  if (!project.sample || project.sampleCaseKey !== 'nike' || project.nikePresentationVersion === 1) return project
+  return { ...project, nikePresentationVersion: 1,
+    brand: normalizeBrand({ ...project.brand, ...(!project.brand?.heroImage ? nikeImagery : {}) }),
+    stakeholders: project.stakeholders.map(s => s.requirements?.length ? s : {
+      ...s, requirements: s.key === 'cto' ? [
+        { id: 'nike-demo-ownership', text: 'Illustrative: validate service ownership and onboarding workflow', status: 'In progress' }
+      ] : s.key === 'finance' ? [
+        { id: 'nike-demo-budget', text: 'Illustrative: approve the annual platform budget', status: 'Waiting for approval' }
+      ] : []
+    })
+  }
 }

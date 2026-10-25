@@ -44,7 +44,7 @@ export function projectToCaseFile(project) {
     company: project.name,
     exportedAt: new Date().toISOString(),
     inputs,
-    stakeholders: project.stakeholders.map(s => (s.builtin && !s.edit && !s.pos && !s.namedPeople?.length ? s.key : s)),
+    stakeholders: project.stakeholders.map(s => (s.builtin && !s.edit && !s.pos && !s.namedPeople?.length && !s.requirements?.length && !s.privateNotes ? s.key : s)),
     people: project.people || {},
     deck: project.deck,
     brand: normalizeBrand(project.brand)

@@ -7,7 +7,7 @@ import { dealStorage } from './dealStorage.js'
 import { loadConnections } from './connectors.js'
 import { SPOTIFY_LOGO } from './spotifyLogo.js'
 import { styleSpotifyDeck } from './spotifyDeck.js'
-import { SAMPLE_CASES, createSampleCase } from './sampleCases.js'
+import { SAMPLE_CASES, createSampleCase, refreshNikeSample } from './sampleCases.js'
 
 export { uid }
 
@@ -35,7 +35,7 @@ export function loadProjects() {
   }
   try {
     return dealStorage.list().map(project => {
-      const styled = styleSpotifyDeck(project)
+      const styled = refreshNikeSample(styleSpotifyDeck(project))
       if (styled !== project) {
         try { dealStorage.set(styled) } catch (error) { loadError = error.message || 'The Spotify design could not be saved.' }
       }
@@ -108,7 +108,7 @@ export function hydrate(project) {
     return { ...f, ...mine, value: mine.value ?? f.value, source: sourceOf(mine) }
   })
   const custom = saved.filter(f => f.custom).map(f => ({ ...f, source: sourceOf(f) }))
-  return {
+  return refreshNikeSample({
     ...project,
     createdAt: Number.isFinite(project.createdAt) ? project.createdAt : Number.isFinite(project.updatedAt) ? project.updatedAt : Date.now(),
     updatedAt: Number.isFinite(project.updatedAt) ? project.updatedAt : Date.now(),
@@ -119,5 +119,5 @@ export function hydrate(project) {
     people: project.people || {},
     connectors: project.connectors && typeof project.connectors === 'object' ? { ...project.connectors } : loadConnections(),
     documents: Array.isArray(project.documents) ? project.documents : []
-  }
+  })
 }

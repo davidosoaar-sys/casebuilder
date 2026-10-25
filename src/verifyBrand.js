@@ -67,6 +67,11 @@ export async function verifyBrandForDisplay(value,{logoCheck=inspectLogo,fontChe
     brand.fontFaces=brand.fontFaces.filter(f=>!failed.includes(f.family))
     if(failed.includes(brand.fontName)){brand.fontData='';brand.fontName=''}
     for(const family of failed)review.warnings.push(family+' could not load. Its name is preserved; a device fallback may be used.')
+    if(brand.heroImage)try{
+      const image=new Image()
+      await timeout(new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=()=>reject(Error('Brand image could not load'));image.src=brand.heroImage}),4000)
+      if(!image.naturalWidth||!image.naturalHeight)throw Error('Brand image has no dimensions')
+    }catch{brand.heroImage='';brand.heroSource='';brand.heroAlt='';review.warnings.push('An unusable brand image was removed; the logo and company identity were retained.')}
     review.checks.logoDecoded=true;review.checks.logoVisible=true;review.checks.fontFilesLoaded=failed.length===0&&fonts.length>0
     brand.status='ready';brand.message=failed.length?'Branding found. A font file is unavailable; the font name is preserved.':'Branding found. Logo display checked automatically.'
   }catch(error){

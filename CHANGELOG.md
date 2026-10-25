@@ -25,6 +25,16 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
+- Update the saved Nike sample with official Nike campaign imagery and illustrative stakeholder requirement statuses. Preserve its edited inputs, slides and existing requirements; apply once on load. Validation: sample tests and production build.
+
+- Show the running package version in the sidebar footer, including a Local label during development. Version follows the installed build rather than claiming the latest remote deployment; release remains v0.11.0. Validation: production build.
+
+- 2026-10-25: Case Inputs / Case Artifacts / Live Room naming; Case Artifacts opens the Live Room first, with the slide editor and other formats retained. Local previews follow saved case updates; published links still require republishing.
+- Added explicit stakeholder requirements with statuses and private preparation notes. Client website, PDF, slides, one-pager and PowerPoint outputs use an allowlisted projection, excluding internal objections, counters, inferred needs and private notes. Requirements/notes survive case handoff. Existing sourced portraits can appear in stakeholder maps.
+- Refined company-themed Live Room and A4 one-pager layouts, added sourced/optional company imagery and correction controls, and retained heading/body fonts. Brand-image discovery validates raster bytes and dimensions; missing/invalid images retain the logo/type composition. Removed unrelated saturated component colors from the fallback accent selection. No equations were changed.
+- Added PRODUCT.md, DESIGN.md, WORKING_AGREEMENT.md, the product storyboard and AGENTS.md scope-maintenance rules. Sent the portable workflow instructions to the authorized autobuild-demo-platform chat; that project must retain its own domain and version history.
+- Validation: 344 app/server tests and app/plugin builds pass. Six company systems passed 24 format previews and mobile website checks with no overflow or browser errors. The isolated Nike case verified brand photography/fonts, one-page fit, requirement status saving, private-note exclusion, and local preview refresh while entering/exiting editing. The mechanical design detector flagged only the deliberate generic fallback font; company font choices take precedence. No push, tag or deployment for this local work.
+
 - Merged Amr’s latest Project Files and waitlist/access updates with the local meeting-feedback work. Installed the new file-reader dependencies locally and retained npm’s resulting peer metadata. Validation: 338 app/server tests, 34 worker tests and production build pass; no push or deployment.
 
 - 2026-10-25: Applied the meeting feedback to Chris’s workflow. Added a private Evidence review tab inside the input sheet with full source links/quotes, source states, timestamps, affected calculations, open questions and existing arithmetic. It is excluded from client exports.

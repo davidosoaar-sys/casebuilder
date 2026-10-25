@@ -1,3 +1,4 @@
+import {clientStakeholder} from '../stakeholderRequirements.js'
 import React, { useState, useRef, useEffect } from 'react'
 import faviconSvg from '../../public/favicon.svg?raw'
 import { prepareOnePager, pickAudience } from './prepare.js'
@@ -78,7 +79,7 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
     setBusy('Building the PowerPoint…')
     try {
       const [{ default: PptxGenJS }, { buildPptx }] = await Promise.all([import('pptxgenjs'), import('./pptx.js')])
-      const env = buildEnv(inputs, fields, who)
+      const env = buildEnv(inputs, fields, clientStakeholder(who))
       const file = await buildPptx({
         company,
         brand,
@@ -97,14 +98,14 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
   function onePager() {
     setOpen(false)
     const facts = prepareOnePager({ inputs, fields, who })
-    setPreview({ kind: 'onepager', title: 'One-pager', file: `${slug(company)} - one-pager.html`, html: brandDocument(buildOnePager({ facts, logoSvg: brandLogoHtml(brand, ''), faviconSvg }), brand) })
+    setPreview({ kind: 'onepager', title: 'One-pager', file: `${slug(company)} - one-pager.html`, html: brandDocument(buildOnePager({ facts, brand, logoSvg: brandLogoHtml(brand, ''), faviconSvg }), brand) })
   }
 
   const items = [
     { name: 'PDF', note: 'Preview the paginated document', run: () => show('pdf') },
     { name: 'Slides', note: 'Present one slide at a time', run: () => show('slides') },
     { name: 'One-pager', note: 'A concise executive brief', run: () => show('onepager') },
-    { name: 'Website', note: 'Explore perspectives and scenarios', run: () => show('website') }
+    { name: 'Live Room', note: 'Explore the case and scenarios', run: () => show('website') }
   ]
 
   return (

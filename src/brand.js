@@ -29,6 +29,7 @@ export function normalizeBrand(value) {
     headingFont: cleanFont(b.headingFont) || DEFAULT_BRAND.headingFont,
     bodyFont: cleanFont(b.bodyFont) || DEFAULT_BRAND.bodyFont,
     companyCandidates:(Array.isArray(b.companyCandidates)?b.companyCandidates:[]).slice(0,5).flatMap(c=>{const website=publicProfileUrl(c?.website);return website?[{name:String(c.name||'').slice(0,120),website}]:[]}),
+    heroImage:safeAsset(b.heroImage),heroAlt:typeof b.heroAlt==='string'?b.heroAlt.slice(0,240):'',heroSource:publicProfileUrl(b.heroSource),
     logo: safeAsset(b.logo),
     logoVariants:(Array.isArray(b.logoVariants)?b.logoVariants:[]).slice(0,3).flatMap(v=>safeAsset(v?.logo)&&v.logo.length<250000?[{logo:safeAsset(v.logo),sourceUrl:publicProfileUrl(v.sourceUrl),authority:v.authority==='company-profile'?'company-profile':'official-site'}]:[]),
     icon: safeAsset(b.icon),

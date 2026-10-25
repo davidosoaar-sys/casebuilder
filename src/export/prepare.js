@@ -1,3 +1,4 @@
+import {clientStakeholder} from '../stakeholderRequirements.js'
 import {contextStatement} from '../caseContext.js'
 import { buildEnv, resolveBlock } from '../deck/model.js'
 import { STAKEHOLDERS, INPUT_GROUPS, confidence, unconfirmed, completeness, fmtDec, fmtMoneyFull } from '../valueModel.js'
@@ -13,6 +14,7 @@ import { NO_ONE } from '../deck/stakeholders.js'
 export const pickAudience = (stakeholders, key) => stakeholders.find(s => s.key === key) || stakeholders[0] || NO_ONE
 
 export function prepareOnePager({ inputs, fields, who, date }) {
+  who=clientStakeholder(who)
   const env = buildEnv(inputs, fields, who)
   const block = type => resolveBlock({ type }, env)
   const room = block('room')
@@ -23,7 +25,7 @@ export function prepareOnePager({ inputs, fields, who, date }) {
     role: who.role,
     archetype: inputs.archetype || '',
     priority: inputs.strategicPriority || '',
-    headline: env.ctx.headline,
+    headline: !env.model.figures.versusSelfHost.incomplete?env.ctx.decisionHeadline:!env.model.figures.totalValue.incomplete?env.ctx.valueHeadline:'',
     cares: who.cares,
     stats: block('stats').items,
     groups: drivers.groups,
@@ -32,6 +34,7 @@ export function prepareOnePager({ inputs, fields, who, date }) {
     total: drivers.total,
     versus: (v => (v.incomplete ? null : v))(block('versus')),
     needs: room.needs,
+    requirements:who.requirements,
     objection: room.objection,
     counter: room.counter,
     date: date || new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
@@ -53,16 +56,17 @@ export function prepareWebsite({ company, deck, inputs, fields, stakeholders, wh
   return {
     company,
     slides: deck,
-    stakeholders: stakeholders.map(s => ({
+    stakeholders: stakeholders.map(clientStakeholder).map(s => ({
       key: s.key,
       role: s.role,
-        namedPeople: (s.namedPeople || []).map(p=>({name:p.name,title:p.title})),
+        namedPeople: s.namedPeople || [],
         pos:s.pos,
       tag: s.tag || '',
       cares: s.cares || '',
       objection: s.objection || '',
       counter: s.counter || '',
       needsToSee: s.needsToSee || [],
+      requirements:s.requirements||[],
       lead: s.lead || [],
       builtin: STAKEHOLDERS.some(b => b.key === s.key)
     })),

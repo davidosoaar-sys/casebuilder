@@ -1,3 +1,4 @@
+import StakeholderRequirements from './StakeholderRequirements.jsx'
 import EvidenceReview from './EvidenceReview.jsx'
 import CaseContext from './CaseContext.jsx'
 import {CASE_CONTEXT} from '../caseContext.js'
@@ -29,7 +30,7 @@ export default function Details({
 
   return (
     <div className="details">
-      <p className="mono-label">Details</p>
+      <p className="mono-label">Case Inputs</p>
       <div className="details-title">
         <h1>{project.name}</h1>
         <button className="ghost" onClick={() => download(markdownFilename(project), new Blob([dealMarkdown(project)], { type: 'text/markdown;charset=utf-8' }))}>Export MD file</button>
@@ -87,7 +88,7 @@ export default function Details({
       )}
 
       {tab === 'stakeholders' && (
-        <StakeholderMap embedded company={project.name} stakeholders={project.stakeholders} people={project.people} onChange={onStakeholders} />
+        <><StakeholderMap embedded company={project.name} stakeholders={project.stakeholders} people={project.people} onChange={onStakeholders} /><StakeholderRequirements stakeholders={project.stakeholders} onChange={onStakeholders}/></>
       )}
 
       {tab === 'people' && (

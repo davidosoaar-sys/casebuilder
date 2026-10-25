@@ -1,4 +1,4 @@
-import {inspectBrandImage,brandPageLinks,brandKitDownloads} from './brandAssets.js'
+import {inspectBrandImage,brandPageLinks,brandKitDownloads,brandHeroCandidates} from './brandAssets.js'
 import { runWithSearch } from './agentSearch.js'
 import { fetchPublic } from './publicWeb.js'
 import {publicProfileUrl} from '../src/profileMedia.js'
@@ -135,7 +135,7 @@ export function parseBrand(html, css, website, company = '') {
   const textColor = color(themeVariables['marketing-foreground'] || variables['color-text'] || themeVariables['text-base'] || variables['text-color'] || variables['ifm-font-color-base'] || bodyRule.match(/(?:^|;)\s*color\s*:\s*([^;}]+)/i)?.[1] || '')
   const light = background && parseInt(background.slice(1,3),16)*.299+parseInt(background.slice(3,5),16)*.587+parseInt(background.slice(5,7),16)*.114 > 150
   const colorEvidence=Object.entries(themeVariables).filter(([key])=>/brand|accent|primary|background|foreground|surface|^bg-|^fg-|text-color|color-text/i.test(key)).flatMap(([token,raw])=>{const value=color(raw);if(!value)return [];const role=/background|^bg-base|^bg-primary/.test(token)?'background':/surface/.test(token)?'surface':/foreground|^fg-primary|text-color|color-text/.test(token)?'text':/accent|primary|brand/.test(token)?'primary':'';return [{token,label:'--'+token,value,role,origin:'observed'}]}).slice(0,40)
-  return { ...(background ? {background, surface: shade(background, light ? -0.035 : 0.06), text: textColor || (light ? '#161616' : '#ffffff'), muted: light ? '#555555' : '#b8b8b8'} : {}), candidates, colorEvidence, faces, derivedColors:['surface','muted',...(!textColor?['text']:[])], primary: color(themeVariables['marketing-primary'] || themeVariables['ds-theme-background-accent-strong-normal'] || '') || named || saturated[0], headingFont: !/var\(/.test(heading) ? heading : '', bodyFont: !/var\(/.test(body) ? body : '', logoUrl, face, colors: ranked.slice(0, 8) }
+  return { ...(background ? {background, surface: shade(background, light ? -0.035 : 0.06), text: textColor || (light ? '#161616' : '#ffffff'), muted: light ? '#555555' : '#b8b8b8'} : {}), candidates, colorEvidence, faces, derivedColors:['surface','muted',...(!textColor?['text']:[])], primary: color(themeVariables['marketing-primary'] || themeVariables['ds-theme-background-accent-strong-normal'] || '') || named || color(themeVariables['essential-bright-accent'] || themeVariables['brand-color'] || '') || textColor || (background?(light?'#111111':'#ffffff'):undefined), headingFont: !/var\(/.test(heading) ? heading : '', bodyFont: !/var\(/.test(body) ? body : '', logoUrl, face, colors: ranked.slice(0, 8) }
 }
 
 const companyLinkedIn = value => {const url=publicProfileUrl(value);return /^https:\/\/(?:[a-z]{2,3}\.|www\.)?linkedin\.com\/company\/[^/?#]+\/?(?:[?#].*)?$/i.test(url)?url:''}
@@ -237,6 +237,10 @@ export async function discoverBrand({ company, website }, fetcher = fetchPublic,
     return {dataUrl,sourceUrl,dimensions,authority:candidate.authority||(candidate.sourcePage?'company-profile':'official-site'),sourcePage:candidate.sourcePage||home.url,variant,score:candidate.score,location:candidate.authority==='official-brand-kit'?'Official brand resource':candidate.sourcePage?'Public company LinkedIn logo':candidate.score>=95?'Official homepage mark':candidate.score===90?'Organization logo':candidate.score===0?'Favicon':'Official site logo'}
   }))
   const logos=loaded.filter(r=>r.status==='fulfilled').map(r=>r.value)
+  let heroImage='',heroAlt='',heroSource=''
+  if(Date.now()<deadline-8000)for(const candidate of brandHeroCandidates(html,home.url,company)){
+    try{const image=await fetcher(candidate.url,{limit:700000}),mime=image.type.split(';')[0];if(!/^image\/(png|jpeg|webp)$/.test(mime))continue;const size=inspectBrandImage(image.buffer,mime);if(size.width<640||size.height<240||size.width/size.height<1.4)continue;heroImage='data:'+mime+';base64,'+image.buffer.toString('base64');heroAlt=candidate.alt||company+' brand image';heroSource=home.url;sources.push(image.url);break}catch{}
+  }
   let icon = ''
   const iconUrls = iconCandidates(html, assetBase)
   // A site's standard icon paths, if the page does not link one.
@@ -278,7 +282,7 @@ export async function discoverBrand({ company, website }, fetcher = fetchPublic,
   if(loaded.some(r=>r.status==='rejected'))curated.review.warnings.push('Unusable logo candidates were rejected automatically.')
   const headingFile=fontFaces.find(f=>f.family===selected.headingFont)
   for(const family of [...new Set([selected.headingFont,selected.bodyFont])])if(!fontFaces.some(f=>f.family===family))curated.review.warnings.push('The '+family+' font file is unavailable; other devices may use a fallback.')
-  return normalizeBrand({...selected,logoVariants:logos.filter(l=>l!==curated.selected&&l.dataUrl.length<250000).slice(0,3).map(l=>({logo:l.dataUrl,sourceUrl:l.sourcePage,authority:l.authority})),website:home.url,linkedinUrl,sourceNotes,sources,fontFaces,fontData:headingFile?.data||'',fontName:headingFile?.family||'',review:curated.review,
+  return normalizeBrand({...selected,heroImage,heroAlt,heroSource,logoVariants:logos.filter(l=>l!==curated.selected&&l.dataUrl.length<250000).slice(0,3).map(l=>({logo:l.dataUrl,sourceUrl:l.sourcePage,authority:l.authority})),website:home.url,linkedinUrl,sourceNotes,sources,fontFaces,fontData:headingFile?.data||'',fontName:headingFile?.family||'',review:curated.review,
     status:selected.logo?'ready':'error',message:!selected.logo?'Company website found, but no usable company logo could be extracted. Your case can continue with the company name.':'Brand assets found. Checking display and font loading…'})
 
 }

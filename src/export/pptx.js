@@ -277,27 +277,7 @@ async function layoutBlock(b, deps, theme = DEFAULTS) {
       }
     }
     case 'room': {
-      const colW = (CW - 0.6) / 2
-      const left = b.needs.reduce((h, n) => h + textHeight(n, 15, colW - 0.3) + 0.08, 0) + 0.45
-      const right = 0.45 + textHeight(b.objection, 16, colW - 0.4) + 0.3 + 0.45 + textHeight(b.counter, 15, colW) + 0.1
-      return {
-        h: Math.max(left, right) + 0.2,
-        draw: (s, y, k) => {
-          s.addText('WHAT THEY NEED TO SEE', { x: MX, y, w: colW, h: 0.3 * k, fontFace: FONT, fontSize: 10 * k, bold: true, color: C.dim, charSpacing: 1, margin: 0 })
-          s.addText(
-            b.needs.map(n => ({ text: n, options: { bullet: { indent: 18 }, breakLine: true, fontSize: 15 * k, color: C.ink, paraSpaceAfter: 5 } })),
-            { x: MX, y: y + 0.4 * k, w: colW, h: (left - 0.4) * k, fontFace: FONT, valign: 'top', margin: 0 }
-          )
-          const rx = MX + colW + 0.6
-          s.addText('THE OBJECTION', { x: rx, y, w: colW, h: 0.3 * k, fontFace: FONT, fontSize: 10 * k, bold: true, color: C.dim, charSpacing: 1, margin: 0 })
-          const qh = textHeight(b.objection, 16, colW - 0.4) + 0.2
-          s.addShape('rect', { x: rx, y: y + 0.4 * k, w: 0.05, h: qh * k, fill: { color: C.accent }, line: { color: C.accent, width: 0 } })
-          s.addText(b.objection, { x: rx + 0.2, y: y + 0.4 * k, w: colW - 0.2, h: qh * k, fontFace: FONT, fontSize: 16 * k, italic: true, color: C.strong, valign: 'middle', margin: 0 })
-          const cy = y + (0.4 + qh + 0.3) * k
-          s.addText('THE COUNTER', { x: rx, y: cy, w: colW, h: 0.3 * k, fontFace: FONT, fontSize: 10 * k, bold: true, color: C.dim, charSpacing: 1, margin: 0 })
-          s.addText(b.counter, { x: rx, y: cy + 0.4 * k, w: colW, h: textHeight(b.counter, 15, colW) * k, fontFace: FONT, fontSize: 15 * k, color: C.ink, valign: 'top', margin: 0 })
-        }
-      }
+      const lines=(b.requirements||[]).map(r=>r.text+' — '+r.status),copy='Requirements\n'+(lines.join('\n')||'No requirements recorded yet.');return {h:Math.max(.8,textHeight(copy,15,CW)),draw:(s,y,k)=>s.addText(copy,{x:MX,y,w:CW,h:Math.max(.8,textHeight(copy,15,CW))*k,fontFace:FONT,fontSize:15*k,color:C.ink,margin:0})}
     }
     default:
       return { h: 0, draw: () => {} }

@@ -1,3 +1,4 @@
+import {clientStakeholder,requirementListHtml} from '../stakeholderRequirements.js'
 import { defaultPositions } from '../deck/mapLayout.js'
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
@@ -7,6 +8,7 @@ export function journeyIndex(progress,count) {
 }
 
 export function stakeholderJourneyHtml(company,logo,stakeholders) {
+  stakeholders=stakeholders.map(clientStakeholder)
   const positions=defaultPositions(stakeholders.length)
   const nodes=stakeholders.map((s,i)=>{
     const pos=s.pos&&Number.isFinite(s.pos.x)&&Number.isFinite(s.pos.y)?s.pos:positions[i]
@@ -15,8 +17,8 @@ export function stakeholderJourneyHtml(company,logo,stakeholders) {
     return {s,i,x,y,name}
   })
   const initial=s=>String(s).split(/[^a-zA-Z]+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase()
-  const diagram='<div class="relation-map" aria-label="Stakeholder map"><svg class="relation-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">'+nodes.map(n=>'<line data-line="'+n.i+'" x1="50" y1="50" x2="'+n.x+'" y2="'+n.y+'" vector-effect="non-scaling-stroke"/>').join('')+'</svg><div class="relation-center">'+(logo?'<div>'+logo+'</div>':'')+'<small>Customer</small><strong>'+esc(company)+'</strong></div>'+nodes.map(n=>'<button class="relation-node" data-journey-node="'+n.i+'" data-x="'+n.x+'" data-y="'+n.y+'" style="left:'+n.x+'%;top:'+n.y+'%" aria-label="Explore '+esc(n.name||n.s.role)+'" aria-pressed="false"><span class="relation-badge" aria-hidden="true">'+esc(initial(n.s.role))+'</span><span><strong>'+esc(n.name||n.s.role)+'</strong>'+(n.name?'<small>'+esc(n.s.role)+'</small>':'')+'</span></button>').join('')+'</div>'
-  const briefs=nodes.map(n=>'<template data-journey-brief="'+n.i+'"><article class="journey-brief"><p class="label">'+esc(n.s.role)+'</p><h3>'+esc(n.name||n.s.role)+'</h3><p class="journey-cares">'+esc(n.s.cares||'Priorities not yet specified.')+'</p><h4>What they need to see</h4>'+((n.s.needsToSee||[]).length?'<ul>'+n.s.needsToSee.map(v=>'<li>'+esc(v)+'</li>').join('')+'</ul>':'<p>Not yet specified.</p>')+'<details class="journey-response"><summary>Objection &amp; response</summary><h4>Likely objection</h4><p>'+esc(n.s.objection&&n.s.objection!=='-'?n.s.objection:'Not yet specified.')+'</p><h4>The response</h4><p>'+esc(n.s.counter&&n.s.counter!=='-'?n.s.counter:'Not yet specified.')+'</p></details></article></template>').join('')
+  const diagram='<div class="relation-map" aria-label="Stakeholder map"><svg class="relation-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">'+nodes.map(n=>'<line data-line="'+n.i+'" x1="50" y1="50" x2="'+n.x+'" y2="'+n.y+'" vector-effect="non-scaling-stroke"/>').join('')+'</svg><div class="relation-center">'+(logo?'<div>'+logo+'</div>':'')+'<small>Customer</small><strong>'+esc(company)+'</strong></div>'+nodes.map(n=>'<button class="relation-node" data-journey-node="'+n.i+'" data-x="'+n.x+'" data-y="'+n.y+'" style="left:'+n.x+'%;top:'+n.y+'%" aria-label="Explore '+esc(n.name||n.s.role)+'" aria-pressed="false"><span class="relation-badge" aria-hidden="true">'+((n.s.namedPeople||[]).find(p=>p.photo)?.photo?'<img src="'+n.s.namedPeople.find(p=>p.photo).photo.dataUrl+'" alt="'+esc(n.name)+'">':esc(initial(n.s.role)))+'</span><span><strong>'+esc(n.name||n.s.role)+'</strong>'+(n.name?'<small>'+esc(n.s.role)+'</small>':'')+'</span></button>').join('')+'</div>'
+  const briefs=nodes.map(n=>'<template data-journey-brief="'+n.i+'"><article class="journey-brief"><h3>'+esc(n.name||n.s.role)+'</h3><p>'+esc(n.s.role)+'</p><h4>Requirements</h4>'+requirementListHtml(n.s)+'</article></template>').join('')
   return '<div class="stakeholder-journey" data-count="'+nodes.length+'" style="--journey-stops:'+Math.max(1,nodes.length+1)+'"><div class="journey-stage"><div class="journey-map">'+diagram+'</div><div class="journey-copy" tabindex="-1" aria-label="Stakeholder brief"></div><div class="journey-controls"><button data-journey-reset>Full map</button><span class="journey-step-label">Scroll to explore</span><button data-journey-next>Next stakeholder ↓</button></div></div>'+briefs+'</div>'
 }
 
@@ -51,12 +53,12 @@ export function mountStakeholderJourney(root,env=window) {
     copy.hidden=index<0
     nodes.forEach((node,i)=>{
       const selected=i===index,right=index%2===1
-      const x=index<0?Number(node.dataset.x):selected?(right?14:86):Math.min(84,Math.max(16,Number(node.dataset.x)+(right?7:-7)))
-      node.style.left=x+'%';node.style.top=(selected?50:Number(node.dataset.y))+'%'
+      const x=index<0||mobile()?Number(node.dataset.x):selected?(right?14:86):Math.min(84,Math.max(16,Number(node.dataset.x)+(right?7:-7)))
+      node.style.left=x+'%';node.style.top=(selected&&!mobile()?50:Number(node.dataset.y))+'%'
       node.classList.toggle('is-selected',selected)
       node.setAttribute('aria-pressed',String(selected))
       const line=journey.querySelector('[data-line="'+i+'"]')
-      line?.setAttribute('x2',String(x));line?.setAttribute('y2',selected?'50':node.dataset.y)
+      line?.setAttribute('x2',String(x));line?.setAttribute('y2',selected&&!mobile()?'50':node.dataset.y)
       line?.classList.toggle('is-selected',selected)
     })
     journey.querySelector('.journey-step-label').textContent=index<0?'Scroll to explore':String(index+1).padStart(2,'0')+' / '+String(nodes.length).padStart(2,'0')

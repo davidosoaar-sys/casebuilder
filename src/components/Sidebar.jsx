@@ -1,6 +1,7 @@
 import React from 'react'
 import AppLogo from './AppLogo.jsx'
 import SaveIndicator from './SaveIndicator.jsx'
+import { version } from '../../package.json'
 
 // Global navigation. The project's own tabs are in ProjectNav.
 
@@ -88,8 +89,8 @@ export default function Sidebar({ view, project, projectMode = false, onNav, onS
       <nav className="sidebar-nav" aria-label="Main">
         {projectMode ? <>
           <button className="side-item project-sidebar-back" onClick={() => onNav('projects')} title="All projects" aria-label="All projects"><span aria-hidden="true">←</span><span className="side-label">All projects</span></button>
-          <Item id="details" label="Input sheet" view={view} onNav={onNav} />
-          <Item id="deck" label="Deck" view={view === 'website' ? 'deck' : view} onNav={onNav} />
+          <Item id="details" label="Case Inputs" view={view} onNav={onNav} />
+          <Item id="deck" label="Case Artifacts" view={view === 'website' ? 'deck' : view} onNav={onNav} />
           <Item id="agent" label="Agent" view={view} onNav={onNav} />
           <Item id="files" label="Files" view={view} onNav={onNav} title="Context the agent reads for this project" />
         </> : <>
@@ -104,6 +105,9 @@ export default function Sidebar({ view, project, projectMode = false, onNav, onS
       </nav>
       {children}
       <div className="sidebar-footer">
+        <small className="platform-version" title={`CaseBuilder v${version}${import.meta.env.DEV ? ' · Local development, unreleased changes may be present' : ' · Installed release'}`}>
+          v{version}<span className="side-label">{import.meta.env.DEV ? ' · Local' : ''}</span>
+        </small>
         <SaveIndicator status={saveStatus} />
         <button type="button" className={`side-item side-settings ${settingsOpen ? 'side-on' : ''}`} onClick={onSettings} title="Settings" aria-label="Settings" aria-haspopup="dialog">
           <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">{icon.settings}</svg>

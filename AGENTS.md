@@ -27,3 +27,7 @@
   note in the final response.
 - Commit, tag, push, and deploy only within the user's authorized scope. A request
   to maintain notes and version numbers is not itself a release instruction.
+
+## Product and design scope
+
+Read PRODUCT.md, DESIGN.md and WORKING_AGREEMENT.md before new work. Update the product brief when a completed change alters scope or product truth. Use its core workflow as the feature filter. Share the process with other projects only when the user authorizes it; adapt their product facts rather than copying CaseBuilder features.
