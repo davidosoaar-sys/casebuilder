@@ -3,6 +3,7 @@ import React, { useState } from 'react'
 import { CONNECTORS } from '../connectors.js'
 import { LOGOS } from '../connectionLogos.js'
 import { uid } from '../uid.js'
+import { extractText, ACCEPT } from '../fileText.js'
 
 // Connections: what the agent is ALLOWED to read. Each switch is a permission for the
 // agent. Everything starts off, and a connection that is off is never read and never
@@ -80,9 +81,9 @@ function Uploader({ connector: c, projectName, docs, onDocuments }) {
     const file = e.target.files && e.target.files[0]
     if (!file) return
     try {
-      add(file.name, await file.text())
-    } catch {
-      setError('That file could not be read as text.')
+      add(file.name, (await extractText(file)).text)
+    } catch (err) {
+      setError(err.message || 'That file could not be read.')
     }
     e.target.value = ''
   }
@@ -100,7 +101,7 @@ function Uploader({ connector: c, projectName, docs, onDocuments }) {
         </button>
         <label className="ghost file-btn">
           Upload a file
-          <input type="file" accept=".txt,.csv,.vtt,.srt,.md,.json,text/*" hidden onChange={onFile} />
+          <input type="file" accept={ACCEPT} hidden onChange={onFile} />
         </label>
       </div>
       {error && <p className="warn">{error}</p>}

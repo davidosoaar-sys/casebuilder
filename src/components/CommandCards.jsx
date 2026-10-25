@@ -104,7 +104,7 @@ function PersonResult({ r, picked, pick, i }) {
   if (!p) return <p className="cmd-note">The lookup returned nothing.</p>
   if (p.candidates?.length > 1) return (
     <div className="cmd-body">
-      <p className="cmd-note">Several people match. Open Person lookup to choose the right one:</p>
+      <p className="cmd-note">Several people match. Open Research, then Person, to choose the right one:</p>
       {p.candidates.slice(0, 4).map((c, k) => <p key={k} className="cmd-dim">{c.name?.value} · {c.title?.value} · {c.company?.value}</p>)}
     </div>
   )

@@ -46,7 +46,7 @@ const icon = {
   )
 }
 
-function Item({ id, label, view, onNav, disabled, title }) {
+function Item({ id, icon: iconId, label, view, onNav, disabled, title }) {
   return (
     <button
       className={`side-item ${view === id ? 'side-on' : ''}`}
@@ -57,7 +57,7 @@ function Item({ id, label, view, onNav, disabled, title }) {
       aria-current={view === id ? 'page' : undefined}
     >
       <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-        {icon[id]}
+        {icon[iconId || id]}
       </svg>
       <span className="side-label">{label}</span>
     </button>
@@ -89,18 +89,16 @@ export default function Sidebar({ view, project, projectMode = false, onNav, onS
       <nav className="sidebar-nav" aria-label="Main">
         {projectMode ? <>
           <button className="side-item project-sidebar-back" onClick={() => onNav('projects')} title="All projects" aria-label="All projects"><span aria-hidden="true">←</span><span className="side-label">All projects</span></button>
-          <Item id="details" label="Case Inputs" view={view} onNav={onNav} />
-          <Item id="deck" label="Case Artifacts" view={view === 'website' ? 'deck' : view} onNav={onNav} />
+          <Item id="details" label="Case inputs" view={view} onNav={onNav} />
+          <Item id="website" icon="deck" label="Case artifacts" view={view === 'deck' ? 'website' : view} onNav={onNav} title="Live room, deck, PDF and one-pager" />
           <Item id="agent" label="Agent" view={view} onNav={onNav} />
+          <Item id="research" label="Research" view={view} onNav={onNav} title="Research this account, with sources" />
           <Item id="files" label="Files" view={view} onNav={onNav} title="Context the agent reads for this project" />
         </> : <>
           <Item id="dashboard" label="Dashboard" view={view} onNav={onNav} />
           <Item id="projects" label="Projects" view={view} onNav={onNav} />
         </>}
         {!projectMode && <Item id="connections" label="Connectors" view={view} onNav={onNav} title="What the agent is allowed to read" />}
-        {projectMode
-          ? <Item id="lookup" label="Person lookup" view={view} onNav={onNav} />
-          : <Item id="research" label="Research" view={view} onNav={onNav} title="Research anything, with sources" />}
         {!projectMode && admin && <Item id="waitlist" label="Waitlist" view={view} onNav={onNav} title="Who asked for access" />}
       </nav>
       {children}

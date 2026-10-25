@@ -34,6 +34,10 @@ export default function ProjectFiles({ project, userId }) {
   const [drag, setDrag] = useState(false)
   const [instr, setInstr] = useState('')
   const [instrSaved, setInstrSaved] = useState('')
+  const [editing, setEditing] = useState(false)
+  const box = useRef(null)
+  // Opening Edit puts the cursor at the end of the saved text, ready to add to it.
+  useEffect(() => { const b = box.current; if (editing && b) { b.focus(); b.setSelectionRange(b.value.length, b.value.length) } }, [editing])
   const [preview, setPreview] = useState(null)
   const input = useRef(null)
 
@@ -70,13 +74,21 @@ export default function ProjectFiles({ project, userId }) {
 
       <section className="pf-section">
         <div className="pf-section-head"><h2>Instructions</h2><p>How to work on this account. Tone, must-have slides, who to avoid naming. Like a CLAUDE.md for this deal.</p></div>
-        <textarea className="pf-instructions" value={instr} onChange={e => setInstr(e.target.value)} rows={5} maxLength={20000}
-          placeholder={'e.g. Always open with the CFO\'s cost target. Every deck needs an implementation plan slide. Use "developer experience", never "DevEx".'} />
-        <div className="pf-instr-bar">
-          <span>{instr === instrSaved ? (instrSaved ? 'Saved' : '') : 'Not saved'}</span>
-          <button type="button" className="primary" disabled={instr === instrSaved}
-            onClick={() => act(async () => { const row = await saveInstructions(supabase, { userId, dealId: project.id, existing: instructions, text: instr }); setFiles(fs => instructions ? fs.map(f => f.id === row.id ? row : f) : [...fs, row]) }, () => setInstrSaved(instr))}>Save instructions</button>
-        </div>
+        {files === null ? <p className="pf-empty">Loading…</p> : instrSaved && !editing ? <>
+          <div className="pf-instr-view">{instrSaved}</div>
+          <div className="pf-instr-bar">
+            <span className="pf-saved"><span aria-hidden="true">✓</span> Saved. The agent follows these on every run.</span>
+            <button type="button" className="ghost" onClick={() => setEditing(true)}>Edit</button>
+          </div>
+        </> : <>
+          <textarea className="pf-instructions" value={instr} onChange={e => setInstr(e.target.value)} rows={5} maxLength={20000} ref={box}
+            placeholder={'e.g. Always open with the CFO\'s cost target. Every deck needs an implementation plan slide. Use "developer experience", never "DevEx".'} />
+          <div className="pf-instr-bar">
+            {instrSaved && <button type="button" className="ghost" onClick={() => { setInstr(instrSaved); setEditing(false) }}>Cancel</button>}
+            <button type="button" className="primary" disabled={instr === instrSaved || !instr.trim()}
+              onClick={() => act(async () => { const row = await saveInstructions(supabase, { userId, dealId: project.id, existing: instructions, text: instr }); setFiles(fs => instructions ? fs.map(f => f.id === row.id ? row : f) : [...fs, row]) }, () => { setInstrSaved(instr); setEditing(false) })}>{instrSaved ? 'Save changes' : 'Save instructions'}</button>
+          </div>
+        </>}
       </section>
 
       <section className="pf-section">

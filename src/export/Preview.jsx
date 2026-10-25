@@ -21,7 +21,7 @@ export default function Preview({ preview, onClose, audience, onView, onDownload
             <span>For {preview.for || audience}</span>
           </div>
           <div className="preview-actions">
-            {onView && <select aria-label="Preview format" value={preview.kind} onChange={e => onView(e.target.value)}><option value="pdf">PDF</option><option value="slides">Slides</option><option value="onepager">One-pager</option><option value="website">Website</option></select>}
+            {onView && <select aria-label="Preview format" value={preview.kind} onChange={e => onView(e.target.value)}><option value="pdf">PDF</option><option value="slides">Slides</option><option value="onepager">One-pager</option><option value="website">Live room</option></select>}
             {preview.kind === 'slides' ? <>
               <button className="ghost" onClick={() => frame.current?.requestFullscreen?.()}>Present fullscreen</button>
               <button className="primary" disabled={busy} onClick={onDownloadSlides}>{busy ? 'Preparing…' : 'Download PPTX'}</button>

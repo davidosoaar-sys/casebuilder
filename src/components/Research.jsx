@@ -93,7 +93,7 @@ function Result({ job, projects }) {
 export default function Research({ userId, projects = [], project, personPage, onSettings }) {
   const [mode, setMode] = useState('ask')
   const [question, setQuestion] = useState('')
-  const [dealId, setDealId] = useState(project?.id || '')
+  const dealId = project?.id || ''
   const [history, setHistory] = useState([])
   const [openId, setOpenId] = useState(null)
   const [error, setError] = useState('')
@@ -102,12 +102,11 @@ export default function Research({ userId, projects = [], project, personPage, o
   const noKey = keys && !keys.some(k => k.provider === 'anthropic')
   const box = useRef(null)
 
-  useEffect(() => { setDealId(project?.id || '') }, [project?.id])
   useEffect(() => {
     let alive = true
-    listResearch(supabase, userId).then(list => { if (alive) setHistory(list) }).catch(e => alive && setError(e.message))
+    listResearch(supabase, userId).then(list => { if (alive) setHistory(dealId ? list.filter(j => j.deal_id === dealId) : list) }).catch(e => alive && setError(e.message))
     return () => { alive = false }
-  }, [userId])
+  }, [userId, dealId])
 
   const open = history.find(j => j.id === openId)
   // Poll whichever jobs are still running (the open one updates live).
@@ -141,7 +140,7 @@ export default function Research({ userId, projects = [], project, personPage, o
 
   return (
     <section className="page research-page no-print" aria-label="Research">
-      <PageHead title="Research" sub="Ask anything about an account, a market or a person. Every answer shows its sources and the work behind it." />
+      <PageHead title="Research" sub={`Ask anything about ${project?.name || 'an account'}, its market or its people. Every answer shows its sources and the work behind it.`} />
       <div className="research-layout">
         <aside className="research-history" aria-label="Past research">
           <button type="button" className="ghost research-new" onClick={newResearch}><span aria-hidden="true">+</span> New research</button>
@@ -170,16 +169,10 @@ export default function Research({ userId, projects = [], project, personPage, o
                 onChange={e => setQuestion(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) ask(e) }} />
               <div className="research-ask-bar">
-                <label className="research-project">
-                  <span>Context</span>
-                  <select value={dealId} onChange={e => setDealId(e.target.value)} aria-label="Project context">
-                    <option value="">No project</option>
-                    {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
-                </label>
+                <span className="research-project">Reads this project's files and connectors</span>
                 <button type="submit" className="primary" disabled={!question.trim() || sending || noKey}>{sending ? 'Starting…' : 'Research'}</button>
               </div>
-              <p className="research-hint">Searches the web with Tavily and reads pages in full.{dealId ? ' Also reads the connectors switched on for that project.' : ''} Usually 30 to 90 seconds.</p>
+              <p className="research-hint">Searches the web with Tavily and reads pages in full. Usually 30 to 90 seconds.</p>
             </form>
             {noKey && <p className="chat-note">Research runs on your own Anthropic API key. <button type="button" className="link-btn" onClick={onSettings}>Add it in Settings</button></p>}
             {!history.length && <div className="lookup-empty research-empty">

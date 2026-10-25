@@ -111,8 +111,8 @@ test('opening the same project on another day shows the same numbers: nothing re
 const model0 = fields => computeModel(valuesOf(fields))
 const ALL_OFF = defaultConnectors()
 
-test('all six connections start off, including Claude and Lemlist', () => {
-  assert.deepEqual(Object.keys(ALL_OFF), ['claude', 'gong', 'hubspot', 'slack', 'clay', 'lemlist'])
+test('all connections start off, including Claude, Lemlist and the new file-based ones', () => {
+  assert.deepEqual(Object.keys(ALL_OFF), ['claude', 'gong', 'hubspot', 'slack', 'clay', 'lemlist', 'granola', 'sheets', 'excel', 'figma', 'canva'])
   assert.ok(Object.values(ALL_OFF).every(v => v === false))
 })
 
@@ -141,7 +141,7 @@ test('a gap says which connection is off, as a setting, and the origin never nam
   const r = await suggestValues({ company: 'Acme', fields, keys: ['searchHoursToday', 'selfHostEngineers'], connectors: ALL_OFF, documents: [], model: model0(fields), agent: none })
   // selfHostEngineers is derived from a rule; the connections that are off are named, but not in its origin
   const s = r.suggestions.selfHostEngineers
-  assert.deepEqual(s.notes, ['Claude, Gong, HubSpot, Slack, Clay and Lemlist are disabled, so no conversation notes, call figures, CRM records, internal threads, enrichment data and outreach data were used.'])
+  assert.deepEqual(s.notes, ['Every connection is off, so no uploaded material was used.'])
   assert.ok(!/Claude|Gong|HubSpot|Slack|Clay|Lemlist/.test(s.origin), s.origin)
   // searchHoursToday has no source at all: the field reads as a setting
   assert.equal(r.gaps.searchHoursToday[0], s.notes[0])
@@ -150,8 +150,11 @@ test('a gap says which connection is off, as a setting, and the origin never nam
   assert.deepEqual(get(written, 'searchHoursToday').source.notes, r.gaps.searchHoursToday)
   assert.deepEqual(get(written, 'selfHostEngineers').source.enabled, [])
   // with only Gong off, the note names just Gong
-  const one = await suggestValues({ company: 'A', fields, keys: ['searchHoursToday'], connectors: { ...ALL_OFF, claude: true, hubspot: true, slack: true, clay: true, lemlist: true }, documents: [], model: model0(fields), agent: none })
+  const one = await suggestValues({ company: 'A', fields, keys: ['searchHoursToday'], connectors: Object.fromEntries(Object.keys(ALL_OFF).map(k => [k, k !== 'gong'])), documents: [], model: model0(fields), agent: none })
   assert.ok(one.gaps.searchHoursToday.includes('Gong is disabled, so no call figures were used.'))
+  // Excel and Google Sheets both off: their shared kind of material is named once
+  const two = await suggestValues({ company: 'A', fields, keys: ['searchHoursToday'], connectors: Object.fromEntries(Object.keys(ALL_OFF).map(k => [k, !['sheets', 'excel'].includes(k)])), documents: [], model: model0(fields), agent: none })
+  assert.ok(two.gaps.searchHoursToday.includes('Google Sheets and Excel are disabled, so no finance figures were used.'), two.gaps.searchHoursToday.join(' / '))
 })
 
 test('an allowed connection with nothing uploaded says so', async () => {

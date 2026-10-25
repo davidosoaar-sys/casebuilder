@@ -13,9 +13,14 @@ const fmtDate = ms => {
 }
 const initials = name => name.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()
 
+let handledCreate = 0
+
 export default function ProjectList({ projects, loading = false, createRequest = 0, activeId, onCreate, onOpen, onDelete, onDuplicate, onCreateSample }) {
-  const [creating, setCreating] = useState(createRequest > 0)
-  useEffect(() => { if (createRequest > 0) setCreating(true) }, [createRequest])
+  // createRequest counts Dashboard "New project" clicks. Open the dialog only for a
+  // click that has not been handled yet, so remounting Projects later does not
+  // reopen it on top of the project list.
+  const [creating, setCreating] = useState(() => createRequest > handledCreate)
+  useEffect(() => { if (createRequest > handledCreate) { handledCreate = createRequest; setCreating(true) } }, [createRequest])
   const [name, setName] = useState('')
   const [display, setDisplay] = useState(() => {
     try { return localStorage.getItem('casebuilder.project-view') === 'list' ? 'list' : 'cards' } catch { return 'cards' }

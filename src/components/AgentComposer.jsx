@@ -10,8 +10,10 @@
 //  - no "simulated speech": if the browser has no speech-to-text, the mic is hidden
 //  - no cancel button: a sent job can't be stopped yet, so the button shows
 //    "working" instead of pretending to cancel
-//  - several text files at once (the agent reads their contents)
+//  - several files at once: PDF, Word, PowerPoint, Excel and text, read in the
+//    browser with the same reader as project Files (the agent gets their text)
 import React, { useEffect, useRef, useState } from 'react'
+import { extractText, ACCEPT } from '../fileText.js'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export const AGENT_MODELS = [
@@ -24,9 +26,7 @@ export const LEVELS = [
   { id: 'medium', label: 'Medium', desc: 'Step-by-step reasoning for most requests' },
   { id: 'high', label: 'High', desc: 'Deep reasoning for tricky numbers. Slower' }
 ]
-const MAX_FILE_BYTES = 1_000_000
 const MAX_FILES = 5
-const TEXT_FILES = '.txt,.md,.csv,.tsv,.json,.vtt,.srt,.html,.xml,.log,text/*'
 const Speech = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition)
 
 const I = ({ d, size = 16, fill }) => (
@@ -126,11 +126,8 @@ export default function AgentComposer({ onSend, busy = false, disabled = false, 
     setFileError('')
     const out = []
     for (const f of list) {
-      if (f.size > MAX_FILE_BYTES) { setFileError(`${f.name} is over 1 MB.`); continue }
-      if (/\.(pdf|docx?|pptx?|xlsx?|png|jpe?g|gif|webp|zip)$/i.test(f.name) || (f.type && !/^text\/|json|xml|csv/.test(f.type))) {
-        setFileError(`${f.name}: text files only for now (.txt, .md, .csv, .json, call transcripts).`); continue
-      }
-      out.push({ name: f.name, text: await f.text() })
+      try { out.push({ name: f.name, text: (await extractText(f)).text }) }
+      catch (e) { setFileError(e.message) }
     }
     setFiles(fs => [...fs, ...out].slice(0, MAX_FILES))
   }
@@ -236,8 +233,8 @@ export default function AgentComposer({ onSend, busy = false, disabled = false, 
                 </AnimatePresence>
               </div>
 
-              <input ref={fileInput} type="file" multiple accept={TEXT_FILES} hidden disabled={disabled} onChange={e => { addFiles(Array.from(e.target.files)); e.target.value = '' }} />
-              <button type="button" className="mascot-icon" onClick={() => fileInput.current?.click()} disabled={disabled} title="Attach text files (notes, transcripts, CSV)" aria-label="Attach files"><I d={ic.clip} /></button>
+              <input ref={fileInput} type="file" multiple accept={ACCEPT} hidden disabled={disabled} onChange={e => { addFiles(Array.from(e.target.files)); e.target.value = '' }} />
+              <button type="button" className="mascot-icon" onClick={() => fileInput.current?.click()} disabled={disabled} title="Attach files (PDF, Word, PowerPoint, Excel, notes, transcripts)" aria-label="Attach files"><I d={ic.clip} /></button>
               <button type="button" className={`mascot-search${web ? ' is-on' : ''}`} onClick={() => setWeb(w => !w)} disabled={disabled} aria-pressed={web}
                 title={web ? 'The agent may search the web' : 'Let the agent search the web'}><I d={ic.globe} size={15} /><span>{web ? 'Search on' : 'Search'}</span></button>
             </div>

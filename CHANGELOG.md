@@ -23,24 +23,44 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ---
 
-## Unreleased
+## v0.13.0 (2026-10-25): Live Room templates and stakeholder requirements
 
-- Update the saved Nike sample with official Nike campaign imagery and illustrative stakeholder requirement statuses. Preserve its edited inputs, slides and existing requirements; apply once on load. Validation: sample tests and production build.
+- Lead Case Artifacts with the Live Room; preserve company fonts, logo and colors across formats. Add optional sourced company imagery and refreshed website/one-pager layouts.
+- Add trackable stakeholder requirements and private preparation notes. Client outputs omit internal strategy and source metadata.
+- Add private Evidence review and optional customer workflow context. Preserve equations, saved inputs and authored slides.
+- Refresh the Nike sample once with official imagery and illustrative requirement statuses, preserving existing edits.
+- Show the installed version in the sidebar; document product scope, design and shared working/release instructions.
+- Merge Amr’s v0.12.0 research, connector and upload improvements. Shared Live Room links still require republishing after edits.
+- Validation: app/server tests, production and plugin builds; prior six-brand desktop/mobile export checks. See product storyboard and Chris demo guide for workflow.
 
-- Show the running package version in the sidebar footer, including a Local label during development. Version follows the installed build rather than claiming the latest remote deployment; release remains v0.11.0. Validation: production build.
+## v0.12.0 (2026-10-25): Case inputs, Case artifacts and Live room, Research in the project, new connectors
 
-- 2026-10-25: Case Inputs / Case Artifacts / Live Room naming; Case Artifacts opens the Live Room first, with the slide editor and other formats retained. Local previews follow saved case updates; published links still require republishing.
-- Added explicit stakeholder requirements with statuses and private preparation notes. Client website, PDF, slides, one-pager and PowerPoint outputs use an allowlisted projection, excluding internal objections, counters, inferred needs and private notes. Requirements/notes survive case handoff. Existing sourced portraits can appear in stakeholder maps.
-- Refined company-themed Live Room and A4 one-pager layouts, added sourced/optional company imagery and correction controls, and retained heading/body fonts. Brand-image discovery validates raster bytes and dimensions; missing/invalid images retain the logo/type composition. Removed unrelated saturated component colors from the fallback accent selection. No equations were changed.
-- Added PRODUCT.md, DESIGN.md, WORKING_AGREEMENT.md, the product storyboard and AGENTS.md scope-maintenance rules. Sent the portable workflow instructions to the authorized autobuild-demo-platform chat; that project must retain its own domain and version history.
-- Validation: 344 app/server tests and app/plugin builds pass. Six company systems passed 24 format previews and mobile website checks with no overflow or browser errors. The isolated Nike case verified brand photography/fonts, one-page fit, requirement status saving, private-note exclusion, and local preview refresh while entering/exiting editing. The mechanical design detector flagged only the deliberate generic fallback font; company font choices take precedence. No push, tag or deployment for this local work.
+- Project menu renamed from Ali's feedback: "Input sheet" is now **Case inputs**;
+  "Deck" is now **Case artifacts** and opens on the **Live room** (was "Website"),
+  with "Edit deck" to reach the slides.
+- Research moved into the project: it sits in the project menu, runs for that
+  project only (its files and connectors), and lists only that project's research.
+  The global Research tab is gone.
+- Files: saved instructions show as text with an Edit button instead of an open
+  box. Edit opens the box with Cancel and Save changes.
+- The separate Person lookup tab is gone: it lives in Research, under the Person toggle.
+- Fixed: cancelling "New project" on the Dashboard made the New project dialog reopen
+  every time Projects was opened, covering the project you clicked.
+- Fixed: chat attachments only took text files. They now read PDF, Word, PowerPoint
+  and Excel with the same reader as Files.
+- Connectors: added Granola (meeting notes), Google Sheets and Excel (finance models),
+  Figma (design specs) and Canva (decks), with their logos. Like the others they take
+  uploaded or pasted material for now; every connector upload now reads PDF and
+  Office files too. With every connection off, a gap says so in one line instead of
+  listing all eleven.
 
-- Merged Amr’s latest Project Files and waitlist/access updates with the local meeting-feedback work. Installed the new file-reader dependencies locally and retained npm’s resulting peer metadata. Validation: 338 app/server tests, 34 worker tests and production build pass; no push or deployment.
-
-- 2026-10-25: Applied the meeting feedback to Chris’s workflow. Added a private Evidence review tab inside the input sheet with full source links/quotes, source states, timestamps, affected calculations, open questions and existing arithmetic. It is excluded from client exports.
-- Added optional team/workflow/problem context using existing saved custom fields and agent-edit handling. Context follows the case into its website and one-pager without changing financial calculations.
-- New deck templates lead with the modeled Portal/self-hosting cost decision, explain the workflow and value drivers, retain stakeholder framing and close with modeled annual impact. Headlines handle missing inputs and unfavorable comparisons honestly; engineering capacity is distinguished from cash savings. Existing authored decks are preserved. App/export narrative tokens share one implementation, including interactive scenario updates.
-- Validation: all 326 app/server tests and app/plugin builds pass. Isolated dark/light desktop/mobile review verified source links/quotes, open-question filtering and plain-text copying. Website/PDF/slides/one-pager previews render context without source-quote leakage or unresolved tokens; website scenario controls update the comparison headline correctly. Added a Chris-focused end-to-end demo guide. No release version bump, push or deployment for these changes.
+Checks: 334 app tests pass. On localhost with the test account:
+scripts/review-nav-instructions.mjs 19/19 (menu names and order, Live room default,
+Research inside the project with its Person toggle, instructions saved view, edit,
+cancel, save changes, reload); scripts/review-new-project-dialog.mjs 3/3;
+scripts/review-chat-attach.mjs 4/4 (real agent answered from an attached PDF and
+Excel file with Search off); scripts/review-connectors.mjs 9/9 (all 11 logos load,
+an Excel file uploads into the Excel connector as spreadsheet text).
 
 ## v0.11.0 (2026-10-25): Project Files and the waitlist
 
