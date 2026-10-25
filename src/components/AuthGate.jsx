@@ -258,7 +258,7 @@ function Waitlist({ email, setEmail, joined, onJoined, onSignIn, onApproved }) {
       <div className="auth-card waitlist-card">
         <AppLogo />
         <h1>You're on the list</h1>
-        <p className="waitlist-lede">Thanks{name.trim() ? `, ${name.trim().split(' ')[0]}` : ''}. We're letting people in by hand while we test with real sellers. We'll let you know at {email.trim()} when you're in. Then come back here, enter the same email, and you'll go straight through.</p>
+        <p className="waitlist-lede">Thanks{name.trim() ? `, ${name.trim().split(' ')[0]}` : ''}. We're letting people in a few at a time while we test it. We'll let you know at {email.trim()} when you're in. Then come back here, enter the same email, and you'll go straight through.</p>
       </div>
     </main>
   )
