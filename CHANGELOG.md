@@ -35,7 +35,9 @@ Every version that lands on `main` gets a line here and a git tag.
   owner-only under RLS, 50 files / 2M characters per project.
 
 - Waitlist: new people join a waitlist instead of creating an account (?waitlist,
-  with an optional ?ref= tag to see where they came from). Only emails an admin
+  with an optional ?ref= tag to see where they came from). The form asks name,
+  email and a role picked from a short list (Account Executive, Sales Engineer,
+  Sales leader, Founder, Consultant, Student, Other). Only emails an admin
   invited can create an account; the database enforces it (migration 0005).
   Existing accounts were carried over as joined. Admins get a Waitlist page:
   counts, a shareable link, Invite per person and a copyable invite link
@@ -43,7 +45,7 @@ Every version that lands on `main` gets a line here and a git tag.
   Team-created accounts (worker/create_account.py) are invited first.
 
 Checks: 333 app tests, 34 worker tests, build OK. scripts/review-waitlist.mjs on the
-live database: 15/15 (join, refused before invite, admin invites, non-admin cannot
+live database: 18/18 (name/email/role form, join, refused before invite, admin invites, non-admin cannot
 see or read the list, invited sign-up reaches the email code, cleanup).
 scripts/review-files.mjs on the
 real worker: 15/15 (four real files uploaded and read; agent answered three facts

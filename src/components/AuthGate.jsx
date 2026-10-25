@@ -223,18 +223,26 @@ function AuthScreens({ onReset = () => {} }) {
   )
 }
 
+export const WAITLIST_ROLES = [
+  'Account Executive',
+  'Sales Engineer / Solutions Consultant',
+  'Sales leader',
+  'Founder',
+  'Consultant',
+  'Student',
+  'Other'
+]
+
 function Waitlist({ email, setEmail, joined, onJoined, onSignIn, onInvited }) {
   const [name, setName] = useState('')
-  const [company, setCompany] = useState('')
   const [role, setRole] = useState('')
-  const [useCase, setUseCase] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
   async function join(e) {
     e.preventDefault()
     setBusy(true); setError('')
-    const { error } = await supabase.rpc('join_waitlist', { p_email: email.trim(), p_name: name, p_company: company, p_role: role, p_use_case: useCase, p_source: sourceParam() })
+    const { error } = await supabase.rpc('join_waitlist', { p_email: email.trim(), p_name: name, p_role: role, p_source: sourceParam() })
     setBusy(false)
     if (error) { setError(/valid email/.test(error.message) ? 'Enter a valid email.' : /too many/.test(error.message) ? 'Too many sign-ups right now. Try again in a little while.' : error.message); return }
     onJoined()
@@ -257,18 +265,17 @@ function Waitlist({ email, setEmail, joined, onJoined, onSignIn, onInvited }) {
         <AppLogo />
         <h1>Join the waitlist</h1>
         <p className="waitlist-lede">CaseBuilder turns what you know about a deal into a business case each stakeholder can say yes to. We're opening it to a small group first.</p>
-        <label htmlFor="wl-email">Work email</label>
-        <input id="wl-email" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} required autoFocus />
-        <div className="waitlist-row">
-          <div><label htmlFor="wl-name">Name</label><input id="wl-name" autoComplete="name" value={name} onChange={e => setName(e.target.value)} maxLength={120} /></div>
-          <div><label htmlFor="wl-company">Company</label><input id="wl-company" autoComplete="organization" value={company} onChange={e => setCompany(e.target.value)} maxLength={120} /></div>
-        </div>
+        <label htmlFor="wl-name">Name</label>
+        <input id="wl-name" autoComplete="name" value={name} onChange={e => setName(e.target.value)} maxLength={120} required autoFocus />
+        <label htmlFor="wl-email">Email</label>
+        <input id="wl-email" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} required />
         <label htmlFor="wl-role">Role</label>
-        <input id="wl-role" autoComplete="organization-title" value={role} onChange={e => setRole(e.target.value)} maxLength={120} placeholder="e.g. Account Executive, Solutions Engineer" />
-        <label htmlFor="wl-use">What would you use it for? <span className="auth-optional">optional</span></label>
-        <textarea id="wl-use" rows={3} value={useCase} onChange={e => setUseCase(e.target.value)} maxLength={1000} placeholder="The deal or business case you'd try it on first." />
+        <select id="wl-role" className="waitlist-select" value={role} onChange={e => setRole(e.target.value)} required>
+          <option value="" disabled>Choose one</option>
+          {WAITLIST_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+        </select>
         {error && <p className="auth-error" role="alert">{error}</p>}
-        <button className="primary" type="submit" disabled={busy || !email.trim()}>{busy ? 'Joining…' : 'Join the waitlist'}</button>
+        <button className="primary" type="submit" disabled={busy || !email.trim() || !name.trim() || !role}>{busy ? 'Joining…' : 'Join the waitlist'}</button>
         <p className="auth-switch">Already have an account? <button type="button" className="link-btn" onClick={onSignIn}>Sign in</button></p>
         <p className="auth-switch waitlist-invited">Got an invite? <button type="button" className="link-btn" onClick={onInvited}>Create your account</button></p>
       </form>

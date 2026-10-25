@@ -89,9 +89,8 @@ export default function WaitlistAdmin() {
             <li key={r.id} className="wl-row">
               <div className="wl-who">
                 <strong>{r.name || r.email}</strong>
-                <span>{[r.role, r.company].filter(Boolean).join(' · ') || (r.name ? r.email : '')}</span>
+                <span>{r.role || 'No role given'}</span>
                 {r.name && <small>{r.email}</small>}
-                {r.use_case && <p className="wl-use">“{r.use_case}”</p>}
               </div>
               <div className="wl-meta">
                 <span>Joined {when(r.created_at)}{r.source ? ` · via ${r.source}` : ''}</span>
