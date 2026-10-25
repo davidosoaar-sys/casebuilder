@@ -32,6 +32,7 @@ import { stakeholdersForArchetype } from './valueModel.js'
 import { DEFAULT_BRAND } from './brand.js'
 import { AGENT_COMMANDS } from './agentCommands.js'
 import PersonLookup from './components/PersonLookup.jsx'
+import Scheduled from './components/Scheduled.jsx'
 import ProjectFiles from './components/ProjectFiles.jsx'
 import WaitlistAdmin, { isAdmin } from './components/WaitlistAdmin.jsx'
 import usePersonLookup from './usePersonLookup.js'
@@ -349,6 +350,9 @@ export default function App({ account }) {
           />
         ) : page === 'waitlist' && admin ? (
           <WaitlistAdmin />
+        ) : page === 'scheduled' && project ? (
+          <Scheduled key={project.id} project={project} userId={account.session.user.id}
+            onOpenChat={chatId => { try { localStorage.setItem(`casebuilder.chat.${project.id}`, chatId) } catch {} ; navigate('agent') }} />
         ) : page === 'files' && project ? (
           <ProjectFiles key={project.id} project={project} userId={account.session.user.id} />
         ) : (page === 'people-lookup' || page === 'research') && project ? (

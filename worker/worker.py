@@ -863,6 +863,13 @@ def run_hermes(profile, prompt, api_key, model=MODEL, effort=None, web=True, pro
             pass
 
 
+def scheduled_meta(job):
+    """Replies from a scheduled task say so (the app labels them)."""
+    if not job.get("schedule_id"):
+        return {}
+    return {"scheduled": True, "schedule_id": job["schedule_id"], "schedule_title": str((job.get("payload") or {}).get("title") or "")[:120]}
+
+
 def chat_for(job):
     """The chat a job's reply belongs to: the payload's chat_id, else the chat of
     the user message that started it (jobs queued before migration 0010)."""
@@ -875,6 +882,18 @@ def chat_for(job):
         if ok:
             return cid
         log("ignored chat_id not owned by the job owner", job.get("id"))
+    if job.get("schedule_id"):
+        # A scheduled task whose chat was deleted: start a fresh chat for it and
+        # point the schedule at it, so later runs land together.
+        title = str((job.get("payload") or {}).get("title") or "Scheduled task")[:120]
+        kind = "research" if job.get("kind") == "research" else "chat"
+        made = api("POST", "/rest/v1/chats", {"deal_id": job["deal_id"], "owner_id": job["owner_id"], "title": title, "kind": kind},
+                   prefer="return=representation") or []
+        if made:
+            new_id = made[0]["id"]
+            payload = dict(job.get("payload") or {}, chat_id=new_id)
+            api("PATCH", f"/rest/v1/schedules?id=eq.{job['schedule_id']}&owner_id=eq.{job['owner_id']}", {"payload": payload}, prefer="return=minimal")
+            return new_id
     rows = api("GET", f"/rest/v1/chat_messages?deal_id=eq.{job['deal_id']}&owner_id=eq.{job['owner_id']}"
                       "&role=eq.user&select=chat_id&order=id.desc&limit=1") or []
     return rows[0]["chat_id"] if rows else None
@@ -903,13 +922,21 @@ def handle(job):
     if job.get("deal_id"):
         rows = api("GET", f"/rest/v1/deals?id=eq.{job['deal_id']}&owner_id=eq.{owner}&select=id,name,data")
         deal = rows[0] if rows else None
+    if job.get("schedule_id") and chat_id and deal and job.get("attempts", 1) <= 1:
+        # A scheduled run has no user message in the chat: post the task's prompt
+        # as one (role 'status' shows as "Scheduled: <title>"), so the reply has context.
+        api("POST", "/rest/v1/chat_messages", {"deal_id": job["deal_id"], "owner_id": owner, "chat_id": chat_id,
+            "role": "status", "content": str((job.get("payload") or {}).get("message") or (job.get("payload") or {}).get("question") or "")[:4000],
+            "job_id": jid, "meta": scheduled_meta(job)}, prefer="return=minimal")
     history = []
     if job["kind"] in ("chat", "research") and job.get("deal_id") and deal and (chat_id or job["kind"] == "chat"):
         # History comes from this chat only (migration 0010); old jobs without a chat id use the deal.
         scope = f"chat_id=eq.{chat_id}" if chat_id else f"deal_id=eq.{job['deal_id']}"
         history = api("GET", f"/rest/v1/chat_messages?{scope}&owner_id=eq.{owner}"
                              f"&role=in.(user,assistant)&select=role,content&order=id.desc&limit={HISTORY_MESSAGES + 1}") or []
-        history = list(reversed(history))[:-1]  # oldest first, minus the request itself
+        history = list(reversed(history))
+        if not job.get("schedule_id"):
+            history = history[:-1]  # minus the request itself (a scheduled run has no user message)
     profile = profile_for(owner)
     t0 = time.time()
     pl = job.get("payload") or {}
@@ -949,7 +976,7 @@ def handle(job):
             api("POST", "/rest/v1/chat_messages", {"deal_id": job["deal_id"], "owner_id": owner, "chat_id": chat_id,
                 "role": "assistant", "content": text, "job_id": jid,
                 "meta": {"research": True, "sources": sources, "dropped_sources": dropped, "model": model,
-                         "effort": effort, "seconds": secs, "trace": trace}}, prefer="return=minimal")
+                         "effort": effort, "seconds": secs, "trace": trace, **scheduled_meta(job)}}, prefer="return=minimal")
         rpc("complete_job", p_id=jid, p_worker=WORKER_ID, p_result=result)
         log("done", jid, f"{secs}s research", f"tools={len(trace)} sources={len(sources)} dropped={dropped}")
         return
@@ -960,7 +987,8 @@ def handle(job):
     if job.get("deal_id") and deal:
         api("POST", "/rest/v1/chat_messages", {"deal_id": job["deal_id"], "owner_id": owner, "chat_id": chat_id,
             "role": "assistant", "content": text, "job_id": jid,
-            "meta": {"model": model, "effort": effort, "web": web, "seconds": secs, "edits": edits, "commands": commands, "rejected": rejected, "trace": trace}}, prefer="return=minimal")
+            "meta": {"model": model, "effort": effort, "web": web, "seconds": secs, "edits": edits, "commands": commands, "rejected": rejected, "trace": trace,
+                     **scheduled_meta(job)}}, prefer="return=minimal")
     rpc("complete_job", p_id=jid, p_worker=WORKER_ID, p_result=result)
     u = usage or {}
     log("done", jid, f"{secs}s", f"edits={len(edits)} commands={len(commands)} rejected={len(rejected)}", f"tokens in={u.get('input_tokens')} out={u.get('output_tokens')} calls={u.get('api_calls')}")

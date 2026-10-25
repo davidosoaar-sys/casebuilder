@@ -2058,3 +2058,35 @@ a.research-cite:hover { background: var(--accent); color: var(--accent-ink) !imp
 .chat-research .research-answer > :first-child { margin-top: 0; }
 .chat-research-ask { display: inline-block; margin-right: 8px; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 600; background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--ink-strong); vertical-align: 1px; }
 .mascot-research.is-on { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+
+/* Scheduled tasks (v0.15.0) */
+.scheduled-page { max-width: 980px; }
+.sched-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.sched-card { display: flex; gap: 16px; justify-content: space-between; align-items: flex-start; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); padding: 16px 18px; }
+.sched-card.is-off { opacity: .62; }
+.sched-main { min-width: 0; flex: 1; }
+.sched-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.sched-title strong { color: var(--ink-strong); font-size: 15px; }
+.sched-kind { font-size: 11.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--panel-3); color: var(--ink-dim); }
+.sched-prompt { margin: 6px 0 8px; color: var(--ink); font-size: 13.5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.sched-meta { margin: 0; display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--ink-faint); }
+.sched-actions { display: flex; align-items: center; gap: 6px; flex: none; flex-wrap: wrap; justify-content: flex-end; }
+.sched-empty p { color: var(--ink-faint); }
+.sched-examples { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.sched-example { text-align: left; display: flex; flex-direction: column; gap: 4px; border: 1px dashed var(--line); border-radius: 14px; background: var(--panel); padding: 14px 16px; color: var(--ink); cursor: pointer; }
+.sched-example:hover:not(:disabled) { border-color: var(--accent); }
+.sched-example span { font-size: 12.5px; color: var(--accent); }
+.sched-example small { color: var(--ink-faint); font-size: 12.5px; }
+.sched-form { display: flex; flex-direction: column; gap: 14px; }
+.sched-field { display: flex; flex-direction: column; gap: 6px; }
+.sched-field > span { font-size: 12.5px; font-weight: 600; color: var(--ink-dim); }
+.sched-field small { color: var(--ink-faint); font-size: 12.5px; }
+.sched-field input, .sched-field textarea, .sched-field select { font: inherit; }
+.sched-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.sched-every { display: flex; gap: 8px; }
+.sched-every input { width: 90px; }
+.sched-form-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.sched-foot { color: var(--ink-faint); font-size: 12.5px; margin-top: 18px; }
+.chat-scheduled-run .mono-label { margin: 0 0 4px; color: var(--accent); }
+.chat-scheduled-run .chat-bubble { background: color-mix(in srgb, var(--accent) 8%, transparent); border: 1px dashed color-mix(in srgb, var(--accent) 40%, transparent); }
+@media (max-width: 760px) { .sched-card { flex-direction: column; } .sched-row { grid-template-columns: 1fr; } }

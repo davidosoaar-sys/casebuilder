@@ -232,7 +232,7 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
     if (id === chatId) setChatId(rest[0]?.id || null)
   }
 
-  const visible = messages.filter(m => m.role !== 'status')
+  const visible = messages.filter(m => m.role !== 'status' || m.meta?.scheduled)
 
   const panel = (
     <section className={`chat-panel chat-${mode}${!loading && visible.length === 0 ? ' is-empty' : ''}`} aria-label="Agent chat" data-deal={dealId}>
@@ -263,7 +263,12 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
                 <li>“Which numbers are still unconfirmed?”</li>
               </ul>
             </div>
-          )) : visible.map(m => m.role === 'user' ? (
+          )) : visible.map(m => m.role === 'status' ? (
+            <div key={m.id} className="chat-msg chat-scheduled-run">
+              <p className="mono-label">Scheduled run{m.meta?.schedule_title ? ` · ${m.meta.schedule_title}` : ''} · {new Date(m.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}</p>
+              <div className="chat-bubble">{m.content}</div>
+            </div>
+          ) : m.role === 'user' ? (
             <div key={m.id} className="chat-msg chat-user">
               {editing?.id === m.id ? (
                 <EditBox initial={editing.text} onCancel={() => setEditing(null)}

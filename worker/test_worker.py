@@ -539,3 +539,10 @@ class ResearchChatScope(unittest.TestCase):
         finally:
             worker.api, worker.rpc = old
         self.assertNotIn("/rest/v1/chat_messages", posted)  # no-key path for a non-chat research job stays off the chat
+
+
+class ScheduledRuns(unittest.TestCase):
+    def test_scheduled_meta(self):
+        self.assertEqual(worker.scheduled_meta({"payload": {}}), {})
+        m = worker.scheduled_meta({"schedule_id": "s1", "payload": {"title": "Weekly news"}})
+        self.assertEqual(m, {"scheduled": True, "schedule_id": "s1", "schedule_title": "Weekly news"})

@@ -431,3 +431,31 @@ test('chat history: the pre-v0.15.0 app and worker (no chat id) still work, into
   assert.equal((await service(tx => tx.query(`select count(*)::int n from public.chats where deal_id = 'deal-b'`))).rows[0].n, chatsBefore, 'no chat created in another account\'s deal')
   assert.equal((await service(tx => tx.query(`select count(*)::int n from public.chats where owner_id = $1 and deal_id = 'deal-b'`, [A]))).rows[0].n, 0)
 })
+
+test('scheduled tasks screen (0011): only prompt/research, on a project, never in the past, owner pinned', async () => {
+  await db.exec(readFileSync(new URL('./migrations/0011_schedules_screen.sql', import.meta.url), 'utf8'))
+  await service(tx => tx.query(`delete from public.schedules`))
+  const ins = (cols, vals, params) => user(A, tx => tx.query(`insert into public.schedules (owner_id, ${cols}) values ($1, ${vals}) returning id`, [A, ...params]))
+  const tomorrow = new Date(Date.now() + 86400000).toISOString()
+  const { rows } = await ins(`deal_id, title, kind, every, next_run_at, payload`, `'deal-a', 'Weekly news', 'research', '7 days', $2, '{"question":"news"}'`, [tomorrow])
+  const id = rows[0].id
+  await rejects(ins(`deal_id, title, kind, every, next_run_at`, `'deal-a', 't', 'recheck_assumptions', '1 day', $2`, [tomorrow]), /schedule_kind/)
+  await rejects(ins(`title, kind, every, next_run_at`, `'t', 'chat', '1 day', $2`, [tomorrow]), /schedule_project/)
+  await rejects(ins(`deal_id, title, kind, every, next_run_at`, `'deal-a', 't', 'chat', '1 day', now() - interval '1 hour'`, []), /schedule_past/)
+  await rejects(ins(`deal_id, title, kind, every, next_run_at`, `'deal-a', '', 'chat', '1 day', $2`, [tomorrow]), /check constraint/)
+  // Pausing (an update that leaves next_run_at alone) is fine even once the slot has passed.
+  await service(tx => tx.query(`update public.schedules set next_run_at = now() - interval '5 minutes' where id = $1`, [id]))
+  await user(A, tx => tx.query(`update public.schedules set enabled = false where id = $1`, [id]))
+  // Moving the next run into the past from the app is refused (would beat the hourly minimum).
+  await rejects(user(A, tx => tx.query(`update public.schedules set next_run_at = now() - interval '2 minutes' where id = $1`, [id])), /schedule_past/)
+  // Owner cannot be changed.
+  await user(A, tx => tx.query(`update public.schedules set next_run_at = $2, owner_id = $3 where id = $1`, [id, tomorrow, B])).catch(() => {})
+  assert.equal((await service(tx => tx.query(`select owner_id from public.schedules where id = $1`, [id]))).rows[0].owner_id, A)
+  // The runner (service role) still queues a due research schedule with its payload.
+  await service(tx => tx.query(`delete from public.jobs`))
+  await service(tx => tx.query(`update public.schedules set enabled = true, next_run_at = now() - interval '1 minute' where id = $1`, [id]))
+  assert.equal((await service(tx => tx.query(`select public.enqueue_due_schedules() as n`))).rows[0].n, 1)
+  const job = (await service(tx => tx.query(`select kind, payload->>'question' q, schedule_id from public.jobs`))).rows[0]
+  assert.deepEqual([job.kind, job.q, job.schedule_id], ['research', 'news', id])
+  assert.equal((await user(B, tx => tx.query(`select * from public.schedules`))).rows.length, 0)
+})
