@@ -45,27 +45,40 @@ const ic = {
 }
 
 // ---------- the robot ----------
-export function Robot({ emotion = 'reading', textLength = 0, listening = false }) {
+// Idle: bobs, blinks, and glances around on its own. Typing: eyes follow the
+// end of the text. Thinking: amber, bounces, eyes scan side to side.
+// Happy: a hop and "^ ^" eyes when a reply arrives.
+export function Robot({ emotion = 'reading', textLength = 0, listening = false, typing = false }) {
   const [blink, setBlink] = useState(false)
+  const [glance, setGlance] = useState({ x: 0, y: 0 })
   useEffect(() => {
-    const t = setInterval(() => {
-      if (emotion !== 'thinking') { setBlink(true); setTimeout(() => setBlink(false), 140) }
-    }, 2800 + Math.random() * 2200)
-    return () => clearInterval(t)
+    let t
+    const loop = () => { t = setTimeout(() => { if (emotion !== 'thinking') { setBlink(true); setTimeout(() => setBlink(false), 140) } loop() }, 2400 + Math.random() * 2200) }
+    loop(); return () => clearTimeout(t)
   }, [emotion])
-  const look = Math.sin(textLength * 0.45) * 6
-  const ears = listening ? 'is-listening' : emotion === 'thinking' ? 'is-thinking' : ''
+  useEffect(() => { // idle glances
+    if (typing || emotion !== 'reading') { setGlance({ x: 0, y: 0 }); return }
+    let t
+    const spots = [[0, 0], [-6, 0], [6, 0], [-4, -2], [4, -2], [0, 2], [0, 0]]
+    const loop = () => { t = setTimeout(() => { const [x, y] = spots[Math.floor(Math.random() * spots.length)]; setGlance({ x, y }); loop() }, 1300 + Math.random() * 1700) }
+    loop(); return () => clearTimeout(t)
+  }, [typing, emotion])
+  const follow = typing ? Math.max(-7, Math.min(7, -7 + (textLength % 60) * (14 / 60))) : glance.x
+  const ears = listening ? 'is-listening' : emotion === 'thinking' ? 'is-thinking' : emotion === 'happy' ? 'is-happy' : ''
+  const body = emotion === 'thinking' ? { y: [0, -6, 0], rotate: [0, -3, 0, 3, 0] }
+    : emotion === 'happy' ? { y: [0, -12, 0, -4, 0], rotate: 0 }
+    : listening ? { y: [0, -2, 0], rotate: [0, 2, 0, -2, 0] }
+    : { y: [0, -3, 0], rotate: typing ? 0 : [0, -1.5, 0, 1.5, 0] }
+  const timing = emotion === 'happy' ? { duration: 0.7, ease: 'easeOut' } : { duration: emotion === 'thinking' ? 1.4 : 2.6, repeat: Infinity, ease: 'easeInOut' }
   return (
-    <motion.div className="robot" aria-hidden="true"
-      animate={{ y: emotion === 'thinking' ? [0, -5, 0] : [0, -2, 0] }}
-      transition={{ y: { duration: 2.2, repeat: Infinity, ease: 'easeInOut' } }}>
+    <motion.div className="robot" aria-hidden="true" animate={body} transition={{ y: timing, rotate: { ...timing, duration: emotion === 'thinking' ? 1.6 : 4.2 } }}>
       <div className="robot-horns"><span /><span /></div>
       <div className="robot-body">
         <span className={`robot-ear left ${ears}`} />
         <span className={`robot-ear right ${ears}`} />
         <div className="robot-head">
           <div className="robot-screen">
-            <div className="robot-eyes"><Eye emotion={emotion} blink={blink} x={look} /><Eye emotion={emotion} blink={blink} x={look} /></div>
+            <div className="robot-eyes"><Eye emotion={emotion} blink={blink} x={follow} y={typing ? 1 : glance.y} /><Eye emotion={emotion} blink={blink} x={follow} y={typing ? 1 : glance.y} /></div>
             <div className="robot-scan" />
           </div>
         </div>
@@ -73,10 +86,11 @@ export function Robot({ emotion = 'reading', textLength = 0, listening = false }
     </motion.div>
   )
 }
-function Eye({ emotion, blink, x }) {
-  if (emotion === 'thinking') return <motion.span className="robot-eye thinking" animate={{ y: [-1, -3, -1] }} transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }} />
+function Eye({ emotion, blink, x, y }) {
+  if (emotion === 'thinking') return <motion.span className="robot-eye thinking" animate={{ x: [-5, 5, -5], y: [-1, -3, -1] }} transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }} />
+  if (emotion === 'happy') return <span className="robot-eye happy" />
   if (blink) return <span className="robot-eye blink" />
-  return <motion.span className="robot-eye" animate={{ x }} transition={{ type: 'spring', stiffness: 300, damping: 25 }} />
+  return <motion.span className="robot-eye" animate={{ x, y }} transition={{ type: 'spring', stiffness: 260, damping: 20 }} />
 }
 
 // ---------- the composer ----------
@@ -142,7 +156,13 @@ export default function AgentComposer({ onSend, busy = false, disabled = false, 
   }
 
   const typing = text.length > 0 || files.length > 0 || listening
-  const emotion = busy ? 'thinking' : 'reading'
+  const [happy, setHappy] = useState(false)
+  const wasBusy = useRef(busy)
+  useEffect(() => {
+    if (wasBusy.current && !busy) { setHappy(true); const t = setTimeout(() => setHappy(false), 1600); wasBusy.current = busy; return () => clearTimeout(t) }
+    wasBusy.current = busy
+  }, [busy])
+  const emotion = busy ? 'thinking' : happy ? 'happy' : 'reading'
   const canSend = !disabled && !busy && (text.trim() || files.length)
 
   return (
@@ -162,7 +182,7 @@ export default function AgentComposer({ onSend, busy = false, disabled = false, 
       <motion.div className="mascot-stage" animate={{ paddingTop: (typing || busy || !showWelcome) ? 66 : 0 }} transition={{ type: 'spring', stiffness: 320, damping: 26 }}>
         {(typing || busy || !showWelcome) && (
           <motion.div layoutId="agent-robot" className="mascot-perch" transition={{ type: 'spring', stiffness: 320, damping: 26 }}>
-            <Robot emotion={emotion} textLength={text.length} listening={listening} />
+            <Robot emotion={emotion} textLength={text.length} listening={listening} typing={text.length > 0} />
           </motion.div>
         )}
 
@@ -173,6 +193,8 @@ export default function AgentComposer({ onSend, busy = false, disabled = false, 
           ))}</div>}
 
           <textarea id="chat-input" ref={area} value={text} disabled={disabled}
+            data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" spellCheck
+
             onChange={e => setText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
             placeholder={listening ? 'Listening… speak your mind' : busy ? (web ? 'Searching and thinking…' : 'Thinking…') : 'Ask about this deal, or tell the agent what to change'} />

@@ -74,7 +74,9 @@ export default function Sidebar({ view, project, projectMode = false, onNav, onS
   return (
     <aside className="sidebar no-print">
       <div className="sidebar-logo">
-        <AppLogo height={26} compact={collapsed} />
+        <button type="button" className="sidebar-home" onClick={() => onNav('dashboard')} title="Dashboard" aria-label="CaseBuilder, go to the dashboard">
+          <AppLogo height={26} compact={collapsed} />
+        </button>
         <button type="button" className="sidebar-collapse" onClick={() => setCollapsed(c => !c)} aria-label={collapsed ? 'Expand menu' : 'Collapse menu'} title={collapsed ? 'Expand menu' : 'Collapse menu'} aria-expanded={!collapsed}>
           <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="1.5" /><path d="M6 2.5v11" />{collapsed ? <path d="M8.6 6.2l1.8 1.8-1.8 1.8" strokeLinecap="round" strokeLinejoin="round" /> : <path d="M10.6 6.2L8.8 8l1.8 1.8" strokeLinecap="round" strokeLinejoin="round" />}</svg>
         </button>
