@@ -241,6 +241,45 @@ def project_files_context(deal_id, owner):
     return files_prompt(rows)
 
 
+MAX_RESEARCH_CHARS = 24000  # past research the chat reads per run
+
+
+def project_research_context(deal_id, owner, limit=6):
+    """Finished research runs on this project, newest first, so the chat agent can
+    see and follow up on them. Returns (prompt_text, trace_steps)."""
+    if not deal_id:
+        return "", []
+    try:
+        rows = api("GET", f"/rest/v1/jobs?deal_id=eq.{urllib.parse.quote(str(deal_id))}&owner_id=eq.{owner}"
+                          f"&kind=eq.research&status=eq.done&select=payload,result,created_at&order=created_at.desc&limit={limit}") or []
+    except Exception as e:
+        log("could not read project research", str(e)[:200])
+        return "", []
+    return research_prompt(rows)
+
+
+def research_prompt(rows):
+    budget, blocks, steps = MAX_RESEARCH_CHARS, [], []
+    for r in rows:
+        q = str((r.get("payload") or {}).get("question") or "").strip()[:300]
+        res = r.get("result") or {}
+        a = str(res.get("text") or "").strip()
+        if not q or not a or budget <= 0:
+            continue
+        srcs = [s for s in (res.get("sources") or []) if isinstance(s, dict)]
+        src_lines = "\n".join(f"[{s.get('n')}] {s.get('title') or ''} {s.get('url') or s.get('connector') or ''}".strip() for s in srcs[:12])
+        body = a[:min(budget, 6000)]
+        budget -= len(body)
+        blocks.append(f"--- Research ({str(r.get('created_at') or '')[:10]}): {q} ---\n{body}" + (f"\nSources:\n{src_lines}" if src_lines else ""))
+        steps.append({"tool": "research", "title": f"Read earlier research: {q[:80]}", "provider": "Research",
+                      "input": {}, "output": f"{len(body):,} characters", "results": [], "ok": True})
+    if not blocks:
+        return "", []
+    return ("Research the user already ran on this project (newest first), with its sources. Use it when it "
+            "helps, cite it as (Research: <question>) and keep its source numbers' meaning. It is from the date "
+            "shown, so say so if it may be out of date.\n" + "\n".join(blocks)), steps
+
+
 def files_prompt(rows):
     instr = [r for r in rows if r.get("kind") == "instructions" and (r.get("text") or "").strip()]
     files = [r for r in rows if r.get("kind") in ("context", "deck_inspiration") and r.get("text")]
@@ -307,7 +346,7 @@ def field_table(fields):
     return "\n".join(rows)
 
 
-def build_prompt(job, deal, history=(), files_text=""):
+def build_prompt(job, deal, history=(), files_text="", research_text=""):
     p = job.get("payload") or {}
     msg = (p.get("message") or p.get("prompt") or "").strip()
     who = (p.get("user_name") or "").strip()[:60]
@@ -374,6 +413,8 @@ def build_prompt(job, deal, history=(), files_text=""):
         parts.append(conn_text)
     if files_text:
         parts.append(files_text)
+    if research_text:
+        parts.append(research_text)
     if history:
         lines = [f"{m.get('role')}: {(m.get('content') or '')[:600]}" for m in history]
         parts.append("Earlier in this chat:\n" + "\n".join(lines))
@@ -697,8 +738,9 @@ def handle(job):
     web = pl.get("web") is not False
     research = job["kind"] == "research"
     files_text, file_steps = project_files_context(job.get("deal_id"), owner) if deal else ("", [])
-    prompt = build_research_prompt(job, deal, files_text) if research else build_prompt(job, deal, history, files_text)
-    conn_steps = connector_context(deal)[1] + file_steps
+    research_text, research_steps = project_research_context(job.get("deal_id"), owner) if (deal and job["kind"] == "chat") else ("", [])
+    prompt = build_research_prompt(job, deal, files_text) if research else build_prompt(job, deal, history, files_text, research_text)
+    conn_steps = connector_context(deal)[1] + file_steps + research_steps
     with Progress(jid, profile, t0, conn_steps):
         raw, usage = run_hermes(profile, prompt, key, model, effort, True if research else web)
     secs = round(time.time() - t0, 1)

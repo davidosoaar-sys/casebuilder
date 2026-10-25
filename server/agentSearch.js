@@ -65,8 +65,11 @@ export async function runWithSearch({
 
   for (let turn = 0; turn < maxSearches + 2; turn++) {
     signal?.throwIfAborted?.()
-    const allowTool = engine && searches < maxSearches
-    message = await client.messages.stream({ ...base, ...(allowTool ? { tools: [SEARCH_TOOL] } : {}), messages: convo }, signal ? { signal } : undefined).finalMessage()
+    // The tool list must stay the same on every turn: the model's thinking blocks are
+    // bound to it, and changing it mid-conversation is rejected by the API ("Invalid
+    // signature in thinking block ... tools list differs"). Past the search limit the
+    // tool stays offered and a call just gets "Search limit reached".
+    message = await client.messages.stream({ ...base, ...(engine ? { tools: [SEARCH_TOOL] } : {}), messages: convo }, signal ? { signal } : undefined).finalMessage()
     blocks.push(...message.content)
     const calls = message.content.filter(b => b.type === 'tool_use' && b.name === 'web_search')
     if (message.stop_reason !== 'tool_use' || !calls.length) break

@@ -29,7 +29,7 @@ export async function fetchPublic(input, { limit = 1_500_000, redirects = 3 } = 
   if (!records.length || records.some(r => !publicAddress(r.address))) throw new Error('That website address is not public.')
   return new Promise((resolve, reject) => {
     const req = https.get(url, {
-      headers: { 'User-Agent': 'CaseBuilder/1.0 (public company and professional profile research)', Accept: '*/*', 'Accept-Encoding': 'identity' },
+      headers: { 'User-Agent': 'CaseBuilder/1.0 (public company and professional profile research)', Accept: 'text/html,application/xhtml+xml,image/avif,image/webp,image/svg+xml,text/css,*/*;q=0.8', 'Accept-Language': 'en-US,en;q=0.9', 'Accept-Encoding': 'identity' },
       lookup: (_host, options, callback) => options.all ? callback(null, records) : callback(null, records[0].address, records[0].family)
     }, res => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {

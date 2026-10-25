@@ -304,3 +304,22 @@ class ProjectFiles(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ProjectResearchInChat(unittest.TestCase):
+    ROWS = [{"payload": {"question": "how many engineers does apple have"}, "created_at": "2026-10-25T20:00:00Z",
+             "result": {"text": "Tens of thousands; 20,000 to 70,000 depending on definition [1].",
+                        "sources": [{"n": 1, "title": "Apple 10-K", "url": "https://sec.gov/x"}]}},
+            {"payload": {"question": "empty"}, "result": {"text": ""}}]
+
+    def test_research_reaches_the_chat_prompt_with_sources(self):
+        text, steps = worker.research_prompt(self.ROWS)
+        self.assertIn("how many engineers does apple have", text)
+        self.assertIn("20,000 to 70,000", text)
+        self.assertIn("[1] Apple 10-K https://sec.gov/x", text)
+        self.assertEqual(len(steps), 1, "runs with no answer are skipped")
+        p = worker.build_prompt({"kind": "chat", "payload": {"message": "can you see my research?"}}, DEAL, (), "", text)
+        self.assertIn("Research the user already ran on this project", p)
+
+    def test_no_research_adds_nothing(self):
+        self.assertEqual(worker.research_prompt([]), ("", []))

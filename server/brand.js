@@ -1,5 +1,5 @@
 import {inspectBrandImage,brandPageLinks,brandKitDownloads,brandHeroCandidates} from './brandAssets.js'
-import { runWithSearch } from './agentSearch.js'
+import { runWithSearch, searchBackendOrNull } from './agentSearch.js'
 import { fetchPublic } from './publicWeb.js'
 import {publicProfileUrl} from '../src/profileMedia.js'
 export { fetchPublic, publicAddress } from './publicWeb.js'
@@ -138,6 +138,52 @@ export function parseBrand(html, css, website, company = '') {
   return { ...(background ? {background, surface: shade(background, light ? -0.035 : 0.06), text: textColor || (light ? '#161616' : '#ffffff'), muted: light ? '#555555' : '#b8b8b8'} : {}), candidates, colorEvidence, faces, derivedColors:['surface','muted',...(!textColor?['text']:[])], primary: color(themeVariables['marketing-primary'] || themeVariables['ds-theme-background-accent-strong-normal'] || '') || named || color(themeVariables['essential-bright-accent'] || themeVariables['brand-color'] || '') || textColor || (background?(light?'#111111':'#ffffff'):undefined), headingFont: !/var\(/.test(heading) ? heading : '', bodyFont: !/var\(/.test(body) ? body : '', logoUrl, face, colors: ranked.slice(0, 8) }
 }
 
+
+// A homepage proposed from evidence (Wikipedia infobox, LinkedIn link) is accepted
+// when the page itself loads and names the company in its title or site name.
+// That is verification, not guessing: an unrelated or parked domain fails it.
+const nameKey = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]/g, '')
+export function homepageNamesCompany(html, company) {
+  const want = nameKey(company)
+  if (want.length < 2) return false
+  const bits = [
+    (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1],
+    ...[...html.matchAll(/<meta\b[^>]*>/gi)].map(m => m[0]).filter(t => /(og:site_name|og:title|application-name)/i.test(t)).map(t => (t.match(/content\s*=\s*["']([^"']*)/i) || [])[1])
+  ].filter(Boolean)
+  return bits.some(b => nameKey(b).includes(want))
+}
+async function verifyHomepage(url, company) {
+  try {
+    const u = new URL(url)
+    if (u.protocol !== 'https:' || u.username || u.password) return ''
+    const page = await fetchPublic(new URL('/', u).href, { limit: HOME_LIMIT })
+    if (!/html/i.test(page.type)) return ''
+    return homepageNamesCompany(page.buffer.toString('utf8'), company) ? new URL('/', page.url).href : ''
+  } catch { return '' }
+}
+// When the agent could not settle on a site: one plain search, then only hosts whose
+// name contains the company's name, each verified by loading it.
+// The company's own domain: "<name>.<tld>" or "<name>.<co>.<cc>", where <name> starts
+// with the company's name. "tesla.wegic.app" (a site builder) and "apple.fandom.com" fail.
+export function ownDomain(host, company) {
+  const want = nameKey(company)
+  const parts = String(host || '').toLowerCase().replace(/^www\./, '').split('.')
+  if (want.length < 2 || parts.length < 2 || parts.length > 3) return false
+  if (parts.length === 3 && !(parts[1].length <= 3 && parts[2].length === 2)) return false
+  return nameKey(parts[0]).startsWith(want)
+}
+async function searchHomepage(company) {
+  const engine = searchBackendOrNull()
+  if (!engine) return ''
+  let found = []
+  try { found = await engine.search(`${company} official website`, { count: 8 }) } catch { return '' }
+  const hosts = [...new Set(found.map(r => { try { return new URL(r.url).hostname.replace(/^www\./, '') } catch { return '' } }))]
+    .filter(h => ownDomain(h, company))
+  for (const h of hosts.slice(0, 3)) { const ok = await verifyHomepage(`https://${h}/`, company); if (ok) return ok }
+  return ''
+}
+const HOME_LIMIT = 6_000_000 // some homepages (Netflix) are several MB of inline HTML
+
 const companyLinkedIn = value => {const url=publicProfileUrl(value);return /^https:\/\/(?:[a-z]{2,3}\.|www\.)?linkedin\.com\/company\/[^/?#]+\/?(?:[?#].*)?$/i.test(url)?url:''}
 async function findWebsite(company, client = null, identity = {}, {linkedinOnly=false,officialWebsite=''} = {}) {
   // Verified official domains for common demo/test accounts, not guessed assets.
@@ -162,8 +208,14 @@ async function findWebsite(company, client = null, identity = {}, {linkedinOnly=
     const linkedin=companyLinkedIn(parsed.linkedinUrl);if(linkedin&&[...urls].some(u=>u.replace(/\/$/,'')===linkedin.replace(/\/$/,'')))identity.linkedinUrl=linkedin } catch {}
   if(linkedinOnly)return officialWebsite
   if(!result&&identity.candidates?.length>1)return ''
-  if (!result || !seen.has(new URL(result).hostname.replace(/^www\./, ''))) throw new Error('Please enter the official website so we use the right company.')
-  return result
+  let host = ''
+  try { host = result ? new URL(result).hostname.replace(/^www\./, '') : '' } catch { result = '' }
+  if (result && seen.has(host)) return result
+  // Not on a host the search returned: accept it if its homepage names the company, or
+  // (when the site blocks automated requests) if it is plainly the company's own domain.
+  const checked = (result && await verifyHomepage(result, company)) || (result && ownDomain(host, company) ? result : '') || await searchHomepage(company)
+  if (checked) return checked
+  throw new Error('Please enter the official website so we use the right company.')
 }
 
 export async function discoverBrand({ company, website }, fetcher = fetchPublic, client = null) {
@@ -173,7 +225,7 @@ export async function discoverBrand({ company, website }, fetcher = fetchPublic,
   const target = website || await findWebsite(company, client, identity)
   if(!target&&identity.candidates?.length>1)return normalizeBrand({status:'error',message:'Several companies match. Which one is this case for?',companyCandidates:identity.candidates})
   let home
-  try { home = await fetcher(target) } catch (error) {
+  try { home = await fetcher(target, { limit: HOME_LIMIT }) } catch (error) {
     // Official brand pages can remain public when a homepage blocks automated requests.
     if (!/403|429/.test(error.message)) throw error
     try { home = await fetcher(new URL('/brand',target).href) } catch { throw new Error('The official website blocked brand discovery. Enter its brand page or upload a logo; no substitute logo was used.') }

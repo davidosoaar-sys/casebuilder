@@ -91,3 +91,16 @@ test('with no search key anywhere it falls back to Anthropic search and says so'
   assert.match(run.corpus, /quoted/)
   assert.match(run.citations['https://x.com/p'], /quoted/)
 })
+
+test('the tool list never changes between turns, even past the search limit', async () => {
+  // Thinking blocks are bound to the tool list; dropping the tool after the last
+  // allowed search made the API reject the next turn (broke brand lookup for Apple, Visa).
+  const client = fakeClient([toolTurn('a'), toolTurn('b'), toolTurn('c'), answer('done')])
+  const be = backend([{ url: 'https://example.com/a', title: 'A', snippet: 's' }])
+  const run = await runWithSearch({ client, model: 'm', system: 's', messages: [], backend: be, maxSearches: 2 })
+  assert.equal(be.queries.length, 2)
+  assert.equal(run.text, 'done')
+  const tools = client.sent.map(r => JSON.stringify(r.tools))
+  assert.ok(tools.every(x => x === tools[0]) && tools[0] !== undefined, tools.join(' | '))
+  assert.match(client.sent[3].messages.at(-1).content[0].content, /Search limit reached/)
+})

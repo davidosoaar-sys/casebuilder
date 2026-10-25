@@ -1,4 +1,5 @@
 import test from 'node:test'
+import { homepageNamesCompany, ownDomain } from './brand.js'
 import assert from 'node:assert/strict'
 import {inspectBrandImage,brandPageLinks,brandKitDownloads} from './brandAssets.js'
 import {discoverBrand} from './brand.js'
@@ -53,4 +54,17 @@ test('normal body-font files outrank regular-weight italic variants and video ic
  return {url,type:'text/html',buffer:Buffer.from('<a href="/" title="home">'+svg+'</a><style>@font-face{font-family:Company Sans;src:url(/italic.woff2);font-weight:400;font-style:italic}@font-face{font-family:Company Sans;src:url(/normal.woff2);font-weight:400;font-style:normal}body{font-family:Company Sans}.vjs-icon{font-family:VideoJS}</style>')}
  })
  assert.equal(brand.headingFont,'Company Sans');assert.ok(requested.includes('https://company.example/normal.woff2'));assert.ok(!requested.includes('https://company.example/italic.woff2'))
+})
+
+test('a homepage found from evidence is accepted only if it names the company', () => {
+  assert.equal(homepageNamesCompany('<title>The Coca-Cola Company: Refresh the World</title>', 'Coca-Cola'), true)
+  assert.equal(homepageNamesCompany('<head><meta property="og:site_name" content="Notion"><title>Your connected workspace</title></head>', 'Notion'), true)
+  assert.equal(homepageNamesCompany('<title>Buy this domain</title>', 'Notion'), false)
+  assert.equal(homepageNamesCompany('<title>Pepsi</title>', 'Coca-Cola'), false)
+  assert.equal(homepageNamesCompany('<title>A</title>', 'A'), false, 'one-letter names never match')
+})
+
+test('only the company\'s own domain counts, never a subdomain of another site', () => {
+  for (const h of ['tesla.com', 'www.tesla.com', 'tesla.co.uk', 'notion.so', 'coca-colacompany.com']) assert.equal(ownDomain(h, h.startsWith('coca') ? 'Coca-Cola' : h.replace(/^www\./, '').split('.')[0]), true, h)
+  for (const [h, c] of [['tesla.wegic.app', 'Tesla'], ['apple.fandom.com', 'Apple'], ['notapple.com', 'Apple'], ['visa.gov.example.org', 'Visa']]) assert.equal(ownDomain(h, c), false, h)
 })
