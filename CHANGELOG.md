@@ -29,9 +29,46 @@ Every version that lands on `main` gets a line here and a git tag.
 - Brand discovery prioritizes official home-link images, inline SVGs and Organization metadata over customer/product logos. Supports official brand-page fallback for blocked homepages and separates default palette tokens from dark overrides. Font selection follows the actual heading family; unavailable font files are disclosed.
 - Removed misleading Backstage-logo fallbacks from the client deck and PDF/slides/one-pager rendering. Project cards prefer the saved brand logo. Company colors stay scoped to the slide so editing controls remain readable with light-brand decks.
 - Brand scans authenticate signed-in sessions server-side on Vercel. Configured production/preview Supabase and server-only research settings with explicit approval; Git deployments use main for production, with a pinned Vite build/output configuration.
-- Validation: live official-asset discovery tested for Microsoft, Lovable and Shopify; isolated brand/deck previews checked at desktop/mobile. Microsoft’s font name is preserved but its font download is unavailable; fallback is disclosed. All 255 tests, production build and plugin packaging pass.
+- Validation: live official-asset discovery tested for Microsoft, Lovable and Shopify; isolated brand/deck previews checked at desktop/mobile. Microsoft’s font name is preserved but its font download is unavailable; fallback is disclosed. All 262 tests, production build and plugin packaging pass after merging Amr’s v0.8.0 account-key and chat-command release.
 
 - 2026-10-25: Moved Suggest values into a single top action and removed per-field Suggest/Refresh controls. Replaced uneven group columns with stacked sections and compact field rows; collapsed the long missing-input breakdown. Source disclosures, editable inputs and model calculations are preserved. Validation: 249 tests and production build pass; isolated desktop/mobile previews have one suggestion action and no horizontal overflow.
+
+## v0.8.0 (2026-10-25): AI buttons use your key; the agent runs the research commands
+
+Work in progress: this release works end to end for the main path but needs
+fixes and bug patches. Known gaps are listed below.
+
+- The AI buttons (Find people, Find everyone, Suggest values, Person lookup,
+  brand discovery) use the signed-in user's own Anthropic key from Settings.
+  The server checks the session with Supabase and reads the key server-side;
+  it never reaches the browser. Without a session or saved key it falls back
+  to the server's ANTHROPIC_API_KEY behind the access code, as before.
+- The chat agent can run Find people, Suggest values, Person lookup and Find
+  branding. The app runs them through the same code as the buttons, with the
+  same evidence checks. Results come back as cards; nothing is written to the
+  deal until you pick (Add to deal / Use / Use branding).
+- The agent describes what it is searching for in plain words, never command
+  names or keys.
+- Setup: the server needs SUPABASE_SECRET_KEY. Locally it goes in
+  .env.server.local (git-ignored). See README.
+
+Checks: 255 app tests, 16 worker tests, build OK. Real end-to-end test
+scripts/review-agent-commands.mjs with no server key configured: button route
+refused without a session and ran on the account key with one; in chat, "Find
+the VP of Engineering" ran Find people, returned a sourced person, Add to deal
+saved them in Supabase. ALL PASS. The Find people button in the app ran
+without the "not connected" notice.
+
+Known gaps, to fix next:
+- Suggest values, Person lookup and Find branding from chat are built on the
+  same path but not tested end to end.
+- Brand discovery fails on sites that block scanners (e.g. lovable.dev, 403).
+- Commands run in the browser: closing the tab mid-run stops them; an old
+  reply's research is not re-run on reload (a "Run it now" link is shown).
+- David's local copy needs SUPABASE_SECRET_KEY in .env.server.local for the
+  buttons to use saved keys; otherwise his own ANTHROPIC_API_KEY.
+- The app is still not deployed; the deployed server will need
+  SUPABASE_SECRET_KEY in its settings.
 
 ## v0.7.0 (2026-10-25): the agent can change the deal
 

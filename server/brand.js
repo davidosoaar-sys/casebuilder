@@ -137,14 +137,13 @@ export function parseBrand(html, css, website, company = '') {
   return { ...(background ? {background, surface: light ? '#f5f5f5' : '#1e1e1e', text: textColor || (light ? '#161616' : '#ffffff'), muted: light ? '#555555' : '#b8b8b8'} : {}), candidates, primary: color(themeVariables['marketing-primary'] || themeVariables['ds-theme-background-accent-strong-normal'] || '') || named || saturated[0], headingFont: !/var\(/.test(heading) ? heading : '', bodyFont: !/var\(/.test(body) ? body : '', logoUrl, face, colors: ranked.slice(0, 8) }
 }
 
-async function findWebsite(company) {
+async function findWebsite(company, client = null) {
   // Verified official domains for common demo/test accounts, not guessed assets.
   const known = {microsoft:'https://www.microsoft.com/',shopify:'https://www.shopify.com/',lovable:'https://lovable.dev/',loveable:'https://lovable.dev/'}
   const official = known[String(company).trim().toLowerCase()]
   if (official) return official
   if (/^(https:\/\/)?[a-z0-9.-]+\.[a-z]{2,}(\/.*)?$/i.test(company)) return company.startsWith('https://') ? company : `https://${company}`
-  if (!process.env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_AUTH_TOKEN) throw new Error('Enter the official company website to scan its branding. Company-name search needs the research API key.')
-  const client = new Anthropic()
+  if (!client) throw new Error('Enter the official company website to scan its branding. Company-name search needs an Anthropic API key (add yours in Settings).')
   const message = await client.messages.create({
     model: process.env.RESEARCH_MODEL || 'claude-sonnet-5-5', max_tokens: 1200,
     tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 2 }],
@@ -163,8 +162,8 @@ async function findWebsite(company) {
   return result
 }
 
-export async function discoverBrand({ company, website }, fetcher = fetchPublic) {
-  const target = website || await findWebsite(company)
+export async function discoverBrand({ company, website }, fetcher = fetchPublic, client = null) {
+  const target = website || await findWebsite(company, client)
   let home
   try { home = await fetcher(target) } catch (error) {
     // Official brand pages can remain public when a homepage blocks automated requests.

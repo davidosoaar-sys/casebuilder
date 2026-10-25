@@ -3,15 +3,19 @@ import { research } from './research.js'
 import { suggest, SUGGESTIBLE } from './suggest.js'
 import { publishSite, PublishError } from './publish.js'
 import { discoverBrand } from './brand.js'
+import { anthropicFor } from './accountKey.js'
 
 // Shared by the Vercel functions (api/*.js) and the Vite dev server. Each
 // handler returns { status, body }. RESEARCH_ACCESS_CODE gates both, so a
 // deployed copy cannot be used by strangers to spend the API key or to host
 // pages on your Vercel account.
 
+// Only the server's shared key is gated; a signed-in user's own key is not.
+// On Vercel the shared key is never used without an access code configured.
 const needsCode = headers => {
   const code = process.env.RESEARCH_ACCESS_CODE
-  return code && headers['x-access-code'] !== code
+  if (!code) return !!process.env.VERCEL
+  return headers['x-access-code'] !== code
 }
 
 // Brand scans accept verified app sessions as well as legacy workspace codes.
@@ -27,20 +31,21 @@ export async function brandAccountAuthorized(headers, fetcher = fetch) {
 }
 export async function handleBrand({ body, headers }) {
   const signedIn = await brandAccountAuthorized(headers)
-  if (!signedIn && process.env.VERCEL && !process.env.RESEARCH_ACCESS_CODE) return { status: 503, body: { error: 'Brand discovery needs the workspace access code configured.' } }
-  if (!signedIn && needsCode(headers)) return { status: 401, body: { error: 'Sign in or enter your access code to scan company branding.' } }
+  if (!signedIn && needsCode(headers)) return {status:401,body:{error:"Sign in or enter your access code to scan company branding."}}
   const company = typeof body?.company === 'string' ? body.company.trim().slice(0, 120) : ''
   const website = typeof body?.website === 'string' ? body.website.trim().slice(0, 500) : ''
   if (!company && !website) return { status: 400, body: { error: 'Enter a company name or official website.' } }
-  try { return { status: 200, body: await discoverBrand({ company, website }) } }
+  // A signed-in user's own key pays for the name search; otherwise the server's
+  // key behind the access code; with neither, only a typed website works.
+  const who = await anthropicFor(headers, { needsCode: h => signedIn ? false : needsCode(h) })
+  if (who.error?.status === 401) return { status: 401, body: { error: 'Enter your access code to scan company branding.' } }
+  try { return { status: 200, body: await discoverBrand({ company, website }, undefined, who.client || null) } }
   catch (err) { return { status: 422, body: { error: err.message || 'Could not read the company branding. You can set it manually.' } } }
 }
 
 export async function handle({ body, headers }) {
-  if (!process.env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_AUTH_TOKEN) {
-    return { status: 503, body: { error: 'not_configured' } }
-  }
-  if (needsCode(headers)) return { status: 401, body: { error: 'access_code' } }
+  const who = await anthropicFor(headers, { needsCode })
+  if (who.error) return who.error
 
   const company = typeof body?.company === 'string' ? body.company.trim() : ''
   const role = typeof body?.role === 'string' ? body.role.trim() : ''
@@ -49,7 +54,7 @@ export async function handle({ body, headers }) {
   }
 
   try {
-    return { status: 200, body: await research({ company, role }) }
+    return { status: 200, body: await research({ company, role }, who.client) }
   } catch (err) {
     if (err instanceof Anthropic.AuthenticationError) {
       return { status: 502, body: { error: 'The API key was rejected.' } }
@@ -106,7 +111,6 @@ export async function handlePublish({ body, headers, fetchImpl, wait }) {
 const DOC_SOURCES = ['claude', 'gong', 'hubspot', 'slack', 'clay', 'lemlist']
 
 export async function handleSuggest({ body, headers }) {
-  if (needsCode(headers)) return { status: 401, body: { error: 'access_code' } }
 
   const company = typeof body?.company === 'string' ? body.company.trim() : ''
   if (!company || company.length > 120) return { status: 400, body: { error: 'A company name is required.' } }
@@ -125,13 +129,13 @@ export async function handleSuggest({ body, headers }) {
 
   // nothing to read: nothing to ask
   if (!only.length || (!documents.length && !web)) return { status: 200, body: { suggestions: [] } }
-  if (!process.env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_AUTH_TOKEN) {
-    return { status: 503, body: { error: 'not_configured' } }
-  }
+  const who = await anthropicFor(headers, { needsCode })
+  if (who.error) return who.error
 
   try {
-    return { status: 200, body: await suggest({ company, filled, documents, web, only, labels }) }
+    return { status: 200, body: await suggest({ company, filled, documents, web, only, labels }, who.client) }
   } catch (err) {
+    if (err instanceof Anthropic.AuthenticationError) return { status: 502, body: { error: 'The API key was rejected.' } }
     if (err instanceof Anthropic.RateLimitError) return { status: 429, body: { error: 'Rate limited. Try again in a minute.' } }
     return { status: 502, body: { error: 'The suggestion service is unavailable.' } }
   }

@@ -9,7 +9,10 @@ import StakeholderMap from './components/StakeholderMap.jsx'
 import People from './components/People.jsx'
 import useCloudDeals from './useCloudDeals.js'
 import ChatPanel from './components/ChatPanel.jsx'
+import { apiHeaders } from './apiAuth.js'
 import { applyAgentEdits, undoAgentEdits } from './agentEdits.js'
+import { runCommand } from './agentRunner.js'
+import { withSuggestion } from './source.js'
 import { supabase } from './supabase.js'
 import {
   duplicateProject,
@@ -100,7 +103,7 @@ export default function App({ account }) {
     try {
       let code = ''
       try { code = localStorage.getItem('casebuilder.access') || '' } catch {}
-      const response = await fetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(code ? { 'x-access-code': code } : {}), ...(account.session?.access_token ? { Authorization: 'Bearer ' + account.session.access_token } : {}) }, body: JSON.stringify({ command:AGENT_COMMANDS.DISCOVER_BRAND,company, website: website && !/^https:\/\//i.test(website) ? `https://${website}` : website }), signal: AbortSignal.timeout(55000) })
+      const response = await fetch('/api/brand', { method: 'POST', headers: await apiHeaders(code ? { 'x-access-code': code } : {}), body: JSON.stringify({ command:AGENT_COMMANDS.DISCOVER_BRAND,company, website: website && !/^https:\/\//i.test(website) ? `https://${website}` : website }), signal: AbortSignal.timeout(55000) })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Brand discovery could not finish.')
       if (brandScans.current.get(id) !== token) return
@@ -194,6 +197,47 @@ export default function App({ account }) {
       return { fields: r.fields, agentLog: { ...p.agentLog, [messageId]: { ...entry, undone: true, skipped: r.skipped } } }
     })
 
+  // Agent commands (Find people, Suggest values, Person lookup, Find branding):
+  // run once per reply through the same client code as the buttons, results
+  // saved on the deal as proposals; the user picks what goes in.
+  const runningCmds = useRef(new Set())
+  const patchDeal = (dealId, fn) => setProjects(prev => prev.map(p => p.id === dealId ? { ...p, ...fn(p), createdAt: p.createdAt, updatedAt: Date.now() } : p))
+  async function runFromChat(messageId, commands) {
+    const deal = project
+    if (!deal || runningCmds.current.has(messageId) || deal.agentRuns?.[messageId]?.status === 'done') return
+    runningCmds.current.add(messageId)
+    const setRun = run => patchDeal(deal.id, p => ({ agentRuns: { ...(p.agentRuns || {}), [messageId]: { ...(p.agentRuns?.[messageId] || {}), ...run } } }))
+    setRun({ status: 'running', at: Date.now(), commands, results: [] })
+    const results = []
+    for (const command of commands) {
+      try { results.push({ command, ...(await runCommand(command, deal, { connections: dealConnections, model })) }) }
+      catch (e) { results.push({ command, error: e.message || 'The command failed.' }) }
+      setRun({ results: [...results] })
+    }
+    setRun({ status: 'done', results, finishedAt: Date.now() })
+    runningCmds.current.delete(messageId)
+  }
+  // Picking a result: the same writes the buttons make.
+  function pickFromChat(messageId, pick) {
+    update(p => {
+      const run = p.agentRuns?.[messageId]
+      if (!run) return {}
+      const mark = picked => ({ agentRuns: { ...p.agentRuns, [messageId]: { ...run, picked: { ...(run.picked || {}), [pick.id]: picked } } } })
+      if (pick.type === 'person') {
+        const have = p.people?.[pick.roleKey] || []
+        if (have.some(x => x.name?.toLowerCase() === pick.person.name.toLowerCase())) return mark(true)
+        return { ...mark(true), people: { ...(p.people || {}), [pick.roleKey]: [...have, pick.person] } }
+      }
+      if (pick.type === 'value') {
+        const now = new Date().toISOString()
+        return { ...mark(true), fields: p.fields.map(f => f.key === pick.key && !f.deleted ? withSuggestion(f, pick.suggestion, { now, enabled: pick.enabled || [] }) : f) }
+      }
+      if (pick.type === 'lookup') { const next = addPersonToDeal(p, pick.person); return next === p ? mark(true) : { ...mark(true), stakeholders: next.stakeholders, people: next.people } }
+      if (pick.type === 'brand') return { ...mark(true), brand: pick.brand }
+      return {}
+    })
+  }
+
   const settingsOverlay = settingsOpen && (
     <Settings account={account} name={user} onName={setUser} theme={theme} onTheme={setTheme} onClose={() => setSettingsOpen(false)} />
   )
@@ -241,7 +285,7 @@ export default function App({ account }) {
   const agentFull = insideProject && page === 'agent'
   const agentSplit = insideProject && split && !agentFull
   const userName = (user || '').trim() || account.session.user.email.split('@')[0]
-  const chatProps = insideProject && { project, userId: account.session.user.id, userName, onApply: applyFromChat, onUndo: undoFromChat, onSettings: openSettings }
+  const chatProps = insideProject && { project, userId: account.session.user.id, userName, onApply: applyFromChat, onUndo: undoFromChat, onRun: runFromChat, onPick: pickFromChat, onSettings: openSettings }
 
   return (
     <div className="layout">

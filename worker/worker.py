@@ -73,6 +73,11 @@ def profile_for(owner_id):
 # Calendar constants (structural) and the company name are off limits.
 EDITABLE_SELECTS = ("archetype", "strategicPriority")
 EDIT_FENCE = "casebuilder-edits"
+COMMAND_FENCE = "casebuilder-commands"
+MAX_COMMANDS = 4
+# The app's button commands the agent may ask for. The app runs them through
+# the same server code as the buttons; results come back as cards to pick from.
+COMMANDS = ("FIND_STAKEHOLDERS", "SUGGEST_INPUTS", "LOOKUP_PERSON", "DISCOVER_BRAND")
 MAX_EDITS = 20
 
 
@@ -132,6 +137,35 @@ def build_prompt(job, deal, history=()):
                 "you set earlier, they changed it on purpose: never say an earlier update failed or "
                 "did not save, just work from the current values. "
                 "The deck, one-pager and summary recalculate from these inputs by themselves.")
+    if deal:
+        d = deal.get("data") or {}
+        # Role names come from the app with the message (the deal only stores keys
+        # for the built-in roles); fall back to the deal's keys.
+        sent = [r for r in (p.get("roles") or []) if isinstance(r, dict) and isinstance(r.get("key"), str)][:20]
+        roles = sent or [{"key": s.get("key"), "role": s.get("role") or (s.get("edit") or {}).get("role") or ""} for s in (d.get("stakeholders") or []) if isinstance(s, dict) and s.get("key")]
+        role_lines = "\n".join(f"- {r['key']}: {str(r.get('role') or '')[:80]}" + (f" ({str(r.get('tag'))[:60]})" if r.get("tag") else "") for r in roles) or "- (no roles on this deal)"
+        parts.append(
+            "You can also RUN the app's research commands. The app runs them with the same "
+            "checks as its buttons and shows the results to the user as cards to pick from; "
+            "nothing is added to the deal until the user picks. Use them whenever the user asks "
+            "to find people, find values, research a person or get the company's branding, "
+            "instead of saying you cannot. End your reply with one block:\n"
+            f"```{COMMAND_FENCE}\n"
+            '[{"command": "FIND_STAKEHOLDERS", "role_key": "champion"}]\n'
+            "```\n"
+            "Commands:\n"
+            "- FIND_STAKEHOLDERS {role_key}: find who holds a stakeholder role at the company. "
+            "role_key is one of the deal's stakeholder keys below (pick by the role name, not the key), or \"all\" for every role. "
+            "If the user asks for a role that is not listed, use the nearest listed one and say which.\n"
+            "- SUGGEST_INPUTS {keys}: look for explicitly stated values for inputs (keys from the "
+            "table above; an empty list means every blank input).\n"
+            "- LOOKUP_PERSON {name, company?, linkedin?, email?}: research one named person.\n"
+            "- DISCOVER_BRAND {website?}: find the company's logo, colours and fonts.\n"
+            "Deal stakeholder keys:\n" + role_lines + "\n"
+            "In your text, say in plain words what you are searching for, e.g. \"Looking for the VP of "
+            "Engineering at Spotify.\" Never show command names, keys or JSON to the user. "
+            "Do not invent results: the cards show them. "
+            "You may use both an edits block and a commands block in one reply.")
     if history:
         lines = [f"{m.get('role')}: {(m.get('content') or '')[:600]}" for m in history]
         parts.append("Earlier in this chat:\n" + "\n".join(lines))
@@ -150,6 +184,54 @@ def build_prompt(job, deal, history=()):
     parts.append(f"Task type: {job['kind']}.")
     parts.append("Request:\n" + (msg or "(no message given)"))
     return "\n\n".join(parts)
+
+
+def parse_commands(text, deal):
+    """Split out the command block. Returns (text, commands, rejected)."""
+    m = re.search(r"```" + re.escape(COMMAND_FENCE) + r"\s*(.*?)```", text, re.S)
+    if not m:
+        return text, [], []
+    clean = (text[:m.start()] + text[m.end():]).strip()
+    try:
+        raw = json.loads(m.group(1).strip() or "[]")
+    except ValueError:
+        return clean, [], ["The agent's command list was not valid JSON, so nothing was run."]
+    if isinstance(raw, dict):
+        raw = [raw]
+    if not isinstance(raw, list):
+        return clean, [], ["The agent's command list was not a list, so nothing was run."]
+    d = (deal or {}).get("data") or {}
+    role_keys = {s.get("key") for s in (d.get("stakeholders") or []) if isinstance(s, dict)} or {"champion", "economic", "platform", "security", "finance"}
+    input_keys = {f["key"] for f in editable_fields(deal) if f.get("type") in ("number", "percent")}
+    s = lambda v, n=200: str(v).strip()[:n] if isinstance(v, (str, int, float)) and str(v).strip() else ""
+    out, rejected = [], []
+    for c in raw[:MAX_COMMANDS]:
+        name = c.get("command") if isinstance(c, dict) else None
+        if name not in COMMANDS:
+            rejected.append(f"Unknown command {name!r}.")
+            continue
+        if name == "FIND_STAKEHOLDERS":
+            rk = s(c.get("role_key"), 60)
+            if rk != "all" and rk not in role_keys:
+                rejected.append(f"Find people: {rk!r} is not one of this deal's roles.")
+                continue
+            out.append({"command": name, "role_key": rk})
+        elif name == "SUGGEST_INPUTS":
+            keys = [k for k in (c.get("keys") or []) if isinstance(k, str) and k in input_keys][:30]
+            out.append({"command": name, "keys": keys})
+        elif name == "LOOKUP_PERSON":
+            who = {k: s(c.get(k), 300) for k in ("name", "company", "linkedin", "email")}
+            who = {k: v for k, v in who.items() if v}
+            if not (who.get("name") or who.get("linkedin") or who.get("email")):
+                rejected.append("Person lookup needs a name, LinkedIn URL or email.")
+                continue
+            out.append({"command": name, **who})
+        elif name == "DISCOVER_BRAND":
+            w = s(c.get("website"), 300)
+            out.append({"command": name, **({"website": w} if w else {})})
+    if len(raw) > MAX_COMMANDS:
+        rejected.append(f"Only the first {MAX_COMMANDS} commands were run.")
+    return clean, out, rejected
 
 
 def parse_edits(text, fields):
@@ -285,15 +367,17 @@ def handle(job):
     web = pl.get("web") is not False
     raw, usage = run_hermes(profile, build_prompt(job, deal, history), key, model, effort, web)
     secs = round(time.time() - t0, 1)
-    text, edits, rejected = parse_edits(raw, editable_fields(deal)) if deal else (raw, [], [])
-    result = {"text": text, "edits": edits, "rejected": rejected, "model": model, "seconds": secs, "usage": usage}
+    text, commands, cmd_rejected = parse_commands(raw, deal) if deal else (raw, [], [])
+    text, edits, rejected = parse_edits(text, editable_fields(deal)) if deal else (text, [], [])
+    rejected += cmd_rejected
+    result = {"text": text, "edits": edits, "commands": commands, "rejected": rejected, "model": model, "seconds": secs, "usage": usage}
     if job.get("deal_id") and deal:
         api("POST", "/rest/v1/chat_messages", {"deal_id": job["deal_id"], "owner_id": owner,
             "role": "assistant", "content": text, "job_id": jid,
-            "meta": {"model": model, "effort": effort, "web": web, "seconds": secs, "edits": edits, "rejected": rejected}}, prefer="return=minimal")
+            "meta": {"model": model, "effort": effort, "web": web, "seconds": secs, "edits": edits, "commands": commands, "rejected": rejected}}, prefer="return=minimal")
     rpc("complete_job", p_id=jid, p_worker=WORKER_ID, p_result=result)
     u = usage or {}
-    log("done", jid, f"{secs}s", f"edits={len(edits)} rejected={len(rejected)}", f"tokens in={u.get('input_tokens')} out={u.get('output_tokens')} calls={u.get('api_calls')}")
+    log("done", jid, f"{secs}s", f"edits={len(edits)} commands={len(commands)} rejected={len(rejected)}", f"tokens in={u.get('input_tokens')} out={u.get('output_tokens')} calls={u.get('api_calls')}")
 
 
 def main():

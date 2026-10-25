@@ -1,3 +1,4 @@
+import { apiHeaders } from './apiAuth.js'
 import { NUMERIC_INPUTS } from './model.js'
 import { AGENT_COMMANDS } from './agentCommands.js'
 import { PAIRS, fmtDec, fmtMoneyFull } from './valueModel.js'
@@ -175,7 +176,7 @@ export const emptyKeys = fields => fields.filter(f => !f.deleted && NUMERIC_INPU
 export async function fetchAgent(payload, { code, fetchImpl = fetch } = {}) {
   const res = await fetchImpl('/api/suggest', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(code ? { 'x-access-code': code } : {}) },
+    headers: await apiHeaders(code ? { 'x-access-code': code } : {}),
     body: JSON.stringify({...payload,command:AGENT_COMMANDS.SUGGEST_INPUTS})
   })
   const data = await res.json().catch(() => ({}))

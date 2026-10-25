@@ -17,11 +17,30 @@ its task ID. Never accept a system prompt from a browser request.
 | AI one-pager organization | ORGANIZE_ONE_PAGER | Contract only; fixed one-page content template. |
 
 The four research services load the corresponding instructions at the provider
-boundary. This centralizes their task definition; it does not replace the current
-provider with Hermes or automatically connect cloud-stored per-account API keys
-to these endpoints. The Hermes worker requires its own adapter before it can run
-these named task contracts. Do not claim that a button runs Hermes merely because
-it has a command ID.
+boundary. This centralizes their task definition.
+
+## Who pays (since v0.8.0)
+
+`server/accountKey.js` decides, per request: the signed-in user's own Anthropic
+key (saved in Settings, read server-side from Supabase Vault after the session
+token is verified with Supabase), else the server's `ANTHROPIC_API_KEY` behind
+the workspace access code. The browser sends its Supabase session with every
+`/api/*` command (`src/apiAuth.js`). The key never reaches the browser.
+
+The server needs `SUPABASE_SECRET_KEY` for this. Locally it goes in
+`.env.server.local` (git-ignored, read only by the dev server's API routes);
+never give it a `VITE_` name.
+
+## The chat agent runs the same commands
+
+The Hermes worker can end a reply with a `casebuilder-commands` block naming
+`FIND_STAKEHOLDERS`, `SUGGEST_INPUTS`, `LOOKUP_PERSON` or `DISCOVER_BRAND`. The
+worker validates it (`parse_commands`), and the app runs each command through
+the same client code as the button (`src/agentRunner.js` -> the same `/api/*`
+route -> the same evidence checks). Results are proposals shown as cards
+(`CommandCards.jsx`); nothing is written until the user picks, and picking makes
+the same write the button flow makes. The three contract-only commands are not
+exposed to the agent.
 
 ## Actions that do not need a new agent call
 

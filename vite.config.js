@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { defineConfig, loadEnv } from 'vite'
@@ -8,6 +9,17 @@ import react from '@vitejs/plugin-react'
 // "Publish to Vercel" work locally without the Vercel CLI. Reads ANTHROPIC_API_KEY,
 // VERCEL_TOKEN etc. from .env.local.
 const ROUTES = { '/api/research': 'handle', '/api/publish': 'handlePublish', '/api/suggest': 'handleSuggest', '/api/brand': 'handleBrand' }
+
+// Server-only secrets for the local /api routes (e.g. SUPABASE_SECRET_KEY, used to
+// read the signed-in user's saved Anthropic key). Kept out of .env.local on
+// purpose: that file holds the public VITE_ settings people share with each
+// other. Never give a secret a VITE_ name: Vite would ship it to the browser.
+function serverOnlyEnv() {
+  try {
+    const text = fs.readFileSync(path.resolve('.env.server.local'), 'utf8')
+    return Object.fromEntries(text.split('\n').filter(l => /^[A-Z_][A-Z0-9_]*=/.test(l) && !l.startsWith('VITE_')).map(l => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1).trim()]))
+  } catch { return {} }
+}
 
 function localApi() {
   const makeMiddleware = (loadHandlers, loadPerson) => async (req, res, next) => {
@@ -38,7 +50,7 @@ function localApi() {
   return {
     name: 'local-api',
     config(_, { mode }) {
-      Object.assign(process.env, { ...loadEnv(mode, process.cwd(), ''), ...process.env })
+      Object.assign(process.env, { ...loadEnv(mode, process.cwd(), ''), ...serverOnlyEnv(), ...process.env })
     },
     configureServer(server) {
       // ssrLoadModule re-reads the file after edits, so server code hot-reloads.

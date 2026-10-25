@@ -11,6 +11,8 @@ import { supabase } from '../supabase.js'
 import { describeValue } from '../agentEdits.js'
 import { useModelKeys } from './Settings.jsx'
 import AgentComposer, { AGENT_MODELS } from './AgentComposer.jsx'
+import CommandCards from './CommandCards.jsx'
+import { resolveStakeholder } from '../deck/stakeholders.js'
 
 const POLL_MS = 3000
 const SELECT = 'id, role, content, meta, job_id, created_at'
@@ -43,7 +45,7 @@ function useCopy() {
   }]
 }
 
-export default function ChatPanel({ project, userId, userName, mode = 'split', onApply, onUndo, onClose, onSplit, onFull, onSettings }) {
+export default function ChatPanel({ project, userId, userName, mode = 'split', onApply, onUndo, onRun, onPick, onClose, onSplit, onFull, onSettings }) {
   const dealId = project.id
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
@@ -105,12 +107,17 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
     if (pending && messages.some(m => m.role === 'assistant' && m.job_id === pending)) setPending(null)
   }, [messages, pending])
 
-  // Apply each reply's edits exactly once.
+  // Apply each reply's edits exactly once; run each reply's commands once.
+  const runs = project.agentRuns || {}
   useEffect(() => {
     for (const m of messages) {
+      if (m.role !== 'assistant') continue
       const edits = m.meta?.edits
-      if (m.role !== 'assistant' || !Array.isArray(edits) || !edits.length || applied[m.id]) continue
-      onApply(m.id, edits)
+      if (Array.isArray(edits) && edits.length && !applied[m.id]) onApply(m.id, edits)
+      const cmds = m.meta?.commands
+      // Only fresh replies run by themselves; an old one never re-runs on reload.
+      const fresh = Date.now() - new Date(m.created_at).getTime() < 10 * 60 * 1000
+      if (Array.isArray(cmds) && cmds.length && !runs[m.id] && fresh) onRun?.(m.id, cmds)
     }
   }, [messages]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -133,7 +140,8 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
       .insert({ deal_id: dealId, owner_id: userId, role: 'user', content: text || '(attached files)', meta }).select(SELECT).single()
     if (e1) { setError(/foreign key|not present|violates row-level/i.test(e1.message) ? 'This deal has not finished saving yet. Try again in a second.' : e1.message); return false }
     setMessages(ms => ms.some(m => m.id === msg.id) ? ms : [...ms, msg])
-    const payload = { message: text, model, effort, web: web !== false, user_name: userName || '', attachments: attachments.map(a => ({ name: a.name, text: a.text })) }
+    const roles = (project.stakeholders || []).map(s => { const r = resolveStakeholder(s); return r ? { key: s.key, role: r.role || '', tag: r.tag || '' } : null }).filter(Boolean)
+    const payload = { message: text, model, effort, web: web !== false, roles, user_name: userName || '', attachments: attachments.map(a => ({ name: a.name, text: a.text })) }
     const { data: job, error: e2 } = await supabase.from('jobs').insert({ owner_id: userId, deal_id: dealId, kind: 'chat', payload }).select('id').single()
     if (e2) { setError(/rate|limit/i.test(e2.message) ? 'Too many requests just now. Wait a minute and try again.' : e2.message); return false }
     setPending(job.id)
@@ -185,6 +193,9 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
             <div key={m.id} className={`chat-msg chat-assistant${m.meta?.error ? ' is-error' : ''}`}>
               <div className="chat-bubble">{m.content}</div>
               <ChangeCard log={applied[m.id]} meta={m.meta} onUndo={() => onUndo(m.id)} />
+              {m.meta?.commands?.length > 0 && (runs[m.id]
+                ? <CommandCards run={runs[m.id]} commands={m.meta.commands} project={project} onPick={onPick} messageId={m.id} />
+                : <div className="cmd-cards"><div className="cmd-card"><p className="cmd-note">This research was not run. <button type="button" className="link-btn" onClick={() => onRun?.(m.id, m.meta.commands)}>Run it now</button></p></div></div>)}
               <div className="msg-actions">
                 <button type="button" className="icon-btn sm" onClick={() => copy(m.id, m.content)} title="Copy" aria-label="Copy reply"><Icon d={copied === m.id ? icons.check : icons.copy} size={14} /></button>
                 {m.meta?.model && <span className="msg-meta">{AGENT_MODELS.find(x => x.id === m.meta.model)?.name || m.meta.model}{m.meta.seconds ? ` · ${Math.round(m.meta.seconds)}s` : ''}</span>}
