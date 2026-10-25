@@ -1,3 +1,4 @@
+import {contextStatement} from '../caseContext.js'
 import { buildEnv, resolveBlock } from '../deck/model.js'
 import { STAKEHOLDERS, INPUT_GROUPS, confidence, unconfirmed, completeness, fmtDec, fmtMoneyFull } from '../valueModel.js'
 import { computeModel } from '../model.js'
@@ -18,6 +19,7 @@ export function prepareOnePager({ inputs, fields, who, date }) {
   const drivers = block('drivers')
   return {
     company: env.ctx.company,
+    caseContext: contextStatement(inputs),
     role: who.role,
     archetype: inputs.archetype || '',
     priority: inputs.strategicPriority || '',

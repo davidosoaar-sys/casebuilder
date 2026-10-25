@@ -1,3 +1,4 @@
+import {caseNarrative} from '../caseNarrative.js'
 import { siteMain } from './siteClient.js'
 import { WEBSITE_CSS } from './websiteStyle.js'
 import { createWebsiteMotion } from './websiteMotion.js'
@@ -177,7 +178,7 @@ ${viewMode === 'website' ? '<div class="website-progress" aria-hidden="true"><sp
 <script>
 var DATA = JSON.parse(document.getElementById('data').textContent);
 var VM = ${vm};
-(${String(siteMain)})(DATA, VM, ${viewMode === 'website' ? String(createWebsiteMotion) : 'null'}, ${viewMode === 'website' ? String(mountStakeholderJourney) : 'null'}, ${viewMode === 'website' ? String(renderWebsiteGraphic) : 'null'});
+(${String(siteMain)})(DATA, VM, ${viewMode === 'website' ? String(createWebsiteMotion) : 'null'}, ${viewMode === 'website' ? String(mountStakeholderJourney) : 'null'}, ${viewMode === 'website' ? String(renderWebsiteGraphic) : 'null'}, ${String(caseNarrative)});
 </script>
 </body></html>`
 }

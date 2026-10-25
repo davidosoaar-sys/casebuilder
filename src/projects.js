@@ -1,3 +1,4 @@
+import {ensureCaseContext} from './caseContext.js'
 import { INPUT_FIELDS, STAKEHOLDERS, migrateOldInputs, sourceOf } from './valueModel.js'
 import { uid } from './uid.js'
 import { defaultDeck, migrateDeck } from './deck/model.js'
@@ -51,7 +52,7 @@ export function saveProjects(projects) {
 }
 
 export function defaultFields() {
-  return INPUT_FIELDS.map(f => ({ ...f }))
+  return ensureCaseContext(INPUT_FIELDS.map(f => ({ ...f })))
 }
 
 export function defaultStakeholders() {
@@ -112,7 +113,7 @@ export function hydrate(project) {
     createdAt: Number.isFinite(project.createdAt) ? project.createdAt : Number.isFinite(project.updatedAt) ? project.updatedAt : Date.now(),
     updatedAt: Number.isFinite(project.updatedAt) ? project.updatedAt : Date.now(),
     brand,
-    fields: [...base, ...custom],
+    fields: ensureCaseContext([...base, ...custom]),
     stakeholders: project.stakeholders || defaultStakeholders(),
     deck: project.deck ? migrateDeck(project.deck) : defaultDeck(),
     people: project.people || {},

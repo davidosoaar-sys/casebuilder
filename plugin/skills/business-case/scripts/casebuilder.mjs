@@ -15727,9 +15727,32 @@ function consistencyWarnings(I, F, blank) {
   return warnings;
 }
 
+// src/caseContext.js
+var CASE_CONTEXT = [
+  { key: "caseScope", label: "Team or department in scope", help: "For example, the platform team supporting commerce services." },
+  { key: "workflowContext", label: "Workflow this case addresses", help: "For example, finding the service owner during an incident." },
+  { key: "businessProblem", label: "What is difficult today", help: "Use the customer\u2019s description. Leave unknown context blank." }
+];
+function contextStatement(inputs = {}) {
+  return CASE_CONTEXT.flatMap((f) => typeof inputs[f.key] === "string" && inputs[f.key].trim() ? [inputs[f.key].trim()] : []).join(" \xB7 ");
+}
+function ensureCaseContext(fields) {
+  return [...fields, ...CASE_CONTEXT.filter((def) => !fields.some((f) => f.key === def.key)).map((def) => ({ ...def, type: "text", group: "Account", custom: true, value: "", source: { state: "empty", origin: "" } }))];
+}
+
 // src/uid.js
 function uid() {
   return Math.random().toString(36).slice(2, 9);
+}
+
+// src/caseNarrative.js
+function caseNarrative(inputs, figures, money2) {
+  const cost = figures.versusSelfHost, total = figures.totalValue;
+  return {
+    caseContext: ["caseScope", "workflowContext", "businessProblem"].flatMap((key) => typeof inputs[key] === "string" && inputs[key].trim() ? [inputs[key].trim()] : []).join(" \xB7 "),
+    decisionHeadline: cost.incomplete ? "Compare Portal with running Backstage in-house" : cost.raw > 0 ? "Modeled Portal cost is " + money2(cost.raw) + "/yr lower than self-hosting" : cost.raw < 0 ? "Modeled Portal cost is " + money2(-cost.raw) + "/yr higher than self-hosting" : "Portal and self-hosting have the same modeled annual cost",
+    valueHeadline: total.incomplete ? "Assess the business impact with your numbers" : money2(total.value) + " in modeled annual value" + (["productivityValue", "onboardingValue", "incidentValue", "standardsValue", "platformValue", "toolingValue"].some((key) => figures[key].incomplete) ? " from available drivers" : "")
+  };
 }
 
 // src/deck/model.js
@@ -15767,6 +15790,7 @@ function buildEnv(inputs, fields, active, model = computeModel(inputs)) {
   const total = F.totalValue;
   const ctx = {
     company: inputs.companyName || "Untitled",
+    ...caseNarrative(inputs, F, fmtMoney),
     role: active.role,
     archetype: inputs.archetype,
     headline: active.headline(model) ?? show(total, (f) => `${fmtMoney(f.value)} of annual value`),
@@ -15791,37 +15815,38 @@ function builtin(type, ed = {}) {
       return slide("hero", [
         block("logo"),
         text("hero", ed.title ?? "{company}"),
-        text("lede", ed.lede ?? "Spotify Portal for Backstage, costed against {company}'s own numbers."),
+        text("lede", ed.lede ?? "The case for Spotify Portal for Backstage at {company}."),
+        text("body", "{caseContext}"),
         text("forwhom", ed.forwhom ?? "Prepared for {role} \xB7 {archetype}")
       ]);
     case "headline":
       return slide("plain", [
-        text("label", "The number"),
-        text("headline", ed.headline ?? "{headline}"),
-        text("sub", ed.sub ?? "{cares}"),
+        text("label", "Business impact"),
+        text("headline", ed.headline ?? "{valueHeadline}"),
+        text("sub", ed.sub ?? "Engineering capacity and potential spend reductions, valued using this case\u2019s inputs. Capacity value is not automatically a cash saving."),
+        text("note", "{cares}"),
         block("stats", { items: STAT_KEYS.map(([k]) => k) })
       ]);
     case "drivers":
       return slide("plain", [
-        text("label", "Where the value comes from"),
-        text("title", ed.title ?? "Speed, chaos-control, scale"),
-        text("note", ed.note ?? "Grouped under the three pillars. Under each bar is the arithmetic with this customer's numbers. The two {role} cares about most are marked."),
+        text("title", ed.title ?? "Recover engineering time across everyday workflows"),
+        text("note", ed.note ?? "Find service information faster, shorten onboarding and incident coordination, and reduce platform upkeep. The arithmetic uses this case\u2019s inputs."),
         block("drivers")
       ]);
     case "pairs":
       return slide("plain", [
         text("label", "Today and with Portal"),
-        text("title", ed.title ?? "What changes, input by input"),
-        text("note", ed.note ?? "Each pair is a number the customer can check against their own. The difference is what the case is built on."),
+        text("title", ed.title ?? "Less time coordinating and maintaining the platform"),
+        text("note", ed.note ?? "Compare the current workflow with the proposed one: finding service information, onboarding, incident coordination and platform upkeep."),
         block("pairs")
       ]);
     case "versus":
       return slide("plain", [
         text("label", "Against the alternative"),
-        text("title", ed.title ?? "Backstage is free. Running it is not."),
+        text("title", ed.title ?? "{decisionHeadline}"),
         text(
           "note",
-          ed.note ?? "The comparison that decides most deals is Portal against self-hosting the open-source project, not Portal against doing nothing."
+          ed.note ?? "Compare the annual Portal subscription with the modeled engineering cost of running Backstage in-house. This is a cost comparison, not a promise of budget savings."
         ),
         block("versus")
       ]);
@@ -15836,9 +15861,8 @@ function builtin(type, ed = {}) {
       return null;
   }
 }
-var BUILTIN_TYPES = ["title", "headline", "drivers", "pairs", "versus", "stakeholder"];
 function defaultDeck() {
-  return BUILTIN_TYPES.map((t) => builtin(t));
+  return ["title", "versus", "drivers", "pairs", "stakeholder", "headline"].map((t) => builtin(t));
 }
 function migrateDeck(deck) {
   return deck.filter((s) => !(Array.isArray(s.blocks) && s.blocks.some((b) => b.type === "assumptions")) && s.type !== "assumptions").map((s) => {
@@ -16327,7 +16351,7 @@ function styleSpotifyDeck(project) {
 
 // src/projects.js
 function defaultFields() {
-  return INPUT_FIELDS.map((f) => ({ ...f }));
+  return ensureCaseContext(INPUT_FIELDS.map((f) => ({ ...f })));
 }
 function defaultStakeholders() {
   return STAKEHOLDERS.map((s) => ({ key: s.key, builtin: true }));
@@ -16572,7 +16596,7 @@ function resolveStakeholder(s) {
 }
 
 // src/export/siteClient.js
-function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic) {
+function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, narrative) {
   const graphic = (kind, rows) => DATA.viewMode === "website" && renderGraphic ? renderGraphic(kind, rows) : "";
   const $ = (s) => document.querySelector(s);
   const mode = DATA.viewMode || "website";
@@ -16626,6 +16650,7 @@ function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic) {
     const F = n.F;
     const when = (f, fn) => f.incomplete ? "" : fn(f);
     return {
+      ...narrative(inputs, F, VM.fmtMoney),
       company: DATA.company,
       role: mode === "website" ? DATA.company : st.role,
       archetype: inputs.archetype,
@@ -17347,7 +17372,7 @@ function websiteStory(slides) {
   const ensure = (kind, title, type) => groups[kind]?.length ? groups[kind] : [text2("title", title), block2(type)];
   return [
     section("cover", "Welcome", [{ ...identity.find((b) => b.style === "hero"), id: "website-company-name", type: "text", style: "hero", text: "{company}", sourceSlideId: void 0 }]),
-    section("overview", "Overview", [text2("title", "Overview"), ...introduction, ...groups.content || [], block2("overviewFacts")]),
+    section("overview", "Overview", [text2("title", "Overview"), ...introduction, ...!introduction.some((b) => b.type === "text" && b.text === "{caseContext}") ? [text2("body", "{caseContext}")] : [], ...groups.content || [], block2("overviewFacts")]),
     section("impact", "Business impact", ensure("impact", "Business impact", "stats")),
     section("drivers", "Value drivers", ensure("drivers", "Value drivers", "drivers")),
     section("comparison", "What changes", ensure("comparison", "What changes", "pairs")),
@@ -17612,8 +17637,8 @@ h1{font-size:34px;line-height:1.05;letter-spacing:-.03em;margin:0 0 10px;font-we
 @media print{html,body{background:transparent!important;height:auto}.onepager-paper{width:210mm!important;height:297mm!important;margin:0;box-shadow:none}.page{transform:none!important}}
 </style></head><body><div class="onepager-paper"><article class="page"><div class="onepager-content">
 <header class="brief-top"><div class="brief-logo">${logoSvg}</div><span>Executive brief<br>${esc3(f.date)}</span></header>
-<section class="brief-hero"><p class="eyebrow">Spotify Portal for Backstage \xB7 ${esc3(f.role)}</p><h1>${esc3(f.company)}</h1>${f.headline ? `<p class="brief-headline">${esc3(f.headline)}</p>` : ""}<p class="cares">${esc3(f.cares)}</p>${f.priority || f.archetype ? `<div class="brief-context">${f.priority ? `<span>Priority: ${esc3(f.priority)}</span>` : ""}${f.archetype ? `<span>${esc3(f.archetype)}</span>` : ""}</div>` : ""}</section>
-${f.stats.length ? `<section class="brief-stats" aria-label="Business impact">${f.stats.map((s) => `<div class="brief-stat ${s.tone || ""}"><span>${esc3(s.label)}</span><strong>${esc3(s.value)}</strong></div>`).join("")}</section>` : ""}
+<section class="brief-hero"><p class="eyebrow">Spotify Portal for Backstage \xB7 ${esc3(f.role)}</p><h1>${esc3(f.company)}</h1>${f.headline ? `<p class="brief-headline">${esc3(f.headline)}</p>` : ""}<p class="cares">${esc3(f.cares)}</p>${f.caseContext ? `<p class="cares">Scope for this case: ${esc3(f.caseContext)}</p>` : ""}${f.priority || f.archetype ? `<div class="brief-context">${f.priority ? `<span>Priority: ${esc3(f.priority)}</span>` : ""}${f.archetype ? `<span>${esc3(f.archetype)}</span>` : ""}</div>` : ""}</section>
+${f.stats.length ? `<p class="cares" style="margin-bottom:10px">Modeled value includes engineering capacity; it is not automatically a cash saving.</p><section class="brief-stats" aria-label="Business impact">${f.stats.map((s) => `<div class="brief-stat ${s.tone || ""}"><span>${esc3(s.label)}</span><strong>${esc3(s.value)}</strong></div>`).join("")}</section>` : ""}
 ${rows.length || alternative ? `<div class="brief-main">${rows.length ? `<section class="brief-section"><h2>Where the value comes from</h2>${rows.map((d) => `<div class="brief-driver"><div class="brief-driver-top"><span>${esc3(d.label)}</span><strong>${esc3(d.valueStr)}</strong></div><div class="track"><div class="fill" style="width:${Math.max(0, Math.min(100, d.pct)).toFixed(1)}%"></div></div><p class="brief-equation">${esc3(d.detail)}</p></div>`).join("")}<div class="brief-total"><span>Total annual value</span><strong>${esc3(f.total)}</strong></div></section>` : ""}${alternative ? `<section class="brief-section brief-comparison"><h2>Portal versus self-hosting</h2>${alternative.rows.map((r) => `<div class="brief-comparison-row"><span>${esc3(r.name)}</span><strong>${esc3(r.valueStr)}</strong></div>`).join("")}<p>${esc3(alternative.lead)}</p><p class="verdict">${esc3(alternative.verdict)}</p></section>` : ""}</div>` : ""}
 <section class="brief-audience"><div><h2>What ${esc3(f.role)} needs to see</h2><ul>${f.needs.map((n) => `<li>${esc3(n)}</li>`).join("")}</ul></div><div><h2>The objection</h2><blockquote>${esc3(f.objection)}</blockquote><h2>The response</h2><p class="brief-counter">${esc3(f.counter)}</p></div></section>
 </div><footer class="brief-footer"><span>${esc3(f.company)} \xB7 Spotify Portal for Backstage</span><span>Business case \xB7 1 / 1</span></footer></article></div>
@@ -17672,7 +17697,7 @@ ${viewMode === "website" ? '<div class="website-progress" aria-hidden="true"><sp
 <script>
 var DATA = JSON.parse(document.getElementById('data').textContent);
 var VM = ${vm};
-(${String(siteMain)})(DATA, VM, ${viewMode === "website" ? String(createWebsiteMotion) : "null"}, ${viewMode === "website" ? String(mountStakeholderJourney) : "null"}, ${viewMode === "website" ? String(renderWebsiteGraphic) : "null"});
+(${String(siteMain)})(DATA, VM, ${viewMode === "website" ? String(createWebsiteMotion) : "null"}, ${viewMode === "website" ? String(mountStakeholderJourney) : "null"}, ${viewMode === "website" ? String(renderWebsiteGraphic) : "null"}, ${String(caseNarrative)});
 </script>
 </body></html>`;
 }
@@ -18155,6 +18180,7 @@ function prepareOnePager({ inputs, fields, who, date }) {
   const drivers = block2("drivers");
   return {
     company: env.ctx.company,
+    caseContext: contextStatement(inputs),
     role: who.role,
     archetype: inputs.archetype || "",
     priority: inputs.strategicPriority || "",

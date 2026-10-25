@@ -38,7 +38,7 @@ const find = (slides, kind) => slides.flatMap(s => s.blocks).find(b => b.kind ==
 test('the default deck has a today vs with Portal slide after the drivers slide', () => {
   const { slides } = render(inputsOf())
   const kinds = slides.map(s => s.blocks.map(b => b.kind).filter(k => ['drivers', 'pairs', 'versus', 'assumptions'].includes(k))[0])
-  assert.deepEqual(kinds.filter(Boolean), ['drivers', 'pairs', 'versus'])
+  assert.deepEqual(kinds.filter(Boolean), ['versus', 'drivers', 'pairs'])
 })
 
 test('drivers are grouped under Speed, Chaos-control, Scale with the equation under each bar', () => {

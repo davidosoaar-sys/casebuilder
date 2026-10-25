@@ -6,7 +6,7 @@
 // VM:   the model (computeModel), the content around it and the formatters, inlined
 //       from model.js, valueModel.js and format.js. The site recomputes every figure
 //       with the same arithmetic the app uses.
-export function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic) {
+export function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, narrative) {
   const graphic = (kind, rows) => DATA.viewMode === 'website' && renderGraphic ? renderGraphic(kind, rows) : ''
   const $ = s => document.querySelector(s)
   const mode = DATA.viewMode || 'website'
@@ -69,6 +69,7 @@ export function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic) {
     const F = n.F
     const when = (f, fn) => (f.incomplete ? '' : fn(f))
     return {
+      ...narrative(inputs,F,VM.fmtMoney),
       company: DATA.company,
       role: mode==='website'?DATA.company:st.role,
       archetype: inputs.archetype,

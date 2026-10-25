@@ -17,7 +17,7 @@ export function websiteStory(slides) {
   const ensure=(kind,title,type)=>groups[kind]?.length ? groups[kind] : [text('title',title),block(type)]
   return [
     section('cover','Welcome',[{...identity.find(b=>b.style==='hero'),id:'website-company-name',type:'text',style:'hero',text:'{company}',sourceSlideId:undefined}]),
-    section('overview','Overview',[text('title','Overview'),...introduction,...(groups.content||[]),block('overviewFacts')]),
+    section('overview','Overview',[text('title','Overview'),...introduction,...(!introduction.some(b=>b.type==='text'&&b.text==='{caseContext}')?[text('body','{caseContext}')]:[]),...(groups.content||[]),block('overviewFacts')]),
     section('impact','Business impact',ensure('impact','Business impact','stats')),
     section('drivers','Value drivers',ensure('drivers','Value drivers','drivers')),
     section('comparison','What changes',ensure('comparison','What changes','pairs')),

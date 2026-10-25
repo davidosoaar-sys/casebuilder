@@ -1,3 +1,4 @@
+import {caseNarrative} from '../caseNarrative.js'
 import { uid } from '../uid.js'
 import { computeModel } from '../model.js'
 import {
@@ -42,6 +43,9 @@ export const STAT_KEYS = [
 
 export const TOKENS = [
   ['company', 'Company name'],
+  ['caseContext', 'Team, workflow and customer problem'],
+  ['decisionHeadline', 'Modeled Portal versus self-hosting comparison'],
+  ['valueHeadline', 'Modeled annual value summary'],
   ['role', 'Selected stakeholder'],
   ['headline', "The stakeholder's headline number"],
   ['cares', 'What they care about'],
@@ -73,6 +77,7 @@ export function buildEnv(inputs, fields, active, model = computeModel(inputs)) {
   const total = F.totalValue
   const ctx = {
     company: inputs.companyName || 'Untitled',
+    ...caseNarrative(inputs,F,fmtMoney),
     role: active.role,
     archetype: inputs.archetype,
     headline: active.headline(model) ?? show(total, f => `${fmtMoney(f.value)} of annual value`),
@@ -104,38 +109,39 @@ function builtin(type, ed = {}) {
       return slide('hero', [
         block('logo'),
         text('hero', ed.title ?? '{company}'),
-        text('lede', ed.lede ?? "Spotify Portal for Backstage, costed against {company}'s own numbers."),
+        text('lede', ed.lede ?? 'The case for Spotify Portal for Backstage at {company}.'),
+        text('body', '{caseContext}'),
         text('forwhom', ed.forwhom ?? 'Prepared for {role} · {archetype}')
       ])
     case 'headline':
       return slide('plain', [
-        text('label', 'The number'),
-        text('headline', ed.headline ?? '{headline}'),
-        text('sub', ed.sub ?? '{cares}'),
+        text('label', 'Business impact'),
+        text('headline', ed.headline ?? '{valueHeadline}'),
+        text('sub', ed.sub ?? 'Engineering capacity and potential spend reductions, valued using this case’s inputs. Capacity value is not automatically a cash saving.'),
+        text('note', '{cares}'),
         block('stats', { items: STAT_KEYS.map(([k]) => k) })
       ])
     case 'drivers':
       return slide('plain', [
-        text('label', 'Where the value comes from'),
-        text('title', ed.title ?? 'Speed, chaos-control, scale'),
-        text('note', ed.note ?? "Grouped under the three pillars. Under each bar is the arithmetic with this customer's numbers. The two {role} cares about most are marked."),
+        text('title', ed.title ?? 'Recover engineering time across everyday workflows'),
+        text('note', ed.note ?? 'Find service information faster, shorten onboarding and incident coordination, and reduce platform upkeep. The arithmetic uses this case’s inputs.'),
         block('drivers')
       ])
     case 'pairs':
       return slide('plain', [
         text('label', 'Today and with Portal'),
-        text('title', ed.title ?? 'What changes, input by input'),
-        text('note', ed.note ?? 'Each pair is a number the customer can check against their own. The difference is what the case is built on.'),
+        text('title', ed.title ?? 'Less time coordinating and maintaining the platform'),
+        text('note', ed.note ?? 'Compare the current workflow with the proposed one: finding service information, onboarding, incident coordination and platform upkeep.'),
         block('pairs')
       ])
     case 'versus':
       return slide('plain', [
         text('label', 'Against the alternative'),
-        text('title', ed.title ?? 'Backstage is free. Running it is not.'),
+        text('title', ed.title ?? '{decisionHeadline}'),
         text(
           'note',
           ed.note ??
-            'The comparison that decides most deals is Portal against self-hosting the open-source project, not Portal against doing nothing.'
+            'Compare the annual Portal subscription with the modeled engineering cost of running Backstage in-house. This is a cost comparison, not a promise of budget savings.'
         ),
         block('versus')
       ])
@@ -211,7 +217,7 @@ export const BLOCK_MENU = [
 ]
 
 export function defaultDeck() {
-  return BUILTIN_TYPES.map(t => builtin(t))
+  return ['title','versus','drivers','pairs','stakeholder','headline'].map(t => builtin(t))
 }
 
 // ------------------------------------------------------------- migration

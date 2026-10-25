@@ -23,6 +23,13 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ---
 
+## Unreleased
+
+- 2026-10-25: Applied the meeting feedback to Chris’s workflow. Added a private Evidence review tab inside the input sheet with full source links/quotes, source states, timestamps, affected calculations, open questions and existing arithmetic. It is excluded from client exports.
+- Added optional team/workflow/problem context using existing saved custom fields and agent-edit handling. Context follows the case into its website and one-pager without changing financial calculations.
+- New deck templates lead with the modeled Portal/self-hosting cost decision, explain the workflow and value drivers, retain stakeholder framing and close with modeled annual impact. Headlines handle missing inputs and unfavorable comparisons honestly; engineering capacity is distinguished from cash savings. Existing authored decks are preserved. App/export narrative tokens share one implementation, including interactive scenario updates.
+- Validation: all 326 app/server tests and app/plugin builds pass. Isolated dark/light desktop/mobile review verified source links/quotes, open-question filtering and plain-text copying. Website/PDF/slides/one-pager previews render context without source-quote leakage or unresolved tokens; website scenario controls update the comparison headline correctly. Added a Chris-focused end-to-end demo guide. No release version bump, push or deployment for these changes.
+
 ## v0.10.0 (2026-10-25): verified brand assets and sourced agent research
 
 - Added official brand/media resource discovery and bounded agent asset selection. Rejects main-logo favicons, invalid/tiny images and unsafe/empty SVGs. Onboarding and chat check logo decoding, full-mark visibility, published variants and embedded font loading automatically; failed marks fall back to the company name. Genuine company ambiguity offers sourced choices.
