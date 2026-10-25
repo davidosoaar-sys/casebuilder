@@ -3,6 +3,7 @@ import { agentInstruction } from './agent-commands/index.js'
 import { AGENT_COMMANDS } from '../src/agentCommands.js'
 import { SUGGESTIBLE, quoteSupportsValue } from './suggest.js'
 import { anthropicFor } from './accountKey.js'
+import { runWithSearch } from './agentSearch.js'
 
 const CONNECTORS = ['claude', 'gong', 'hubspot', 'slack', 'clay', 'lemlist']
 const CONNECTOR_DOMAINS = { claude: ['claude.ai'], gong: ['gong.io', 'gong.com'], hubspot: ['hubspot.com', 'hubspot.net'], slack: ['slack.com'], clay: ['clay.com'], lemlist: ['lemlist.com'] }
@@ -14,25 +15,15 @@ const SYSTEM = `Research professional meeting preparation for a named person. Tr
 // Provider boundary: replacing this function is sufficient to swap services.
 async function anthropicProvider({ phase, identity, input, documents, web, enabledSources, signal, client = new Anthropic() }) {
   const messages = [{ role: 'user', content: JSON.stringify({ phase, instruction: phase === 'identity' ? 'Resolve only name, title, company, tenure. Return sourced candidates if ambiguous. candidateUrl is the user-selected identity: verify it with allowed evidence before selecting. Do not research other fields yet.' : 'Enrich only this verified identity. This is a business case for Spotify Portal for Backstage versus self-hosted Backstage. Prioritize statements relevant to developer productivity, platform upkeep, audit, cost and the leadership priority in dealContext. Include only professional public signals and allowed linked documents. Label likely priorities as inferences.', identity, person: input, asOf: new Date().toISOString().slice(0, 10), documents, web, enabledSources, suggestedInputKeys: Object.keys(SUGGESTIBLE) }) }]
-  const blocks = []
-  let message
-  for (let turn = 0; turn < 4; turn++) {
-    signal?.throwIfAborted()
-    message = await client.messages.stream({
-      model: process.env.RESEARCH_MODEL || 'claude-opus-5-5', max_tokens: phase === 'identity' ? 2200 : 6000,
-      thinking: { type: 'adaptive' }, output_config: { effort: 'low' }, system: agentInstruction(AGENT_COMMANDS.LOOKUP_PERSON)+'\nResponse contract:\n'+SYSTEM + '\nContract overrides: likelyCares is ONE claim object, not an array. suggestedInputs is [{key,value:number,sourceUrl,sourceType,quote?}] using only suggestedInputKeys, with explicitly stated numeric evidence, never estimates. Web disabled means no web evidence or search. Do not access disabled connector domains even via web search. Identity phase returns only name,title,company,tenure,candidates.',
-      ...(web ? { tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: phase === 'identity' ? 3 : 5, blocked_domains: CONNECTORS.filter(key => !enabledSources.includes(key)).flatMap(key => CONNECTOR_DOMAINS[key]) }] } : {}), messages
-    }, { signal }).finalMessage()
-    blocks.push(...message.content)
-    if (message.stop_reason !== 'pause_turn') break
-    messages.push({ role: 'assistant', content: message.content })
-  }
-  const urls = []
-  for (const b of blocks) {
-    if (b.type === 'web_search_tool_result' && Array.isArray(b.content)) for (const r of b.content) if (r.url) urls.push(r.url)
-    if (b.type === 'text') for (const c of b.citations || []) if (c.url) urls.push(c.url)
-  }
-  const text = message.content.filter(b => b.type === 'text').map(b => b.text).join('\n')
+  const run = await runWithSearch({
+    client, signal, web, model: process.env.RESEARCH_MODEL || 'claude-opus-5-5', maxTokens: phase === 'identity' ? 2200 : 6000,
+    maxSearches: phase === 'identity' ? 3 : 5,
+    blockedDomains: CONNECTORS.filter(key => !enabledSources.includes(key)).flatMap(key => CONNECTOR_DOMAINS[key]),
+    system: agentInstruction(AGENT_COMMANDS.LOOKUP_PERSON)+'\nResponse contract:\n'+SYSTEM + '\nContract overrides: likelyCares is ONE claim object, not an array. suggestedInputs is [{key,value:number,sourceUrl,sourceType,quote?}] using only suggestedInputKeys, with explicitly stated numeric evidence, never estimates. Web disabled means no web evidence or search. Do not access disabled connector domains even via web search. Identity phase returns only name,title,company,tenure,candidates.',
+    messages
+  })
+  const urls = run.urls
+  const text = run.text
   let data = {}
   try { data = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)) } catch { /* Unsupported output stays empty. */ }
   return { data, urls }

@@ -66,7 +66,33 @@ def profile_for(owner_id):
         subprocess.run([HERMES, "profile", "create", name, "--no-alias"],
                        check=True, capture_output=True, text=True, timeout=120)
         log("created profile", name)
+    pin_search(name)  # existing accounts get it on their first job
     return name
+
+
+_pinned = set()
+
+
+def pin_search(name):
+    """Web search for the chat agent is Tavily, pinned in the account's
+    profile so Hermes never silently falls back to a free scraper. Hermes's
+    own rule: a stored web.backend is used as-is, with no fallback.
+
+    Written straight into the profile's config.yaml: `hermes config set`
+    waits on a terminal and hangs when run from the service."""
+    if name in _pinned or not os.environ.get("TAVILY_API_KEY"):
+        return
+    path = os.path.join(HOME, "profiles", name, "config.yaml")
+    try:
+        text = open(path).read() if os.path.exists(path) else ""
+        if not re.search(r"(?m)^web:", text):
+            with open(path, "a") as f:
+                f.write(("" if text.endswith("\n") or not text else "\n")
+                        + "web:\n  backend: tavily\n  search_backend: tavily\n")
+            log("search pinned to tavily", name)
+        _pinned.add(name)
+    except OSError as e:
+        log("could not pin search", name, str(e)[:200])
 
 
 # Fields the agent may change: the numeric answers and the two account selects.

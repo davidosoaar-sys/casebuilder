@@ -69,7 +69,7 @@ export default function ProjectList({ projects, loading = false, createRequest =
       ) : (
         <ul className={`project-grid ${display === 'list' ? 'project-list-view' : 'project-cards-view'}`} aria-label={display === 'list' ? 'Projects list' : 'Project cards'}>
           {sorted.map(p => {
-            const logo = p.brand?.hideLogo ? '' : safeAsset(p.brand?.logo) || safeAsset(p.projectLogo)
+            const logo = p.brand?.hideLogo ? '' : safeAsset(p.brand?.icon) || safeAsset(p.brand?.logo) || safeAsset(p.projectLogo)
             return (
               <li key={p.id}>
                 <div

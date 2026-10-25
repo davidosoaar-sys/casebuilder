@@ -1783,3 +1783,21 @@ body.is-resizing iframe { pointer-events: none; }
 .cmd-logo { max-height: 36px; max-width: 160px; object-fit: contain; align-self: flex-start; margin-bottom: 4px; }
 .cmd-swatches { display: flex; gap: 4px; margin: 2px 0; }
 .cmd-swatches span { width: 18px; height: 18px; border-radius: 4px; border: 1px solid var(--line-2); }
+
+/* ---- v0.9.1: brand icon + logo sizing ---- */
+.brand-setup-marks { display: flex; align-items: center; gap: 22px; margin-bottom: 18px; }
+.brand-setup-preview .brand-setup-icon { width: 64px; height: 64px; object-fit: contain; }
+.brand-setup-preview .brand-setup-logo { height: 44px; max-width: 280px; object-fit: contain; }
+.brand-icon-preview img { width: 48px; height: 48px; object-fit: contain; }
+/* Wordmarks are wide and short: size by height so they read at a glance. */
+.deck-company-logo { height: 44px; width: auto; max-width: 300px; max-height: none; }
+.projects-page .project-company-logo img, .project-company-logo img { width: 30px; height: 30px; }
+
+/* v0.9.1: deck pieces must use the DECK's colours, never the app's.
+   The objection box used var(--bg) (the app's #111), so on a light deck it was
+   a black box with dark text, readable only on hover. */
+.customer-deck .slide { --bg: var(--deck-surface); --panel: var(--deck-surface); --line: color-mix(in srgb, var(--deck-text) 14%, transparent); --line-2: color-mix(in srgb, var(--deck-text) 22%, transparent); }
+.customer-deck .slide blockquote { background: var(--deck-surface); color: var(--deck-text); border-left-color: var(--deck-primary); }
+/* Every page shares one background; the title page no longer fades to a different tone. */
+.customer-deck .slide-hero { background: var(--deck-bg); }
+@media print { .customer-deck .slide blockquote { background: var(--deck-surface)!important; color: var(--deck-text)!important; } .customer-deck .slide-hero { background: var(--page-background, var(--deck-bg))!important; } }

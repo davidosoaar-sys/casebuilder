@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { runWithSearch } from './agentSearch.js'
 import { agentInstruction } from './agent-commands/index.js'
 import { AGENT_COMMANDS } from '../src/agentCommands.js'
 
@@ -173,31 +174,14 @@ export async function suggest({ company, filled, documents, web, only, labels },
     }
   ]
 
-  const blocks = []
-  let message
-  for (let turn = 0; turn < 4; turn++) {
-    const stream = client.messages.stream({
-      model: MODEL,
-      max_tokens: 6000,
-      thinking: { type: 'adaptive' },
-      output_config: { effort: 'low' },
-      system: agentInstruction(AGENT_COMMANDS.SUGGEST_INPUTS)+'\nResponse contract:\n'+SYSTEM,
-      ...(web ? { tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: MAX_SEARCHES }] } : {}),
-      messages
-    })
-    message = await stream.finalMessage()
-    blocks.push(...message.content)
-    if (message.stop_reason !== 'pause_turn') break
-    messages.push({ role: 'assistant', content: message.content })
-  }
+  const run = await runWithSearch({
+    client, model: MODEL, maxTokens: 6000, maxSearches: MAX_SEARCHES, web,
+    system: agentInstruction(AGENT_COMMANDS.SUGGEST_INPUTS) + '\nResponse contract:\n' + SYSTEM,
+    messages
+  })
+  const message = run.message
   if (message.stop_reason === 'refusal') return { suggestions: [] }
-
-  const seen = new Set()
-  for (const block of blocks) {
-    if (block.type === 'web_search_tool_result' && Array.isArray(block.content)) for (const r of block.content) if (r.url) seen.add(norm(r.url))
-    if (block.type === 'text') for (const c of block.citations || []) if (c.url) seen.add(norm(c.url))
-  }
-  const text = (message.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n')
-  const parsed = extractJson(text)
-  return { suggestions: validateAgentItems(parsed, { documents: docs, seen, only }) }
+  const seen = new Set(run.urls.map(norm))
+  const parsed = extractJson(run.text)
+  return { suggestions: validateAgentItems(parsed, { documents: docs, seen, only }), search: run.search }
 }

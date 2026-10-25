@@ -112,6 +112,37 @@ class ParseCommands(unittest.TestCase):
         self.assertIn("Never show command names", p)
 
 
+class PinSearch(unittest.TestCase):
+    def test_pins_tavily_once_and_keeps_existing_config(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as home:
+            os.makedirs(os.path.join(home, "profiles", "acct-x"))
+            cfg = os.path.join(home, "profiles", "acct-x", "config.yaml")
+            open(cfg, "w").write("model:\n  default: m\n")
+            old_home, old_key = worker.HOME, os.environ.get("TAVILY_API_KEY")
+            worker.HOME, os.environ["TAVILY_API_KEY"] = home, "k"
+            worker._pinned.clear()
+            try:
+                worker.pin_search("acct-x"); worker._pinned.clear(); worker.pin_search("acct-x")
+            finally:
+                worker.HOME = old_home
+                if old_key is None: os.environ.pop("TAVILY_API_KEY", None)
+                else: os.environ["TAVILY_API_KEY"] = old_key
+            text = open(cfg).read()
+            self.assertIn("model:\n  default: m\n", text)
+            self.assertEqual(text.count("web:"), 1)
+            self.assertIn("  backend: tavily", text)
+
+    def test_no_key_no_pin(self):
+        old = os.environ.pop("TAVILY_API_KEY", None)
+        worker._pinned.clear()
+        try:
+            worker.pin_search("acct-none")  # must not raise or write
+        finally:
+            if old is not None: os.environ["TAVILY_API_KEY"] = old
+        self.assertNotIn("acct-none", worker._pinned)
+
+
 class Prompt(unittest.TestCase):
     def test_uses_the_users_name_not_chris(self):
         p = worker.build_prompt({"kind": "chat", "payload": {"message": "hi", "user_name": "Amr"}}, DEAL)

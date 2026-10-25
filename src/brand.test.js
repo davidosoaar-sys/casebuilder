@@ -105,7 +105,9 @@ test('inline home-link logos, public brand-page fallback and theme tokens are pr
   if(url==='https://lovable.dev/')throw Error('Website returned 403.')
   return {url,type:'text/html',buffer:Buffer.from('<a href="/home" aria-label="Go to homepage"><svg viewBox="0 0 10 10"><path fill="currentColor" d="M0 0h10v10z"/></svg></a><style>:root{--marketing-background:45 40% 98%;--marketing-primary:0 0% 11%;--marketing-foreground:0 0% 11%}.dark{--marketing-background:0 0% 11%;--marketing-primary:45 40% 98%}</style>')}
  })
- assert.deepEqual(calls,['https://lovable.dev/','https://lovable.dev/brand'])
+ // The page itself: homepage, then the brand-page fallback. Icon lookups follow.
+ assert.deepEqual(calls.slice(0,2),['https://lovable.dev/','https://lovable.dev/brand'])
+ assert.ok(calls.slice(2).every(u=>/\/(icon\.svg|apple-touch-icon\.png)$/.test(u)))
  assert.ok(result.logo.startsWith('data:image/svg+xml;base64,'))
  assert.equal(result.background,'#fcfbf8')
  assert.equal(result.primary,'#1c1c1c')
@@ -116,4 +118,19 @@ test('unsafe inline logo is dropped and an unrelated first font face is not subs
  assert.equal(result.logo,'')
  assert.equal(result.fontData,'')
  assert.equal(result.headingFont,'Company Sans')
+})
+
+test('the square icon is found separately from the wordmark logo', async () => {
+ const html='<link rel="icon" href="/favicon.ico"><link rel="icon" href="/favicon-16x16.png" sizes="16x16"><link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180"><link rel="icon" href="/icon.svg" type="image/svg+xml"><a href="/" aria-label="Home"><svg viewBox="0 0 755 129"><path d="M0 0h10v10z"/></svg></a>'
+ const icon='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 37 38"><path d="M0 0h37v38z"/></svg>'
+ const calls=[]
+ const result=await discoverBrand({website:'https://example.com/'},async url=>{
+  calls.push(url)
+  if(url==='https://example.com/icon.svg')return {url,type:'image/svg+xml',buffer:Buffer.from(icon)}
+  return {url,type:'text/html',buffer:Buffer.from(html)}
+ })
+ assert.ok(result.logo.startsWith('data:image/svg+xml;base64,'))
+ assert.equal(Buffer.from(result.icon.split(',')[1],'base64').toString(),icon)
+ assert.notEqual(result.icon,result.logo)
+ assert.ok(!calls.some(u=>/favicon\.ico|16x16/.test(u)),'tiny favicons are never used')
 })

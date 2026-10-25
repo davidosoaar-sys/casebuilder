@@ -2,7 +2,7 @@ import { websiteThemeCss } from './export/websiteFramework.js'
 // Customer branding is scoped to a deck. It never themes the application chrome.
 export const DEFAULT_BRAND = {
   primary: '#9bf0de', background: '#111111', surface: '#1e1e1e', text: '#e3e3e3',
-  muted: '#a9acb1', headingFont: 'Outfit', bodyFont: 'Arial', logo: '',
+  muted: '#a9acb1', headingFont: 'Outfit', bodyFont: 'Arial', logo: '', icon: '',
   fontData: '', fontName: '', website: '', sources: [], status: 'idle', message: '', hideLogo: false
 }
 export const COLOR_KEYS = ['primary', 'background', 'surface', 'text', 'muted']
@@ -28,6 +28,7 @@ export function normalizeBrand(value) {
     headingFont: cleanFont(b.headingFont) || DEFAULT_BRAND.headingFont,
     bodyFont: cleanFont(b.bodyFont) || DEFAULT_BRAND.bodyFont,
     logo: safeAsset(b.logo),
+    icon: safeAsset(b.icon),
     hideLogo: b.hideLogo === true,
     fontData: typeof b.fontData === 'string' && b.fontData.length < 900_000 && /^data:font\/(woff2?|ttf|otf);base64,[a-zA-Z0-9+/=]+$/.test(b.fontData) ? b.fontData : '',
     fontName: cleanFont(b.fontName),
