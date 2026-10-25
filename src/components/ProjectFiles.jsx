@@ -6,9 +6,9 @@ import React, { useEffect, useRef, useState } from 'react'
 import PageHead from './PageHead.jsx'
 import { supabase } from '../supabase.js'
 import { ACCEPT } from '../fileText.js'
-import { FILE_KINDS, listFiles, uploadFile, setEnabled, setKind, removeFile, saveInstructions, fmtSize, extOf } from '../projectFiles.js'
+import { listFiles, uploadFile, setEnabled, removeFile, saveInstructions, fmtSize, extOf } from '../projectFiles.js'
 
-function FileCard({ f, onToggle, onKind, onRemove, onOpen }) {
+function FileCard({ f, onToggle, onRemove, onOpen }) {
   return (
     <li className={`pf-card${f.enabled ? '' : ' is-off'}`}>
       <button type="button" className="pf-card-main" onClick={() => onOpen(f)} title="Preview the text the agent reads">
@@ -17,9 +17,6 @@ function FileCard({ f, onToggle, onKind, onRemove, onOpen }) {
         <span className="pf-ext">{extOf(f.name)}</span>
       </button>
       <div className="pf-card-actions">
-        <select value={f.kind} onChange={e => onKind(f, e.target.value)} aria-label={`Use ${f.name} as`}>
-          {FILE_KINDS.map(k => <option key={k.key} value={k.key}>{k.label}</option>)}
-        </select>
         <label className="pf-toggle" title={f.enabled ? 'The agent reads this file' : 'The agent ignores this file'}>
           <input type="checkbox" checked={f.enabled} onChange={e => onToggle(f, e.target.checked)} aria-label={`Agent reads ${f.name}`} />
           <span>{f.enabled ? 'On' : 'Off'}</span>
@@ -35,7 +32,6 @@ export default function ProjectFiles({ project, userId }) {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState([]) // names uploading
   const [drag, setDrag] = useState(false)
-  const [kind, setUploadKind] = useState('context')
   const [instr, setInstr] = useState('')
   const [instrSaved, setInstrSaved] = useState('')
   const [preview, setPreview] = useState(null)
@@ -56,7 +52,7 @@ export default function ProjectFiles({ project, userId }) {
     for (const file of list) {
       setBusy(b => [...b, file.name])
       try {
-        const row = await uploadFile(supabase, { userId, dealId: project.id, file, kind })
+        const row = await uploadFile(supabase, { userId, dealId: project.id, file })
         setFiles(fs => [...(fs || []), row])
         if (row.truncated) setError(`${file.name} is very long; the agent reads the first 300,000 characters.`)
       } catch (e) { setError(e.message) }
@@ -70,7 +66,7 @@ export default function ProjectFiles({ project, userId }) {
 
   return (
     <section className="page pf-page" aria-label="Files">
-      <PageHead title="Files" sub={`Context for ${project.name}. The agent reads every file that is on, in chat and when it drafts the deck.`} />
+      <PageHead title="Files" sub={`Everything the agent should know about ${project.name}. It reads every file that is on.`} />
 
       <section className="pf-section">
         <div className="pf-section-head"><h2>Instructions</h2><p>How to work on this account. Tone, must-have slides, who to avoid naming. Like a CLAUDE.md for this deal.</p></div>
@@ -92,24 +88,16 @@ export default function ProjectFiles({ project, userId }) {
           onDragOver={e => { e.preventDefault(); setDrag(true) }} onDragLeave={() => setDrag(false)}
           onDrop={e => { e.preventDefault(); setDrag(false); add(Array.from(e.dataTransfer.files)) }}>
           <p><strong>Drop files here</strong> or <button type="button" className="link-btn pf-browse" onClick={() => input.current?.click()}>choose files</button></p>
-          <label className="pf-kind">Add as
-            <select value={kind} onChange={e => setUploadKind(e.target.value)}>{FILE_KINDS.map(k => <option key={k.key} value={k.key}>{k.label}</option>)}</select>
-          </label>
-          <p className="pf-kind-help">{FILE_KINDS.find(k => k.key === kind)?.help}</p>
+          <p className="pf-kind-help">Financial reports, call notes, a deck you liked. When you chat, say what a file is for: "check my deck against the one I attached".</p>
           <input ref={input} type="file" multiple accept={ACCEPT} hidden onChange={e => { add(Array.from(e.target.files)); e.target.value = '' }} />
         </div>
         {busy.length > 0 && <p className="pf-busy" role="status"><span className="cmd-spin" aria-hidden="true" />Reading {busy.join(', ')}…</p>}
         {error && <p className="auth-error" role="alert">{error}</p>}
-        {files === null ? <p className="pf-empty">Loading…</p> : FILE_KINDS.map(k => {
-          const group = visible.filter(f => f.kind === k.key)
-          if (!group.length) return null
-          return <div key={k.key} className="pf-group"><h3>{k.label}</h3><ul className="pf-grid">{group.map(f => (
-            <FileCard key={f.id} f={f} onOpen={setPreview}
-              onToggle={(f, on) => act(() => setEnabled(supabase, f.id, on), () => setFiles(fs => fs.map(x => x.id === f.id ? { ...x, enabled: on } : x)))}
-              onKind={(f, k2) => act(() => setKind(supabase, f.id, k2), () => setFiles(fs => fs.map(x => x.id === f.id ? { ...x, kind: k2 } : x)))}
-              onRemove={f => act(() => removeFile(supabase, f.id), () => setFiles(fs => fs.filter(x => x.id !== f.id)))} />
-          ))}</ul></div>
-        })}
+        {files === null ? <p className="pf-empty">Loading…</p> : visible.length > 0 && <ul className="pf-grid pf-list">{visible.map(f => (
+          <FileCard key={f.id} f={f} onOpen={setPreview}
+            onToggle={(f, on) => act(() => setEnabled(supabase, f.id, on), () => setFiles(fs => fs.map(x => x.id === f.id ? { ...x, enabled: on } : x)))}
+            onRemove={f => act(() => removeFile(supabase, f.id), () => setFiles(fs => fs.filter(x => x.id !== f.id)))} />
+        ))}</ul>}
         {files && !visible.length && <p className="pf-empty">No files yet. Start with the client's latest financial report or a deck you were proud of.</p>}
       </section>
 

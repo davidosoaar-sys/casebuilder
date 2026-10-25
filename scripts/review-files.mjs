@@ -35,17 +35,13 @@ await page.waitForFunction(() => !/Loading/.test(document.querySelector('.pf-pag
 // Clean slate: remove files left by an earlier run.
 for (let i = 0; i < 60; i++) { const b = await page.$('.pf-card-actions .icon-btn'); if (!b) break; await b.click(); await sleep(400) }
 
-// Upload: three as Context, the deck as Deck inspiration.
+// Upload all four in one go.
 const input = await page.$('.pf-drop input[type=file]')
-await input.uploadFile(...FILES.filter(f => !f.endsWith('.pptx')))
-await page.waitForFunction(n => document.querySelectorAll('.pf-card').length >= n, { timeout: 30000 }, 3)
-await page.select('.pf-kind select', 'deck_inspiration')
-await input.uploadFile(FILES.find(f => f.endsWith('.pptx')))
+await input.uploadFile(...FILES)
 await page.waitForFunction(() => document.querySelectorAll('.pf-card').length >= 4, { timeout: 30000 })
 const cards = await page.$$eval('.pf-card', cs => cs.map(c => c.querySelector('.pf-card-name').innerText + ' | ' + c.querySelector('.pf-card-meta').innerText))
 check('4 real files uploaded (PDF, Word, PowerPoint, Excel)', cards.length === 4, cards.join(' ; '))
-const groups = await page.$$eval('.pf-group h3', hs => hs.map(h => h.innerText))
-check('deck shown under Deck inspiration', groups.some(g => /deck inspiration/i.test(g)), groups.join(', '))
+check('no file-type picker: every file is just a file', !(await page.$('.pf-card select, .pf-kind select')))
 
 // Preview text of each: the fact inside must be there.
 const facts = { 'Report FY2026.pdf': '1,480 software engineers', 'discovery notes.docx': 'payback inside 9 months', 'finance model.xlsx': '118', 'Best deck': '90-day implementation plan' }

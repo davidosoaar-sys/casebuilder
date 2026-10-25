@@ -2,10 +2,6 @@
 // Rows live in public.project_files (migration 0004), owner-only under RLS.
 import { extractText } from './fileText.js'
 
-export const FILE_KINDS = [
-  { key: 'context', label: 'Context', help: 'Anything about this client: financials, call notes, org charts, RFPs.' },
-  { key: 'deck_inspiration', label: 'Deck inspiration', help: 'Decks you liked. The agent copies their structure and tone, never their numbers.' }
-]
 export const INSTRUCTIONS_NAME = 'Project instructions'
 const SELECT = 'id, deal_id, name, kind, mime, size_bytes, pages, enabled, created_at, text'
 
@@ -22,9 +18,9 @@ const friendly = e => {
   return m
 }
 
-export async function uploadFile(client, { userId, dealId, file, kind = 'context' }) {
+export async function uploadFile(client, { userId, dealId, file }) {
   const { text, pages, truncated } = await extractText(file)
-  const row = { owner_id: userId, deal_id: dealId, name: file.name.slice(0, 200), kind, mime: file.type || '', size_bytes: file.size || 0, text, pages: pages ?? null }
+  const row = { owner_id: userId, deal_id: dealId, name: file.name.slice(0, 200), kind: 'context', mime: file.type || '', size_bytes: file.size || 0, text, pages: pages ?? null }
   const { data, error } = await client.from('project_files').insert(row).select(SELECT).single()
   if (error) throw new Error(friendly(error))
   return { ...data, truncated }
@@ -32,11 +28,6 @@ export async function uploadFile(client, { userId, dealId, file, kind = 'context
 
 export async function setEnabled(client, id, enabled) {
   const { error } = await client.from('project_files').update({ enabled }).eq('id', id)
-  if (error) throw new Error(friendly(error))
-}
-
-export async function setKind(client, id, kind) {
-  const { error } = await client.from('project_files').update({ kind }).eq('id', id)
   if (error) throw new Error(friendly(error))
 }
 

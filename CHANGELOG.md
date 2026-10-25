@@ -26,10 +26,10 @@ Every version that lands on `main` gets a line here and a git tag.
 ## Unreleased
 
 - Project Files: each project has a Files page, like a Claude Project's files.
-  Instructions (how to work on this account), Context files and Deck inspiration
-  (decks the user liked; the agent copies structure and tone, never numbers).
-  Reads PDF, Word, PowerPoint (with speaker notes), Excel and text in the browser;
-  each file can be switched off, relabelled or previewed as the text the agent
+  Instructions (how to work on this account) plus any files: no file types to pick;
+  the user says what a file is for when they ask ("check my deck against the one I
+  attached"). Reads PDF, Word, PowerPoint (with speaker notes), Excel and text in the browser;
+  each file can be switched off or previewed as the text the agent
   reads. Every chat and research run for the project reads the enabled files and
   lists each one in "Used N tools". New table project_files (migration 0004),
   owner-only under RLS, 50 files / 2M characters per project.

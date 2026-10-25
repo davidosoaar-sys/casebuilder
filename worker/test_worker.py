@@ -282,9 +282,9 @@ class ProjectFiles(unittest.TestCase):
     def test_instructions_files_and_inspiration_in_prompt(self):
         text, steps = worker.files_prompt(self.ROWS)
         self.assertIn("Always open with the CFO cost target.", text)
-        self.assertIn("--- Context file: Nike FY26 report.pdf ---", text)
-        self.assertIn("--- Deck inspiration file: Best deck.pptx ---", text)
-        self.assertIn("never their numbers", text)
+        self.assertIn("--- File: Nike FY26 report.pdf ---", text)
+        self.assertIn("--- File: Best deck.pptx ---", text)
+        self.assertIn("Never carry another client's numbers", text)
         self.assertEqual([s["title"] for s in steps], ["Read the project instructions", "Read Nike FY26 report.pdf", "Read Best deck.pptx"])
 
     def test_budget_cuts_and_says_so(self):
