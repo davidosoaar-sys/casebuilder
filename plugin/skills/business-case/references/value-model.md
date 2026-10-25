@@ -2,7 +2,7 @@
 
 Every figure is plain arithmetic in `src/model.js`; nothing is generated. Normally run `casebuilder.mjs calc` instead and never do the arithmetic yourself. Each saving is a difference between a "today" input and a "with Portal" input.
 
-## Figures, in order, with the default inputs
+## Figures, in order, with illustrative inputs (not the initial case state)
 
 | Figure | Working | Value |
 |---|---|---|
@@ -26,7 +26,7 @@ Every figure is plain arithmetic in `src/model.js`; nothing is generated. Normal
 | `selfHostCost` | 3 * $210,000 | 630000 |
 | `versusSelfHost` | $630,000 - $400,000 | 230000 |
 
-Division by zero gives 0, every value figure is floored at 0, and no figure is ever NaN or Infinity.
+Completeness and zero/negative handling come from the canonical model. Do not present an incomplete figure as zero. Preserve signed net/cost differences; do not recompute figures in the agent.
 
 ## Against self-hosting
 
@@ -34,7 +34,7 @@ The comparison that decides most deals is Portal against self-hosting open-sourc
 
 ## Case confidence
 
-The share of numeric and percent inputs (excluding the calendar) that are **confirmed**. An input is confirmed only when the customer said it. Everything else is an assumption and is listed on the deck's honesty page as a question for the next call.
+Internal confidence is the share of active numeric inputs supported as inputs, excluding calendar constants. Keep confidence and source metadata out of client outputs. Review incomplete or unconfirmed fields as internal follow-up questions.
 
 ## Archetypes
 

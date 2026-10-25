@@ -208,9 +208,10 @@ export default function InputSheet({ fields, model, company, connectors, documen
         </div>
       )}
 
+      <nav className="input-group-nav" aria-label="Input sections">{groups.map(([group, items], index) => <a key={group} href={`#inputs-group-${index}`}>{group}<span>{items.length}</span></a>)}</nav>
       <div className="groups-grid">
         {groups.map(([group, items]) => (
-          <section key={group} className="group">
+          <section key={group} className="group" id={`inputs-group-${groups.findIndex(([name]) => name === group)}`}>
             <h2>{group}</h2>
             {items.map(renderItem)}
           </section>
@@ -234,14 +235,10 @@ export default function InputSheet({ fields, model, company, connectors, documen
 }
 
 // The state, origin and gaps of one number, on the face of its field.
-function SourceLine({ field, onState, onOrigin, onSuggest, busy }) {
+export function SourceLine({ field, onState, onOrigin, onSuggest, busy }) {
   const state = stateOf(field)
   const s = field.source || {}
   const notes = s.notes || []
-  // Default labels repeat the badge. Keep real quotes/references visible, with
-  // an optional note for manually entered numbers instead of boilerplate.
-  const origin = /^(Confirmed by the customer(?: \(saved before sources were tracked\))?|Your own read|Your own number \(edited from a suggestion\))$/i.test(s.origin || '') ? '' : s.origin || ''
-
   if (state === 'empty') {
     return (
       <div className="source source-empty" data-state="empty">
@@ -263,69 +260,17 @@ function SourceLine({ field, onState, onOrigin, onSuggest, busy }) {
   return (
     <div className={`source source-${state}`} data-state={state}>
       <div className="source-row">
-        {state === 'suggestion' ? (
-          <span className="state state-suggestion">Suggestion</span>
-        ) : (
-          <button
-            type="button"
-            className={`state state-toggle ${state === 'input' ? 'state-verified' : 'state-assumed'}`}
-            aria-pressed={state === 'input'}
-            aria-label={`${field.label}: ${STATE_LABEL[state]}. Click to mark as ${state === 'input' ? 'assumption' : 'input'}`}
-            title={state === 'input' ? 'Click to mark as an assumption' : 'Click when this number is verified'}
-            onClick={() => onState(field.key, state === 'input' ? 'assumption' : 'input')}
-          >
-            {STATE_LABEL[state]}
-          </button>
-        )}
-        {state === 'suggestion' && (
-          <>
-            <button className="link-btn" onClick={() => onState(field.key, 'input')} title="Mark this number as an input">
-              Mark as input
-            </button>
-            <button className="link-btn" onClick={() => onSuggest(field.key)} disabled={!!busy} title="Ask again. It never changes by itself.">
-              {busy === field.key ? 'Refreshing…' : 'Refresh'}
-            </button>
-          </>
-        )}
+        {state === 'suggestion' ? <><span className="state state-suggestion">Suggestion</span><button type="button" className="link-btn" onClick={() => onState(field.key, 'input')}>Mark as input</button><button type="button" className="link-btn" disabled={!!busy} onClick={() => onSuggest(field.key)}>{busy === field.key ? 'Refreshing…' : 'Refresh'}</button></> : <button type="button" className={`state state-toggle ${state === 'input' ? 'state-verified' : 'state-assumed'}`} aria-pressed={state === 'input'} aria-label={`${field.label}: ${STATE_LABEL[state]}. Click to mark as ${state === 'input' ? 'assumption' : 'input'}`} onClick={() => onState(field.key, state === 'input' ? 'assumption' : 'input')}>{STATE_LABEL[state]}</button>}
       </div>
-      {state === 'suggestion' ? (
-        <p className="source-origin" data-testid="origin">
-          {s.link ? (
-            <>
-              {String(s.origin).split(s.link)[0]}
-              <a href={s.link} target="_blank" rel="noreferrer">
-                {s.link}
-              </a>
-              {String(s.origin).split(s.link)[1] || ''}
-            </>
-          ) : (
-            s.origin
-          )}
-        </p>
-      ) : (
-        <details className="source-details" open={origin ? true : undefined}>
-          <summary>{origin ? 'Source note' : 'Add source note'}</summary>
-          <input className="origin-input" type="text" value={origin} placeholder="Add a source or note" onChange={e => onOrigin(field.key, e.target.value)} aria-label="Origin" />
-        </details>
-      )}
-      {state !== 'assumption' && s.link && state === 'input' && (
-        <p className="source-origin">
-          <a href={s.link} target="_blank" rel="noreferrer">
-            {s.link}
-          </a>
-        </p>
-      )}
-      {s.pinnedAt && (
-        <p className="source-meta">
-          {s.confidence ? `${s.confidence} confidence · ` : ''}Pinned {when(s.pinnedAt)} · connections allowed:{' '}
-          {s.enabled && s.enabled.length ? s.enabled.join(', ') : 'none'}
-        </p>
-      )}
-      {notes.map(n => (
-        <p key={n} className="source-note">
-          {n}
-        </p>
-      ))}
+        {state === 'suggestion' && <details className="source-details suggestion-source">
+        <summary>Source notes</summary><div className="suggestion-source-body">
+          {s.origin && <p className="source-origin" data-testid="origin">{s.origin}</p>}
+          {s.quote && <blockquote>{s.quote}</blockquote>}
+          {s.link && /^https?:\/\//i.test(s.link) && <a href={s.link} target="_blank" rel="noreferrer noopener">View source</a>}
+          {s.pinnedAt && <p className="source-meta">Pinned {when(s.pinnedAt)}</p>}
+          {notes.map(n => <p key={n} className="source-note">{n}</p>)}
+          {!s.origin && !s.link && !s.quote && !notes.length && <p className="source-note">No source was supplied. Verify this suggestion before using it.</p>}
+        </div></details>}
     </div>
   )
 }
@@ -339,6 +284,7 @@ function PairField({ pair, today, portal, model, onChange, onEdit, onRemove, ...
     <div className={`pair-side is-${stateOf(f)}`}>
       <label htmlFor={f.key}>{label}</label>
       <InputActions field={f} onEdit={onEdit} onRemove={onRemove} />
+      <SourceLine field={f} {...rest} />
       <input
         id={f.key}
         type="number"
@@ -347,7 +293,6 @@ function PairField({ pair, today, portal, model, onChange, onEdit, onRemove, ...
         value={f.value}
         onChange={e => onChange(f.key, e.target.value === '' ? '' : Number(e.target.value))}
       />
-      <SourceLine field={f} {...rest} />
     </div>
   )
   return (
@@ -384,6 +329,7 @@ function Field({ field, onChange, onRemove, onEdit, ...rest }) {
         <InputActions field={field} onEdit={onEdit} onRemove={onRemove} />
       </div>
 
+      {number && <SourceLine field={field} {...rest} />}
       {field.type === 'select' ? (
         <select id={field.key} value={field.value} onChange={e => onChange(field.key, e.target.value)}>
           {field.options.map(o => (
@@ -417,7 +363,6 @@ function Field({ field, onChange, onRemove, onEdit, ...rest }) {
         />
       )}
 
-      {number && <SourceLine field={field} {...rest} />}
       {field.help && <p className="help">{field.help}</p>}
     </div>
   )

@@ -1,4 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { agentInstruction } from './agent-commands/index.js'
+import { AGENT_COMMANDS } from '../src/agentCommands.js'
 
 // The people-finder agent. One call researches one role at one company with
 // Claude's web search tool, then every claim is checked against what the search
@@ -50,7 +52,7 @@ export async function research({ company, role }, client = new Anthropic()) {
       max_tokens: 8000,
       thinking: { type: 'adaptive' },
       output_config: { effort: 'low' },
-      system: SYSTEM,
+      system: agentInstruction(AGENT_COMMANDS.FIND_STAKEHOLDERS)+'\nResponse contract:\n'+SYSTEM,
       tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: MAX_SEARCHES }],
       messages
     })

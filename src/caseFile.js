@@ -44,7 +44,7 @@ export function projectToCaseFile(project) {
     company: project.name,
     exportedAt: new Date().toISOString(),
     inputs,
-    stakeholders: project.stakeholders.map(s => (s.builtin && !s.edit && !s.pos ? s.key : s)),
+    stakeholders: project.stakeholders.map(s => (s.builtin && !s.edit && !s.pos && !s.namedPeople?.length ? s.key : s)),
     people: project.people || {},
     deck: project.deck,
     brand: normalizeBrand(project.brand)
@@ -209,7 +209,8 @@ export function caseFileToProject(file, { id } = {}) {
       bio: p.bio || '',
       sources: Array.isArray(p.sources) ? p.sources : [],
       confidence: ['high', 'medium', 'low'].includes(p.confidence) ? p.confidence : 'low',
-      found: p.found !== false
+      found: p.found !== false,
+      ...(p.mapping?.state==='inferred'?{mapping:{...p.mapping}}:{})
     }))
   }
 

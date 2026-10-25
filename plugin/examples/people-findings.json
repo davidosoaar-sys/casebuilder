@@ -1,0 +1,16 @@
+{
+  "kind":"people",
+  "query":"Alex Example, Northwind Example",
+  "enabledSources":["web"],
+  "sourcesUsed":["web"],
+  "sourcesSkipped":[],
+  "people":[{
+    "status":"resolved",
+    "claims":[
+      {"key":"name","value":"Alex Example","sourceUrl":"https://northwind.example/team","sourceType":"web"},
+      {"key":"title","value":"Chief Exploration Officer","sourceUrl":"https://northwind.example/team","sourceType":"web"}
+    ],
+    "notFound":["tenure","reportsTo","reports","email","linkedin"],
+    "suggestedInputs":[]
+  }]
+}

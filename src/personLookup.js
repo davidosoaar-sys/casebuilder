@@ -43,6 +43,16 @@ export function sanitizePerson(raw = {}, enabledSources = ['web']) {
   for (const key of ['name', 'title', 'company', 'tenure', 'reportsTo', 'likelyCares']) out[key] = sourcedClaim(raw[key], enabledSources)
   out.reports = (Array.isArray(raw.reports) ? raw.reports : []).map(x => sourcedClaim(x, enabledSources)).filter(Boolean)
   out.publicSignals = (Array.isArray(raw.publicSignals) ? raw.publicSignals : []).map(x => sourcedClaim(x, enabledSources)).filter(c => c && publicTypes.has(c.sourceType))
+  // Discussion prompts are grounded in already validated public evidence.
+  out.conversationStarters = out.publicSignals.slice(0, 3).map((signal, index) => ({
+    question: ['What has changed in your approach since this public contribution?', 'What was the biggest practical lesson from this work?', 'How does this work connect to your team’s priorities today?'][index],
+    context: signal.value, sourceUrl: signal.sourceUrl, kind: 'public-work'
+  }))
+  if (!out.conversationStarters.length && out.title) out.conversationStarters = [{
+    question: 'What is the biggest priority for your team this quarter, and where does developer experience fit?',
+    context: 'Role-based question inferred from their title; not a stated personal interest.',
+    sourceUrl: out.title.sourceUrl, kind: 'role-based'
+  }]
   // A title is required as evidence for an inferred role. Do not display an
   // agent's unsupported explanation or high confidence for an unfamiliar title.
   out.roleMatch = out.title ? { ...matchPersonRole(out.title.value), sourceUrl: out.title.sourceUrl, sourceType: out.title.sourceType } : null

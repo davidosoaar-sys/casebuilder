@@ -3,8 +3,11 @@ description: Start a business case for a company (inputs, stakeholders, ROI, dec
 argument-hint: <company name>
 ---
 
-Start a new business case using the **business-case** skill.
+Start a new case using `${CLAUDE_PLUGIN_ROOT}/skills/case-workflow/SKILL.md`.
 
 Company: $ARGUMENTS
 
-If no company was given above, ask for it. Then follow the skill's workflow from step 1: create the case file, ask for the account archetype, and begin gathering inputs in small groups, marking an input confirmed only when the customer said it. Do not invent any figures.
+If no company was given, ask for it. A company name is enough to create an empty
+case and begin official brand discovery when web is enabled. Extract supplied
+material before asking questions. Leave unknown inputs empty and keep researched
+stakeholders proposed until selected. Planner action: `new-case`.

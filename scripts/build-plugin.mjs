@@ -42,6 +42,17 @@ await build({
 })
 console.log(`bundle   ${path.relative(root, bundle)}  ${(fs.statSync(bundle).size / 1024 / 1024).toFixed(2)} MB`)
 
+// The framework planner and evidence validator use the app's source permission
+// and title-mapping helpers, bundled so the distributed plugin stays portable.
+await build({entryPoints:[path.join(root,'plugin-src/workflow.mjs')],outfile:path.join(plugin,'scripts/workflow.mjs'),bundle:true,platform:'node',format:'esm',target:'node18',logLevel:'warning'})
+const designRefs=path.join(plugin,'skills/case-deliverables/references')
+fs.mkdirSync(designRefs,{recursive:true})
+for(const [source,name] of [['docs/agents/design-case.md','design-case.md'],['docs/agents/one-pager.md','one-pager.md'],['docs/design-reference-study.md','design-reference-study.md'],['docs/agents/design-plan.schema.json','design-plan.schema.json']]){
+  let contents=fs.readFileSync(path.join(root,source),'utf8')
+  contents=contents.replaceAll('../design-reference-study.md','design-reference-study.md').replaceAll('agents/design-case.md','design-case.md')
+  fs.writeFileSync(path.join(designRefs,name),contents)
+}
+
 // 3. reference docs, generated from the model
 const M = await import(pathToFileURL(path.join(root, 'src/valueModel.js')).href)
 fs.mkdirSync(refs, { recursive: true })
@@ -53,16 +64,16 @@ const inputsMd = [
   '# Inputs',
   '',
   'Generated from the value model. Every key below can be set with `casebuilder.mjs set <file> key=value`.',
-  'Numbers and percentages feed the model and count toward case confidence. "Starts as" is the status a new case begins with: **assumption** until the customer says the number on a call.',
+  'Numeric inputs start empty. Example numbers are illustrative only and are never inserted into a new case. Calendar constants are structural. Source state distinguishes verified inputs, assumptions, suggestions and empty fields.',
   '',
   ...Object.entries(
     M.INPUT_FIELDS.reduce((g, f) => ((g[f.group] ||= []).push(f), g), {})
   ).flatMap(([group, items]) => [
     `## ${group}`,
     '',
-    '| Key | What it is | Type | Default | Starts as |',
+    '| Key | What it is | Type | Initial value | Example only |',
     '|---|---|---|---|---|',
-    ...items.map(f => `| \`${f.key}\` | ${f.label}${f.help ? `. ${f.help}` : ''} | ${f.type}${f.unit ? ` (${f.unit})` : ''}${f.options ? `: ${f.options.join(' / ')}` : ''} | ${f.value} | ${f.confirmed ? 'confirmed' : 'assumption'} |`),
+    ...items.map(f => `| \`${f.key}\` | ${f.label}${f.help ? `. ${f.help}` : ''} | ${f.type}${f.unit ? ` (${f.unit})` : ''}${f.options ? `: ${f.options.join(' / ')}` : ''} | ${f.value===''?'empty':f.value} | ${defaults[f.key]??''} |`),
     ''
   ])
 ].join('\n')
@@ -75,13 +86,13 @@ const modelMd = [
   '',
   'Every figure is plain arithmetic in `src/model.js`; nothing is generated. Normally run `casebuilder.mjs calc` instead and never do the arithmetic yourself. Each saving is a difference between a "today" input and a "with Portal" input.',
   '',
-  '## Figures, in order, with the default inputs',
+  '## Figures, in order, with illustrative inputs (not the initial case state)',
   '',
   '| Figure | Working | Value |',
   '|---|---|---|',
   ...Model.FIGURE_ORDER.map(k => `| \`${k}\` | ${computed.figures[k].equation} | ${computed.figures[k].value} |`),
   '',
-  'Division by zero gives 0, every value figure is floored at 0, and no figure is ever NaN or Infinity.',
+  'Completeness and zero/negative handling come from the canonical model. Do not present an incomplete figure as zero. Preserve signed net/cost differences; do not recompute figures in the agent.',
   '',
   '## Against self-hosting',
   '',
@@ -89,7 +100,7 @@ const modelMd = [
   '',
   '## Case confidence',
   '',
-  'The share of numeric and percent inputs (excluding the calendar) that are **confirmed**. An input is confirmed only when the customer said it. Everything else is an assumption and is listed on the deck\'s honesty page as a question for the next call.',
+  'Internal confidence is the share of active numeric inputs supported as inputs, excluding calendar constants. Keep confidence and source metadata out of client outputs. Review incomplete or unconfirmed fields as internal follow-up questions.',
   '',
   '## Archetypes',
   '',
@@ -110,7 +121,7 @@ const stakeMd = [
     `- **Who:** ${s.tag}`,
     `- **Cares about:** ${s.cares}`,
     `- **Value drivers to lead with:** ${s.lead.join(', ')}`,
-    `- **Headline with default inputs:** ${s.headline(computed)}`,
+    `- **Headline with illustrative inputs:** ${s.headline(computed)}`,
     `- **Needs to see:**`,
     ...s.needsToSee.map(n => `  - ${n}`),
     `- **Likely objection:** "${s.objection}"`,

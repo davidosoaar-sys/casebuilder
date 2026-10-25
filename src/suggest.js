@@ -1,4 +1,5 @@
 import { NUMERIC_INPUTS } from './model.js'
+import { AGENT_COMMANDS } from './agentCommands.js'
 import { PAIRS, fmtDec, fmtMoneyFull } from './valueModel.js'
 import { CONNECTORS, enabledLabels } from './connectors.js'
 import { isBlank, withSuggestion, withGap } from './source.js'
@@ -175,7 +176,7 @@ export async function fetchAgent(payload, { code, fetchImpl = fetch } = {}) {
   const res = await fetchImpl('/api/suggest', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(code ? { 'x-access-code': code } : {}) },
-    body: JSON.stringify(payload)
+    body: JSON.stringify({...payload,command:AGENT_COMMANDS.SUGGEST_INPUTS})
   })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw Object.assign(new Error(data.error || 'The agent is unavailable.'), { status: res.status })

@@ -3,8 +3,12 @@ description: Build the PowerPoint, one-pager and interactive website for a case
 argument-hint: [case file] [stakeholder] [pptx|onepager|website|all]
 ---
 
-Build the deliverables for a business case using the **business-case** skill (step 7).
+Build using `${CLAUDE_PLUGIN_ROOT}/skills/case-deliverables/SKILL.md`.
 
 Arguments: $ARGUMENTS
 
-Use the single `*.case.json` in the working folder unless one is named. First run `validate`, then `calc --md` and mention the case confidence and anything still assumed. Build for the stakeholder named (or ask which one if the case has several and none was named; the website lets the viewer switch). Default format is `all`, with `--pdf` for the one-pager. Finish by listing the files that were written and who each is for.
+Resolve the named case or the only case in the folder. Run `validate`, then
+`calc`. Build requested formats; `all` is the default for an unqualified build
+request. PDF is optional and requires tooling. Keep confidence/source details in
+the internal report. The website uses the company story and stakeholder map;
+slides/one-pager use the selected audience. Report actual files and QA limits.

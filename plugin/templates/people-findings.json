@@ -1,0 +1,17 @@
+{
+  "kind": "people",
+  "query": "Original query",
+  "enabledSources": ["web"],
+  "sourcesUsed": [],
+  "sourcesSkipped": [],
+  "people": [],
+  "personShape": {
+    "status":"resolved or ambiguous or not-found",
+    "claims":[],
+    "notFound":["tenure", "reportsTo", "reports", "email"],
+    "roleMatch":{"role":"cto","confidence":"low","why":"Explain title/responsibility inference","sourceUrl":"https://company.example/team","sourceType":"web","state":"inferred"},
+    "candidates":[],
+    "suggestedInputs":[]
+  },
+  "claimShape":{"key":"title","value":"Supported current title","sourceUrl":"https://company.example/team","sourceType":"web"}
+}

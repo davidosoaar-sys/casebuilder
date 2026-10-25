@@ -1,0 +1,7 @@
+{
+  "company":"Northwind Example",
+  "caseFile":"northwind-example.case.json",
+  "enabledSources":[],
+  "materialFiles":["examples/discovery.txt"],
+  "outputs":["website","onepager"]
+}

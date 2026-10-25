@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { resolve } from './Deck.jsx'
 import AppLogo from './AppLogo.jsx'
 import { uid } from '../projects.js'
+import { AGENT_COMMANDS } from '../agentCommands.js'
 
 // The people step. For each stakeholder role an AI agent searches the public
 // web for who holds it at the company and returns names, titles, public emails,
@@ -45,7 +46,7 @@ export default function People({
       const res = await fetch('/api/research', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(code ? { 'x-access-code': code } : {}) },
-        body: JSON.stringify({ company, role: role.role })
+        body: JSON.stringify({ command:AGENT_COMMANDS.FIND_STAKEHOLDERS,company, role: role.role })
       })
       const data = await res.json().catch(() => ({}))
       if (res.status === 503) return setSetup(true)

@@ -1397,3 +1397,111 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 :root[data-sidebar="collapsed"] .sidebar-footer { width: 100%; }
 /* dialogs opened from inside Settings sit above it */
 .overlay ~ .modal-backdrop, .overlay .modal-backdrop { z-index: 90; }
+
+/* Person lookup workspace: compact search, one readable brief per person. */
+.page.person-lookup{max-width:1040px;padding-inline:36px}
+.person-lookup .page-head{padding-top:52px;padding-bottom:30px}
+.person-lookup .page-head h1{letter-spacing:-.025em}
+.person-lookup .page-sub{margin:8px 0 0;font-size:14px;color:var(--ink-dim);line-height:1.6}
+.person-lookup .lookup-body{padding:0;font-size:14px}
+.person-lookup .lookup-search{max-width:none;margin:0}
+.person-lookup .lookup-search-line{gap:10px;min-height:52px;padding:5px 5px 5px 15px;border:1px solid var(--line-2);border-radius:10px;background:var(--panel);transition:border-color .15s}
+.person-lookup .lookup-search-line:focus-within{border-color:var(--accent);outline:2px solid var(--accent);outline-offset:3px}
+.person-lookup .lookup-search-icon{display:flex;flex:none;color:var(--ink-dim)}
+.person-lookup .lookup-search-line>input{height:38px;padding:0 4px;border:0;border-radius:0;background:transparent;box-shadow:none;font-size:14px;color:var(--ink)}
+.person-lookup .lookup-search-line>input:focus{outline:none}
+.person-lookup .lookup-search-line>input::placeholder{color:var(--ink-dim);opacity:1}
+.person-lookup .lookup-search-line>.primary{display:flex;align-items:center;justify-content:center;gap:12px;min-height:40px;height:auto;padding:10px 15px;font-size:12px;border-radius:7px;white-space:nowrap}
+.person-lookup .lookup-search-meta{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;padding:12px 1px}
+.person-lookup .lookup-search-meta>p{margin:0;font-size:11px;line-height:1.7;color:var(--ink-dim)}
+.person-lookup .lookup-search-meta strong{font-weight:500;color:var(--ink)}
+.person-lookup .lookup-context-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--accent);margin:0 7px 2px 0}
+.person-lookup .lookup-meta-divider{padding:0 7px;color:var(--ink-dim)}
+.person-lookup .lookup-test-options{margin:0;flex:none;font-size:11px;line-height:1.7;color:var(--ink-dim)}
+.person-lookup .lookup-test-options summary{text-align:right;cursor:pointer}
+.person-lookup .lookup-test-options label{font-size:11px}
+.person-lookup .lookup-demo-notice{font-size:11px;color:var(--ink-dim);line-height:1.6;padding:10px 0;border-bottom:1px solid var(--line);margin:0}
+.person-lookup .lookup-empty{text-align:center;padding:76px 16px 72px;color:var(--ink-dim)}
+.person-lookup .lookup-empty-symbol{display:block;margin:0 auto 26px;color:var(--ink-dim)}
+.person-lookup .lookup-empty h2{font-size:22px;letter-spacing:-.02em;line-height:1.3;margin:0 0 12px;color:var(--ink);font-weight:500}
+.person-lookup .lookup-empty>p{font-size:14px;line-height:1.75;margin:0}
+.person-lookup .lookup-empty-note{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;margin-top:28px;font-size:11px}
+.person-lookup .lookup-empty-note>span+span{border-left:1px solid var(--line-2);padding-left:20px}
+.person-lookup .lookup-results{display:block;margin-top:24px}
+.person-lookup .lookup-result{border:0;border-top:1px solid var(--line-2);border-radius:0;padding:22px 0 32px;margin:0 0 24px;line-height:1.65}
+.person-lookup .lookup-result-status{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px;color:var(--ink-dim);font-size:11px}
+.person-lookup .lookup-request{font-size:11px;min-width:0;overflow-wrap:anywhere}
+.person-lookup .lookup-progress{display:inline-flex;align-items:center;gap:7px}
+.person-lookup .lookup-progress>span{width:5px;height:5px;border-radius:50%;background:var(--accent)}
+.person-lookup .lookup-person-head{display:flex;align-items:flex-start;gap:15px;margin-bottom:30px}
+.person-lookup .lookup-avatar{width:46px;height:46px;display:grid;place-items:center;flex:none;border:1px solid var(--line-2);background:var(--panel);border-radius:50%;font-size:13px;font-weight:500;color:var(--ink)}
+.person-lookup .lookup-person-identity{flex:1;min-width:0}
+.person-lookup .lookup-person-identity h2{font-size:25px;font-weight:600;line-height:1.25;letter-spacing:-.025em;margin:0 0 6px}
+.person-lookup .lookup-person-identity>p{margin:0;font-size:13px;line-height:1.65;color:var(--ink-dim)}
+.person-lookup .lookup-tenure{font-size:11px;margin-top:5px;color:var(--ink-dim)}
+.person-lookup .lookup-add.primary,.person-lookup .lookup-add.ghost{font-size:12px;padding:10px 14px;display:flex;align-items:center;gap:14px;flex:none;min-height:38px;margin:2px 0 0}
+.person-lookup .lookup-add>span{font-size:17px;font-weight:400;line-height:1}
+.person-lookup .lookup-evidence{overflow-wrap:anywhere}
+.person-lookup .lookup-evidence-link{display:inline-flex;align-items:center;vertical-align:baseline;margin-left:6px;color:var(--ink-dim);text-decoration:none;padding:2px;border-radius:3px;line-height:1}
+.person-lookup .lookup-evidence-link:hover{color:var(--accent);background:var(--panel)}
+.person-lookup .lookup-evidence-link:focus-visible,.person-lookup summary:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+.person-lookup .lookup-brief-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(220px,1fr);gap:40px;margin-bottom:28px}
+.person-lookup .lookup-result h3{font-size:12px;font-weight:600;margin:0 0 12px;line-height:1.5;color:var(--ink)}
+.person-lookup .lookup-care{font-size:16px;line-height:1.65;margin:0 0 28px;max-width:60ch}
+.person-lookup .lookup-care>.lookup-missing{font-size:13px}
+.person-lookup .lookup-secondary,.person-lookup .lookup-signals{font-size:13px;line-height:1.75;color:var(--ink-dim)}
+.person-lookup .lookup-signals{padding-left:16px;margin:0;color:var(--ink)}
+.person-lookup .lookup-signals li{padding-left:3px;margin-bottom:9px}
+.person-lookup .lookup-role-brief{border-left:1px solid var(--line);padding-left:28px;min-width:0}
+.person-lookup .lookup-role-name{font-size:16px;font-weight:500;line-height:1.5;margin:0 0 8px}
+.person-lookup .lookup-confidence{font-size:10px;color:var(--ink);display:inline-block;padding:3px 7px;background:var(--panel);border:1px solid var(--line);border-radius:4px}
+.person-lookup .lookup-role-brief .lookup-secondary{margin:14px 0 10px}
+.person-lookup .lookup-inference-note{font-size:11px;color:var(--ink-dim);margin:0;line-height:1.7}
+.person-lookup .lookup-detail-section{border-top:1px solid var(--line);padding:15px 0;margin:0}
+.person-lookup .lookup-detail-section>summary{cursor:pointer;font-size:12px;color:var(--ink-dim);line-height:1.5}
+.person-lookup .lookup-detail-section>summary>span{float:right;font-size:10px;color:var(--ink-dim);margin-left:14px}
+.person-lookup .lookup-detail-section[open]>summary{color:var(--ink);margin-bottom:16px}
+.person-lookup .lookup-facts{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:0}
+.person-lookup .lookup-facts>div{margin:0}.person-lookup .lookup-facts dt{text-transform:none;letter-spacing:0;font-size:11px;margin-bottom:6px}
+.person-lookup .lookup-facts dd{font-size:13px}
+.person-lookup .lookup-gaps{border:0;padding:0;margin:0;font-size:12px;line-height:1.7}
+.person-lookup .lookup-suggestions{padding:20px 0 24px;border-top:1px solid var(--line)}
+.person-lookup .lookup-suggestions>.lookup-secondary{margin:-6px 0 16px}
+.person-lookup .lookup-suggestions>div{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:12px}
+.person-lookup .lookup-suggestions p{margin:0;font-size:13px}.person-lookup .lookup-suggestions button{font-size:11px}
+.person-lookup .lookup-missing{color:var(--ink-dim);font-size:12px}
+.person-lookup .lookup-error{padding:16px 18px;background:var(--panel);border:1px solid var(--line-2);border-radius:7px;color:var(--ink);margin-bottom:18px;font-size:13px}
+.person-lookup .lookup-error p{margin:5px 0 8px}.person-lookup .lookup-error>span{font-size:11px;color:var(--ink-dim)}
+.person-lookup .lookup-ambiguity>h3{font-size:20px;font-weight:500}.person-lookup .lookup-ambiguity>.lookup-secondary{margin:0 0 18px}
+.person-lookup .lookup-candidate{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:18px 0;border-top:1px solid var(--line)}
+.person-lookup .lookup-candidate p{margin:5px 0 0;font-size:13px;color:var(--ink-dim)}
+@media(max-width:800px){.page.person-lookup{padding-inline:24px}.person-lookup .lookup-brief-grid{gap:24px;grid-template-columns:minmax(0,1.2fr) minmax(180px,1fr)}.person-lookup .lookup-role-brief{padding-left:20px}.person-lookup .lookup-search-meta{flex-wrap:wrap;gap:6px}.person-lookup .lookup-test-options summary{text-align:left}}
+@media(max-width:600px){.page.person-lookup{padding-inline:18px}.person-lookup .page-head{padding-top:30px}.person-lookup .lookup-search-line{gap:6px;padding-left:10px}.person-lookup .lookup-search-line>input{font-size:12px}.person-lookup .lookup-search-line>.primary{padding:10px;gap:6px}.person-lookup .lookup-search-line>.primary svg{display:none}.person-lookup .lookup-empty{padding:58px 0}.person-lookup .lookup-empty h2{font-size:20px}.person-lookup .lookup-desktop-break{display:none}.person-lookup .lookup-brief-grid{grid-template-columns:1fr;gap:26px}.person-lookup .lookup-role-brief{border-left:0;border-top:1px solid var(--line);padding:22px 0 0}.person-lookup .lookup-person-head{flex-wrap:wrap;gap:12px;margin-bottom:26px}.person-lookup .lookup-person-identity h2{font-size:22px}.person-lookup .lookup-add{margin-left:58px!important}.person-lookup .lookup-facts{grid-template-columns:1fr;gap:18px}.person-lookup .lookup-suggestions>div,.person-lookup .lookup-candidate{align-items:flex-start;flex-direction:column;gap:12px}.person-lookup .lookup-result-status{gap:10px}.person-lookup .lookup-empty-note{gap:10px;font-size:10px}.person-lookup .lookup-empty-note>span+span{padding-left:10px}}
+@media(prefers-reduced-motion:reduce){.person-lookup .lookup-search-line{transition:none}}
+.person-lookup .lookup-inference-label{font-weight:400;font-size:10px;color:var(--ink-dim);margin-left:8px}
+@media(max-width:600px){.person-lookup .lookup-person-head .lookup-person-identity{flex-basis:calc(100% - 58px)}}
+.person-lookup .lookup-evidence-link{min-width:20px;min-height:20px;justify-content:center}
+
+/* Organized input sections; suggestion evidence stays closed above its value. */
+.input-group-nav{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 20px}
+.input-group-nav a{display:inline-flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;color:var(--ink-dim);text-decoration:none;font-size:12px}
+.input-group-nav a:hover,.input-group-nav a:focus-visible{color:var(--ink)}
+.input-group-nav span{font-size:10px;opacity:.65}
+.inputs-page .groups-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;align-items:start}
+.inputs-page .group{border:1px solid var(--line);border-radius:12px;padding:20px;scroll-margin-top:24px;min-width:0}
+.inputs-page .group h2{font-size:13px;color:var(--ink);margin-bottom:20px;letter-spacing:0}
+.inputs-page .field{padding-bottom:18px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+.inputs-page .field:last-child{border-bottom:0;padding-bottom:0;margin-bottom:0}
+.inputs-page .source{margin:6px 0 10px}
+.inputs-page .source-row{flex-wrap:wrap}
+.inputs-page .suggestion-source{margin:6px 0 0;color:var(--ink-dim)}
+.suggestion-source summary{width:fit-content;padding:4px 0;font-size:12px;cursor:pointer}
+.suggestion-source-body{padding:10px 12px;border:1px solid var(--line);border-radius:8px;margin-top:6px;overflow-wrap:anywhere}
+.suggestion-source-body blockquote{margin:8px 0;font-size:12px;color:var(--ink-dim)}
+.inputs-page .pair-grid{align-items:start}
+.lookup-conversation{padding:22px 0;border-top:1px solid var(--line)}
+.lookup-conversation-item{margin-top:16px;max-width:740px}
+.lookup-conversation-item p{margin:0 0 6px;line-height:1.6;color:var(--ink)}
+.lookup-conversation-item small{display:block;color:var(--ink-dim);line-height:1.5}
+@media(max-width:900px){.inputs-page .groups-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:480px){.inputs-page .group{padding:16px}.input-group-nav a{padding:8px 10px}}

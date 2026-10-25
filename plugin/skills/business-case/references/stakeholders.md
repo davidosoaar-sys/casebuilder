@@ -8,7 +8,7 @@ The same numbers are framed differently for each person who has to approve the d
 - **Who:** Usually the champion
 - **Cares about:** Their team shipping instead of searching
 - **Value drivers to lead with:** productivity, onboarding
-- **Headline with default inputs:** 24k hours of engineering time back per year
+- **Headline with illustrative inputs:** 24k hours of engineering time back per year
 - **Needs to see:**
   - Time recovered per engineer, not just in aggregate
   - Onboarding time for the hires they are about to make
@@ -20,7 +20,7 @@ The same numbers are framed differently for each person who has to approve the d
 - **Who:** Often has the opposite goal
 - **Cares about:** Cutting spend while the org keeps growing
 - **Value drivers to lead with:** platform, tooling
-- **Headline with default inputs:** $714k of run cost avoided per year
+- **Headline with illustrative inputs:** $714k of run cost avoided per year
 - **Needs to see:**
   - Total cost of ownership against self-hosting, not against doing nothing
   - What gets retired, not just what gets added
@@ -32,7 +32,7 @@ The same numbers are framed differently for each person who has to approve the d
 - **Who:** Shows up late and can stall a done deal
 - **Cares about:** Payback, contract terms, and whether the numbers survive scrutiny
 - **Value drivers to lead with:** productivity, tooling
-- **Headline with default inputs:** Payback in 1.25 months
+- **Headline with illustrative inputs:** Payback in 1.25 months
 - **Needs to see:**
   - Payback period and five-year value
   - Which inputs are confirmed and which are still assumptions
@@ -44,7 +44,7 @@ The same numbers are framed differently for each person who has to approve the d
 - **Who:** The late arrival that kills timelines
 - **Cares about:** Proving which services meet which standards, on a date
 - **Value drivers to lead with:** standards, incidents
-- **Headline with default inputs:** $96k of audit effort avoided per year
+- **Headline with illustrative inputs:** $96k of audit effort avoided per year
 - **Needs to see:**
   - Where the data lives and who can see it
   - How standards are enforced and evidenced for an audit

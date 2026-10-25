@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "actions": [
+    {"id":"new-case","command":"new","button":"New project","skill":"skills/case-workflow/SKILL.md","required":["company"],"artifact":"case file and workflow report","writes":"new case only"},
+    {"id":"run-case","command":"run","button":"Build case","skill":"skills/case-workflow/SKILL.md","required":["company"],"artifact":"case file, review report and requested deliverables","writes":"authorized case edits; research stays proposed"},
+    {"id":"brand-assets","command":"assets","button":"Find brand assets","skill":"skills/brand-discovery/SKILL.md","required":["company"],"artifact":"brand findings JSON and asset files","writes":"apply reviewed brand only"},
+    {"id":"person-lookup","command":"lookup","button":"Person lookup","skill":"skills/person-brief/SKILL.md","required":["query"],"artifact":"sourced person brief or candidate list","writes":"none until Add to this deal"},
+    {"id":"find-stakeholders","command":"stakeholders","button":"Find stakeholders","skill":"skills/account-research/SKILL.md","required":["company"],"artifact":"sourced role candidates and inferred mappings","writes":"none until candidates are selected"},
+    {"id":"create-deliverables","command":"build","button":"View as","skill":"skills/case-deliverables/SKILL.md","required":["caseFile"],"artifact":"website, slides or one-pager","writes":"new output files only"}
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "brand",
+  "company": "Company name",
+  "enabledSources": ["web"],
+  "sourcesUsed": [],
+  "sourcesSkipped": [],
+  "claims": [],
+  "notFound": [],
+  "fallbacks": [],
+  "claimShape": {"key":"headingFont","value":"verified font family","sourceUrl":"https://company.example/brand","sourceType":"web","observedAt":"YYYY-MM-DD","localFile":"optional assets/font.woff2"}
+}

@@ -1,4 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { agentInstruction } from './agent-commands/index.js'
+import { AGENT_COMMANDS } from '../src/agentCommands.js'
 
 // The suggestion agent. It READS material Chris switched on and proposes values for
 // empty inputs. It never computes a figure, and it never invents one: every item it
@@ -179,7 +181,7 @@ export async function suggest({ company, filled, documents, web, only, labels },
       max_tokens: 6000,
       thinking: { type: 'adaptive' },
       output_config: { effort: 'low' },
-      system: SYSTEM,
+      system: agentInstruction(AGENT_COMMANDS.SUGGEST_INPUTS)+'\nResponse contract:\n'+SYSTEM,
       ...(web ? { tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: MAX_SEARCHES }] } : {}),
       messages
     })

@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CaseBuilder design plan",
+  "description": "Planning boundary for a future renderer. References existing deal figures; does not permit model or input edits.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "dealId", "thesis", "brand", "beats", "qa", "limitations"],
+  "properties": {
+    "version": {"const": "1.0.0"},
+    "dealId": {"type": "string", "minLength": 1},
+    "thesis": {"type": "string", "minLength": 1},
+    "brand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["surface", "assetRefs", "fonts", "tokens", "adjustments"],
+      "properties": {
+        "surface": {"enum": ["light", "dark", "mixed"]},
+        "assetRefs": {"type": "array", "items": {"type": "string"}},
+        "fonts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["heading", "body", "status", "fallbackReason"],
+          "properties": {
+            "heading": {"type": "string"},
+            "body": {"type": "string"},
+            "status": {"enum": ["verified-loaded", "fallback", "not-tested"]},
+            "fallbackReason": {"type": "string"}
+          }
+        },
+        "tokens": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["canvas", "surface", "raisedSurface", "text", "secondaryText", "divider", "accent", "accentText", "focus"],
+          "properties": {
+            "canvas": {"$ref": "#/$defs/color"},
+            "surface": {"$ref": "#/$defs/color"},
+            "raisedSurface": {"$ref": "#/$defs/color"},
+            "text": {"$ref": "#/$defs/color"},
+            "secondaryText": {"$ref": "#/$defs/color"},
+            "divider": {"$ref": "#/$defs/color"},
+            "accent": {"$ref": "#/$defs/color"},
+            "accentText": {"$ref": "#/$defs/color"},
+            "focus": {"$ref": "#/$defs/color"}
+          }
+        },
+        "adjustments": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "beats": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "prefixItems": [
+        {"allOf": [{"$ref": "#/$defs/beat"}, {"properties": {"key": {"const": "identity"}}}]},
+        {"allOf": [{"$ref": "#/$defs/beat"}, {"properties": {"key": {"const": "overview"}}}]},
+        {"allOf": [{"$ref": "#/$defs/beat"}, {"properties": {"key": {"const": "impact"}}}]},
+        {"allOf": [{"$ref": "#/$defs/beat"}, {"properties": {"key": {"const": "drivers"}}}]},
+        {"allOf": [{"$ref": "#/$defs/beat"}, {"properties": {"key": {"const": "changes"}}}]},
+        {"allOf": [{"$ref": "#/$defs/beat"}, {"properties": {"key": {"const": "alternative"}}}]},
+        {"allOf": [{"$ref": "#/$defs/beat"}, {"properties": {"key": {"const": "stakeholders"}}}]}
+      ]
+    },
+    "qa": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["check", "status", "evidence"],
+        "properties": {
+          "check": {"type": "string"},
+          "status": {"enum": ["passed", "failed", "not-tested"]},
+          "evidence": {"type": "string"}
+        }
+      }
+    },
+    "limitations": {"type": "array", "items": {"type": "string"}}
+  },
+  "$defs": {
+    "color": {"type": "string", "pattern": "^#[0-9a-fA-F]{6}$"},
+    "beat": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "purpose", "contentRefs", "figureRefs", "website", "deck", "missingInputBehavior"],
+      "properties": {
+        "key": {"type": "string"},
+        "purpose": {"type": "string"},
+        "contentRefs": {"type": "array", "items": {"type": "string"}},
+        "figureRefs": {"type": "array", "items": {"type": "string"}},
+        "website": {"$ref": "#/$defs/composition"},
+        "deck": {"$ref": "#/$defs/composition"},
+        "missingInputBehavior": {"type": "string"}
+      }
+    },
+    "composition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["layout", "diagram", "focalPoint", "behavior"],
+      "properties": {
+        "layout": {"enum": ["identity", "editorial-split", "wide-evidence", "structured-comparison", "cost-flow", "relationship-map"]},
+        "diagram": {"enum": ["none", "annual-comparison", "driver-breakdown", "before-after", "diverging-bars", "self-host-cost-flow", "stakeholder-map"]},
+        "focalPoint": {"type": "string"},
+        "behavior": {"type": "string"}
+      }
+    }
+  }
+}

@@ -23,6 +23,17 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ---
 
+## v0.6.0 (2026-10-25)
+
+- 2026-10-25: Added evidence-linked professional conversation starters to Person lookup, with an explicitly inferred role-based fallback. Organized inputs into consistent sections with jump navigation; suggestion-only source notes are closed by default above values. Manual inputs retain their state controls without source-note UI. Equations and client deck unchanged. Validation: 236 tests pass; production build passes.
+
+- Refined Person lookup with a compact unified search line, a useful empty state, readable sourced identity/brief sections, explicit inferred stakeholder fit and expandable reporting/source coverage. Sidebar and search/write behavior remain unchanged; styles support light/dark and narrow screens.
+- Added app-specific agent command IDs and a trusted instruction registry, separate from the Claude plugin. New project/brand discovery, Find people, Person lookup and Suggest values now name their tasks and use centralized server instructions; framing/website/one-pager design are explicitly documented as future contracts. Format exports remain deterministic and reuse saved branding.
+- Extended the Claude plugin with shared button/action contracts, company-to-case orchestration, brand discovery, person lookup, stakeholder proposals, deliverable instructions, examples and an evaluation scorecard.
+- Added a portable action planner and evidence validator using the app's connector permissions and nearest-role mapping. Research remains proposed until selected; no app-to-Claude bridge or live connector access is implied.
+- Plugin exports now use the case's branding; unsupported PowerPoint logo formats produce an explicit warning. Inferred person mappings survive case-file conversion. No model equations changed.
+- Validation: 236 tests pass, including lookup view/source/action states, app command contracts/transports and an offline empty-case → sourced inputs → branded HTML/PPTX fixture; app and plugin builds pass. Lookup checked with fictional results in light/dark and at 390 px, including no-deal and added states. Extracted ZIP checked: 36 files, six action routes, portable planner and no environment files. Live agent invocation and connected-source research have not been tested. Release version: v0.6.0.
+
 ## v0.5.0 (2026-10-24)
 
 - Combined Amr's accounts, password security, cloud deal storage, dashboard/settings and Hermes worker with David's website framework, previews, deck/input editing, Claude connector and design-agent instructions.

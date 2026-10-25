@@ -23,6 +23,7 @@ import Settings from './components/Settings.jsx'
 import { computeModel } from './model.js'
 import { stakeholdersForArchetype } from './valueModel.js'
 import { DEFAULT_BRAND } from './brand.js'
+import { AGENT_COMMANDS } from './agentCommands.js'
 import PersonLookup from './components/PersonLookup.jsx'
 import usePersonLookup from './usePersonLookup.js'
 import { addPersonToDeal, acceptPersonInput } from './personLookup.js'
@@ -84,7 +85,7 @@ export default function App({ account }) {
     try {
       let code = ''
       try { code = localStorage.getItem('casebuilder.access') || '' } catch {}
-      const response = await fetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(code ? { 'x-access-code': code } : {}) }, body: JSON.stringify({ company, website: website && !/^https:\/\//i.test(website) ? `https://${website}` : website }), signal: AbortSignal.timeout(55000) })
+      const response = await fetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(code ? { 'x-access-code': code } : {}) }, body: JSON.stringify({ command:AGENT_COMMANDS.DISCOVER_BRAND,company, website: website && !/^https:\/\//i.test(website) ? `https://${website}` : website }), signal: AbortSignal.timeout(55000) })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Brand discovery could not finish.')
       if (brandScans.current.get(id) !== token) return

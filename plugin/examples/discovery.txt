@@ -1,0 +1,8 @@
+FICTIONAL OFFLINE FIXTURE — not research about a real company.
+Company: Northwind Example
+Source: Sample discovery transcript, lines 4–8.
+Customer: We have 500 engineers. Our fully loaded engineering cost is $100 per hour.
+Customer: Engineers spend about 3 hours each week searching for documentation and service owners.
+Seller assumption: With Portal, we would model 2 hours searching each week.
+Customer: Our priority for this example is reducing platform operating costs.
+No customer statement in this fixture confirms the Portal subscription or self-hosting salary.

@@ -1,63 +1,114 @@
 # CaseBuilder for Claude
 
-Build a customer-specific business case for **Spotify Portal for Backstage** with Claude: an ROI model from the customer's own numbers, framed for each stakeholder, with researched contacts, exported as a **PowerPoint**, a **one-pager** (HTML and PDF) and an **interactive website**.
+A local Claude plugin that turns a company name and supplied discovery material
+into a sourced case file and requested business-case deliverables. It contains
+commands, reusable skills, templates, design references, a deterministic model
+CLI, an action planner, evidence checks and an offline fixture.
 
-## Install
+## Commands
 
-**Claude Code**
+| Command | Purpose |
+| --- | --- |
+| `/casebuilder:new <company>` | Create an empty case and discover official branding when web is enabled. |
+| `/casebuilder:run <company> [discovery files]` | Coordinate the full input → research → calculation → output workflow. |
+| `/casebuilder:assets <company or case>` | Return sourced logo, font and color findings with explicit fallbacks. |
+| `/casebuilder:lookup <name, email or LinkedIn URL>` | Brief a person, even without a case; no automatic case writes. |
+| `/casebuilder:stakeholders <company or case> [role]` | Return sourced candidates for the relevant stakeholder roles. |
+| `/casebuilder:research ...` | Alias for stakeholder research. |
+| `/casebuilder:build <case> [format]` | Build website, editable PPTX or one-pager using the case's branding/model. |
+| `/casebuilder:whatif <case> <changes>` | Calculate a scenario on a copy; preserve the original case. |
 
-```
-/plugin marketplace add davidosoaar-sys/casebuilder
-/plugin install casebuilder --marketplace davidosoaar-sys/casebuilder
-```
+A typical request is: "Build a case for Northwind using this discovery transcript."
+Claude coordinates the routine steps. Ambiguous people/companies, selected case
+writes and unavailable access may require a question; missing figures stay missing.
 
-From a local checkout instead: `claude --plugin-dir ./plugin`. After editing, `/reload-plugins`.
+## Load and test locally
 
-**Claude Cowork / Claude desktop**: in the repo run `npm run build:plugin -- --zip`, then *Customize > Plugins > Add > Upload plugin* and choose `dist-plugin/casebuilder-plugin.zip`.
+Requires Node 18+ in the environment where Claude executes commands.
 
-**Requires Node.js 18 or newer** where Claude runs commands (check `node --version`). Nothing else: the script is a single self-contained file.
-
-## Use it
-
-| Command | |
-|---|---|
-| `/casebuilder:new <company>` | Start a case: archetype, inputs, stakeholders |
-| `/casebuilder:research [file] [role]` | Find who holds each role, with sources |
-| `/casebuilder:build [file] [stakeholder] [format]` | Build the PowerPoint, one-pager and website (ask to publish it for a live link) |
-| `/casebuilder:whatif <file> <changes>` | Before/after if an assumption changes, without touching the case |
-
-You can also just ask: *"Build a business case for Acme. They have about 800 engineers."*
-
-## Sharing the website as a link
-
-Ask Claude to publish it, or run `casebuilder.mjs publish <file>`. It puts the interactive website on Vercel at its own address (`https://bc-<company>-<random>.vercel.app`, unlisted, not indexed by search engines). Because that exposes the customer's numbers, it **does nothing until you confirm**: the first run is a dry run that shows what would happen, and only `--yes` publishes. The link is unguessable and unlisted but not locked, so anyone who has it can read the numbers.
-
-It needs either `VERCEL_TOKEN` (create one at vercel.com/account/tokens; optionally `VERCEL_TEAM_ID`) or the Vercel CLI installed and logged in (`npm i -g vercel`, `vercel login`; add `--scope <team>` if you have several).
-
-## How it works
-
-- A case lives in a `<company>.case.json` file in your working folder.
-- **Skill `business-case`** runs the workflow and calls a bundled script for everything numeric, so the figures always come from the model. An input is *confirmed* only when the customer said it; everything else stays an assumption and is listed as a question for the next call.
-- **Skill `account-research`** (and the **`account-researcher`** agent, one per role in parallel) searches the public web with Claude's own tools. No API key is needed. Every person must cite a source page; emails and LinkedIn URLs are recorded only if seen on a page, never guessed.
-- **The script** (`skills/business-case/scripts/casebuilder.mjs`) is built from the same source as the CaseBuilder web app, so the PowerPoint, one-pager and website are identical to the app's.
-
-## The case file and the app
-
-`/casebuilder:build` is one way to finish a case. The other is the web app: `casebuilder.mjs export <file>` writes a complete case file, and the app's **Projects > Import** opens it for visual deck editing, the draggable stakeholder map, and more research. The app can export the same format back. The format is documented in `skills/business-case/references/case-file.md`.
-
-## Files
-
-```
-.claude-plugin/plugin.json
-skills/business-case/       SKILL.md, scripts/casebuilder.mjs, references/
-skills/account-research/    SKILL.md
-agents/account-researcher.md
-commands/                   new, research, build, whatif
+```text
+npm run build:plugin -- --zip
+claude --plugin-dir ./plugin
 ```
 
-`scripts/casebuilder.mjs` and `references/inputs.md`, `value-model.md`, `stakeholders.md` are **generated**. Change `src/valueModel.js` (or the deck/export code) in the app repo and run `npm run build:plugin`.
+Then invoke the commands above in Claude Code. For hosts offering custom plugin
+upload, the package is `dist-plugin/casebuilder-plugin.zip`. Host capabilities
+vary: hooks/subagents need a supporting host; the bundled Node CLI needs command
+execution. A chat-only environment without those capabilities can produce a plan
+or findings but must not claim it ran the CLI or built artifacts.
 
-## Notes
+This package has not been automatically installed, uploaded or tested inside a
+Claude account by the build. Follow `evaluations/scorecard.md` to run the Claude
+host smoke test yourself. No publish or marketplace release is performed here.
 
-- The stakeholder copy (what each role needs to hear, their objection and the counter) is starter text. Replace it with your own words.
-- Research uses public web pages and can be out of date. Check each person before you reach out.
+## What is actually connected
+
+The planner maps app-style action IDs to skills; it is not an app-to-Claude API.
+Research uses tools already available to the host agent. No LinkedIn/Clay provider
+is hard-coded, and naming Gong, HubSpot or Slack does not connect an account.
+Enabled-source settings govern access and citations. Missing tools/auth are
+reported as unavailable; disabled sources are reported as disabled.
+
+Lookup returns proposals. Add to deal and applying suggested inputs require a
+separate selection. Existing authored brand choices are preserved until selected
+for replacement. All arithmetic is the bundled canonical model, never agent math.
+
+The CLI uses local `.case.json` files. There is no automatic Supabase sync or
+case-import button in the web app. The file contract remains useful for the local
+plugin; do not imply that file creation also writes to an authenticated app deal.
+
+## Framework layout
+
+```text
+plugin/
+  .claude-plugin/plugin.json
+  commands/                         Claude entry points
+  skills/case-workflow/              coordinating instructions
+  skills/brand-discovery/            official assets and fallback rules
+  skills/person-brief/               quick sourced lookup
+  skills/account-research/           role/candidate research
+  skills/business-case/              numeric/file CLI and model references
+  skills/case-deliverables/           website/deck/one-pager design references
+  agents/account-researcher.md        read-only research helper
+  framework/actions.json             button → action → command → skill
+  framework/README.md                eight-part workflow contract
+  scripts/workflow.mjs                generated planner/evidence validator
+  templates/                         findings/report shapes
+  examples/                          fictional offline material
+  evaluations/scorecard.md            acceptance checks and host smoke test
+```
+
+Run the planner without executing research or writing a case:
+
+```text
+node plugin/scripts/workflow.mjs plan brand-assets --request plugin/examples/request.json
+node plugin/scripts/workflow.mjs validate people --file plugin/examples/people-findings.json --demo
+```
+
+`--demo` permits fictional `.example` evidence for testing only. Validation checks
+structure and source permissions; Claude must still verify the meaning of pages.
+
+## Outputs and limitations
+
+Website and one-pager HTML embed supported brand images/fonts. PPTX keeps selected
+font names; recipients need those fonts installed. A PNG/JPEG logo can be embedded
+in PPTX; other logo formats produce an explicit omission warning. PDF generation
+requires a supported local browser. Report unverified clipping/font states rather
+than declaring visual success from file existence.
+
+The packaged design instructions describe the target quality/template. Some
+proposed design-plan layouts are not consumed by the current renderer; instructions
+alone do not implement new rendering features. The CLI uses existing exporters.
+
+Publishing is separate: `CB publish <case>` is a dry run. `--yes` exposes the case
+and requires a specific publish request after reviewing the concrete output.
+Nothing sends customer messages or publishes automatically.
+
+## Maintenance
+
+Edit sources in `plugin-src/`, `src/` and `docs/agents/`, then rebuild. The CLI,
+planner, model reference tables and copied deliverable references are generated.
+Hand-written skills, commands, templates and fixtures remain in `plugin/`.
+Workflow/content owner and technical maintainer must be named before wider team
+rollout; they are not assigned by this prototype. Release versions are assigned
+only on an authorized release push. Current work is recorded under Unreleased.

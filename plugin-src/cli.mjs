@@ -10,7 +10,6 @@ import { spawnSync } from 'node:child_process'
 import PptxGenJS from 'pptxgenjs'
 import logoSvg from '../src/assets/backstage-logo.svg'
 import faviconSvg from '../public/favicon.svg'
-import logoPng from '../src/assets/logo-teal.png'
 import vmSource from '../.build/valueModel.txt'
 import {
   INPUT_FIELDS,
@@ -32,9 +31,10 @@ import { buildPptx } from '../src/export/pptx.js'
 import { prepareOnePager, prepareWebsite, pickAudience } from '../src/export/prepare.js'
 import { dataUrlSize } from '../src/export/imageSize.js'
 import { newProject } from '../src/projects.js'
+import { normalizeBrand, brandDocument, brandLogoHtml } from '../src/brand.js'
+import { matchPersonRole } from '../src/personLookup.js'
 import { publishSite, projectName, checkPublic, siteFiles, AUTH_NOTE, PublishError } from '../server/publish.js'
 
-const LOGO_RATIO = 2079.95 / 456.05
 const BUILTIN_KEYS = STAKEHOLDERS.map(s => s.key)
 const LINKEDIN = /^https:\/\/([a-z]{2,3}\.)?linkedin\.com\/in\/[^\s?#]+/i
 
@@ -107,7 +107,10 @@ function loadProject(file) {
 const inputsOf = fields => Object.fromEntries(fields.map(f => [f.key, f.value]))
 
 function audienceFor(project, key) {
-  const list = project.stakeholders.map(resolveStakeholder).filter(Boolean)
+  const list = project.stakeholders.map(s=>{
+    const resolved=resolveStakeholder(s)
+    return resolved?{...resolved,pos:s.pos,namedPeople:(s.namedPeople||project.people?.[s.key]||[]).map(p=>({name:p.name,title:p.title}))}:null
+  }).filter(Boolean)
   if (key && !list.some(s => s.key === key)) {
     fail(`No stakeholder "${key}" in this case. Choices: ${list.map(s => s.key).join(', ') || '(none)'}`)
   }
@@ -300,6 +303,7 @@ function cmdPerson(pos, flags) {
     const sources = many(flags, 'source')
     const manual = has(flags, 'manual')
     if (!sources.length && !manual) fail('A researched person needs at least one --source URL (the page you found them on). Use --manual for someone you were told about.')
+    if(sources.some(s=>{try{const u=new URL(s);return !['https:','http:'].includes(u.protocol)||u.username||u.password}catch{return true}}))fail('Each --source must be an HTTP(S) URL without credentials.')
     const linkedin = one(flags, 'linkedin')
     if (linkedin && !LINKEDIN.test(linkedin)) fail('--linkedin must be a linkedin.com/in/ profile URL.')
     const person = {
@@ -310,6 +314,7 @@ function cmdPerson(pos, flags) {
       bio: (one(flags, 'bio') || '').slice(0, 400),
       sources,
       confidence: one(flags, 'confidence') || 'low',
+      ...(!manual&&one(flags,'title')?{mapping:{...matchPersonRole(one(flags,'title')),key:sk,state:'inferred',origin:'Inferred from title, not confirmed'}}:{}),
       ...(manual ? { found: false } : {})
     }
     const i = data.people[sk].findIndex(p => p.name.toLowerCase() === name.toLowerCase())
@@ -455,13 +460,20 @@ async function cmdBuild(pos, flags) {
   const deck = inlineImages(project.deck, path.dirname(path.resolve(file)))
   const name = slug(company)
   const written = []
+  const brand=normalizeBrand(project.brand)
+  const hasCompanyLogo=Boolean(brand.logo&&!brand.hideLogo)
+  const companyLogo=brandLogoHtml(brand,'')
+  const rasterLogo=hasCompanyLogo&&/^data:image\/(png|jpeg);base64,/.test(brand.logo)?brand.logo:null
+  const warnings=[]
+  if(hasCompanyLogo&&!rasterLogo&&formats.includes('pptx'))warnings.push('The company logo is not PNG/JPEG. PPTX omits it; supply a PNG/JPEG variant for an embedded logo. HTML outputs retain the original asset.')
 
   if (formats.includes('pptx')) {
     const env = buildEnv(inputs, project.fields, who)
     const pptx = await buildPptx({
       company,
+      brand,
       slides: resolveSlides(deck, env),
-      deps: { PptxGenJS, logoPng: async () => ({ data: logoPng, ratio: LOGO_RATIO }), imageSize: async src => dataUrlSize(src) }
+      deps: { PptxGenJS, logoPng: async () => {if(!rasterLogo)return null;const size=dataUrlSize(rasterLogo);return {data:rasterLogo,ratio:size.w/size.h}}, imageSize: async src => dataUrlSize(src) }
     })
     const out = path.join(outDir, `${name}-business-case.pptx`)
     fs.writeFileSync(out, await pptx.write({ outputType: 'nodebuffer' }))
@@ -471,7 +483,7 @@ async function cmdBuild(pos, flags) {
   if (formats.includes('onepager')) {
     const facts = prepareOnePager({ inputs, fields: project.fields, who })
     const out = path.join(outDir, `${name}-one-pager.html`)
-    fs.writeFileSync(out, buildOnePager({ facts, logoSvg, faviconSvg }))
+    fs.writeFileSync(out, brandDocument(buildOnePager({ facts, logoSvg:companyLogo, faviconSvg }),brand))
     written.push({ format: 'onepager', file: out, bytes: fs.statSync(out).size, audience: who.role })
     if (has(flags, 'pdf')) {
       const pdf = out.replace(/\.html$/, '.pdf')
@@ -483,15 +495,15 @@ async function cmdBuild(pos, flags) {
   if (formats.includes('website')) {
     const out = path.join(outDir, `${name}-business-case.html`)
     fs.writeFileSync(out, websiteHtml({ company, deck, inputs, project, list, who }))
-    written.push({ format: 'website', file: out, bytes: fs.statSync(out).size, audience: 'all stakeholders (switchable)' })
+    written.push({ format: 'website', file: out, bytes: fs.statSync(out).size, audience: 'company story with stakeholder map' })
   }
 
-  print({ built: written, note: 'The PowerPoint and one-pager are for the selected stakeholder; the website lets the viewer switch.' })
+  print({ built: written, warnings, note: 'PowerPoint and one-pager use the selected stakeholder. The website uses the company story and stakeholder map. PPTX keeps font names; recipients need those fonts installed.' })
 }
 
 function websiteHtml({ company, deck, inputs, project, list, who }) {
   const args = prepareWebsite({ company, deck, inputs, fields: project.fields, stakeholders: list, who })
-  return buildWebsite({ ...args, logoSvg, faviconSvg, vmSource })
+  return brandDocument(buildWebsite({ ...args, logoSvg:brandLogoHtml(project.brand,''), faviconSvg, vmSource,websiteBrand:project.brand }),project.brand)
 }
 
 // Publish the interactive website to its own Vercel project. This puts the

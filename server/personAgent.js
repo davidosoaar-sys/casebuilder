@@ -1,4 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { agentInstruction } from './agent-commands/index.js'
+import { AGENT_COMMANDS } from '../src/agentCommands.js'
 import { SUGGESTIBLE, quoteSupportsValue } from './suggest.js'
 
 const CONNECTORS = ['claude', 'gong', 'hubspot', 'slack', 'clay', 'lemlist']
@@ -18,7 +20,7 @@ async function anthropicProvider({ phase, identity, input, documents, web, enabl
     signal?.throwIfAborted()
     message = await client.messages.stream({
       model: process.env.RESEARCH_MODEL || 'claude-opus-5-5', max_tokens: phase === 'identity' ? 2200 : 6000,
-      thinking: { type: 'adaptive' }, output_config: { effort: 'low' }, system: SYSTEM + '\nContract overrides: likelyCares is ONE claim object, not an array. suggestedInputs is [{key,value:number,sourceUrl,sourceType,quote?}] using only suggestedInputKeys, with explicitly stated numeric evidence, never estimates. Web disabled means no web evidence or search. Do not access disabled connector domains even via web search. Identity phase returns only name,title,company,tenure,candidates.',
+      thinking: { type: 'adaptive' }, output_config: { effort: 'low' }, system: agentInstruction(AGENT_COMMANDS.LOOKUP_PERSON)+'\nResponse contract:\n'+SYSTEM + '\nContract overrides: likelyCares is ONE claim object, not an array. suggestedInputs is [{key,value:number,sourceUrl,sourceType,quote?}] using only suggestedInputKeys, with explicitly stated numeric evidence, never estimates. Web disabled means no web evidence or search. Do not access disabled connector domains even via web search. Identity phase returns only name,title,company,tenure,candidates.',
       ...(web ? { tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: phase === 'identity' ? 3 : 5, blocked_domains: CONNECTORS.filter(key => !enabledSources.includes(key)).flatMap(key => CONNECTOR_DOMAINS[key]) }] } : {}), messages
     }, { signal }).finalMessage()
     blocks.push(...message.content)
