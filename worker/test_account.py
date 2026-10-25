@@ -54,6 +54,7 @@ def signin():
 def setup():
     if "TEST_PASSWORD" not in t:
         pw = secrets.token_urlsafe(24)
+        call("PATCH", f"/rest/v1/waitlist?email=eq.{EMAIL}", {"status": "invited"}, key=SECRET)  # waitlist gate
         call("POST", "/auth/v1/admin/users", {"email": EMAIL, "password": pw, "email_confirm": True}, key=SECRET)
         with open(ENV, "a") as f:
             f.write(f"TEST_PASSWORD={pw}\n")

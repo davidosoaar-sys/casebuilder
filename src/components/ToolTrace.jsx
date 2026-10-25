@@ -14,6 +14,7 @@ const host = u => { try { return new URL(u).hostname.replace(/^www\./, '') } cat
 const glyph = {
   web_search: <><circle cx="7" cy="7" r="4.2" /><path d="M10.2 10.2l3.3 3.3" /></>,
   web_extract: <><path d="M4 1.8h5.2l2.8 2.8v9.6H4z" /><path d="M9 1.8v3h3M6 8h4M6 10.5h4" /></>,
+  files: <><path d="M4 1.8h5.2l2.8 2.8v9.6H4z" /><path d="M9 1.8v3h3" /></>,
   memory: <><path d="M3 3.5h10v9H3z" /><path d="M5.5 6.5h5M5.5 9h3" /></>,
   todo: <><path d="M3 4.5l1.3 1.3L6.6 3.5M3 9.5l1.3 1.3 2.3-2.3" /><path d="M8.5 5h4.5M8.5 10h4.5" /></>,
   tool: <><circle cx="8" cy="8" r="2.2" /><path d="M8 2v2M8 12v2M2 8h2M12 8h2" /></>

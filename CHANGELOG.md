@@ -25,10 +25,42 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
+- Merged Amr’s latest Project Files and waitlist/access updates with the local meeting-feedback work. Installed the new file-reader dependencies locally and retained npm’s resulting peer metadata. Validation: 338 app/server tests, 34 worker tests and production build pass; no push or deployment.
+
 - 2026-10-25: Applied the meeting feedback to Chris’s workflow. Added a private Evidence review tab inside the input sheet with full source links/quotes, source states, timestamps, affected calculations, open questions and existing arithmetic. It is excluded from client exports.
 - Added optional team/workflow/problem context using existing saved custom fields and agent-edit handling. Context follows the case into its website and one-pager without changing financial calculations.
 - New deck templates lead with the modeled Portal/self-hosting cost decision, explain the workflow and value drivers, retain stakeholder framing and close with modeled annual impact. Headlines handle missing inputs and unfavorable comparisons honestly; engineering capacity is distinguished from cash savings. Existing authored decks are preserved. App/export narrative tokens share one implementation, including interactive scenario updates.
 - Validation: all 326 app/server tests and app/plugin builds pass. Isolated dark/light desktop/mobile review verified source links/quotes, open-question filtering and plain-text copying. Website/PDF/slides/one-pager previews render context without source-quote leakage or unresolved tokens; website scenario controls update the comparison headline correctly. Added a Chris-focused end-to-end demo guide. No release version bump, push or deployment for these changes.
+
+- Project Files: each project has a Files page, like a Claude Project's files.
+  Instructions (how to work on this account) plus any files: no file types to pick;
+  the user says what a file is for when they ask ("check my deck against the one I
+  attached"). Reads PDF, Word, PowerPoint (with speaker notes), Excel and text in the browser;
+  each file can be switched off or previewed as the text the agent
+  reads. Every chat and research run for the project reads the enabled files and
+  lists each one in "Used N tools". New table project_files (migration 0004),
+  owner-only under RLS, 50 files / 2M characters per project.
+
+- Waitlist: new people join a waitlist instead of creating an account (?waitlist,
+  with an optional ?ref= tag to see where they came from). The form asks name,
+  email and a role from a short list (Account Executive, Sales Engineer, Sales
+  leader, Founder, Consultant, Student, Other). An approved email goes straight
+  from the form to choosing a password; anyone else sees "You're on the list";
+  an existing account is sent to Sign in. Only approved emails can create an
+  account, enforced in the database (migrations 0005, 0006); existing accounts
+  were carried over. Admins get a Waitlist page: counts, a shareable link with a
+  source tag, Approve per person, and "Let someone in" to approve an email before
+  they join. Approving sends no email; the team tells the person.
+  Team-created accounts (worker/create_account.py) are approved first.
+
+Checks: 334 app tests, 34 worker tests, build OK. scripts/review-waitlist.mjs on the
+live database: 16/16 (form fields, on the list, refused before approval, admin
+pre-approves, approved email goes straight to password and the email code, existing
+account sent to Sign in, non-admin cannot see, read or approve, cleanup).
+scripts/review-files.mjs on the
+real worker: 15/15 (four real files uploaded and read; agent answered three facts
+that exist only in the PDF, Word and Excel files, with Search off, and followed
+the saved instructions).
 
 ## v0.10.0 (2026-10-25): verified brand assets and sourced agent research
 

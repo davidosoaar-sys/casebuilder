@@ -33,6 +33,8 @@ import { DEFAULT_BRAND } from './brand.js'
 import { AGENT_COMMANDS } from './agentCommands.js'
 import PersonLookup from './components/PersonLookup.jsx'
 import Research from './components/Research.jsx'
+import ProjectFiles from './components/ProjectFiles.jsx'
+import WaitlistAdmin, { isAdmin } from './components/WaitlistAdmin.jsx'
 import usePersonLookup from './usePersonLookup.js'
 import { addPersonToDeal, acceptPersonInput } from './personLookup.js'
 
@@ -64,6 +66,8 @@ export default function App({ account }) {
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#f6f8f7' : '#111111')
     try { localStorage.setItem(THEME_KEY, theme) } catch {}
   }, [theme])
+  const [admin, setAdmin] = useState(false)
+  useEffect(() => { isAdmin(account.session.user.id).then(setAdmin).catch(() => setAdmin(false)) }, [account.session.user.id])
   const [connections, setConnections] = useState(loadConnections)
   const cloud = useCloudDeals(account.session.user.id, connections)
   const { deals: projects, setDeals: setProjects, loading: dealsLoading } = cloud
@@ -143,7 +147,7 @@ export default function App({ account }) {
   function navigate(next) {
     setStage(null)
     if (next === 'settings') { setSettingsOpen(true); return } // overlay: never leaves the current page
-    if (['projects', 'dashboard', 'research'].includes(next)) { saving.flush(); setCurrentId(null) }
+    if (['projects', 'dashboard', 'research', 'waitlist'].includes(next)) { saving.flush(); setCurrentId(null) }
     if (next === 'agent') { if (view !== 'agent') backFromAgent.current = view; setSplit(false) }
     setView(next)
   }
@@ -283,7 +287,7 @@ export default function App({ account }) {
   }
 
   // Details and Deck need a project; without one, fall back to the list.
-  const page = ['connections', 'lookup', 'dashboard', 'research'].includes(view) ? view : project ? view : 'projects'
+  const page = ['connections', 'lookup', 'dashboard', 'research', 'waitlist'].includes(view) ? view : project ? view : 'projects'
   const insideProject = !!project && page !== 'projects'
   const agentFull = insideProject && page === 'agent'
   const agentSplit = insideProject && split && !agentFull
@@ -292,7 +296,7 @@ export default function App({ account }) {
 
   return (
     <div className="layout">
-      <Sidebar view={page} project={project} projectMode={insideProject} onNav={navigate} onSettings={openSettings} settingsOpen={settingsOpen} saveStatus={saving.status} account={account} />
+      <Sidebar view={page} project={project} projectMode={insideProject} onNav={navigate} onSettings={openSettings} settingsOpen={settingsOpen} saveStatus={saving.status} account={account} admin={admin} />
 
       <div className={`lookup-content-wrap${agentSplit ? ' with-chat' : ''}`} style={agentSplit ? { '--chat-w': `${chatWidth}px` } : undefined}>
       <main className={`content${agentFull ? ' content-agent' : ''}`}>
@@ -334,6 +338,10 @@ export default function App({ account }) {
             onConnections={fn => connectionProject ? updateConnectionProject(p => ({ connectors: fn(p.connectors || connections) })) : setConnections(fn)}
             onDocuments={fn => updateConnectionProject(p => ({ documents: fn(p.documents || []) }))}
           />
+        ) : page === 'waitlist' && admin ? (
+          <WaitlistAdmin />
+        ) : page === 'files' && project ? (
+          <ProjectFiles key={project.id} project={project} userId={account.session.user.id} />
         ) : page === 'research' ? (
           <Research userId={account.session.user.id} projects={projects} project={project}
             personPage={<PersonLookup embedded lookup={lookup} project={project}
