@@ -96,7 +96,7 @@ export default function People({
           <div className="topbar topbar-flush">
             <AppLogo height={26} />
           </div>
-          <p className="mono-label">{showStep ? 'Step 3 of 3 · ' : ''}People</p>
+          <p className="mono-label">{showStep ? 'Step 4 of 4 · ' : ''}People</p>
           <h1>Who are they at {company}?</h1>
           <p className="sub">
             An AI agent searches public web pages for the people who hold each role. Every result

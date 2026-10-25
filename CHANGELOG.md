@@ -23,6 +23,16 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ---
 
+## v0.9.0 (2026-10-25)
+
+- Added company brand review after stakeholder setup, with logo/palette/type preview, correction controls and a deliberate continue-without-logo option. Discovered logos also appear on the setup map.
+- Brand discovery prioritizes official home-link images, inline SVGs and Organization metadata over customer/product logos. Supports official brand-page fallback for blocked homepages and separates default palette tokens from dark overrides. Font selection follows the actual heading family; unavailable font files are disclosed.
+- Removed misleading Backstage-logo fallbacks from the client deck and PDF/slides/one-pager rendering. Project cards prefer the saved brand logo. Company colors stay scoped to the slide so editing controls remain readable with light-brand decks.
+- Brand scans authenticate signed-in sessions server-side on Vercel. Configured production/preview Supabase and server-only research settings with explicit approval; Git deployments use main for production, with a pinned Vite build/output configuration.
+- Validation: live official-asset discovery tested for Microsoft, Lovable and Shopify; isolated brand/deck previews checked at desktop/mobile. Microsoft’s font name is preserved but its font download is unavailable; fallback is disclosed. All 255 tests, production build and plugin packaging pass.
+
+- 2026-10-25: Moved Suggest values into a single top action and removed per-field Suggest/Refresh controls. Replaced uneven group columns with stacked sections and compact field rows; collapsed the long missing-input breakdown. Source disclosures, editable inputs and model calculations are preserved. Validation: 249 tests and production build pass; isolated desktop/mobile previews have one suggestion action and no horizontal overflow.
+
 ## v0.7.0 (2026-10-25): the agent can change the deal
 
 - Agent tab in every project, plus a split-screen mode beside Input sheet,

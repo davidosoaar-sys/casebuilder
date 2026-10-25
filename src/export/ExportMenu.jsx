@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react'
-import logoSvg from '../assets/backstage-logo.svg?raw'
 import faviconSvg from '../../public/favicon.svg?raw'
 import { prepareOnePager, pickAudience } from './prepare.js'
 import { buildEnv, resolveSlides } from '../deck/model.js'
@@ -17,7 +16,7 @@ const slug = s => String(s || 'deck').replace(/[^\w\- ]+/g, '').trim() || 'deck'
 function rasterLogo(brand) {
   return new Promise(resolve => {
     const img = new Image()
-    if (brand?.hideLogo) return resolve(null)
+    if (brand?.hideLogo || !normalizeBrand(brand).logo) return resolve(null)
     img.onload = () => {
       const canvas = document.createElement('canvas')
       canvas.width = 1200
@@ -27,8 +26,7 @@ function rasterLogo(brand) {
       resolve({ data: canvas.toDataURL('image/png'), ratio })
     }
     img.onerror = () => resolve(null)
-    const withSize = logoSvg.replace('<svg ', '<svg width="1200" height="263" ')
-    img.src = normalizeBrand(brand).logo || `data:image/svg+xml;charset=utf-8,${encodeURIComponent(withSize)}`
+    img.src = normalizeBrand(brand).logo
   })
 }
 
@@ -97,7 +95,7 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
   function onePager() {
     setOpen(false)
     const facts = prepareOnePager({ inputs, fields, who })
-    setPreview({ kind: 'onepager', title: 'One-pager', file: `${slug(company)} - one-pager.html`, html: brandDocument(buildOnePager({ facts, logoSvg: brandLogoHtml(brand, logoSvg), faviconSvg }), brand) })
+    setPreview({ kind: 'onepager', title: 'One-pager', file: `${slug(company)} - one-pager.html`, html: brandDocument(buildOnePager({ facts, logoSvg: brandLogoHtml(brand, ''), faviconSvg }), brand) })
   }
 
   const items = [

@@ -91,3 +91,29 @@ test('unquoted HTML attributes and framework theme variables resolve to actual b
   assert.equal(parsed.headingFont, 'system-ui')
   assert.equal(parsed.logoUrl, 'https://example.com/logo.svg')
 })
+
+
+test('home-link identity wins over customer logos and promotional imagery', () => {
+ const html='<img alt="Customer logo" src="/wrong.svg"><a href="/" aria-label="Microsoft home"><img alt="Microsoft" src="/official.png"></a><img alt="Microsoft Edge logo scenery" src="/promo.png">'
+ assert.equal(parseBrand(html,'','https://www.microsoft.com/','Microsoft').logoUrl,'https://www.microsoft.com/official.png')
+ assert.equal(parseBrand('<img alt="Other company logo" src="/other.svg">','','https://example.com/','Example').logoUrl,'')
+})
+test('inline home-link logos, public brand-page fallback and theme tokens are preserved', async () => {
+ const calls=[]
+ const result=await discoverBrand({company:'Loveable'},async url=>{
+  calls.push(url)
+  if(url==='https://lovable.dev/')throw Error('Website returned 403.')
+  return {url,type:'text/html',buffer:Buffer.from('<a href="/home" aria-label="Go to homepage"><svg viewBox="0 0 10 10"><path fill="currentColor" d="M0 0h10v10z"/></svg></a><style>:root{--marketing-background:45 40% 98%;--marketing-primary:0 0% 11%;--marketing-foreground:0 0% 11%}.dark{--marketing-background:0 0% 11%;--marketing-primary:45 40% 98%}</style>')}
+ })
+ assert.deepEqual(calls,['https://lovable.dev/','https://lovable.dev/brand'])
+ assert.ok(result.logo.startsWith('data:image/svg+xml;base64,'))
+ assert.equal(result.background,'#fcfbf8')
+ assert.equal(result.primary,'#1c1c1c')
+ assert.equal(result.text,'#1c1c1c')
+})
+test('unsafe inline logo is dropped and an unrelated first font face is not substituted', async()=>{
+ const result=await discoverBrand({website:'https://example.com/'},async url=>({url,type:'text/html',buffer:Buffer.from('<a href="/" aria-label="Home"><svg onload="bad()"><path/></svg></a><style>@font-face{font-family:Icons;src:url(/icons.woff2)}h1{font-family:Company Sans}</style>')}))
+ assert.equal(result.logo,'')
+ assert.equal(result.fontData,'')
+ assert.equal(result.headingFont,'Company Sans')
+})

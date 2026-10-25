@@ -14,9 +14,21 @@ const needsCode = headers => {
   return code && headers['x-access-code'] !== code
 }
 
+// Brand scans accept verified app sessions as well as legacy workspace codes.
+export async function brandAccountAuthorized(headers, fetcher = fetch) {
+  const token = (headers.authorization || headers.Authorization || '').match(/^Bearer (.+)$/i)?.[1]
+  const url = process.env.VITE_SUPABASE_URL, key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY
+  if (!token || !url || !key) return false
+  try {
+    const result = await fetcher(new URL('/auth/v1/user', url), {headers:{Authorization:'Bearer '+token,apikey:key},signal:AbortSignal.timeout(5000)})
+    if (!result.ok) return false
+    const user=await result.json(); return !!user.id && !user.is_anonymous
+  } catch { return false }
+}
 export async function handleBrand({ body, headers }) {
-  if (process.env.VERCEL && !process.env.RESEARCH_ACCESS_CODE) return { status: 503, body: { error: 'Brand discovery needs the workspace access code configured.' } }
-  if (needsCode(headers)) return { status: 401, body: { error: 'Enter your access code to scan company branding.' } }
+  const signedIn = await brandAccountAuthorized(headers)
+  if (!signedIn && process.env.VERCEL && !process.env.RESEARCH_ACCESS_CODE) return { status: 503, body: { error: 'Brand discovery needs the workspace access code configured.' } }
+  if (!signedIn && needsCode(headers)) return { status: 401, body: { error: 'Sign in or enter your access code to scan company branding.' } }
   const company = typeof body?.company === 'string' ? body.company.trim().slice(0, 120) : ''
   const website = typeof body?.website === 'string' ? body.website.trim().slice(0, 500) : ''
   if (!company && !website) return { status: 400, body: { error: 'Enter a company name or official website.' } }

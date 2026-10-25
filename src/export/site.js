@@ -1,4 +1,3 @@
-import logoSvg from '../assets/backstage-logo.svg?raw'
 import faviconSvg from '../../public/favicon.svg?raw'
 import formatSource from '../format.js?raw'
 import modelSource from '../model.js?raw'
@@ -23,7 +22,7 @@ export function buildSiteHtml({ project, inputs, activeKey, mode = 'website' }) 
   const who = pickAudience(stakeholders, activeKey)
   const args = prepareWebsite({ company, deck: project.deck, inputs, fields: project.fields, stakeholders, who })
   const brand=mode==='website'?websiteIdentity(project.brand,project.deck):project.brand
-  return brandDocument(buildWebsite({ ...args, viewMode: mode, websiteBrand: brand, logoSvg: brandLogoHtml(brand, mode === 'website' ? '' : logoSvg), faviconSvg, vmSource }), brand)
+  return brandDocument(buildWebsite({ ...args, viewMode: mode, websiteBrand: brand, logoSvg: brandLogoHtml(brand, ''), faviconSvg, vmSource }), brand)
 }
 
 // A short fingerprint, to tell whether the site changed since it was published.

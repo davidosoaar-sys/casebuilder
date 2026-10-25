@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { confidence } from '../valueModel.js'
 import { safeAsset } from '../brand.js'
-import { SPOTIFY_LOGO } from '../spotifyLogo.js'
 import PageHead from './PageHead.jsx'
 
 // Projects: a quiet, Claude-style index. Each deal is a compact row-card with
@@ -70,7 +69,7 @@ export default function ProjectList({ projects, loading = false, createRequest =
       ) : (
         <ul className={`project-grid ${display === 'list' ? 'project-list-view' : 'project-cards-view'}`} aria-label={display === 'list' ? 'Projects list' : 'Project cards'}>
           {sorted.map(p => {
-            const logo = safeAsset(p.projectLogo) || safeAsset(p.brand?.logo) || (/^spotify$/i.test(p.name) ? SPOTIFY_LOGO : '')
+            const logo = p.brand?.hideLogo ? '' : safeAsset(p.brand?.logo) || safeAsset(p.projectLogo)
             return (
               <li key={p.id}>
                 <div

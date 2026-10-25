@@ -24,3 +24,14 @@ test('only suggestion sources have closed, explicit source disclosure',()=>{
   assert.ok(manual.includes('state-toggle'))
  }
 })
+
+test('input sheet renders exactly one suggest action before the fields',async()=>{
+ const {computeModel}=await import('./model.js')
+ const fields=modules['../valueModel.js'].INPUT_FIELDS
+ const model=computeModel(Object.fromEntries(fields.map(f=>[f.key,f.value])))
+ const html=renderToStaticMarkup(React.createElement(module.exports.default,{fields,model,company:'Example',connectors:{},documents:[],onFields:()=>{},onAdd:()=>{},onRemove:()=>{},onReset:()=>{}}))
+ assert.equal((html.match(/>Suggest values<\/button>/g)||[]).length,1)
+ assert.ok(!html.includes('>Suggest</button>'))
+ assert.ok(!render('suggestion').includes('>Refresh</button>'))
+ assert.ok(html.indexOf('Suggest values')<html.indexOf('input-group-fields'))
+})

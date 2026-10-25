@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar.jsx'
 import Deck from './components/Deck.jsx'
 import WebsiteView from './components/WebsiteView.jsx'
 import ProjectList from './components/ProjectList.jsx'
+import BrandSetup from './components/BrandSetup.jsx'
 import Details from './components/Details.jsx'
 import StakeholderMap from './components/StakeholderMap.jsx'
 import People from './components/People.jsx'
@@ -99,11 +100,11 @@ export default function App({ account }) {
     try {
       let code = ''
       try { code = localStorage.getItem('casebuilder.access') || '' } catch {}
-      const response = await fetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(code ? { 'x-access-code': code } : {}) }, body: JSON.stringify({ command:AGENT_COMMANDS.DISCOVER_BRAND,company, website: website && !/^https:\/\//i.test(website) ? `https://${website}` : website }), signal: AbortSignal.timeout(55000) })
+      const response = await fetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(code ? { 'x-access-code': code } : {}), ...(account.session?.access_token ? { Authorization: 'Bearer ' + account.session.access_token } : {}) }, body: JSON.stringify({ command:AGENT_COMMANDS.DISCOVER_BRAND,company, website: website && !/^https:\/\//i.test(website) ? `https://${website}` : website }), signal: AbortSignal.timeout(55000) })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Brand discovery could not finish.')
       if (brandScans.current.get(id) !== token) return
-      setProjects(ps => ps.map(p => p.id === id ? { ...p, brand: result } : p))
+      setProjects(ps => ps.map(p => p.id === id ? { ...p, brand: result, updatedAt: Date.now() } : p))
     } catch (error) {
       if (brandScans.current.get(id) !== token) return
       setProjects(ps => ps.map(p => p.id === id ? { ...p, brand: { ...p.brand, status: 'error', message: error.message || 'Brand discovery could not finish. You can edit everything manually.' } } : p))
@@ -205,11 +206,14 @@ export default function App({ account }) {
         company={project.name}
         stakeholders={project.stakeholders}
         onChange={onStakeholders}
-        onContinue={() => setStage('people')}
+        brand={project.brand}
+        onContinue={() => setStage('brand')}
       />
       </main>{settingsOverlay}</div>
     )
   }
+
+  if (project && stage === 'brand') return <div className="layout">{projectSidebar}<main className="content"><BrandSetup company={project.name} brand={project.brand} onScan={website=>scanBrand(project.id,project.name,website)} onChange={brand=>{brandScans.current.delete(project.id);update({brand:{...brand,status:'ready',message:'Your branding is saved.'}})}} onContinue={()=>setStage('people')}/></main>{settingsOverlay}</div>
 
   if (project && stage === 'people') {
     return (

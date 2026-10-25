@@ -19,6 +19,7 @@ const initials = role =>
 
 export default function StakeholderMap({
   company,
+  brand,
   stakeholders,
   people = {},
   onChange,
@@ -76,7 +77,7 @@ export default function StakeholderMap({
           <div className="topbar topbar-flush">
             <AppLogo height={26} />
           </div>
-          <p className="mono-label">{showStep ? 'Step 2 of 3 · ' : ''}Stakeholder map</p>
+          <p className="mono-label">{showStep ? 'Step 2 of 4 · ' : ''}Stakeholder map</p>
           <h1>Who has to say yes at {company}?</h1>
           <p className="sub">
             Drag people to arrange the map, add anyone this case has to convince, and remove anyone
@@ -94,7 +95,8 @@ export default function StakeholderMap({
         </svg>
 
         <div className="map-center" style={{ left: '50%', top: '50%' }}>
-          <small>Customer</small>
+          {brand?.logo && <img src={brand.logo} alt={company+' logo'} style={{maxWidth:100,maxHeight:40,objectFit:'contain'}}/>}
+            <small>{brand?.status === 'scanning' ? 'Finding branding…' : 'Customer'}</small>
           <span>{company}</span>
         </div>
 

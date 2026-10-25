@@ -51,26 +51,97 @@ const attr = (tag, name) => {
 const absolute = (value, base) => { try { return new URL(value.replace(/&amp;/g, '&'), base).href } catch { return '' } }
 const fontName = value => String(value || '').split(',')[0].replace(/["']/g, '').trim()
 
-export function parseBrand(html, css, website) {
-  const images = [...html.matchAll(/<img\b[^>]*>/gi)].map(m => m[0])
-  const logoTag = images.find(t => /logo|wordmark/i.test(attr(t, 'alt') + attr(t, 'class') + attr(t, 'src')))
+// Prefer the site's home-link identity over partner logos and product imagery.
+export function logoCandidates(html, website, company = '') {
+  const host = new URL(website).hostname.replace(/^www\./, '')
+  const identity = (company || host.split('.')[0]).toLowerCase().replace(/[^a-z0-9]/g, '')
+  const candidates = []
+  const add = (tag, score) => {
+    const src = attr(tag, 'src') || attr(tag, 'data-src')
+    if (src) candidates.push({ url: absolute(src, website), score })
+  }
+  for (const match of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)) {
+    const tag = '<a ' + match[1] + '>', href = absolute(attr(tag, 'href'), website)
+    let home = false
+    try { const u = new URL(href); home = u.hostname.replace(/^www\./, '') === host && /^\/(?:home\/?|[a-z]{2}(?:-[a-z]{2})?\/?)?$/i.test(u.pathname) } catch {}
+    const label = [attr(tag, 'aria-label'), attr(tag, 'class'), attr(tag, 'data-component-name')].join(' ')
+    if (!home || !/logo|home/i.test(label) && !label.toLowerCase().replace(/[^a-z0-9]/g, '').includes(identity)) continue
+    for (const image of match[2].matchAll(/<img\b[^>]*>/gi)) add(image[0], 100)
+    const svg = match[2].match(/<svg\b[\s\S]*?<\/svg>/i)?.[0]
+    if (svg) candidates.push({ svg, score: 95 })
+  }
+  for (const match of html.matchAll(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
+    try {
+      const visit = item => {
+        if (Array.isArray(item)) return item.forEach(visit)
+        if (!item || typeof item !== 'object') return
+        if (/Organization|Corporation/.test(String(item['@type'])) && String(item.name || '').toLowerCase().replace(/[^a-z0-9]/g, '').includes(identity)) {
+          const url = typeof item.logo === 'string' ? item.logo : item.logo?.url || item.logo?.contentUrl
+          if (url) candidates.push({ url: absolute(url, website), score: 90 })
+        }
+        if (item['@graph']) visit(item['@graph'])
+      }; visit(JSON.parse(match[1]))
+    } catch {}
+  }
+  for (const match of html.matchAll(/<img\b[^>]*>/gi)) {
+    const tag = match[0], label = [attr(tag, 'alt'), attr(tag, 'class'), attr(tag, 'src'), attr(tag, 'data-component-name')].join(' ')
+    const named = label.toLowerCase().replace(/[^a-z0-9]/g, '').includes(identity)
+    if (named && /logo|wordmark/i.test(label)) add(tag, 70)
+    else if (!company && /logo|wordmark/i.test(label)) add(tag, 20)
+  }
+  return candidates.sort((a,b) => b.score - a.score)
+}
+const safeSvg = text => !/<(?:script|foreignObject|iframe|use|image)\b|\bon[a-z]+\s*=|(?:href|src)\s*=|<!ENTITY/i.test(text) && !/url\s*\(/i.test(text.replace(/url\(\s*["']?#[\w-]+["']?\s*\)/gi,''))
+export function parseBrand(html, css, website, company = '') {
+  const candidates = logoCandidates(html, website, company)
   const icon = [...html.matchAll(/<link\b[^>]*>/gi)].map(m => m[0]).find(t => /^(shortcut )?icon$/i.test(attr(t, 'rel')))
   const cssLogo = css.match(/--[\w-]*logo[\w-]*\s*:\s*url\(\s*["']?([^"')\s]+)["']?\s*\)/i)?.[1]
-  const logoUrl = absolute(logoTag ? attr(logoTag, 'src') : cssLogo || (icon ? attr(icon, 'href') : ''), website)
+  if (cssLogo) candidates.push({ url: absolute(cssLogo, website), score: 50 })
+  // A favicon is a last-resort identity mark, never a partner image.
+  if (icon && attr(icon,'href')) candidates.push({ url: absolute(attr(icon,'href'),website),score:0 })
+  const logoUrl = candidates.find(c => c.url)?.url || ''
   const colors = [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0].toLowerCase())
   const ranked = [...new Set(colors)].sort((a, b) => colors.filter(c => c === b).length - colors.filter(c => c === a).length)
   const saturated = ranked.filter(c => { const rgb = c.slice(1).match(/../g).map(h => parseInt(h, 16)); return Math.max(...rgb) - Math.min(...rgb) > 65 })
   const named = [...css.matchAll(/--(?:ifm-color-primary|(?:color-)?(?:brand|primary)(?:-color)?|color-accent)\s*:\s*(#[0-9a-f]{6})\b/gi)].at(-1)?.[1]
   const faces = [...css.matchAll(/@font-face\s*\{([^}]+)\}/gi)].map(m => m[1])
-  const face = faces.find(f => /woff2?/i.test(f)) || ''
+  let face = ''
   const variables = Object.fromEntries([...css.matchAll(/--([\w-]+)\s*:\s*([^;}]+)/g)].map(m => [m[1], m[2]]))
+  const firstVariables = Object.fromEntries([...css.matchAll(/--([\w-]+)\s*:\s*([^;}]+)/g)].reverse().map(m => [m[1],m[2]]))
+  const darkDefault = /<html[^>]*(?:class=["'][^"']*\bdark\b|data-theme=["']dark)/i.test(html)
+  const themeVariables = darkDefault ? variables : firstVariables
   const expand = text => { let s = text || ''; for (let n = 0; n < 5; n++) s = s.replace(/var\(--([\w-]+)(?:,([^)]*))?\)/g, (_all, key, fallback) => variables[key] || fallback || ''); return s }
-  const heading = fontName(expand(variables['heading-font'] || variables['ifm-heading-font-family'] || css.match(/(?:h1|\.heading|\.headline)[^{]*\{[^}]*font-family\s*:\s*([^;}]+)/i)?.[1] || css.match(/font-family\s*:\s*([^;}]+)/i)?.[1]))
-  const body = fontName(expand(variables['ifm-font-family-base'] || css.match(/body\s*\{[^}]*font-family\s*:\s*([^;}]+)/i)?.[1]))
-  return { primary: named || saturated[0], headingFont: !/var\(/.test(heading) ? heading : '', bodyFont: !/var\(/.test(body) ? body : '', logoUrl, face, colors: ranked.slice(0, 8) }
+  const heading = fontName(expand(variables['heading-font'] || variables['font-heading'] || variables['ds-font-family-segoe-variable-display'] || variables['ifm-heading-font-family'] || variables['font-sans'] || css.match(/(?:h1|\.heading|\.headline)[^{]*\{[^}]*font-family\s*:\s*([^;}]+)/i)?.[1] || css.match(/font-family\s*:\s*([^;}]+)/i)?.[1]))
+  const body = fontName(expand(variables['ifm-font-family-base'] || variables['ds-font-family-segoe-variable-text'] || variables['font-sans'] || css.match(/body\s*\{[^}]*font-family\s*:\s*([^;}]+)/i)?.[1]))
+  face = faces.find(f => fontName(f.match(/font-family\s*:\s*([^;]+)/i)?.[1]).toLowerCase() === (heading || body).toLowerCase() && /woff2?/i.test(f)) || ''
+  const color = value => {
+    value = expand(value).trim()
+    const hex = value.match(/^#([0-9a-f]{6}|[0-9a-f]{3})\b/i)?.[1]
+    if (hex) return '#' + (hex.length === 3 ? [...hex].map(c=>c+c).join('') : hex)
+    if (/^(white|black)$/i.test(value)) return value.toLowerCase() === 'white' ? '#ffffff' : '#000000'
+    const rgb = value.match(/^rgba?\(\s*(\d+)[, ]+\s*(\d+)[, ]+\s*(\d+)/i)
+    if (rgb) return '#' + rgb.slice(1,4).map(n=>Math.min(255,Number(n)).toString(16).padStart(2,'0')).join('')
+    const hsl = value.match(/^(?:hsl\()?\s*([\d.]+)\s+([\d.]+)%\s+([\d.]+)%/i)
+    if (hsl) {
+      const h=Number(hsl[1])/360, sat=Number(hsl[2])/100, l=Number(hsl[3])/100
+      const hue=(p,q,t)=>{t=(t+1)%1;return t<1/6?p+(q-p)*6*t:t<1/2?q:t<2/3?p+(q-p)*(2/3-t)*6:p}
+      const q=l<.5?l*(1+sat):l+sat-l*sat,p=2*l-q
+      return '#'+[h+1/3,h,h-1/3].map(t=>Math.round((sat?hue(p,q,t):l)*255).toString(16).padStart(2,'0')).join('')
+    }
+    return ''
+  }
+  const bodyRule = [...css.matchAll(/(?:^|})\s*(?:html\s*,\s*)?body\s*\{([^}]+)}/gi)].map(m=>m[1]).join(';')
+  const background = color(themeVariables['marketing-background'] || variables['color-background'] || variables['background-color'] || variables['ifm-background-color'] || variables.background || bodyRule.match(/(?:^|;)\s*background(?:-color)?\s*:\s*([^;}]+)/i)?.[1] || '')
+  const textColor = color(themeVariables['marketing-foreground'] || variables['color-text'] || variables['text-color'] || variables['ifm-font-color-base'] || bodyRule.match(/(?:^|;)\s*color\s*:\s*([^;}]+)/i)?.[1] || '')
+  const light = background && parseInt(background.slice(1,3),16)*.299+parseInt(background.slice(3,5),16)*.587+parseInt(background.slice(5,7),16)*.114 > 150
+  return { ...(background ? {background, surface: light ? '#f5f5f5' : '#1e1e1e', text: textColor || (light ? '#161616' : '#ffffff'), muted: light ? '#555555' : '#b8b8b8'} : {}), candidates, primary: color(themeVariables['marketing-primary'] || themeVariables['ds-theme-background-accent-strong-normal'] || '') || named || saturated[0], headingFont: !/var\(/.test(heading) ? heading : '', bodyFont: !/var\(/.test(body) ? body : '', logoUrl, face, colors: ranked.slice(0, 8) }
 }
 
 async function findWebsite(company) {
+  // Verified official domains for common demo/test accounts, not guessed assets.
+  const known = {microsoft:'https://www.microsoft.com/',shopify:'https://www.shopify.com/',lovable:'https://lovable.dev/',loveable:'https://lovable.dev/'}
+  const official = known[String(company).trim().toLowerCase()]
+  if (official) return official
   if (/^(https:\/\/)?[a-z0-9.-]+\.[a-z]{2,}(\/.*)?$/i.test(company)) return company.startsWith('https://') ? company : `https://${company}`
   if (!process.env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_AUTH_TOKEN) throw new Error('Enter the official company website to scan its branding. Company-name search needs the research API key.')
   const client = new Anthropic()
@@ -93,7 +164,13 @@ async function findWebsite(company) {
 }
 
 export async function discoverBrand({ company, website }, fetcher = fetchPublic) {
-  const home = await fetcher(website || await findWebsite(company))
+  const target = website || await findWebsite(company)
+  let home
+  try { home = await fetcher(target) } catch (error) {
+    // Official brand pages can remain public when a homepage blocks automated requests.
+    if (!/403|429/.test(error.message)) throw error
+    try { home = await fetcher(new URL('/brand',target).href) } catch { throw new Error('The official website blocked brand discovery. Enter its brand page or upload a logo; no substitute logo was used.') }
+  }
   if (!/html/i.test(home.type)) throw new Error('Enter the company homepage, rather than an asset URL.')
   const html = home.buffer.toString('utf8')
   const sources = [home.url]
@@ -104,13 +181,25 @@ export async function discoverBrand({ company, website }, fetcher = fetchPublic)
   for (const r of results) if (r.status === 'fulfilled' && /css|text\/plain/i.test(r.value.type)) {
     const text = r.value.buffer.toString('utf8'); css += '\n' + text; cssBases.push({ text, url: r.value.url }); sources.push(r.value.url)
   }
-  const parsed = parseBrand(html, css, home.url)
+  const parsed = parseBrand(html, css, home.url, company)
   let logo = '', fontData = '', extractedFont = ''
-  if (parsed.logoUrl) try {
-    const asset = await fetcher(parsed.logoUrl, { limit: 600_000 })
-    const mime = asset.type.split(';')[0]
-    if (/^image\/(png|jpeg|webp|svg\+xml)$/.test(mime) && !(mime.includes('svg') && /<script|foreignObject|onload\s*=/i.test(asset.buffer.toString()))) { logo = `data:${mime};base64,${asset.buffer.toString('base64')}`; sources.push(asset.url) }
-  } catch {}
+  for (const candidate of parsed.candidates.slice(0, 5)) {
+    if (logo) break
+    try {
+      if (candidate.svg) {
+        if (!safeSvg(candidate.svg)) continue
+        let svg = candidate.svg.replace(/currentColor/g, parsed.text || '#161616')
+        if (!/xmlns=/.test(svg)) svg = svg.replace('<svg','<svg xmlns="http://www.w3.org/2000/svg"')
+        logo = 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64')
+        continue
+      }
+      const asset = await fetcher(candidate.url, { limit: 600_000 })
+      const mime = asset.type.split(';')[0]
+      if (/^image\/(png|jpeg|webp|svg\+xml)$/.test(mime) && (!mime.includes('svg') || safeSvg(asset.buffer.toString()))) {
+        logo = 'data:' + mime + ';base64,' + asset.buffer.toString('base64'); sources.push(asset.url)
+      }
+    } catch {}
+  }
   if (parsed.face) try {
     extractedFont = fontName(parsed.face.match(/font-family\s*:\s*([^;]+)/i)?.[1])
     const src = parsed.face.match(/url\(\s*["']?([^"')\s]+)["']?\s*\)/i)?.[1]
@@ -126,6 +215,6 @@ export async function discoverBrand({ company, website }, fetcher = fetchPublic)
     ...parsed, logo, website: home.url, fontData, fontName: extractedFont,
     headingFont: fontData ? extractedFont : parsed.headingFont,
     bodyFont: parsed.bodyFont || (fontData ? extractedFont : 'Arial'), sources,
-    status: 'ready', message: `Found ${logo ? 'a logo' : 'no usable logo'}${parsed.primary ? ', a brand color' : ''}${fontData ? ', and a web font' : parsed.headingFont ? ', and a font name' : ''}. Review the result and edit anything below.`
+    status: 'ready', message: `Found ${logo ? 'a logo' : 'no usable logo'}${parsed.primary ? ', a brand color' : ''}${fontData ? ', and a web font' : parsed.headingFont ? ', and a font name' : ''}. Review the result and edit anything below.${!fontData && parsed.headingFont ? ' The font file could not be embedded; devices need this font installed or will use a fallback.' : ''}`
   })
 }

@@ -129,8 +129,11 @@ export default function InputSheet({ fields, model, company, connectors, documen
 
   return (
     <div className="inputs-page">
+      <header className="inputs-toolbar"><div><h2>Inputs</h2><p>Build the case with your numbers, or suggest values for empty fields.</p></div><button type="button" className="primary" onClick={() => suggest(emptyKeys(fields), 'all')} disabled={!!busy}>{busy ? 'Suggesting…' : 'Suggest values'}</button></header>
+      {msg && <p className="suggest-msg" role="status">{msg}</p>}
       <div className="internal-note">Only you see this page. Nothing on it (sources, states, confidence) appears on the client deck.</div>
 
+      <div className="inputs-status">
       <div className="confidence">
         <div className="confidence-top">
           <span>Case confidence</span>
@@ -150,13 +153,13 @@ export default function InputSheet({ fields, model, company, connectors, documen
           {done.total - done.done > 0 ? ` and are in the deck. ${done.total - done.done} still missing, so they are left out of the deck and the total.` : '.'}
         </p>
         {done.waiting.length > 0 && (
-          <ul className="waiting-list">
+          <details className="input-waiting"><summary>Missing inputs for {done.waiting.length} figures</summary><ul className="waiting-list">
             {done.waiting.map(w => (
               <li key={w.key}>
                 <strong>{w.label}</strong> is waiting on {w.missing.map(k => byKey[k]?.label || k).join(', ')}
               </li>
             ))}
-          </ul>
+          </ul></details>
         )}
         <p className="summary-sources">Connectors the agent may read: {on.length ? on.join(', ') : 'none (all are off)'}.</p>
         <details>
@@ -171,6 +174,7 @@ export default function InputSheet({ fields, model, company, connectors, documen
         </details>
       </div>
 
+      </div>
       {warnings.length > 0 && (
         <div className="warn-panel" role="alert" data-testid="warnings">
           {warnings.map(w => (
@@ -190,15 +194,7 @@ export default function InputSheet({ fields, model, company, connectors, documen
         </div>
       )}
 
-      <div className="suggest-row">
-        <button className="ghost" onClick={() => suggest(emptyKeys(fields), 'all')} disabled={!!busy}>
-          {busy === 'all' ? 'Suggesting…' : 'Suggest values'}
-        </button>
-        <span className="help">
-          Fills the empty fields. The agent can search the web and read only the connections you have allowed. Each value keeps its origin and stays exactly as it is until you ask again.
-        </span>
-        {msg && <p className="help suggest-msg">{msg}</p>}
-      </div>
+
 
       {archetype && ARCHETYPES[archetype] && (
         <div className="archetype-note">
@@ -213,7 +209,7 @@ export default function InputSheet({ fields, model, company, connectors, documen
         {groups.map(([group, items]) => (
           <section key={group} className="group" id={`inputs-group-${groups.findIndex(([name]) => name === group)}`}>
             <h2>{group}</h2>
-            {items.map(renderItem)}
+            <div className="input-group-fields">{items.map(renderItem)}</div>
           </section>
         ))}
       </div>
@@ -244,9 +240,7 @@ export function SourceLine({ field, onState, onOrigin, onSuggest, busy }) {
       <div className="source source-empty" data-state="empty">
         <div className="source-row">
           <span className="state state-empty">Empty</span>
-          <button className="link-btn" onClick={() => onSuggest(field.key)} disabled={!!busy}>
-            {busy === field.key ? 'Suggesting…' : 'Suggest'}
-          </button>
+
         </div>
         {notes.map(n => (
           <p key={n} className="source-note">
@@ -260,7 +254,7 @@ export function SourceLine({ field, onState, onOrigin, onSuggest, busy }) {
   return (
     <div className={`source source-${state}`} data-state={state}>
       <div className="source-row">
-        {state === 'suggestion' ? <><span className="state state-suggestion">Suggestion</span><button type="button" className="link-btn" onClick={() => onState(field.key, 'input')}>Mark as input</button><button type="button" className="link-btn" disabled={!!busy} onClick={() => onSuggest(field.key)}>{busy === field.key ? 'Refreshing…' : 'Refresh'}</button></> : <button type="button" className={`state state-toggle ${state === 'input' ? 'state-verified' : 'state-assumed'}`} aria-pressed={state === 'input'} aria-label={`${field.label}: ${STATE_LABEL[state]}. Click to mark as ${state === 'input' ? 'assumption' : 'input'}`} onClick={() => onState(field.key, state === 'input' ? 'assumption' : 'input')}>{STATE_LABEL[state]}</button>}
+        {state === 'suggestion' ? <><span className="state state-suggestion">Suggestion</span><button type="button" className="link-btn" onClick={() => onState(field.key, 'input')}>Mark as input</button></> : <button type="button" className={`state state-toggle ${state === 'input' ? 'state-verified' : 'state-assumed'}`} aria-pressed={state === 'input'} aria-label={`${field.label}: ${STATE_LABEL[state]}. Click to mark as ${state === 'input' ? 'assumption' : 'input'}`} onClick={() => onState(field.key, state === 'input' ? 'assumption' : 'input')}>{STATE_LABEL[state]}</button>}
       </div>
         {state === 'suggestion' && <details className="source-details suggestion-source">
         <summary>Source notes</summary><div className="suggestion-source-body">

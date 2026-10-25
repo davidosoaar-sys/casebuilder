@@ -1126,7 +1126,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .badge-color-panel .delete-element { margin: 8px 0 0 8px; }
 .slide-bar-tools { flex-wrap: wrap; }
 .customer-deck .block-content.custom-color * { color: inherit!important; }
-.customer-deck { --accent: var(--deck-primary); --accent-mint: var(--deck-primary); --ink: var(--deck-text); --ink-strong: var(--deck-text); --ink-dim: var(--deck-muted); --ink-faint: var(--deck-muted); --font: var(--deck-body-font); --heading: var(--deck-heading-font); }
+.customer-deck .slide { --accent: var(--deck-primary); --accent-mint: var(--deck-primary); --ink: var(--deck-text); --ink-strong: var(--deck-text); --ink-dim: var(--deck-muted); --ink-faint: var(--deck-muted); --font: var(--deck-body-font); --heading: var(--deck-heading-font); }
 .customer-deck .slide { background: var(--deck-bg); color: var(--deck-text); font-family: var(--deck-body-font); }
 .customer-deck .slide-hero { background: linear-gradient(115deg,var(--deck-bg),var(--deck-surface)); }
 .customer-deck .slide h1, .customer-deck .slide h2, .customer-deck .slide h3, .customer-deck .stat-value { font-family: var(--deck-heading-font); color: var(--deck-text); }
@@ -1698,3 +1698,54 @@ body.is-resizing iframe { pointer-events: none; }
 .robot { transform-origin: 50% 100%; }
 .robot-ear.is-happy { background: #6ee7b7; box-shadow: 0 0 12px #34d399, 0 0 20px rgba(52,211,153,.6); }
 .robot-eye.happy { width: 12px; height: 7px; background: none; border: 3px solid #34d399; border-bottom: 0; border-radius: 8px 8px 0 0; box-shadow: 0 -2px 10px rgba(52,211,153,.5); }
+
+/* Compact input workspace: sections follow reading order, fields share rows. */
+.inputs-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}
+.inputs-toolbar h2{margin:0 0 4px;font-size:20px;letter-spacing:-.02em;color:var(--ink)}
+.inputs-toolbar p{margin:0;color:var(--ink-dim);font-size:13px;line-height:1.5}
+.inputs-toolbar button{flex-shrink:0}
+.inputs-page .internal-note{margin-bottom:12px;padding:8px 12px}
+.inputs-page .confidence{margin-bottom:12px;padding:12px 16px}
+.inputs-page .confidence-note{margin-bottom:0}
+.inputs-page .summary-panel{padding:12px 16px;margin-bottom:12px}
+.inputs-page .summary-panel p{margin:0 0 8px}
+.inputs-page .summary-panel details{font-size:12px;margin-top:8px}
+.inputs-page .input-group-nav{margin:16px 0;gap:6px}
+.inputs-page .groups-grid{display:flex;flex-direction:column;gap:20px}
+.inputs-page .group{width:100%;margin:0;padding:0;border:0;border-radius:0}
+.inputs-page .group h2{margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line);font-size:14px}
+.input-group-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 24px;align-items:start}
+.inputs-page .input-group-fields>.field{margin:0;padding:0;border:0;min-width:0}
+.inputs-page .input-group-fields>.pair{grid-column:1/-1;margin:0;padding:0 0 16px;border-bottom:1px solid var(--line)}
+.inputs-page .input-group-fields>.derived,.inputs-page .input-group-fields>.warn{grid-column:1/-1;margin:0}
+.inputs-page .field-row{align-items:center;gap:8px;margin-bottom:4px;min-height:28px}
+.inputs-page .input-field-actions{gap:4px;margin:0}
+.inputs-page .pair-side>.input-field-actions{margin:0;justify-content:flex-start}
+.inputs-page .pair-side{gap:4px;min-width:0}
+.inputs-page .source{margin:0 0 6px;min-height:24px}
+.inputs-page .source-row{min-height:24px;gap:8px}
+.inputs-page .pair-diff{margin-top:6px;font-size:12px}
+.inputs-page .help{font-size:12px;line-height:1.5;margin-top:6px;margin-bottom:0}
+.inputs-page .archetype-note{padding:12px 16px;margin-bottom:16px}
+.inputs-page .archetype-note p{margin:4px 0 0}
+@media(max-width:600px){.input-group-fields{grid-template-columns:minmax(0,1fr);gap:16px}.inputs-toolbar{align-items:flex-start;flex-wrap:wrap}.inputs-page .pair-grid{gap:12px}.inputs-page .field-row{flex-wrap:wrap}}
+
+.inputs-status{display:grid;grid-template-columns:minmax(220px,1fr) minmax(0,2fr);gap:12px;align-items:start;margin-bottom:12px}
+.inputs-page .inputs-status>.confidence,.inputs-page .inputs-status>.summary-panel{max-width:none;margin:0;height:100%}
+.inputs-page .archetype-note{max-width:none}
+.inputs-page .source{padding:0;border:0;background:none}
+.inputs-page .input-group-fields>.pair{grid-column:auto}
+.inputs-page .pair-title{min-height:20px}
+@media(max-width:760px){.inputs-status{grid-template-columns:minmax(0,1fr)}.inputs-page .input-group-fields>.pair{grid-column:1/-1}}
+
+.brand-setup{max-width:1000px}.brand-setup h1{font-size:clamp(24px,3vw,36px);letter-spacing:-.025em}
+.brand-setup-preview{background:var(--deck-bg);color:var(--deck-text);border:1px solid var(--line);border-radius:12px;padding:48px 32px;min-height:280px;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;font-family:var(--deck-body-font)}
+.brand-setup-preview>img{max-width:240px;max-height:64px;object-fit:contain;margin-bottom:24px}
+.brand-setup-preview h2{font-family:var(--deck-heading-font);font-size:32px;line-height:1.2;margin:0 0 12px;color:var(--deck-text)}
+.brand-setup-preview p{color:var(--deck-muted);margin:0 0 16px}.brand-setup-swatches{display:flex;gap:8px;margin-top:16px}.brand-setup-swatches span{width:24px;height:24px;border:1px solid var(--deck-muted);border-radius:50%}
+.brand-setup-actions{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;margin:20px 0}.brand-setup .brand-panel{margin-top:20px}
+
+/* Customer palette belongs to the slide, never its surrounding editor controls. */
+:root{--editor-ink:var(--ink);--editor-ink-dim:var(--ink-dim);--editor-font:var(--font);--editor-accent:var(--accent)}
+.customer-deck :is(.block-tools,.block-settings,.badge-color-panel){--ink:var(--editor-ink);--ink-dim:var(--editor-ink-dim);--ink-strong:var(--editor-ink);--ink-faint:var(--editor-ink-dim);--font:var(--editor-font);--accent:var(--editor-accent);color:var(--editor-ink);font-family:var(--editor-font)}
+.customer-deck .slide-hero .blocks::before{background:linear-gradient(90deg,var(--deck-primary),transparent)}
