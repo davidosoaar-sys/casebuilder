@@ -23,6 +23,40 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ---
 
+## Unreleased (planned v0.7.0): the agent can change the deal
+
+- Agent tab in every project, plus a split-screen mode beside Input sheet,
+  Deck and Person lookup, with a draggable divider (width remembered).
+  Chat history is saved per deal in Supabase.
+- Ask in plain words ("They have 1,200 engineers"). The Hermes worker
+  returns structured edits; the app checks each one again and applies it
+  straight away. The deck, one-pager and summaries recalculate.
+- Each reply that changed something shows a card (old -> new) with Undo.
+  Undo restores the exact value and source; if you edited the field
+  since, your number is kept. Edits apply once per reply, never twice.
+- A figure you stated becomes your own number (assumption, "You said it
+  in chat"); a figure the agent proposed becomes a suggestion with its
+  reason. Neither counts as confirmed. The agent cannot change the
+  company name, calendar constants, custom inputs or removed inputs.
+- Message box with a mascot: model picker (Sonnet / Haiku / Opus 5.5) with
+  a Low / Medium / High thinking level, attach text files (.txt, .md, .csv,
+  .json, transcripts, up to 1 MB each, 5 files), web search on/off, voice
+  dictation where the browser supports it. Copy on every message; edit and
+  resend on your own messages (on hover).
+- No API key: sending is blocked with a link to Settings. A failed request
+  is reported in the chat instead of spinning. Leaving and coming back
+  mid-reply picks the reply up.
+- The agent addresses the signed-in user by name.
+- Clicking the logo goes to the Dashboard.
+- Fixed: Dashboard asked for job columns that do not exist, so its query
+  failed on every load.
+
+Checks: app tests and build pass; 11 worker tests pass. Real end-to-end
+test `scripts/review-agent-chat.mjs` (browser -> Supabase -> Hermes worker
+-> model -> deal -> Supabase): change applied and saved, deck renders with
+the split pane, copy/edit on hover, Undo restores and saves, reload does
+not re-apply. Web search checked on and off against the live worker.
+
 ## v0.6.0 (2026-10-25)
 
 - 2026-10-25: Added evidence-linked professional conversation starters to Person lookup, with an explicitly inferred role-based fallback. Organized inputs into consistent sections with jump navigation; suggestion-only source notes are closed by default above values. Manual inputs retain their state controls without source-note UI. Equations and client deck unchanged. Validation: 236 tests pass; production build passes.

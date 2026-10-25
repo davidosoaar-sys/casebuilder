@@ -7,6 +7,8 @@ import Details from './components/Details.jsx'
 import StakeholderMap from './components/StakeholderMap.jsx'
 import People from './components/People.jsx'
 import useCloudDeals from './useCloudDeals.js'
+import ChatPanel from './components/ChatPanel.jsx'
+import { applyAgentEdits, undoAgentEdits } from './agentEdits.js'
 import { supabase } from './supabase.js'
 import {
   duplicateProject,
@@ -71,6 +73,18 @@ export default function App({ account }) {
   const [view, setView] = useState('dashboard') // 'dashboard' | 'projects' | 'details' | 'deck' | 'website' | 'settings' | ...
   const [createRequest, setCreateRequest] = useState(0)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  // Agent: its own tab, or split beside the other tabs (width remembered).
+  const [split, setSplit] = useState(() => { try { return localStorage.getItem('casebuilder.agent-split') === '1' } catch { return false } })
+  const [chatWidth, setChatWidth] = useState(() => { try { return Number(localStorage.getItem('casebuilder.agent-width')) || 420 } catch { return 420 } })
+  useEffect(() => { try { localStorage.setItem('casebuilder.agent-split', split ? '1' : '0') } catch {} }, [split])
+  useEffect(() => { try { localStorage.setItem('casebuilder.agent-width', String(chatWidth)) } catch {} }, [chatWidth])
+  const backFromAgent = useRef('details')
+  function startResize(e) {
+    e.preventDefault()
+    const move = ev => setChatWidth(Math.round(Math.min(Math.max(window.innerWidth - (ev.touches?.[0]?.clientX ?? ev.clientX), 320), Math.min(900, window.innerWidth - 420))))
+    const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); document.body.classList.remove('is-resizing') }
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up); document.body.classList.add('is-resizing')
+  }
   const openSettings = () => setSettingsOpen(true)
   const [websiteAudience, setWebsiteAudience] = useState(null)
   const [previewRequest, setPreviewRequest] = useState(null)
@@ -123,6 +137,7 @@ export default function App({ account }) {
     setStage(null)
     if (next === 'settings') { setSettingsOpen(true); return } // overlay: never leaves the current page
     if (['projects', 'dashboard'].includes(next)) { saving.flush(); setCurrentId(null) }
+    if (next === 'agent') { if (view !== 'agent') backFromAgent.current = view; setSplit(false) }
     setView(next)
   }
   const projectSidebar = <Sidebar view={view} project={project} projectMode onNav={navigate} onSettings={openSettings} settingsOpen={settingsOpen} saveStatus={saving.status} account={account} />
@@ -159,6 +174,23 @@ export default function App({ account }) {
       return arch(next) !== arch(p.fields)
         ? { name, fields: next, stakeholders: stakeholdersForArchetype(p.stakeholders, arch(next)) }
         : { name, fields: next }
+    })
+
+  // Agent edits: applied straight away, once per reply (agentLog is keyed by
+  // the chat message id and saved with the deal), and undoable.
+  const applyFromChat = (messageId, edits) =>
+    update(p => {
+      if (p.agentLog?.[messageId]) return {}
+      const r = applyAgentEdits(p.fields, edits)
+      const entry = { changes: r.changes, refused: r.refused, at: Date.now() }
+      return { fields: r.fields, agentLog: { ...(p.agentLog || {}), [messageId]: entry } }
+    })
+  const undoFromChat = messageId =>
+    update(p => {
+      const entry = p.agentLog?.[messageId]
+      if (!entry || entry.undone) return {}
+      const r = undoAgentEdits(p.fields, entry.changes)
+      return { fields: r.fields, agentLog: { ...p.agentLog, [messageId]: { ...entry, undone: true, skipped: r.skipped } } }
     })
 
   const settingsOverlay = settingsOpen && (
@@ -202,14 +234,20 @@ export default function App({ account }) {
   // Details and Deck need a project; without one, fall back to the list.
   const page = ['connections', 'lookup', 'dashboard'].includes(view) ? view : project ? view : 'projects'
   const insideProject = !!project && page !== 'projects'
+  const agentFull = insideProject && page === 'agent'
+  const agentSplit = insideProject && split && !agentFull
+  const userName = (user || '').trim() || account.session.user.email.split('@')[0]
+  const chatProps = insideProject && { project, userId: account.session.user.id, userName, onApply: applyFromChat, onUndo: undoFromChat, onSettings: openSettings }
 
   return (
     <div className="layout">
       <Sidebar view={page} project={project} projectMode={insideProject} onNav={navigate} onSettings={openSettings} settingsOpen={settingsOpen} saveStatus={saving.status} account={account} />
 
-      <div className="lookup-content-wrap">
-      <main className="content">
-        {page === 'dashboard' ? (
+      <div className={`lookup-content-wrap${agentSplit ? ' with-chat' : ''}`} style={agentSplit ? { '--chat-w': `${chatWidth}px` } : undefined}>
+      <main className={`content${agentFull ? ' content-agent' : ''}`}>
+        {agentFull ? (
+          <ChatPanel key={project.id} {...chatProps} mode="full" onSplit={() => { setSplit(true); setView(backFromAgent.current === 'agent' ? 'details' : backFromAgent.current) }} />
+        ) : page === 'dashboard' ? (
           <Dashboard
             account={account}
             name={user}
@@ -316,6 +354,16 @@ export default function App({ account }) {
           />
         )}
       </main>
+      {agentSplit && <>
+        <div className="chat-resizer" role="separator" aria-orientation="vertical" aria-label="Resize agent panel" tabIndex={0}
+          onPointerDown={startResize}
+          onKeyDown={e => { if (e.key === 'ArrowLeft') setChatWidth(w => Math.min(w + 24, 900)); if (e.key === 'ArrowRight') setChatWidth(w => Math.max(w - 24, 320)) }} />
+        <ChatPanel key={project.id} {...chatProps} mode="split" onClose={() => setSplit(false)} onFull={() => navigate('agent')} />
+      </>}
+      {insideProject && !agentSplit && !agentFull && (
+        <button type="button" className="chat-open" onClick={() => setSplit(true)} title="Open the agent beside this tab">
+          <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true"><rect x="2" y="3" width="12" height="10" rx="1.5" /><path d="M9.5 3v10" /></svg>Agent
+        </button>)}
       </div>
       {pendingPersonInput && project?.id === pendingPersonInput.dealId && <div className="modal-backdrop" onClick={() => setPendingPersonInput(null)}>
         <section className="modal" role="dialog" aria-modal="true" aria-labelledby="person-input-review" onClick={e => e.stopPropagation()}>

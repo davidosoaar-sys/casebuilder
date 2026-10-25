@@ -34,7 +34,7 @@ export default function Dashboard({ account, name, deals, loading, onOpen, onNav
   const { keys } = useModelKeys(account.session.user.id)
   const [jobs, setJobs] = useState(null)
   useEffect(() => {
-    supabase.from('jobs').select('id, kind, status, created_at, finished_at, deal_id, last_error')
+    supabase.from('jobs').select('id, kind, status, created_at, updated_at, deal_id, error')
       .eq('owner_id', account.session.user.id).order('created_at', { ascending: false }).limit(5)
       .then(({ data }) => setJobs(data || []))
   }, [account.session.user.id])
