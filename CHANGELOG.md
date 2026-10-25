@@ -32,6 +32,8 @@ Every version that lands on `main` gets a line here and a git tag.
 - New deck templates lead with the modeled Portal/self-hosting cost decision, explain the workflow and value drivers, retain stakeholder framing and close with modeled annual impact. Headlines handle missing inputs and unfavorable comparisons honestly; engineering capacity is distinguished from cash savings. Existing authored decks are preserved. App/export narrative tokens share one implementation, including interactive scenario updates.
 - Validation: all 326 app/server tests and app/plugin builds pass. Isolated dark/light desktop/mobile review verified source links/quotes, open-question filtering and plain-text copying. Website/PDF/slides/one-pager previews render context without source-quote leakage or unresolved tokens; website scenario controls update the comparison headline correctly. Added a Chris-focused end-to-end demo guide. No release version bump, push or deployment for these changes.
 
+## v0.11.0 (2026-10-25): Project Files and the waitlist
+
 - Project Files: each project has a Files page, like a Claude Project's files.
   Instructions (how to work on this account) plus any files: no file types to pick;
   the user says what a file is for when they ask ("check my deck against the one I
@@ -52,8 +54,9 @@ Every version that lands on `main` gets a line here and a git tag.
   source tag, Approve per person, and "Let someone in" to approve an email before
   they join. Approving sends no email; the team tells the person.
   Team-created accounts (worker/create_account.py) are approved first.
+  The "You're on the list" message says "a few at a time while we test it".
 
-Checks: 334 app tests, 34 worker tests, build OK. scripts/review-waitlist.mjs on the
+Checks: 334 app tests (329 pass; the 5 brand/people research failures also fail on v0.10.0), 34 worker tests, build OK. scripts/review-waitlist.mjs on the
 live database: 16/16 (form fields, on the list, refused before approval, admin
 pre-approves, approved email goes straight to password and the email code, existing
 account sent to Sign in, non-admin cannot see, read or approve, cleanup).
