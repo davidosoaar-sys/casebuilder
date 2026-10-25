@@ -107,11 +107,13 @@ await page.click('.side-item[aria-label="Files"]')
 await page.waitForSelector('.pf-instr-view', { timeout: 15000 }).catch(() => {})
 check('after a reload it opens in the saved view', (await page.$eval('.pf-instr-view', e => e.innerText).catch(() => '')) === TEXT + ' Avoid "DevEx".')
 
-// Restore.
-await page.click('.pf-instr-bar .ghost'); await page.waitForSelector('.pf-instructions')
-await page.$eval('.pf-instructions', e => { e.focus(); e.select() }); await page.keyboard.press('Backspace')
-if (original) { await page.type('.pf-instructions', original); await page.click('.pf-instr-bar .primary'); await page.waitForSelector('.pf-instr-view') }
-else console.log('note: test project had no instructions; left the last test text (instructions cannot be emptied from the UI)')
+// Restore (skip when the original already matches what is saved).
+const nowSaved = TEXT + ' Avoid "DevEx".'
+if (original && original !== nowSaved) {
+  await page.click('.pf-instr-bar .ghost'); await page.waitForSelector('.pf-instructions')
+  await page.$eval('.pf-instructions', e => { e.focus(); e.select() }); await page.keyboard.press('Backspace')
+  await page.type('.pf-instructions', original); await page.click('.pf-instr-bar .primary'); await page.waitForSelector('.pf-instr-view')
+} else if (!original) console.log('note: test project had no instructions; left the last test text (instructions cannot be emptied from the UI)')
 
 check('no page errors or failed Supabase calls', errors.length === 0, errors.join(' | '))
 await browser.close()

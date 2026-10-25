@@ -28,7 +28,12 @@ const WHAT = {
   hubspot: 'CRM records',
   slack: 'internal threads',
   clay: 'enrichment data',
-  lemlist: 'outreach data'
+  lemlist: 'outreach data',
+  granola: 'meeting notes',
+  sheets: 'finance figures',
+  excel: 'finance figures',
+  figma: 'design notes',
+  canva: 'design material'
 }
 
 const WHOLE = new Set(['newHiresPerYear', 'incidentsPerMonth', 'peoplePerIncident', 'peoplePerAudit', 'auditsPerYear', 'toolSpendToday', 'toolSpendPortal', 'portalCost', 'selfHostSalary', 'engineers'])
@@ -86,8 +91,10 @@ function notesFor({ connectors, documents, agentState, beatenBy }) {
   const relevant = beatenBy > RANK.transcript ? CONNECTORS : []
   const off = relevant.filter(c => !connectors[c.key])
   // one sentence for everything that is switched off, so a gap reads as a setting
-  if (off.length === 1) notes.push(`${off[0].label} is disabled, so no ${WHAT[off[0].key]} were used.`)
-  else if (off.length > 1) notes.push(`${list(off.map(c => c.label))} are disabled, so no ${list(off.map(c => WHAT[c.key]))} were used.`)
+  // With eleven connectors, naming every one in every gap is noise: when all are off, say so once.
+  if (off.length && off.length === relevant.length) notes.push('Every connection is off, so no uploaded material was used.')
+  else if (off.length === 1) notes.push(`${off[0].label} is disabled, so no ${WHAT[off[0].key]} were used.`)
+  else if (off.length > 1) notes.push(`${list(off.map(c => c.label))} are disabled, so no ${list([...new Set(off.map(c => WHAT[c.key]))])} were used.`)
   for (const c of relevant.filter(c => connectors[c.key])) {
     if (!documents.some(d => d.source === c.key)) notes.push(`${c.label} is allowed but nothing has been uploaded.`)
   }

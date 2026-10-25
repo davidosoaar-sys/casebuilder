@@ -33,10 +33,24 @@ Every version that lands on `main` gets a line here and a git tag.
   The global Research tab is gone.
 - Files: saved instructions show as text with an Edit button instead of an open
   box. Edit opens the box with Cancel and Save changes.
+- The separate Person lookup tab is gone: it lives in Research, under the Person toggle.
+- Fixed: cancelling "New project" on the Dashboard made the New project dialog reopen
+  every time Projects was opened, covering the project you clicked.
+- Fixed: chat attachments only took text files. They now read PDF, Word, PowerPoint
+  and Excel with the same reader as Files.
+- Connectors: added Granola (meeting notes), Google Sheets and Excel (finance models),
+  Figma (design specs) and Canva (decks), with their logos. Like the others they take
+  uploaded or pasted material for now; every connector upload now reads PDF and
+  Office files too. With every connection off, a gap says so in one line instead of
+  listing all eleven.
 
-Checks: 334 app tests pass. scripts/review-nav-instructions.mjs on localhost with
-the test account: 18/18 (menu names and order, Live room default, Research inside
-the project, instructions saved view, edit, cancel, save changes, reload).
+Checks: 334 app tests pass. On localhost with the test account:
+scripts/review-nav-instructions.mjs 19/19 (menu names and order, Live room default,
+Research inside the project with its Person toggle, instructions saved view, edit,
+cancel, save changes, reload); scripts/review-new-project-dialog.mjs 3/3;
+scripts/review-chat-attach.mjs 4/4 (real agent answered from an attached PDF and
+Excel file with Search off); scripts/review-connectors.mjs 9/9 (all 11 logos load,
+an Excel file uploads into the Excel connector as spreadsheet text).
 
 ## v0.11.0 (2026-10-25): Project Files and the waitlist
 
