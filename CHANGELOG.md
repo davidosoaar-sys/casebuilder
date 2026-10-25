@@ -25,7 +25,9 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
-- People search now adds headshots: when the agent returns no photo, a fallback searches "<name> <company>" and takes a portrait from a public page that names both (exact or suffixed alt text, a file named after the person, or the share image on the person's own page). Skips LinkedIn, social and podcast sites, group shots, signatures and icons; falls back to initials. Spot check: 7 of 8 real execs got a correct headshot, checked by eye. 354/354 tests.
+## v0.15.0 (2026-10-26): headshots on found people
+
+- People search now adds headshots: when the agent returns no photo, a fallback searches "<name> <company>" and takes a portrait from a public page that names both (exact or suffixed alt text, a file named after the person, or the share image on the person's own page). Skips LinkedIn, social and podcast sites, group shots, signatures and icons; falls back to initials. Checks the pages the agent cited first, so it works without a search key (Tavily widens it). Spot check: 7 of 8 real execs got a correct headshot, checked by eye. 356/356 tests.
 
 ## v0.14.1 (2026-10-26): clear error when the server cannot read saved API keys
 

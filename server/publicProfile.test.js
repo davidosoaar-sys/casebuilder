@@ -108,3 +108,10 @@ test('photoOnPage: file name must be the name plus size noise; og:image only on 
  assert.equal(photoOnPage('<title>Acme leadership team</title>'+og,'Dana Ruiz'),'')
  assert.equal(photoOnPage('<title>Dana Ruiz | Acme</title><meta property="og:image" content="https://cdn.example/social-image-default.png">','Dana Ruiz'),'')
 })
+
+test('photo fallback works without a search key, from the pages the agent cited', async()=>{
+ const p=await findPublicPhoto({name:'Dana Ruiz',company:'Acme',sourceUrls:['https://x.com/dana','https://conf.example/speakers/dana']},{search:null,fetcher:pages({
+  'https://conf.example/speakers/dana':'<h1>Dana Ruiz</h1><p>VP Engineering at Acme</p><img src="/img/dana-ruiz.jpg" alt="">',
+  'https://conf.example/img/dana-ruiz.jpg':JPEG})})
+ assert.equal(p.imageUrl,'https://conf.example/img/dana-ruiz.jpg')
+})

@@ -93,7 +93,7 @@ export async function research({ company, role }, client = new Anthropic(), {fet
   // No verified headshot from the agent: look for one on public pages, in parallel.
   await Promise.all(top.map(async p => {
     if (p.photo) return
-    const photo = await findPublicPhoto({ name: p.name, company }, { ...(photoSearch !== undefined ? { search: photoSearch } : {}), ...(fetcher ? { fetcher } : {}) }).catch(() => null)
+    const photo = await findPublicPhoto({ name: p.name, company, sourceUrls: p.sources }, { ...(photoSearch !== undefined ? { search: photoSearch } : {}), ...(fetcher ? { fetcher } : {}) }).catch(() => null)
     if (photo) p.photo = photo
   }))
   return { people: top, note: clean(parsed.note, 300) || null, search: run.search }

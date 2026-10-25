@@ -128,15 +128,17 @@ export function photoOnPage(html,name){
  }catch{}
  return ''
 }
-export async function findPublicPhoto({name,company},{search=searchBackendOrNull(),fetcher=fetchPublic,maxPages=6}={}){
- if(!search||!text(name)||!text(company))return null
- let results=[]
- try{results=await search.search(`"${text(name)}" ${text(company)}`,{count:10})}catch{return null}
- const co=text(company).toLowerCase(),who=text(name).toLowerCase()
+export async function findPublicPhoto({name,company,sourceUrls=[]},{search=searchBackendOrNull(),fetcher=fetchPublic,maxPages=6}={}){
+ if(!text(name)||!text(company))return null
+ // Pages the agent already cited for this person come first; they need no search key.
+ const urls=[...sourceUrls.filter(u=>typeof u==='string')]
+ if(search)try{for(const r of await search.search(`"${text(name)}" ${text(company)}`,{count:10}))if(r?.url)urls.push(r.url)}catch{}
+ const co=text(company).toLowerCase(),who=text(name).toLowerCase(),seen=new Set()
  let tried=0
- for(const r of results){
-  let url;try{url=new URL(r.url)}catch{continue}
-  if(url.protocol!=='https:'||SKIP_PHOTO_HOSTS.test(url.hostname))continue
+ for(const raw of urls){
+  let url;try{url=new URL(raw)}catch{continue}
+  if(url.protocol!=='https:'||SKIP_PHOTO_HOSTS.test(url.hostname)||seen.has(url.href))continue
+  seen.add(url.href)
   if(++tried>maxPages)break
   try{
    const page=await fetcher(url.href,{limit:1500000});if(!/html/.test(page.type))continue
