@@ -10,16 +10,10 @@ import React, { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabase.js'
 import { describeValue } from '../agentEdits.js'
 import { useModelKeys } from './Settings.jsx'
+import AgentComposer, { AGENT_MODELS } from './AgentComposer.jsx'
 
 const POLL_MS = 3000
 const SELECT = 'id, role, content, meta, job_id, created_at'
-export const AGENT_MODELS = [
-  { id: 'claude-sonnet-5-5', label: 'Sonnet 5.5', note: 'Balanced' },
-  { id: 'claude-haiku-5-5', label: 'Haiku 5.5', note: 'Fastest' },
-  { id: 'claude-opus-5-5', label: 'Opus 5.5', note: 'Most capable' }
-]
-const MAX_FILE_BYTES = 1_000_000
-const TEXT_FILES = '.txt,.md,.csv,.tsv,.json,.vtt,.srt,.html,.xml,.log,text/*'
 
 const Icon = ({ d, size = 15 }) => (
   <svg viewBox="0 0 16 16" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>
@@ -48,8 +42,6 @@ function useCopy() {
     setCopied(id); setTimeout(() => setCopied(c => (c === id ? null : c)), 1400)
   }]
 }
-
-const Speech = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition)
 
 export default function ChatPanel({ project, userId, userName, mode = 'split', onApply, onUndo, onClose, onSplit, onFull, onSettings }) {
   const dealId = project.id
@@ -129,17 +121,19 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
     firstScroll.current = false
   }, [messages.length, pending, loading])
 
-  async function send({ text, attachments = [], model }) {
+  async function send({ text, attachments = [], model, effort, web }) {
     if (noKey) { setError('Add your Anthropic API key in Settings first.'); return false }
     if (pending) return false
     setError('')
     const meta = attachments.length ? { attachments: attachments.map(a => ({ name: a.name, size: a.text.length })) } : {}
     if (model) meta.model = model
+    if (effort) meta.effort = effort
+    if (web === false) meta.web = false
     const { data: msg, error: e1 } = await supabase.from('chat_messages')
       .insert({ deal_id: dealId, owner_id: userId, role: 'user', content: text || '(attached files)', meta }).select(SELECT).single()
     if (e1) { setError(/foreign key|not present|violates row-level/i.test(e1.message) ? 'This deal has not finished saving yet. Try again in a second.' : e1.message); return false }
     setMessages(ms => ms.some(m => m.id === msg.id) ? ms : [...ms, msg])
-    const payload = { message: text, model, user_name: userName || '', attachments: attachments.map(a => ({ name: a.name, text: a.text })) }
+    const payload = { message: text, model, effort, web: web !== false, user_name: userName || '', attachments: attachments.map(a => ({ name: a.name, text: a.text })) }
     const { data: job, error: e2 } = await supabase.from('jobs').insert({ owner_id: userId, deal_id: dealId, kind: 'chat', payload }).select('id').single()
     if (e2) { setError(/rate|limit/i.test(e2.message) ? 'Too many requests just now. Wait a minute and try again.' : e2.message); return false }
     setPending(job.id)
@@ -149,7 +143,7 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
   const visible = messages.filter(m => m.role !== 'status')
 
   return (
-    <section className={`chat-panel chat-${mode}`} aria-label="Agent chat">
+    <section className={`chat-panel chat-${mode}${!loading && visible.length === 0 ? ' is-empty' : ''}`} aria-label="Agent chat">
       <header className="chat-head">
         <div className="chat-title"><span className="chat-dot" aria-hidden="true" /><h2>Agent</h2><span className="chat-deal">{project.name}</span></div>
         <div className="chat-head-actions">
@@ -164,7 +158,7 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
 
       <div className="chat-list" ref={list}>
         <div className="chat-inner">
-          {loading ? <p className="chat-empty">Loading…</p> : visible.length === 0 ? (
+          {loading ? <p className="chat-empty">Loading…</p> : visible.length === 0 ? (mode === 'full' ? null : (
             <div className="chat-empty">
               <p>Ask a question about this deal, or tell the agent what to change. Changes apply straight away, and every one can be undone.</p>
               <ul>
@@ -173,11 +167,11 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
                 <li>“Which numbers are still unconfirmed?”</li>
               </ul>
             </div>
-          ) : visible.map(m => m.role === 'user' ? (
+          )) : visible.map(m => m.role === 'user' ? (
             <div key={m.id} className="chat-msg chat-user">
               {editing?.id === m.id ? (
                 <EditBox initial={editing.text} onCancel={() => setEditing(null)}
-                  onSave={async t => { if (await send({ text: t, model: m.meta?.model })) setEditing(null) }} disabled={!!pending} />
+                  onSave={async t => { if (await send({ text: t, model: m.meta?.model, effort: m.meta?.effort, web: m.meta?.web })) setEditing(null) }} disabled={!!pending} />
               ) : <>
                 {m.meta?.attachments?.length > 0 && <div className="chat-files">{m.meta.attachments.map((a, i) => <span key={i} className="chat-file"><Icon d={icons.file} size={13} />{a.name}</span>)}</div>}
                 <div className="chat-bubble">{m.content}</div>
@@ -193,7 +187,7 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
               <ChangeCard log={applied[m.id]} meta={m.meta} onUndo={() => onUndo(m.id)} />
               <div className="msg-actions">
                 <button type="button" className="icon-btn sm" onClick={() => copy(m.id, m.content)} title="Copy" aria-label="Copy reply"><Icon d={copied === m.id ? icons.check : icons.copy} size={14} /></button>
-                {m.meta?.model && <span className="msg-meta">{AGENT_MODELS.find(x => x.id === m.meta.model)?.label || m.meta.model}{m.meta.seconds ? ` · ${Math.round(m.meta.seconds)}s` : ''}</span>}
+                {m.meta?.model && <span className="msg-meta">{AGENT_MODELS.find(x => x.id === m.meta.model)?.name || m.meta.model}{m.meta.seconds ? ` · ${Math.round(m.meta.seconds)}s` : ''}</span>}
               </div>
             </div>
           ))}
@@ -204,7 +198,9 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
       <div className="chat-bottom">
         {noKey && <p className="chat-note">The agent needs your Anthropic API key first. <button type="button" className="link-btn" onClick={onSettings}>Add it in Settings</button></p>}
         {error && <p className="auth-error chat-error" role="alert">{error}</p>}
-        <Composer disabled={!!pending || noKey} busy={!!pending} onSend={send} />
+        <AgentComposer disabled={noKey} busy={!!pending} onSend={send} showWelcome={!loading && visible.length === 0}
+          title={`What should we work on${userName ? ', ' + userName.split(' ')[0] : ''}?`}
+          subtitle={`Ask about ${project.name || 'this deal'}, or tell the agent what to change. Every change can be undone.`} />
       </div>
     </section>
   )
@@ -223,91 +219,6 @@ function EditBox({ initial, onSave, onCancel, disabled }) {
         <button type="button" className="primary" disabled={!t.trim() || disabled} onClick={() => onSave(t.trim())}>Send</button>
       </div>
     </div>
-  )
-}
-
-function Composer({ disabled, busy, onSend }) {
-  const [text, setText] = useState('')
-  const [files, setFiles] = useState([])
-  const [fileError, setFileError] = useState('')
-  const [model, setModel] = useState(() => { try { return localStorage.getItem('casebuilder.agent-model') || AGENT_MODELS[0].id } catch { return AGENT_MODELS[0].id } })
-  const [menu, setMenu] = useState(false)
-  const [listening, setListening] = useState(false)
-  const input = useRef(null)
-  const fileInput = useRef(null)
-  const rec = useRef(null)
-  useEffect(() => { try { localStorage.setItem('casebuilder.agent-model', model) } catch {} }, [model])
-  useEffect(() => { // grow with content
-    const el = input.current; if (!el) return
-    el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 200) + 'px'
-  }, [text])
-  useEffect(() => () => rec.current?.abort?.(), [])
-
-  async function addFiles(list) {
-    setFileError('')
-    const out = []
-    for (const f of list) {
-      if (f.size > MAX_FILE_BYTES) { setFileError(`${f.name} is over 1 MB.`); continue }
-      if (/\.(pdf|docx?|pptx?|xlsx?|png|jpe?g|gif|zip)$/i.test(f.name)) { setFileError(`${f.name}: only text files for now (.txt, .md, .csv, .json, transcripts).`); continue }
-      out.push({ name: f.name, text: await f.text() })
-    }
-    setFiles(fs => [...fs, ...out].slice(0, 5))
-  }
-
-  function toggleMic() {
-    if (!Speech) return
-    if (listening) { rec.current?.stop(); return }
-    const r = new Speech()
-    r.lang = navigator.language || 'en-US'; r.interimResults = true; r.continuous = true
-    const base = text ? text.replace(/\s*$/, ' ') : ''
-    r.onresult = e => setText(base + Array.from(e.results).map(x => x[0].transcript).join(''))
-    r.onend = () => setListening(false)
-    r.onerror = () => setListening(false)
-    rec.current = r; r.start(); setListening(true)
-  }
-
-  async function submit(e) {
-    e?.preventDefault()
-    if (disabled || (!text.trim() && !files.length)) return
-    rec.current?.stop()
-    if (await onSend({ text: text.trim(), attachments: files, model })) { setText(''); setFiles([]) }
-  }
-
-  const current = AGENT_MODELS.find(m => m.id === model) || AGENT_MODELS[0]
-  return (
-    <form className="composer" onSubmit={submit}
-      onDragOver={e => { e.preventDefault() }} onDrop={e => { e.preventDefault(); addFiles(Array.from(e.dataTransfer.files)) }}>
-      {files.length > 0 && <div className="composer-files">{files.map((f, i) => (
-        <span key={i} className="chat-file"><Icon d={icons.file} size={13} />{f.name}
-          <button type="button" aria-label={`Remove ${f.name}`} onClick={() => setFiles(fs => fs.filter((_, j) => j !== i))}><Icon d={icons.close} size={11} /></button></span>
-      ))}</div>}
-      <textarea id="chat-input" ref={input} rows={1} value={text}
-        placeholder={busy ? 'The agent is working…' : 'Ask about this deal, or tell the agent what to change'}
-        onChange={e => setText(e.target.value)}
-        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) submit(e) }} />
-      {fileError && <p className="composer-error">{fileError}</p>}
-      <div className="composer-row">
-        <button type="button" className="icon-btn round" onClick={() => fileInput.current?.click()} title="Attach text files" aria-label="Attach files"><Icon d={icons.plus} /></button>
-        <input ref={fileInput} type="file" multiple accept={TEXT_FILES} hidden onChange={e => { addFiles(Array.from(e.target.files)); e.target.value = '' }} />
-        <div className="model-pick">
-          <button type="button" className="model-btn" onClick={() => setMenu(m => !m)} aria-haspopup="listbox" aria-expanded={menu}>
-            <span className="model-mark" aria-hidden="true">✳</span>{current.label}<Icon d={icons.chevron} size={13} />
-          </button>
-          {menu && <>
-            <div className="model-scrim" onClick={() => setMenu(false)} />
-            <ul className="model-menu" role="listbox">
-              {AGENT_MODELS.map(m => (
-                <li key={m.id}><button type="button" role="option" aria-selected={m.id === model} className={m.id === model ? 'is-on' : ''}
-                  onClick={() => { setModel(m.id); setMenu(false) }}><strong>{m.label}</strong><span>{m.note}</span></button></li>
-              ))}
-            </ul>
-          </>}
-        </div>
-        <span className="composer-space" />
-        {Speech && <button type="button" className={`icon-btn round${listening ? ' is-live' : ''}`} onClick={toggleMic} title={listening ? 'Stop dictation' : 'Dictate'} aria-label={listening ? 'Stop dictation' : 'Dictate'}><Icon d={icons.mic} /></button>}
-        <button type="submit" className="icon-btn round send" disabled={disabled || (!text.trim() && !files.length)} title="Send" aria-label="Send"><Icon d={busy ? icons.stop : icons.up} /></button>
-      </div>
-    </form>
   )
 }
 

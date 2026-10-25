@@ -236,7 +236,7 @@ export default function App({ account }) {
   const agentFull = insideProject && page === 'agent'
   const agentSplit = insideProject && split && !agentFull
   const userName = (user || '').trim() || account.session.user.email.split('@')[0]
-  const chatProps = insideProject && { key: project.id, project, userId: account.session.user.id, userName, onApply: applyFromChat, onUndo: undoFromChat, onSettings: openSettings }
+  const chatProps = insideProject && { project, userId: account.session.user.id, userName, onApply: applyFromChat, onUndo: undoFromChat, onSettings: openSettings }
 
   return (
     <div className="layout">
@@ -245,7 +245,7 @@ export default function App({ account }) {
       <div className={`lookup-content-wrap${agentSplit ? ' with-chat' : ''}`} style={agentSplit ? { '--chat-w': `${chatWidth}px` } : undefined}>
       <main className={`content${agentFull ? ' content-agent' : ''}`}>
         {agentFull ? (
-          <ChatPanel {...chatProps} mode="full" onSplit={() => { setSplit(true); setView(backFromAgent.current === 'agent' ? 'details' : backFromAgent.current) }} />
+          <ChatPanel key={project.id} {...chatProps} mode="full" onSplit={() => { setSplit(true); setView(backFromAgent.current === 'agent' ? 'details' : backFromAgent.current) }} />
         ) : page === 'dashboard' ? (
           <Dashboard
             account={account}
@@ -357,7 +357,7 @@ export default function App({ account }) {
         <div className="chat-resizer" role="separator" aria-orientation="vertical" aria-label="Resize agent panel" tabIndex={0}
           onPointerDown={startResize}
           onKeyDown={e => { if (e.key === 'ArrowLeft') setChatWidth(w => Math.min(w + 24, 900)); if (e.key === 'ArrowRight') setChatWidth(w => Math.max(w - 24, 320)) }} />
-        <ChatPanel {...chatProps} mode="split" onClose={() => setSplit(false)} onFull={() => navigate('agent')} />
+        <ChatPanel key={project.id} {...chatProps} mode="split" onClose={() => setSplit(false)} onFull={() => navigate('agent')} />
       </>}
       {insideProject && !agentSplit && !agentFull && (
         <button type="button" className="chat-open" onClick={() => setSplit(true)} title="Open the agent beside this tab">

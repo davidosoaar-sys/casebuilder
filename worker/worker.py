@@ -22,6 +22,7 @@ MODEL = os.environ.get("CB_MODEL", "claude-sonnet-5-5")
 # Models the app may pick per message (anything else falls back to MODEL).
 MODELS = ("claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5")
 MAX_ATTACH_CHARS = 60000
+EFFORTS = ("low", "medium", "high")
 TOOLSETS = os.environ.get("CB_TOOLSETS", "web,memory,todo")
 TIMEOUT = int(os.environ.get("CB_TIMEOUT", "480"))
 POLL = float(os.environ.get("CB_POLL", "3"))
@@ -204,7 +205,7 @@ def parse_edits(text, fields):
     return clean or "Done.", edits, rejected
 
 
-def run_hermes(profile, prompt, api_key, model=MODEL):
+def run_hermes(profile, prompt, api_key, model=MODEL, effort=None, web=True):
     """Run one job in the account's own Hermes home.
 
     The key is handed over through the profile's .env (0600) for the length of
@@ -230,8 +231,11 @@ def run_hermes(profile, prompt, api_key, model=MODEL):
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as u:
         usage_path = u.name
     try:
-        r = subprocess.run([HERMES, "-z", prompt, "--provider", "anthropic",
-                            "-m", model, "-t", TOOLSETS, "--usage-file", usage_path],
+        tools = TOOLSETS if web else ",".join(t for t in TOOLSETS.split(",") if t.strip() != "web") or "memory"
+        cmd = [HERMES, "-z", prompt, "--provider", "anthropic", "-m", model, "-t", tools, "--usage-file", usage_path]
+        if effort in EFFORTS:
+            cmd += ["--reasoning", effort]
+        r = subprocess.run(cmd,
                            cwd=workdir, env=env, capture_output=True, text=True, timeout=TIMEOUT)
         try:
             usage = json.load(open(usage_path))
@@ -275,16 +279,18 @@ def handle(job):
         history = list(reversed(history))[:-1]  # oldest first, minus the request itself
     profile = profile_for(owner)
     t0 = time.time()
-    want = (job.get("payload") or {}).get("model")
-    model = want if want in MODELS else MODEL
-    raw, usage = run_hermes(profile, build_prompt(job, deal, history), key, model)
+    pl = job.get("payload") or {}
+    model = pl.get("model") if pl.get("model") in MODELS else MODEL
+    effort = pl.get("effort") if pl.get("effort") in EFFORTS else None
+    web = pl.get("web") is not False
+    raw, usage = run_hermes(profile, build_prompt(job, deal, history), key, model, effort, web)
     secs = round(time.time() - t0, 1)
     text, edits, rejected = parse_edits(raw, editable_fields(deal)) if deal else (raw, [], [])
     result = {"text": text, "edits": edits, "rejected": rejected, "model": model, "seconds": secs, "usage": usage}
     if job.get("deal_id") and deal:
         api("POST", "/rest/v1/chat_messages", {"deal_id": job["deal_id"], "owner_id": owner,
             "role": "assistant", "content": text, "job_id": jid,
-            "meta": {"model": model, "seconds": secs, "edits": edits, "rejected": rejected}}, prefer="return=minimal")
+            "meta": {"model": model, "effort": effort, "web": web, "seconds": secs, "edits": edits, "rejected": rejected}}, prefer="return=minimal")
     rpc("complete_job", p_id=jid, p_worker=WORKER_ID, p_result=result)
     u = usage or {}
     log("done", jid, f"{secs}s", f"edits={len(edits)} rejected={len(rejected)}", f"tokens in={u.get('input_tokens')} out={u.get('output_tokens')} calls={u.get('api_calls')}")
