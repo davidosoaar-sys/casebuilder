@@ -60,3 +60,27 @@ substituting another company's mark. Preview must not download automatically.
 No source/confidence metadata belongs in client outputs. Missing figures remain
 missing; a formatting command cannot make them computable. Publishing/sharing is
 a separate explicit user action, never a side effect of research or export.
+
+## Six-part prompt framework
+
+Live service calls use agentPrompt(command): the shared safety instruction, the command brief (trigger, allowed sources, processing, examples/output, evaluation, deterministic boundaries and judgment criteria), and the original provider response contract. Task briefs live in framework.js; JSON response formats live in responseContracts.js. Neither is accepted from the browser.
+
+Read docs/agents/command-prompts.md for the complete current system prompts, docs/agents/prompt-audit-v0.9.0.md for the before snapshot, and docs/agents/command-scorecard.md for evaluation.
+
+Run npm run prompts:commands -- --write after editing a brief. Print one exact prompt with npm run prompts:commands -- LOOKUP_PERSON. Run npm run eval:commands for fictional offline fixtures; npm test includes them. These checks verify deterministic guards and prompt wiring, not factual accuracy of a live search. No live model evaluation is claimed without a dated manual scorecard.
+
+Model choice is unchanged: RESEARCH_MODEL overrides service defaults. The chat model picker currently controls the worker conversation, not each research service. Only the four active command IDs are dispatched; design/framing/one-pager prompts are future contracts.
+
+## Public branding and profile media
+
+DISCOVER_BRAND resolves an official website and verified company linkedinUrl, then reads the website plus the public LinkedIn page when available. Actual website logo candidates outrank LinkedIn logo candidates and favicons. Only the company website supplies typography/palette. A bounded extra company-profile search can run if the site has no LinkedIn cross-link; unavailable/login-blocked pages become sourceNotes, not invented assets.
+
+FIND_STAKEHOLDERS and LOOKUP_PERSON can return photo, email/emailSourceUrl, linkedin/linkedinSourceUrl and public professional links. server/publicProfile.js binds photos/links to observed supporting pages, checks image references and raster bytes, and returns embedded image data with its source. The browser loads no remote photo URLs. Exact-name images or Person metadata on an observed biography can supply an asset when the model cannot see its URL. This is source binding, not facial identification or proof of semantic freshness.
+
+Lookup yields current identity/title before optional media. A missing photo never replaces identity with another person or a generated image. Client sanitization still enforces enabled sources; lookup writes remain behind Add to this deal. Media and its evidence survive selected-person persistence.
+
+## Research-to-design selection
+
+The workflow behind the refined samples is documented in docs/agents/brand-to-case-playbook.md. DISCOVER_BRAND now has an identity-resolution phase followed by a bounded asset-selection phase using agentPrompt(DISCOVER_BRAND, asset-selection). server/brandSelection.js presents only sourced candidates, validates the returned IDs, preserves original logo/color assets and reports readability adjustments or fallbacks. The phase cannot browse, generate financial content, invent asset URLs or approve its own visual output.
+
+The existing templates consume the resulting saved brand. Both heading/body font files are embedded where found. BrandReview exposes source decisions and limitations without changing application chrome. Missing/invalid/slow selection uses a clearly labeled deterministic fallback. A real preview remains the human visual check; future free-form layout plans are not active dispatch.

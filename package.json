@@ -8,7 +8,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node --test",
-    "build:plugin": "node scripts/build-plugin.mjs"
+    "build:plugin": "node scripts/build-plugin.mjs",
+    "prompts:commands": "node scripts/inspect-agent-prompts.mjs",
+    "eval:commands": "node scripts/evaluate-agent-commands.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.1.0",

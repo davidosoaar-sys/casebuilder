@@ -22,7 +22,9 @@ function rasterLogo(brand) {
       canvas.width = 1200
       const ratio = (img.naturalWidth || 2079.95) / (img.naturalHeight || 456.05)
       canvas.height = Math.round(1200 / ratio)
-      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+      const ctx=canvas.getContext('2d'),b=normalizeBrand(brand)
+      if(b.logoBackground!=='transparent'){ctx.fillStyle=b.logoBackground;ctx.fillRect(0,0,canvas.width,canvas.height)}
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
       resolve({ data: canvas.toDataURL('image/png'), ratio })
     }
     img.onerror = () => resolve(null)

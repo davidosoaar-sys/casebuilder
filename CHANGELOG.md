@@ -23,6 +23,17 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ---
 
+## Unreleased
+
+- 2026-10-25: Translated the manually refined sample workflow into an executable brand-selection phase and a research-to-design playbook. The agent selects only sourced candidate IDs; code checks choices/contrast and records fallbacks for preview review. Added separate heading/body font embedding and a neutral logo field when no appropriate official variant is available, reused across previews/exports. Full layout generation and server-side visual approval remain explicitly unsupported.
+
+- 2026-10-25: Fixed the reproduced Adidas discovery failure: honor HTML base paths, recognize home-link title attributes even when the input name is misspelled, prioritize declared heading/body fonts over generic CSS reset fonts, and accept signature-validated TTF/OTF font files. Added the verified Adidas corporate domain/spelling alias. Missing logos now produce an explicit incomplete/error state rather than a misleading ready result. Validation: all 290 tests and production build pass; actual localhost API requests for both Adidas and addidas return HTTP 200 with an official logo and embedded font.
+
+- 2026-10-25: Extended brand discovery to verify and read the company website and public company LinkedIn page, using actual logo assets and reporting blocked access. Company fonts/palette remain sourced from its website. Added source-verified embedded portraits, published emails, LinkedIn and professional public links to Find people, lookup and chat result cards; identity/current role still stream before optional media. Unsupported images/links are dropped and selected media survives deal/case-file storage. Validation: all 287 tests and app/plugin builds pass; isolated lookup, people and chat views checked at desktop/mobile with fictional data. Live model/photo retrieval quality has not been evaluated for this revision.
+
+- 2026-10-25: Expanded all seven command briefs with explicit triggers, real input/source limits, processing, fictional output examples, quality gates, deterministic boundaries and judgment criteria. The four live services now share an inspectable full prompt builder and separate provider response contracts; future design contracts remain inactive. Preserved the v0.9.0 prompt snapshot and added generated current prompt documentation and a human scorecard.
+- Added an offline command evaluation suite and regression checks. Fixed chat LinkedIn lookup payload naming, restricted suggestion searches to blank fields, and protected manually entered values from late suggestion responses. Existing model equations and client deck are unchanged. Validation: all 277 tests, 11 offline command evaluations and the production build pass. Live model search quality has not been evaluated for this prompt revision.
+
 ## v0.9.0 (2026-10-25)
 
 - Added company brand review after stakeholder setup, with logo/palette/type preview, correction controls and a deliberate continue-without-logo option. Discovered logos also appear on the setup map.

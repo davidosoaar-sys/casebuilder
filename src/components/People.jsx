@@ -1,4 +1,6 @@
 import React, { useState } from 'react'
+import {ProfileAvatar,PublicProfileLinks} from './ProfileMedia.jsx'
+import {publicProfileUrl} from '../profileMedia.js'
 import { resolve } from './Deck.jsx'
 import AppLogo from './AppLogo.jsx'
 import { uid } from '../projects.js'
@@ -211,6 +213,7 @@ function PersonCard({ person: p, onChange, onRemove }) {
   return (
     <article className="person">
       <div className="person-top">
+        <ProfileAvatar photo={p.photo} name={p.name}/>
         <div>
           {editing ? (
             <input className="person-edit" value={p.name} onChange={e => set('name', e.target.value)} placeholder="Name" />
@@ -244,10 +247,11 @@ function PersonCard({ person: p, onChange, onRemove }) {
       ) : (
         <>
           {p.bio && <p className="person-bio">{p.bio}</p>}
+          <PublicProfileLinks links={p.links?.filter(link=>link.url!==p.linkedin)}/>
           <dl className="person-meta">
             <div>
               <dt>Email</dt>
-              <dd>{p.email ? <a href={`mailto:${p.email}`}>{p.email}</a> : <span className="none">Not publicly listed</span>}</dd>
+              <dd>{p.email ? <a href={`mailto:${p.email}`}>{p.email}</a> : <span className="none">Not publicly listed</span>}{publicProfileUrl(p.emailSourceUrl)&&<a className="profile-link-source" href={p.emailSourceUrl} target="_blank" rel="noreferrer noopener"> Email source</a>}</dd>
             </div>
             <div>
               <dt>LinkedIn</dt>

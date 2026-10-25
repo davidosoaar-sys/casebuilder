@@ -67,7 +67,7 @@ async function findPeople(cmd, project) {
 
 async function suggestInputs(cmd, project, ctx) {
   const blank = project.fields.filter(f => !f.deleted && NUMERIC_INPUTS.includes(f.key) && isBlank(f.value)).map(f => f.key)
-  const keys = (cmd.keys?.length ? cmd.keys.filter(k => NUMERIC_INPUTS.includes(k)) : blank)
+  const keys = (cmd.keys?.length ? cmd.keys.filter(k => blank.includes(k)) : blank)
   if (!keys.length) return { kind: 'values', suggestions: [], gaps: [], note: 'Every input already has a value.' }
   const labels = Object.fromEntries(project.fields.map(f => [f.key, `${f.label}${f.unit ? ` (${f.unit})` : ''}`]))
   const result = await suggestValues({
@@ -89,7 +89,7 @@ async function lookupPerson(cmd, project, ctx) {
   const documents = (project.documents || []).filter(d => enabledSources.includes(d.source))
   const dealContext = Object.fromEntries(project.fields.filter(f => ['archetype', 'strategicPriority'].includes(f.key)).map(f => [f.key, f.value]))
   let last = null
-  const request = { name: cmd.name || '', company: cmd.company || project.name || '', ...(cmd.linkedin ? { linkedin: cmd.linkedin } : {}), ...(cmd.email ? { email: cmd.email } : {}) }
+  const request = { name: cmd.name || '', company: cmd.company || project.name || '', ...(cmd.linkedin ? { linkedinUrl: cmd.linkedin } : {}), ...(cmd.email ? { email: cmd.email } : {}) }
   for await (const update of searchPerson({ ...request, enabledSources, documents, dealContext }, { signal: AbortSignal.timeout(90000) })) last = update
   const person = last ? sanitizePerson(last, enabledSources) : null
   return { kind: 'person', person }

@@ -117,3 +117,61 @@ test('unsafe inline logo is dropped and an unrelated first font face is not subs
  assert.equal(result.fontData,'')
  assert.equal(result.headingFont,'Company Sans')
 })
+
+
+test('branding reads the official site and its verified public company LinkedIn logo without adopting LinkedIn fonts',async()=>{
+ const calls=[],linkedin='https://www.linkedin.com/company/example'
+ const r=await discoverBrand({company:'Example',website:'https://company.example/'},async url=>{
+  calls.push(url)
+  if(url==='https://company.example/')return {url,type:'text/html',buffer:Buffer.from('<a href="'+linkedin+'">LinkedIn</a><style>:root{--primary:#123456}body{font-family:Company Sans}</style>')}
+  if(url===linkedin)return {url,type:'text/html',buffer:Buffer.from('<img alt="Example logo" src="https://media.licdn.com/example.png"><style>body{font-family:LinkedIn Sans;color:#0a66c2}</style>')}
+  if(url==='https://media.licdn.com/example.png')return {url,type:'image/png',buffer:Buffer.from('png-fixture')}
+  throw Error('Unexpected request '+url)
+ })
+ assert.ok(calls.includes(linkedin));assert.ok(r.logo.startsWith('data:image/png;base64,'))
+ assert.equal(r.linkedinUrl,linkedin);assert.equal(r.headingFont,'Company Sans');assert.equal(r.primary,'#123456')
+ assert.ok(r.sources.includes(linkedin))
+})
+test('blocked LinkedIn does not break official website assets or pretend its assets were used',async()=>{
+ const linkedin='https://www.linkedin.com/company/example'
+ const r=await discoverBrand({company:'Example',website:'https://company.example/'},async url=>{
+  if(url===linkedin)throw Error('403')
+  return {url,type:url.endsWith('.png')?'image/png':'text/html',buffer:Buffer.from(url.endsWith('.png')?'png':'<a href="/" aria-label="Example home"><img alt="Example" src="/logo.png"></a><a href="'+linkedin+'">LinkedIn</a>')}
+ })
+ assert.ok(r.logo);assert.equal(r.status,'ready');assert.ok(!r.sources.includes(linkedin))
+ assert.equal(r.sourceNotes[0].status,'unavailable')
+})
+
+
+test('branding can search for a verified company LinkedIn page when the official site does not link it',async()=>{
+ const linkedin='https://www.linkedin.com/company/example',calls=[]
+ const client={messages:{create:async options=>{assert.equal(options.tools[0].max_uses,1);return {content:[{type:'web_search_tool_result',content:[{url:linkedin}]},{type:'text',text:JSON.stringify({website:'https://company.example/',linkedinUrl:linkedin})}]}}}}
+ const result=await discoverBrand({company:'Example',website:'https://company.example/'},async url=>{calls.push(url);return {url,type:'text/html',buffer:Buffer.from('<p>No logo</p>')}},client)
+ assert.equal(result.linkedinUrl,linkedin);assert.ok(calls.includes(linkedin))
+})
+
+
+test('localized home titles and HTML base paths work with or without trailing slash',async()=>{
+ for(const homepage of ['https://company.example/en','https://company.example/en/']){
+  const requested=[]
+  const r=await discoverBrand({company:'A misspelled company',website:homepage},async url=>{
+   requested.push(url)
+   if(url===homepage)return {url,type:'text/html',buffer:Buffer.from('<base href="/en/"><link rel="stylesheet" href="public/styles.css"><a href="/en" title="home"><img src="public/company-logo-white.svg"></a>')}
+   if(url==='https://company.example/en/public/styles.css')return {url,type:'text/css',buffer:Buffer.from(':root{--font-sans:ui-sans-serif;--font-company:Company Display}html{font-family:Company Body,sans-serif}h1:not(.hidden){font-family:var(--font-company)}@font-face{font-family:Company Display;src:url(assets/display.ttf)}')}
+   if(url==='https://company.example/en/public/company-logo-white.svg')return {url,type:'image/svg+xml',buffer:Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><path fill="white" d="M0 0h10v10H0z"/></svg>')}
+   if(url==='https://company.example/en/public/assets/display.ttf')return {url,type:'font/ttf',buffer:Buffer.concat([Buffer.from([0,1,0,0]),Buffer.from('font-fixture')])}
+   throw Error('Wrong relative path: '+url)
+  })
+  assert.equal(r.status,'ready');assert.ok(r.logo);assert.equal(r.headingFont,'Company Display');assert.equal(r.bodyFont,'Company Body')
+  assert.ok(r.fontData.startsWith('data:font/ttf;base64,'));assert.ok(requested.includes('https://company.example/en/public/company-logo-white.svg'))
+ }
+})
+test('a successful company-page fetch without a usable logo is not reported ready',async()=>{
+ const r=await discoverBrand({company:'Example',website:'https://company.example/'},async url=>({url,type:'text/html',buffer:Buffer.from('<p>No logo assets</p>')}))
+ assert.equal(r.status,'error');assert.equal(r.logo,'');assert.match(r.message,/no usable company logo/i)
+})
+test('the verified Adidas corporate domain also handles the observed addidas spelling',async()=>{
+ const requested=[]
+ const r=await discoverBrand({company:'addidas'},async url=>{requested.push(url);return {url,type:'text/html',buffer:Buffer.from('<p>No assets in this fixture</p>')}})
+ assert.equal(requested[0],'https://www.adidas-group.com/en/');assert.equal(r.status,'error')
+})

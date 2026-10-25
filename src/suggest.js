@@ -101,7 +101,8 @@ function notesFor({ connectors, documents, agentState, beatenBy }) {
 //   given only the connections that are allowed; it can always search the web itself.
 export async function suggestValues({ company, fields, keys, connectors, documents = [], model, agent }) {
   const values = valuesOf(fields)
-  const want = keys.filter(k => NUMERIC_INPUTS.includes(k))
+  const want = keys.filter(k => fields.some(f => f.key === k && !f.deleted && NUMERIC_INPUTS.includes(k) && isBlank(f.value)))
+  if (!want.length) return { suggestions: {}, gaps: {}, enabled: enabledLabels(connectors), agent: 'ok' }
   const candidates = {} // key -> [suggestion]
   const add = (key, s) => (candidates[key] || (candidates[key] = [])).push(s)
 
@@ -160,7 +161,7 @@ export async function suggestValues({ company, fields, keys, connectors, documen
 export function applySuggestions(fields, result, { keys, now }) {
   const ctx = { now, enabled: result.enabled }
   return fields.map(f => {
-    if (f.deleted || !keys.includes(f.key)) return f
+    if (f.deleted || !keys.includes(f.key) || !isBlank(f.value)) return f
     const s = result.suggestions[f.key]
     if (s) return withSuggestion(f, s, ctx)
     const notes = result.gaps[f.key]

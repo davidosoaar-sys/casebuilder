@@ -2,6 +2,7 @@
 import { CONNECTORS } from './connectors.js'
 import { INPUT_FIELDS, STAKEHOLDERS } from './valueModel.js'
 import { uid } from './uid.js'
+import {publicProfileUrl,profilePhotoData} from './profileMedia.js'
 
 const publicTypes = new Set(['web', 'linkedin', 'github', 'blog', 'conference', 'podcast', 'earnings', 'public'])
 const connectorDomains = { claude: ['claude.ai'], gong: ['gong.io', 'gong.com'], hubspot: ['hubspot.com', 'hubspot.net'], slack: ['slack.com'], clay: ['clay.com'], lemlist: ['lemlist.com'] }
@@ -41,6 +42,12 @@ export function matchPersonRole(title) {
 export function sanitizePerson(raw = {}, enabledSources = ['web']) {
   const out = {}
   for (const key of ['name', 'title', 'company', 'tenure', 'reportsTo', 'likelyCares']) out[key] = sourcedClaim(raw[key], enabledSources)
+  out.photo = raw.photo && sourceFor(raw.photo,enabledSources) && profilePhotoData(raw.photo.dataUrl) ? {dataUrl:profilePhotoData(raw.photo.dataUrl),...sourceFor(raw.photo,enabledSources)} : null
+  out.links = (Array.isArray(raw.links)?raw.links:[]).slice(0,8).flatMap(link=>{const source=sourceFor(link,enabledSources),url=publicProfileUrl(link?.url);return source&&url?[{url,label:text(link.label)||new URL(url).hostname,...source}]:[]})
+  out.email = sourcedClaim(raw.email,enabledSources)
+  if(out.email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(out.email.value))out.email=null
+  out.linkedin = sourcedClaim(raw.linkedin,enabledSources)
+  if(out.linkedin&&!/^https:\/\/(?:[a-z]{2,3}\.|www\.)?linkedin\.com\/in\//i.test(publicProfileUrl(out.linkedin.value)))out.linkedin=null
   out.reports = (Array.isArray(raw.reports) ? raw.reports : []).map(x => sourcedClaim(x, enabledSources)).filter(Boolean)
   out.publicSignals = (Array.isArray(raw.publicSignals) ? raw.publicSignals : []).map(x => sourcedClaim(x, enabledSources)).filter(c => c && publicTypes.has(c.sourceType))
   // Discussion prompts are grounded in already validated public evidence.
@@ -56,7 +63,7 @@ export function sanitizePerson(raw = {}, enabledSources = ['web']) {
   // A title is required as evidence for an inferred role. Do not display an
   // agent's unsupported explanation or high confidence for an unfamiliar title.
   out.roleMatch = out.title ? { ...matchPersonRole(out.title.value), sourceUrl: out.title.sourceUrl, sourceType: out.title.sourceType } : null
-  out.sourcesUsed = [...new Set([out.name, out.title, out.company, out.tenure, out.reportsTo, out.likelyCares, ...out.reports, ...out.publicSignals].filter(Boolean).map(x => publicTypes.has(x.sourceType) ? 'web' : x.sourceType))]
+  out.sourcesUsed = [...new Set([out.name, out.title, out.company, out.tenure, out.reportsTo, out.likelyCares, out.email, out.linkedin, out.photo, ...out.links, ...out.reports, ...out.publicSignals].filter(Boolean).map(x => publicTypes.has(x.sourceType) ? 'web' : x.sourceType))]
   const skipped = Array.isArray(raw.sourcesSkipped) ? raw.sourcesSkipped : []
   out.sourcesSkipped = CONNECTORS.map(c => {
     const reason = skipped.find(x => (x.source || x.key) === c.key)?.reason
@@ -94,7 +101,7 @@ export function addPersonToDeal(deal, person, now = Date.now()) {
   if ((deal.stakeholders || []).some(s => s.namedPeople?.some(p => p.lookupId === id))) return deal
   const existing = deal.stakeholders.find(s => s.key === match.key || s.mappedRoleKey === match.key)
   const key = existing?.key || match.key
-  const named = { id: uid(), lookupId: id, name: person.name.value, title: person.title.value, company: person.company?.value || '', found: true, confidence: match.confidence, sources: [...new Set([person.name.sourceUrl, person.title.sourceUrl])], mapping: { ...match, state: 'inferred', origin: 'Inferred from title, not confirmed' }, brief: person }
+  const named = { id: uid(), lookupId: id, name: person.name.value, title: person.title.value, company: person.company?.value || '', found: true, photo: person.photo || null, email: person.email?.value || '', emailSourceUrl: person.email?.sourceUrl || null, linkedin: person.linkedin?.value || '', linkedinSourceUrl: person.linkedin?.sourceUrl || null, links: person.links || [], confidence: match.confidence, sources: [...new Set([person.name.sourceUrl, person.title.sourceUrl])], mapping: { ...match, state: 'inferred', origin: 'Inferred from title, not confirmed' }, brief: person }
   const stakeholder = existing || { key, builtin: true }
   const updated = { ...stakeholder, namedPeople: [...(stakeholder.namedPeople || []), named] }
   return { ...deal, updatedAt: now, stakeholders: existing ? deal.stakeholders.map(s => s.key === key ? updated : s) : [...deal.stakeholders, updated], people: { ...deal.people, [key]: [...(deal.people?.[key] || []), named] } }

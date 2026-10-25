@@ -155,7 +155,7 @@ async function layoutBlock(b, deps, theme = DEFAULTS) {
     case 'logo': {
       const png = await deps.logoPng()
       if (!png) return { h: 0, draw: () => {} }
-      return { h: 0.7, draw: (s, y, k) => s.addImage({ data: png.data, x: MX, y, w: 0.34 * png.ratio * k, h: 0.34 * k }) }
+      return { h: 0.7, draw: (s, y, k) => {const w=0.34*png.ratio*k,h=0.34*k;if(theme.logoBackground&&theme.logoBackground!=='transparent')s.addShape('rect',{x:MX,y,w,h,fill:{color:hex(theme.logoBackground)},line:{transparency:100}});s.addImage({data:png.data,x:MX,y,w,h})} }
     }
     case 'divider':
       return { h: 0.35, draw: (s, y) => s.addShape('line', { x: MX, y: y + 0.1, w: CW, h: 0, line: { color: C.line, width: 1 } }) }
@@ -309,7 +309,7 @@ export async function buildPptx({ company, slides, deps, brand }) {
   const b = normalizeBrand(brand)
   const colors = brand ? { ...DEFAULTS.colors, bg: hex(b.background), panel: hex(b.surface), ink: hex(b.text), strong: hex(b.text), dim: hex(b.muted), faint: hex(b.muted), accent: hex(b.primary), mint: hex(b.primary) } : DEFAULTS.colors
   const styles = Object.fromEntries(Object.entries(DEFAULTS.styles).map(([key, style]) => [key, { ...style, color: style.color === DEFAULTS.colors.strong ? colors.strong : style.color === DEFAULTS.colors.ink ? colors.ink : style.color === DEFAULTS.colors.mint ? colors.mint : style.color === DEFAULTS.colors.faint ? colors.faint : style.color === DEFAULTS.colors.dim ? colors.dim : style.color }]))
-  const theme = { colors, font: brand ? officeFont(b.bodyFont) : DEFAULTS.font, headingFont:brand ? officeFont(b.headingFont) : DEFAULTS.font, styles }
+  const theme = { colors, logoBackground:b.logoBackground, font: brand ? officeFont(b.bodyFont) : DEFAULTS.font, headingFont:brand ? officeFont(b.headingFont) : DEFAULTS.font, styles }
   const C = colors, FONT = theme.font
   const pptx = new deps.PptxGenJS()
   pptx.layout = 'LAYOUT_WIDE'

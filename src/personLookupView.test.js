@@ -11,7 +11,7 @@ function loadComponent(name){
   const source=fs.readFileSync(new URL('components/'+name,import.meta.url),'utf8')
   const compiled=transformSync(source,{loader:'jsx',format:'cjs',tsconfigRaw:{}}).code
   const module={exports:{}}
-  const resolve=id=>id==='./PageHead.jsx'?loadComponent('PageHead.jsx'):require(id)
+  const resolve=id=>id.endsWith('.jsx')?loadComponent(id.replace('./','')):require(id.startsWith('../')?'./'+id.slice(3):id)
   new Function('require','module','exports',compiled)(resolve,module,module.exports)
   return module.exports
 }
@@ -52,4 +52,15 @@ test('ambiguous and error states retain selection and query without case-write a
   const error=render({results:[{request:{name:'Alex Example'},status:'error',error:'Agent unavailable'}]})
   assert.ok(error.includes('value="Alex Example"'))
   assert.ok(error.includes('Agent unavailable'))
+})
+
+
+test('public portrait, current role and sourced professional links render without loading remote image URLs',()=>{
+ const dataUrl='data:image/png;base64,'+Buffer.from('fixture').toString('base64')
+ const p={...person,photo:{dataUrl,sourceUrl:'https://company.example/team'},links:[{label:'GitHub',url:'https://github.com/alex',sourceUrl:'https://company.example/team'}],email:claim('alex@company.example'),linkedin:claim('https://www.linkedin.com/in/alex')}
+ const html=render({results:[{...result,person:p}]})
+ assert.ok(html.includes('public profile photo'));assert.ok(html.includes('src="'+dataUrl+'"'))
+ assert.ok(html.includes('Head of Platform'));assert.ok(html.includes('GitHub'));assert.ok(html.includes('mailto:alex@company.example'));assert.ok(html.includes('linkedin.com/in/alex'))
+ const missing=render({results:[{...result,person:{...p,photo:{dataUrl:'https://tracking.example/photo.png',sourceUrl:'https://company.example/team'}}}]})
+ assert.ok(!missing.includes('tracking.example'));assert.ok(missing.includes('Photo not found'))
 })

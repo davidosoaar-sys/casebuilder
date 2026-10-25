@@ -2,6 +2,7 @@
 // values, Person lookup, Find branding). Proposals only: each has its own
 // Add / Use button, and nothing is written until the user picks.
 import React from 'react'
+import {ProfileAvatar,PublicProfileLinks} from './ProfileMedia.jsx'
 import { COMMAND_LABEL, describeCommand } from '../agentRunner.js'
 import { describeValue } from '../agentEdits.js'
 
@@ -53,14 +54,15 @@ function PeopleResult({ r, picked, pick, i }) {
               const id = `${i}:person:${g.roleKey}:${p.name.toLowerCase()}`
               return (
                 <div key={id} className="cmd-row">
-                  <div className="cmd-main">
+                  <ProfileAvatar photo={p.photo} name={p.name}/><div className="cmd-main">
                     <strong>{p.name}</strong><span className="cmd-dim">{p.title}</span>
                     {p.bio && <p className="cmd-bio">{p.bio}</p>}
+                    <PublicProfileLinks links={p.links?.filter(link=>link.url!==p.linkedin)}/>
                     <div className="cmd-meta">
                       {p.confidence && <span className={`cmd-conf cmd-${p.confidence}`}>{p.confidence}</span>}
                       {p.linkedin && <a href={p.linkedin} target="_blank" rel="noreferrer">LinkedIn</a>}
                       {p.email && <span>{p.email}</span>}
-                      <Sources urls={p.source_urls} />
+                      <Sources urls={p.sources || p.source_urls} />
                     </div>
                   </div>
                   <PickButton done={picked[id]} label="Add to deal" doneLabel="Added" onClick={() => pick({ id, type: 'person', roleKey: g.roleKey, person: p })} />
@@ -111,10 +113,11 @@ function PersonResult({ r, picked, pick, i }) {
   return (
     <div className="cmd-body">
       <div className="cmd-row">
-        <div className="cmd-main">
+        <ProfileAvatar photo={p.photo} name={p.name.value}/><div className="cmd-main">
           <strong>{p.name.value}</strong><span className="cmd-dim">{p.title?.value}{p.company?.value ? ` · ${p.company.value}` : ''}</span>
-          {p.roleMatch?.role?.value && <p className="cmd-bio">Likely the {p.roleMatch.role.value} ({p.roleMatch.confidence}, inferred from title)</p>}
+          {p.roleMatch?.role && <p className="cmd-bio">Likely the {p.roleMatch.role} ({p.roleMatch.confidence}, inferred from title)</p>}
           {p.likelyCares?.value && <p className="cmd-bio">Probably cares about: {p.likelyCares.value}</p>}
+          <PublicProfileLinks links={p.links} email={p.email} linkedin={p.linkedin}/>
           <div className="cmd-meta"><Sources urls={[p.name.sourceUrl, p.title?.sourceUrl]} /></div>
         </div>
         <PickButton done={picked[id]} label="Add to deal" doneLabel="Added" disabled={!p.roleMatch} onClick={() => pick({ id, type: 'lookup', person: p })} />

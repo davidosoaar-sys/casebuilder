@@ -1783,3 +1783,9 @@ body.is-resizing iframe { pointer-events: none; }
 .cmd-logo { max-height: 36px; max-width: 160px; object-fit: contain; align-self: flex-start; margin-bottom: 4px; }
 .cmd-swatches { display: flex; gap: 4px; margin: 2px 0; }
 .cmd-swatches span { width: 18px; height: 18px; border-radius: 4px; border: 1px solid var(--line-2); }
+
+.profile-avatar-wrap{width:48px;height:48px;flex:0 0 48px}.profile-avatar-wrap>a{display:block;width:100%;height:100%;border-radius:50%;overflow:hidden}.profile-avatar-image{width:100%;height:100%;object-fit:cover;display:block}.profile-avatar-fallback{display:flex;align-items:center;justify-content:center;width:100%;height:100%;border-radius:50%;background:var(--panel-2);color:var(--ink-dim);font-size:15px;font-weight:600;border:1px solid var(--line)}
+.lookup-profile-avatar{width:56px;height:56px;flex-basis:56px}.profile-public-links{display:flex;flex-wrap:wrap;gap:8px 16px;margin:12px 0;font-size:12px;overflow-wrap:anywhere}.profile-public-links:empty{display:none}.profile-public-links>span{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}.profile-link-source{font-size:11px;color:var(--ink-dim)}.person-top>.profile-avatar-wrap+div{flex:1;min-width:0}.cmd-row>.profile-avatar-wrap{width:40px;height:40px;flex-basis:40px}.lookup-person-head .lookup-person-identity{min-width:0}
+
+.person-meta dd .profile-link-source{margin-left:8px}
+.brand-review{margin:16px 0;padding:12px 0;border-top:1px solid var(--line);font-size:12px;color:var(--ink-dim)}.brand-review summary{cursor:pointer;color:var(--ink);padding:4px 0}.brand-review p{line-height:1.6}.brand-review dl{margin:12px 0}.brand-review dl>div{display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}.brand-review dt{text-transform:capitalize;color:var(--ink)}.brand-review dd{margin:0;overflow-wrap:anywhere}.brand-review dd small{display:inline-block;margin-left:8px}.brand-review dd a{margin-left:8px}

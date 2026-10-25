@@ -1,0 +1,267 @@
+{
+  "note": "Fictional offline fixtures. These test prompt wiring and deterministic guards, not live search accuracy.",
+  "cases": [
+    {
+      "id": "brand-home-identity",
+      "command": "DISCOVER_BRAND",
+      "company": "Example",
+      "website": "https://company.example/",
+      "html": "<img alt=\"Customer logo\" src=\"/customer.svg\"><a href=\"/\" aria-label=\"Example home\"><img alt=\"Example\" src=\"/official.svg\"></a>",
+      "expected": {
+        "logoUrl": "https://company.example/official.svg"
+      }
+    },
+    {
+      "id": "brand-no-invented-logo",
+      "command": "DISCOVER_BRAND",
+      "company": "Example",
+      "website": "https://company.example/",
+      "html": "<img alt=\"Unrelated customer logo\" src=\"/wrong.svg\">",
+      "expected": {
+        "logoUrl": ""
+      }
+    },
+    {
+      "id": "people-supported-and-no-guessed-email",
+      "command": "FIND_STAKEHOLDERS",
+      "observed": [
+        "https://company.example/team"
+      ],
+      "raw": {
+        "people": [
+          {
+            "name": "Alex Example",
+            "title": "VP Engineering",
+            "email": "alex@company.example",
+            "linkedin": "https://linkedin.com/in/invented",
+            "bio": "Engineering leader.",
+            "source_urls": [
+              "https://company.example/team"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      "expected": {
+        "people": 1,
+        "email": null,
+        "linkedin": null
+      }
+    },
+    {
+      "id": "people-unobserved-source-dropped",
+      "command": "FIND_STAKEHOLDERS",
+      "observed": [],
+      "raw": {
+        "people": [
+          {
+            "name": "Alex Example",
+            "source_urls": [
+              "https://company.example/team"
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "people": 0
+      }
+    },
+    {
+      "id": "lookup-disabled-source",
+      "command": "LOOKUP_PERSON",
+      "enabledSources": [
+        "web"
+      ],
+      "raw": {
+        "name": {
+          "value": "Alex Example",
+          "sourceUrl": "https://workspace.slack.com/archives/1",
+          "sourceType": "slack"
+        },
+        "title": {
+          "value": "CTO",
+          "sourceUrl": "https://workspace.slack.com/archives/1",
+          "sourceType": "slack"
+        }
+      },
+      "expected": {
+        "name": null,
+        "roleConfidence": null
+      }
+    },
+    {
+      "id": "lookup-unfamiliar-role",
+      "command": "LOOKUP_PERSON",
+      "enabledSources": [
+        "web"
+      ],
+      "raw": {
+        "name": {
+          "value": "Alex Example",
+          "sourceUrl": "https://company.example/team",
+          "sourceType": "web"
+        },
+        "title": {
+          "value": "Chief Story Wizard",
+          "sourceUrl": "https://company.example/team",
+          "sourceType": "web"
+        }
+      },
+      "expected": {
+        "name": "Alex Example",
+        "roleConfidence": "low"
+      }
+    },
+    {
+      "id": "lookup-common-name-requires-selection",
+      "command": "LOOKUP_PERSON",
+      "enabledSources": [
+        "web"
+      ],
+      "raw": {
+        "name": {
+          "value": "Alex Example",
+          "sourceUrl": "https://company.example/team",
+          "sourceType": "web"
+        },
+        "title": {
+          "value": "CTO",
+          "sourceUrl": "https://company.example/team",
+          "sourceType": "web"
+        },
+        "candidates": [
+          {
+            "name": {
+              "value": "Alex Example",
+              "sourceUrl": "https://company.example/team",
+              "sourceType": "web"
+            }
+          },
+          {
+            "name": {
+              "value": "Alex Example",
+              "sourceUrl": "https://other.example/team",
+              "sourceType": "web"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "candidates": 2,
+        "unchanged": true
+      }
+    },
+    {
+      "id": "input-exact-customer-quote",
+      "command": "SUGGEST_INPUTS",
+      "only": [
+        "engineers"
+      ],
+      "documents": [
+        {
+          "source": "gong",
+          "name": "Fictional discovery call",
+          "text": "We have 500 engineers."
+        }
+      ],
+      "raw": {
+        "suggestions": [
+          {
+            "key": "engineers",
+            "value": 500,
+            "document": "d1",
+            "quote": "We have 500 engineers.",
+            "confidence": "high"
+          }
+        ]
+      },
+      "expected": {
+        "values": [
+          500
+        ],
+        "states": [
+          "input"
+        ]
+      }
+    },
+    {
+      "id": "input-fabricated-quote-dropped",
+      "command": "SUGGEST_INPUTS",
+      "only": [
+        "engineers"
+      ],
+      "documents": [
+        {
+          "source": "gong",
+          "name": "Fictional discovery call",
+          "text": "We have 500 engineers."
+        }
+      ],
+      "raw": {
+        "suggestions": [
+          {
+            "key": "engineers",
+            "value": 900,
+            "document": "d1",
+            "quote": "We have 900 engineers."
+          }
+        ]
+      },
+      "expected": {
+        "values": [],
+        "states": []
+      }
+    },
+    {
+      "id": "input-benchmark-remains-suggestion",
+      "command": "SUGGEST_INPUTS",
+      "only": [
+        "hourlyCost"
+      ],
+      "observed": [
+        "https://publication.example/report"
+      ],
+      "raw": {
+        "suggestions": [
+          {
+            "key": "hourlyCost",
+            "value": 100,
+            "link": "https://publication.example/report",
+            "publication": "Fictional published benchmark"
+          }
+        ]
+      },
+      "expected": {
+        "values": [
+          100
+        ],
+        "states": [
+          "suggestion"
+        ]
+      }
+    },
+    {
+      "id": "input-filled-key-not-researched",
+      "command": "SUGGEST_INPUTS",
+      "only": [
+        "engineers"
+      ],
+      "filled": {
+        "engineers": 500
+      },
+      "raw": {
+        "suggestions": [
+          {
+            "key": "engineers",
+            "value": 900
+          }
+        ]
+      },
+      "expected": {
+        "values": [],
+        "states": [],
+        "calls": 0
+      }
+    }
+  ]
+}

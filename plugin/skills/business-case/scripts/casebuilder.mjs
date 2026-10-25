@@ -15996,6 +15996,17 @@ function resolveSlides(deck, env) {
   }).filter((s) => !s.dropped).map(({ dropped, ...s }) => s);
 }
 
+// src/profileMedia.js
+function publicProfileUrl(value) {
+  try {
+    const u = new URL(value);
+    if (u.protocol !== "https:" || u.username || u.password || u.port || u.hostname === "localhost" || !u.hostname.includes(".") || /^\d+\.\d+\.\d+\.\d+$/.test(u.hostname)) return "";
+    return u.href;
+  } catch {
+    return "";
+  }
+}
+
 // src/export/websiteFramework.js
 var hex = (value, fallback) => /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
 function luminance(color) {
@@ -16068,7 +16079,7 @@ var COLOR_KEYS = ["primary", "background", "surface", "text", "muted"];
 var cleanFont = (value) => String(value || "").replace(/[^a-zA-Z0-9 ,_-]/g, "").slice(0, 100);
 var fontStack = (value) => {
   const names = cleanFont(value).split(",").map((n) => n.trim()).filter(Boolean);
-  const generic = ["system-ui", "sans-serif", "serif", "monospace", "cursive", "fantasy"];
+  const generic = ["ui-sans-serif", "system-ui", "sans-serif", "serif", "monospace", "cursive", "fantasy"];
   if (!names.length) return "sans-serif";
   const stack = names.map((name) => generic.includes(name) ? name : `'${name}'`);
   if (!generic.includes(names.at(-1))) stack.push("sans-serif");
@@ -16076,7 +16087,7 @@ var fontStack = (value) => {
 };
 var officeFont = (value) => {
   const name = cleanFont(value).split(",")[0].trim();
-  return { "system-ui": "Arial", "sans-serif": "Arial", serif: "Times New Roman", monospace: "Courier New" }[name] || name || "Arial";
+  return { "ui-sans-serif": "Arial", "system-ui": "Arial", "sans-serif": "Arial", serif: "Times New Roman", monospace: "Courier New" }[name] || name || "Arial";
 };
 var safeAsset = (value) => typeof value === "string" && value.length < 12e5 && /^data:image\/(png|jpeg|webp|svg\+xml);base64,[a-zA-Z0-9+/=]+$/.test(value) ? value : "";
 function normalizeBrand(value) {
@@ -16088,6 +16099,11 @@ function normalizeBrand(value) {
     bodyFont: cleanFont(b.bodyFont) || DEFAULT_BRAND.bodyFont,
     logo: safeAsset(b.logo),
     hideLogo: b.hideLogo === true,
+    logoBackground: /^#[0-9a-f]{6}$/i.test(b.logoBackground) ? b.logoBackground : "transparent",
+    fontFaces: Array.isArray(b.fontFaces) ? b.fontFaces.filter((f) => f && cleanFont(f.family) && typeof f.data === "string" && f.data.length < 9e5 && /^data:font\/(woff2?|ttf|otf);base64,[a-zA-Z0-9+/=]+$/.test(f.data)).slice(0, 3).map((f) => ({ family: cleanFont(f.family), data: f.data })) : [],
+    review: b.review?.version === 1 ? { version: 1, mode: ["agent-selected", "deterministic-fallback"].includes(b.review.mode) ? b.review.mode : "deterministic-fallback", status: "needs-review", decisions: (Array.isArray(b.review.decisions) ? b.review.decisions : []).filter((d) => d && typeof d === "object").slice(0, 10).map((d) => ({ field: String(d.field || "").slice(0, 40), value: String(d.value || "").slice(0, 160), sourceUrl: publicProfileUrl(d.sourceUrl), origin: ["observed", "readability-adjustment", "fallback"].includes(d.origin) ? d.origin : "fallback" })), adjustments: (Array.isArray(b.review.adjustments) ? b.review.adjustments : []).filter((x) => typeof x === "string").slice(0, 12).map((x) => x.slice(0, 300)), warnings: (Array.isArray(b.review.warnings) ? b.review.warnings : []).filter((x) => typeof x === "string").slice(0, 12).map((x) => x.slice(0, 300)), checks: { logoPresent: !!safeAsset(b.logo), textContrast: b.review.checks?.textContrast === true, secondaryContrast: b.review.checks?.secondaryContrast === true, visualReviewPerformed: false } } : null,
+    linkedinUrl: /^https:\/\/(?:[a-z]{2,3}\.|www\.)?linkedin\.com\/company\//i.test(publicProfileUrl(b.linkedinUrl)) ? publicProfileUrl(b.linkedinUrl) : "",
+    sourceNotes: Array.isArray(b.sourceNotes) ? b.sourceNotes.filter((n) => publicProfileUrl(n?.url) && ["used", "unavailable"].includes(n.status)).slice(0, 4).map((n) => ({ url: publicProfileUrl(n.url), status: n.status, message: String(n.message || "").slice(0, 300) })) : [],
     fontData: typeof b.fontData === "string" && b.fontData.length < 9e5 && /^data:font\/(woff2?|ttf|otf);base64,[a-zA-Z0-9+/=]+$/.test(b.fontData) ? b.fontData : "",
     fontName: cleanFont(b.fontName),
     website: typeof b.website === "string" && /^https:\/\//.test(b.website) ? b.website.slice(0, 500) : "",
@@ -16098,12 +16114,13 @@ function normalizeBrand(value) {
 }
 function fontFaceCss(value) {
   const b = normalizeBrand(value);
-  return b.fontData && b.fontName ? `@font-face{font-family:'${b.fontName}';src:url('${b.fontData}');font-display:swap;}` : "";
+  const faces = [...b.fontFaces, ...b.fontData && b.fontName ? [{ family: b.fontName, data: b.fontData }] : []];
+  return faces.filter((f, i) => faces.findIndex((x) => x.family === f.family) === i).map((f) => `@font-face{font-family:'${f.family}';src:url('${f.data}');font-display:swap;}`).join("\n");
 }
 function brandLogoHtml(value, fallback = "") {
   const b = normalizeBrand(value);
   if (b.hideLogo) return "";
-  return b.logo ? `<img src="${b.logo}" alt="Company logo" style="max-height:40px;max-width:220px;object-fit:contain">` : fallback;
+  return b.logo ? `<img src="${b.logo}" alt="Company logo" style="max-height:40px;max-width:220px;object-fit:contain;${b.logoBackground !== "transparent" ? "background:" + b.logoBackground + ";padding:8px;border-radius:4px;" : ""}">` : fallback;
 }
 function brandDocument(html, value) {
   if (!value) return html;
@@ -16498,6 +16515,10 @@ function caseFileToProject(file, { id } = {}) {
     people[key] = list.map((p) => ({
       id: p.id || uid(),
       name: p.name.trim(),
+      photo: p.photo || null,
+      links: Array.isArray(p.links) ? p.links : [],
+      emailSourceUrl: p.emailSourceUrl || null,
+      linkedinSourceUrl: p.linkedinSourceUrl || null,
       title: p.title || "",
       email: p.email || "",
       linkedin: p.linkedin || "",
@@ -17894,7 +17915,11 @@ async function layoutBlock(b, deps, theme = DEFAULTS) {
       const png = await deps.logoPng();
       if (!png) return { h: 0, draw: () => {
       } };
-      return { h: 0.7, draw: (s, y, k) => s.addImage({ data: png.data, x: MX, y, w: 0.34 * png.ratio * k, h: 0.34 * k }) };
+      return { h: 0.7, draw: (s, y, k) => {
+        const w = 0.34 * png.ratio * k, h = 0.34 * k;
+        if (theme.logoBackground && theme.logoBackground !== "transparent") s.addShape("rect", { x: MX, y, w, h, fill: { color: hex2(theme.logoBackground) }, line: { transparency: 100 } });
+        s.addImage({ data: png.data, x: MX, y, w, h });
+      } };
     }
     case "divider":
       return { h: 0.35, draw: (s, y) => s.addShape("line", { x: MX, y: y + 0.1, w: CW, h: 0, line: { color: C2.line, width: 1 } }) };
@@ -18063,7 +18088,7 @@ async function buildPptx({ company, slides, deps, brand }) {
   const b = normalizeBrand(brand);
   const colors = brand ? { ...DEFAULTS.colors, bg: hex2(b.background), panel: hex2(b.surface), ink: hex2(b.text), strong: hex2(b.text), dim: hex2(b.muted), faint: hex2(b.muted), accent: hex2(b.primary), mint: hex2(b.primary) } : DEFAULTS.colors;
   const styles = Object.fromEntries(Object.entries(DEFAULTS.styles).map(([key, style]) => [key, { ...style, color: style.color === DEFAULTS.colors.strong ? colors.strong : style.color === DEFAULTS.colors.ink ? colors.ink : style.color === DEFAULTS.colors.mint ? colors.mint : style.color === DEFAULTS.colors.faint ? colors.faint : style.color === DEFAULTS.colors.dim ? colors.dim : style.color }]));
-  const theme = { colors, font: brand ? officeFont(b.bodyFont) : DEFAULTS.font, headingFont: brand ? officeFont(b.headingFont) : DEFAULTS.font, styles };
+  const theme = { colors, logoBackground: b.logoBackground, font: brand ? officeFont(b.bodyFont) : DEFAULTS.font, headingFont: brand ? officeFont(b.headingFont) : DEFAULTS.font, styles };
   const C2 = colors, FONT3 = theme.font;
   const pptx = new deps.PptxGenJS();
   pptx.layout = "LAYOUT_WIDE";

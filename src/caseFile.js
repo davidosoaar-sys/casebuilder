@@ -203,6 +203,7 @@ export function caseFileToProject(file, { id } = {}) {
     people[key] = list.map(p => ({
       id: p.id || uid(),
       name: p.name.trim(),
+      photo: p.photo || null, links: Array.isArray(p.links) ? p.links : [], emailSourceUrl: p.emailSourceUrl || null, linkedinSourceUrl: p.linkedinSourceUrl || null,
       title: p.title || '',
       email: p.email || '',
       linkedin: p.linkedin || '',
