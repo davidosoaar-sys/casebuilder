@@ -13,7 +13,7 @@ export const COMMAND_FRAMEWORK=Object.freeze({
       "Return website/LinkedIn URLs only when the search/citations support that exact organization and domain. If several organizations remain plausible, return website:null and let the caller request the official URL.",
       "Do not return asset URLs, guessed font families, dominant-color guesses or an entire design plan in the identity response. The scanner handles supported assets and exposes missing downloads."
     ],
-    "output": "Exactly {website: HTTPS URL or null, linkedinUrl: verified public company LinkedIn URL or null}. The service fetches the website and publicly readable company LinkedIn page, validates actual logo assets, then returns the brand snapshot. Missing or blocked LinkedIn access is reported; no login bypass or guessed assets.",
+    "output": "Return {website: HTTPS URL or null, linkedinUrl: verified public company LinkedIn URL or null, brandPages: observed official brand/media resource URLs[], candidates: [{name,website}] only for genuinely ambiguous company identities}. The service fetches the website and publicly readable company LinkedIn page, validates actual logo assets, then returns the brand snapshot. Missing or blocked LinkedIn access is reported; no login bypass or guessed assets.",
     "examples": [
       {
         "scenario": "Official source identifies the company and its domain",

@@ -1,0 +1,56 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {inspectBrandImage,brandPageLinks,brandKitDownloads} from './brandAssets.js'
+import {discoverBrand} from './brand.js'
+import {decodePublicBody} from './publicWeb.js'
+import {gzipSync} from 'node:zlib'
+const svg='<svg viewBox="0 0 160 40"><path d="M0 0h160v40H0z"/></svg>'
+test('compressed CSS is decoded and decompression is size bounded',()=>{
+ const css='body{font-family:Company Sans}',bytes=gzipSync(css)
+ assert.equal(decodePublicBody(bytes,'gzip',1000).toString(),css)
+ assert.equal(decodePublicBody(bytes,'',1000).toString(),css)
+ assert.throws(()=>decodePublicBody(gzipSync('x'.repeat(10000)),'gzip',100))
+})
+test('rejects disguised images, empty SVGs, active content and low resolution raster logos',()=>{
+ for(const [bytes,type] of [[Buffer.from('not a png'),'image/png'],[Buffer.from('<svg/>'),'image/svg+xml'],[Buffer.from('<svg><image href="https://other.example/x"/></svg>'),'image/svg+xml']])assert.throws(()=>inspectBrandImage(bytes,type))
+ const png=Buffer.alloc(24);Buffer.from([137,80,78,71,13,10,26,10]).copy(png);png.writeUInt32BE(16,16);png.writeUInt32BE(16,20)
+ assert.throws(()=>inspectBrandImage(png,'image/png'),/too small/)
+ assert.equal(inspectBrandImage(Buffer.from(svg),'image/svg+xml').vector,true)
+})
+test('brand resources are official cross-links and downloaded logo variants exclude misuse',()=>{
+ const site='https://company.example/'
+ assert.deepEqual(brandPageLinks('<a href="/brand-assets">Brand kit</a><a href="https://third.example/brand">Brand kit</a><a href="/legal">Brand guidelines</a>',site),[site+'brand-assets'])
+ assert.deepEqual(brandKitDownloads('<a href="/example-primary.svg">Download primary logo</a><a href="/old.svg">Old logo</a>',site,'Example').map(c=>c.url),[site+'example-primary.svg'])
+})
+test('discovery follows an official brand kit, rejects a broken primary and uses a valid published variant',async()=>{
+ const calls=[]
+ const brand=await discoverBrand({company:'Example',website:'https://company.example/'},async url=>{
+ calls.push(url)
+ if(url.endsWith('/brand-assets'))return {url,type:'text/html',buffer:Buffer.from('<a href="/example-primary.png">Download primary logo</a><a href="/example-white.svg">Download full logo</a>')}
+ if(url.endsWith('.png'))return {url,type:'image/png',buffer:Buffer.from('html pretending to be png')}
+ if(url.endsWith('example-white.svg'))return {url,type:'image/svg+xml',buffer:Buffer.from(svg)}
+ if(url==='https://company.example/')return {url,type:'text/html',buffer:Buffer.from('<a href="/brand-assets">Brand kit</a><link rel="icon" href="/favicon.png">')}
+ throw Error('Not found')
+ })
+ assert.ok(brand.logo);assert.equal(brand.review.decisions[0].sourceUrl,'https://company.example/brand-assets')
+ assert.equal(brand.review.checks.assetBytesValidated,true);assert.ok(!brand.review.decisions[0].sourceUrl.endsWith('favicon.png'))
+})
+test('genuinely ambiguous company results return cited choices without selecting a logo',async()=>{
+ const urls=['https://first.example/','https://second.example/']
+ const client={messages:{stream:()=>({finalMessage:async()=>({content:[{type:'web_search_tool_result',content:urls.map(url=>({url}))},{type:'text',text:JSON.stringify({website:null,candidates:urls.map((website,i)=>({website,name:'Example '+i}))})}]})})}}
+ const result=await discoverBrand({company:'Ambiguous name'},()=>{throw Error('Must not fetch a guessed domain')},client)
+ assert.equal(result.logo,'');assert.equal(result.companyCandidates.length,2);assert.match(result.message,/Several companies/)
+})
+test('a company LinkedIn page cannot substitute LinkedIn’s own home-link logo',async()=>{
+ const brand=await discoverBrand({company:'Example',website:'https://company.example/'},async url=>({url,type:'text/html',buffer:Buffer.from(url.includes('linkedin.com')?'<a href="/" aria-label="LinkedIn home">'+svg+'</a>':'<a href="https://www.linkedin.com/company/example">LinkedIn</a>')}))
+ assert.equal(brand.logo,'');assert.equal(brand.status,'error')
+})
+test('normal body-font files outrank regular-weight italic variants and video icon fonts',async()=>{
+ const requested=[]
+ const brand=await discoverBrand({company:'Example',website:'https://company.example/'},async url=>{
+ requested.push(url)
+ if(url.endsWith('.woff2'))return {url,type:'font/woff2',buffer:Buffer.from('wOF2fixture')}
+ return {url,type:'text/html',buffer:Buffer.from('<a href="/" title="home">'+svg+'</a><style>@font-face{font-family:Company Sans;src:url(/italic.woff2);font-weight:400;font-style:italic}@font-face{font-family:Company Sans;src:url(/normal.woff2);font-weight:400;font-style:normal}body{font-family:Company Sans}.vjs-icon{font-family:VideoJS}</style>')}
+ })
+ assert.equal(brand.headingFont,'Company Sans');assert.ok(requested.includes('https://company.example/normal.woff2'));assert.ok(!requested.includes('https://company.example/italic.woff2'))
+})

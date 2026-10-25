@@ -1,3 +1,4 @@
+import {verifyBrandForDisplay} from './verifyBrand.js'
 import React, { useState, useMemo, useEffect, useRef } from 'react'
 import Sidebar from './components/Sidebar.jsx'
 import Deck from './components/Deck.jsx'
@@ -107,8 +108,9 @@ export default function App({ account }) {
       const response = await fetch('/api/brand', { method: 'POST', headers: await apiHeaders(code ? { 'x-access-code': code } : {}), body: JSON.stringify({ command:AGENT_COMMANDS.DISCOVER_BRAND,company, website: website && !/^https:\/\//i.test(website) ? `https://${website}` : website }), signal: AbortSignal.timeout(55000) })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Brand discovery could not finish.')
+      const checked=await verifyBrandForDisplay(result)
       if (brandScans.current.get(id) !== token) return
-      setProjects(ps => ps.map(p => p.id === id ? { ...p, brand: result, updatedAt: Date.now() } : p))
+      setProjects(ps => ps.map(p => p.id === id ? { ...p, brand: checked, updatedAt: Date.now() } : p))
     } catch (error) {
       if (brandScans.current.get(id) !== token) return
       setProjects(ps => ps.map(p => p.id === id ? { ...p, brand: { ...p.brand, status: 'error', message: error.message || 'Brand discovery could not finish. You can edit everything manually.' } } : p))

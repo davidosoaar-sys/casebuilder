@@ -9,6 +9,7 @@ import { NO_ONE } from './deck/stakeholders.js'
 import { buildPptx } from './export/pptx.js'
 import PptxGenJS from 'pptxgenjs'
 import JSZip from 'jszip'
+const logoPng=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAKAAAAAoCAYAAAB5LPGYAAAAg0lEQVR4nO3SIQEAIBDAwE9CJsLSD2JMcOL8xGbtc6EydQB/MyApA5IyICkDkjIgKQOSMiApA5IyICkDkjIgKQOSMiApA5IyICkDkjIgKQOSMiApA5IyICkDkjIgKQOSMiApA5IyICkDkjIgKQOSMiApA5IyICkDkjIgKQOSMiApA5J6Mvc8HCzG4hMAAAAASUVORK5CYII=','base64')
 
 test('brand input cannot inject CSS, HTML or external assets', () => {
   const b = normalizeBrand({ primary: 'red;position:fixed', headingFont: "X';}</style><script>alert(1)</script>", logo: 'javascript:alert(1)', fontData: 'https://tracker.example/font' })
@@ -40,7 +41,7 @@ test('discovery extracts actual site assets, embeds them, and cites their source
   assert.equal(result.sources.length, 4)
   assert.equal(result.status, 'ready')
   const parsed = parseBrand('<link rel="icon" href="/icon.png">', '', 'https://example.com/')
-  assert.equal(parsed.logoUrl, 'https://example.com/icon.png')
+  assert.equal(parsed.logoUrl, '') // a favicon is not a presentation logo
 })
 test('brand and formatting survive project hydration, case-file handoff and client resolution', () => {
   const p = newProject('Test')
@@ -127,7 +128,7 @@ test('branding reads the official site and its verified public company LinkedIn 
   calls.push(url)
   if(url==='https://company.example/')return {url,type:'text/html',buffer:Buffer.from('<a href="'+linkedin+'">LinkedIn</a><style>:root{--primary:#123456}body{font-family:Company Sans}</style>')}
   if(url===linkedin)return {url,type:'text/html',buffer:Buffer.from('<img alt="Example logo" src="https://media.licdn.com/example.png"><style>body{font-family:LinkedIn Sans;color:#0a66c2}</style>')}
-  if(url==='https://media.licdn.com/example.png')return {url,type:'image/png',buffer:Buffer.from('png-fixture')}
+  if(url==='https://media.licdn.com/example.png')return {url,type:'image/png',buffer:logoPng}
   throw Error('Unexpected request '+url)
  })
  assert.ok(calls.includes(linkedin));assert.ok(r.logo.startsWith('data:image/png;base64,'))
@@ -138,7 +139,7 @@ test('blocked LinkedIn does not break official website assets or pretend its ass
  const linkedin='https://www.linkedin.com/company/example'
  const r=await discoverBrand({company:'Example',website:'https://company.example/'},async url=>{
   if(url===linkedin)throw Error('403')
-  return {url,type:url.endsWith('.png')?'image/png':'text/html',buffer:Buffer.from(url.endsWith('.png')?'png':'<a href="/" aria-label="Example home"><img alt="Example" src="/logo.png"></a><a href="'+linkedin+'">LinkedIn</a>')}
+  return {url,type:url.endsWith('.png')?'image/png':'text/html',buffer:(url.endsWith('.png')?logoPng:Buffer.from('<a href="/" aria-label="Example home"><img alt="Example" src="/logo.png"></a><a href="'+linkedin+'">LinkedIn</a>'))}
  })
  assert.ok(r.logo);assert.equal(r.status,'ready');assert.ok(!r.sources.includes(linkedin))
  assert.equal(r.sourceNotes[0].status,'unavailable')

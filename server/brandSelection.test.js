@@ -5,7 +5,7 @@ import {discoverBrand}from'./brand.js'
 import {fontFaceCss,brandLogoHtml,normalizeBrand}from'../src/brand.js'
 import {agentPrompt}from'./agent-commands/index.js'
 const website='https://company.example/'
-const logo='data:image/svg+xml;base64,'+Buffer.from('<svg/>').toString('base64')
+const logo='data:image/svg+xml;base64,'+Buffer.from('<svg viewBox="0 0 160 40"><path d="M0 0h160v40H0z"/></svg>').toString('base64')
 const parsed={primary:'#111111',background:'#ffffff',surface:'#f5f5f5',text:'#111111',muted:'#555555',headingFont:'Company Display',bodyFont:'Company Text',colors:[],colorEvidence:[]}
 const logos=[{dataUrl:logo,sourceUrl:website+'logo.svg',location:'Official homepage mark',score:100,variant:'dark'}]
 const baseline={...parsed,logo,website}

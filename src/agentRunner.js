@@ -1,3 +1,4 @@
+import {verifyBrandForDisplay} from './verifyBrand.js'
 // Runs the commands the chat agent asks for, through the SAME client code the
 // buttons use (so the same server routes, the same key, the same evidence
 // checks). Results are proposals: the chat shows them as cards and nothing
@@ -98,7 +99,7 @@ async function lookupPerson(cmd, project, ctx) {
 async function discoverBrand(cmd, project) {
   const website = cmd.website && !/^https:\/\//i.test(cmd.website) ? `https://${cmd.website}` : cmd.website
   const brand = await post('/api/brand', { command: C.DISCOVER_BRAND, company: project.name, website })
-  return { kind: 'brand', brand }
+  return { kind: 'brand', brand: await verifyBrandForDisplay(brand) }
 }
 
 export async function runCommand(cmd, project, ctx = {}) {

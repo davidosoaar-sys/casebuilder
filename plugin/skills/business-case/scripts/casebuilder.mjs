@@ -16098,12 +16098,17 @@ function normalizeBrand(value) {
     ...Object.fromEntries(COLOR_KEYS.map((k) => [k, /^#[0-9a-f]{6}$/i.test(b[k]) ? b[k] : DEFAULT_BRAND[k]])),
     headingFont: cleanFont(b.headingFont) || DEFAULT_BRAND.headingFont,
     bodyFont: cleanFont(b.bodyFont) || DEFAULT_BRAND.bodyFont,
+    companyCandidates: (Array.isArray(b.companyCandidates) ? b.companyCandidates : []).slice(0, 5).flatMap((c) => {
+      const website = publicProfileUrl(c?.website);
+      return website ? [{ name: String(c.name || "").slice(0, 120), website }] : [];
+    }),
     logo: safeAsset(b.logo),
+    logoVariants: (Array.isArray(b.logoVariants) ? b.logoVariants : []).slice(0, 3).flatMap((v) => safeAsset(v?.logo) && v.logo.length < 25e4 ? [{ logo: safeAsset(v.logo), sourceUrl: publicProfileUrl(v.sourceUrl), authority: v.authority === "company-profile" ? "company-profile" : "official-site" }] : []),
     icon: safeAsset(b.icon),
     hideLogo: b.hideLogo === true,
     logoBackground: /^#[0-9a-f]{6}$/i.test(b.logoBackground) ? b.logoBackground : "transparent",
     fontFaces: Array.isArray(b.fontFaces) ? b.fontFaces.filter((f) => f && cleanFont(f.family) && typeof f.data === "string" && f.data.length < 9e5 && /^data:font\/(woff2?|ttf|otf);base64,[a-zA-Z0-9+/=]+$/.test(f.data)).slice(0, 3).map((f) => ({ family: cleanFont(f.family), data: f.data })) : [],
-    review: b.review?.version === 1 ? { version: 1, mode: ["agent-selected", "deterministic-fallback"].includes(b.review.mode) ? b.review.mode : "deterministic-fallback", status: "needs-review", decisions: (Array.isArray(b.review.decisions) ? b.review.decisions : []).filter((d) => d && typeof d === "object").slice(0, 10).map((d) => ({ field: String(d.field || "").slice(0, 40), value: String(d.value || "").slice(0, 160), sourceUrl: publicProfileUrl(d.sourceUrl), origin: ["observed", "readability-adjustment", "fallback"].includes(d.origin) ? d.origin : "fallback" })), adjustments: (Array.isArray(b.review.adjustments) ? b.review.adjustments : []).filter((x) => typeof x === "string").slice(0, 12).map((x) => x.slice(0, 300)), warnings: (Array.isArray(b.review.warnings) ? b.review.warnings : []).filter((x) => typeof x === "string").slice(0, 12).map((x) => x.slice(0, 300)), checks: { logoPresent: !!safeAsset(b.logo), textContrast: b.review.checks?.textContrast === true, secondaryContrast: b.review.checks?.secondaryContrast === true, visualReviewPerformed: false } } : null,
+    review: b.review?.version === 1 ? { version: 1, mode: ["agent-selected", "deterministic-fallback"].includes(b.review.mode) ? b.review.mode : "deterministic-fallback", status: "needs-review", decisions: (Array.isArray(b.review.decisions) ? b.review.decisions : []).filter((d) => d && typeof d === "object").slice(0, 10).map((d) => ({ field: String(d.field || "").slice(0, 40), value: String(d.value || "").slice(0, 160), sourceUrl: publicProfileUrl(d.sourceUrl), origin: ["observed", "readability-adjustment", "fallback"].includes(d.origin) ? d.origin : "fallback" })), adjustments: (Array.isArray(b.review.adjustments) ? b.review.adjustments : []).filter((x) => typeof x === "string").slice(0, 12).map((x) => x.slice(0, 300)), warnings: (Array.isArray(b.review.warnings) ? b.review.warnings : []).filter((x) => typeof x === "string").slice(0, 12).map((x) => x.slice(0, 300)), checks: { logoPresent: !!safeAsset(b.logo), textContrast: b.review.checks?.textContrast === true, secondaryContrast: b.review.checks?.secondaryContrast === true, ...Object.fromEntries(["assetBytesValidated", "officialSource", "displayCheckPerformed", "logoDecoded", "logoVisible", "fontFilesLoaded"].map((k) => [k, b.review.checks?.[k] === true])), visualReviewPerformed: false } } : null,
     linkedinUrl: /^https:\/\/(?:[a-z]{2,3}\.|www\.)?linkedin\.com\/company\//i.test(publicProfileUrl(b.linkedinUrl)) ? publicProfileUrl(b.linkedinUrl) : "",
     sourceNotes: Array.isArray(b.sourceNotes) ? b.sourceNotes.filter((n) => publicProfileUrl(n?.url) && ["used", "unavailable"].includes(n.status)).slice(0, 4).map((n) => ({ url: publicProfileUrl(n.url), status: n.status, message: String(n.message || "").slice(0, 300) })) : [],
     fontData: typeof b.fontData === "string" && b.fontData.length < 9e5 && /^data:font\/(woff2?|ttf|otf);base64,[a-zA-Z0-9+/=]+$/.test(b.fontData) ? b.fontData : "",
@@ -16122,7 +16127,7 @@ function fontFaceCss(value) {
 function brandLogoHtml(value, fallback = "") {
   const b = normalizeBrand(value);
   if (b.hideLogo) return "";
-  return b.logo ? `<img src="${b.logo}" alt="Company logo" style="max-height:40px;max-width:220px;object-fit:contain;${b.logoBackground !== "transparent" ? "background:" + b.logoBackground + ";padding:8px;border-radius:4px;" : ""}">` : fallback;
+  return b.logo ? `<img src="${b.logo}" alt="Company logo" style="height:40px;width:auto;max-width:220px;object-fit:contain;${b.logoBackground !== "transparent" ? "background:" + b.logoBackground + ";padding:8px;border-radius:4px;" : ""}">` : fallback;
 }
 function brandDocument(html, value) {
   if (!value) return html;

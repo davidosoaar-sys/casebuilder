@@ -37,7 +37,7 @@ const TASKS=Object.freeze({
   }
 })
 
-export const PROMPT_REVISION='2026-10-25.3'
+export const PROMPT_REVISION='2026-10-25.4'
 export const APP_AGENT_TASKS=Object.freeze(Object.fromEntries(Object.entries(TASKS).map(([id,task])=>[id,Object.freeze({...task,framework:COMMAND_FRAMEWORK[id]})])))
 
 export function agentInstruction(command){

@@ -23,22 +23,16 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ---
 
-## Unreleased
+## v0.10.0 (2026-10-25): verified brand assets and sourced agent research
 
-## v0.10.0 (2026-10-25) — local preparation, not released
-
-- Merged Amr’s v0.9.1 Tavily research, separate company icons and deck color fixes with the unfinished agent-command, sourced-profile and brand-selection work. Research uses the shared search loop and expanded command contracts; source evidence and both sets of branding controls are preserved.
-- Also merged Amr’s v0.9.2 Research page, live tool-use traces, chat search toggle and connector-context updates while retaining sourced profile media.
-- Merge validation: all 311 app/server tests, 30 worker tests and production build pass. Branding verification remains work in progress; this version has not been pushed, tagged or deployed.
-
-- 2026-10-25: Translated the manually refined sample workflow into an executable brand-selection phase and a research-to-design playbook. The agent selects only sourced candidate IDs; code checks choices/contrast and records fallbacks for preview review. Added separate heading/body font embedding and a neutral logo field when no appropriate official variant is available, reused across previews/exports. Full layout generation and server-side visual approval remain explicitly unsupported.
-
-- 2026-10-25: Fixed the reproduced Adidas discovery failure: honor HTML base paths, recognize home-link title attributes even when the input name is misspelled, prioritize declared heading/body fonts over generic CSS reset fonts, and accept signature-validated TTF/OTF font files. Added the verified Adidas corporate domain/spelling alias. Missing logos now produce an explicit incomplete/error state rather than a misleading ready result. Validation: all 290 tests and production build pass; actual localhost API requests for both Adidas and addidas return HTTP 200 with an official logo and embedded font.
-
-- 2026-10-25: Extended brand discovery to verify and read the company website and public company LinkedIn page, using actual logo assets and reporting blocked access. Company fonts/palette remain sourced from its website. Added source-verified embedded portraits, published emails, LinkedIn and professional public links to Find people, lookup and chat result cards; identity/current role still stream before optional media. Unsupported images/links are dropped and selected media survives deal/case-file storage. Validation: all 287 tests and app/plugin builds pass; isolated lookup, people and chat views checked at desktop/mobile with fictional data. Live model/photo retrieval quality has not been evaluated for this revision.
-
-- 2026-10-25: Expanded all seven command briefs with explicit triggers, real input/source limits, processing, fictional output examples, quality gates, deterministic boundaries and judgment criteria. The four live services now share an inspectable full prompt builder and separate provider response contracts; future design contracts remain inactive. Preserved the v0.9.0 prompt snapshot and added generated current prompt documentation and a human scorecard.
-- Added an offline command evaluation suite and regression checks. Fixed chat LinkedIn lookup payload naming, restricted suggestion searches to blank fields, and protected manually entered values from late suggestion responses. Existing model equations and client deck are unchanged. Validation: all 277 tests, 11 offline command evaluations and the production build pass. Live model search quality has not been evaluated for this prompt revision.
+- Added official brand/media resource discovery and bounded agent asset selection. Rejects main-logo favicons, invalid/tiny images and unsafe/empty SVGs. Onboarding and chat check logo decoding, full-mark visibility, published variants and embedded font loading automatically; failed marks fall back to the company name. Genuine company ambiguity offers sourced choices.
+- Preserved company heading/body fonts and original logo artwork across previews/exports. Fixed Adidas base paths/spelling, compressed public CSS, video/icon-font selection, regular-versus-italic font files, logo sizing and light/dark logo legibility.
+- Expanded the four live research-command prompts with triggers, source limits, processing, examples, evaluation and judgment criteria. Added inspectable prompt documentation and an offline evaluation suite. Future framing/website/one-pager generation contracts remain inactive.
+- Added source-bound professional portraits, published emails, LinkedIn and public links to people lookup, Find people and chat cards. Selected media and its evidence survive case storage. Live profile retrieval quality has not been evaluated for this revision.
+- Restricted input suggestions to blank fields and prevented late responses from replacing manually entered values. Preserved existing financial equations and client content.
+- Includes Amr’s v0.9.1/v0.9.2 Tavily search, company icons, deck color fixes, Research page, live tool traces and search/connector controls. Preserves per-URL evidence across both search backends.
+- Validation: 322 app/server tests, 30 worker tests, 11 offline command evaluations, production build and plugin packaging pass. Official assets from Microsoft, Adidas, Shopify, Spotify, Nike and Lovable passed 24 format previews and six mobile website checks without overflow or page errors.
+- Known limits: Microsoft’s font files were unavailable; sourced family names and the fallback warning are preserved. A live model-selection probe hit insufficient credit on the local Anthropic key; live name-to-domain/model-selection accuracy remains unverified. Local Settings-key access still needs its server configuration. Automated display checks do not certify semantic identity or overall design quality.
 
 ## v0.9.2 (2026-10-25): Research page, "Used N tools" trace, search toggle
 

@@ -1,3 +1,4 @@
+import {inspectBrandImage,brandPageLinks,brandKitDownloads} from './brandAssets.js'
 import { runWithSearch } from './agentSearch.js'
 import { fetchPublic } from './publicWeb.js'
 import {publicProfileUrl} from '../src/profileMedia.js'
@@ -22,7 +23,7 @@ export function logoCandidates(html, website, company = '', assetBase = document
   const candidates = []
   const add = (tag, score) => {
     const src = attr(tag, 'src') || attr(tag, 'data-src')
-    if (src) candidates.push({ url: absolute(src, assetBase), score })
+    if (src && !/favicon|sprite|customer|partner|promo|banner|scenery/i.test(src+' '+attr(tag,'alt'))) candidates.push({ url: absolute(src, assetBase), score })
   }
   for (const match of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)) {
     const tag = '<a ' + match[1] + '>', href = absolute(attr(tag, 'href'), website)
@@ -92,8 +93,7 @@ export function parseBrand(html, css, website, company = '') {
   const icon = [...html.matchAll(/<link\b[^>]*>/gi)].map(m => m[0]).find(t => /^(shortcut )?icon$/i.test(attr(t, 'rel')))
   const cssLogo = css.match(/--[\w-]*logo[\w-]*\s*:\s*url\(\s*["']?([^"')\s]+)["']?\s*\)/i)?.[1]
   if (cssLogo) candidates.push({ url: absolute(cssLogo, assetBase), score: 50 })
-  // A favicon is a last-resort identity mark, never a partner image.
-  if (icon && attr(icon,'href')) candidates.push({ url: absolute(attr(icon,'href'),assetBase),score:0 })
+  // Icons are extracted separately; never substitute a favicon for the main logo.
   const logoUrl = candidates.find(c => c.url)?.url || ''
   const colors = [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0].toLowerCase())
   const ranked = [...new Set(colors)].sort((a, b) => colors.filter(c => c === b).length - colors.filter(c => c === a).length)
@@ -110,8 +110,9 @@ export function parseBrand(html, css, website, company = '') {
   const familyFor=selector=>rules.filter(m=>selector.test(m[1])).map(m=>[...m[2].matchAll(/font-family\s*:\s*([^;}]+)/gi)].at(-1)?.[1]).filter(Boolean).at(-1)||''
   const headingRule=familyFor(/(?:^|,)\s*(?:h1|\.h1|\.heading|\.headline)(?:$|[:.#\s])/i)
   const bodyRuleFont=familyFor(/(?:^|,)\s*(?:body|html)(?:$|[:.#\s])/i)
-  const heading = fontName(expand(variables['heading-font'] || variables['font-heading'] || variables['ds-font-family-segoe-variable-display'] || variables['ifm-heading-font-family'] || headingRule || variables['font-sans'] || css.match(/(?:h1|\.heading|\.headline)[^{]*\{[^}]*font-family\s*:\s*([^;}]+)/i)?.[1] || css.match(/font-family\s*:\s*([^;}]+)/i)?.[1]))
-  const body = fontName(expand(variables['ifm-font-family-base'] || variables['ds-font-family-segoe-variable-text'] || bodyRuleFont || variables['font-sans'] || css.match(/body\s*\{[^}]*font-family\s*:\s*([^;}]+)/i)?.[1]))
+  let heading = fontName(expand(variables['heading-font'] || variables['font-heading'] || variables['encore-title-font-stack'] || variables['ds-font-family-segoe-variable-display'] || variables['ifm-heading-font-family'] || headingRule || bodyRuleFont || variables['font-sans'] || css.match(/(?:h1|\.heading|\.headline)[^{]*\{[^}]*font-family\s*:\s*([^;}]+)/i)?.[1] || css.match(/font-family\s*:\s*([^;}]+)/i)?.[1]))
+  const body = fontName(expand(variables['ifm-font-family-base'] || variables['encore-body-font-stack'] || variables['ds-font-family-segoe-variable-text'] || bodyRuleFont || variables['font-sans'] || css.match(/body\s*\{[^}]*font-family\s*:\s*([^;}]+)/i)?.[1]))
+  if(/icon|glyph|videojs|fontawesome|material symbols/i.test(heading)||!heading)heading=body
   face = faces.find(f => fontName(f.match(/font-family\s*:\s*([^;]+)/i)?.[1]).toLowerCase() === (heading || body).toLowerCase() && /url\(/i.test(f)) || ''
   const color = value => {
     value = expand(value).trim()
@@ -130,8 +131,8 @@ export function parseBrand(html, css, website, company = '') {
     return ''
   }
   const bodyRule = [...css.matchAll(/(?:^|})\s*(?:html\s*,\s*)?body\s*\{([^}]+)}/gi)].map(m=>m[1]).join(';')
-  const background = color(themeVariables['marketing-background'] || variables['color-background'] || variables['background-color'] || variables['ifm-background-color'] || variables.background || bodyRule.match(/(?:^|;)\s*background(?:-color)?\s*:\s*([^;}]+)/i)?.[1] || '')
-  const textColor = color(themeVariables['marketing-foreground'] || variables['color-text'] || variables['text-color'] || variables['ifm-font-color-base'] || bodyRule.match(/(?:^|;)\s*color\s*:\s*([^;}]+)/i)?.[1] || '')
+  const background = color(themeVariables['marketing-background'] || variables['color-background'] || themeVariables['background-base'] || variables['background-color'] || variables['ifm-background-color'] || variables.background || bodyRule.match(/(?:^|;)\s*background(?:-color)?\s*:\s*([^;}]+)/i)?.[1] || '')
+  const textColor = color(themeVariables['marketing-foreground'] || variables['color-text'] || themeVariables['text-base'] || variables['text-color'] || variables['ifm-font-color-base'] || bodyRule.match(/(?:^|;)\s*color\s*:\s*([^;}]+)/i)?.[1] || '')
   const light = background && parseInt(background.slice(1,3),16)*.299+parseInt(background.slice(3,5),16)*.587+parseInt(background.slice(5,7),16)*.114 > 150
   const colorEvidence=Object.entries(themeVariables).filter(([key])=>/brand|accent|primary|background|foreground|surface|^bg-|^fg-|text-color|color-text/i.test(key)).flatMap(([token,raw])=>{const value=color(raw);if(!value)return [];const role=/background|^bg-base|^bg-primary/.test(token)?'background':/surface/.test(token)?'surface':/foreground|^fg-primary|text-color|color-text/.test(token)?'text':/accent|primary|brand/.test(token)?'primary':'';return [{token,label:'--'+token,value,role,origin:'observed'}]}).slice(0,40)
   return { ...(background ? {background, surface: shade(background, light ? -0.035 : 0.06), text: textColor || (light ? '#161616' : '#ffffff'), muted: light ? '#555555' : '#b8b8b8'} : {}), candidates, colorEvidence, faces, derivedColors:['surface','muted',...(!textColor?['text']:[])], primary: color(themeVariables['marketing-primary'] || themeVariables['ds-theme-background-accent-strong-normal'] || '') || named || saturated[0], headingFont: !/var\(/.test(heading) ? heading : '', bodyFont: !/var\(/.test(body) ? body : '', logoUrl, face, colors: ranked.slice(0, 8) }
@@ -140,7 +141,7 @@ export function parseBrand(html, css, website, company = '') {
 const companyLinkedIn = value => {const url=publicProfileUrl(value);return /^https:\/\/(?:[a-z]{2,3}\.|www\.)?linkedin\.com\/company\/[^/?#]+\/?(?:[?#].*)?$/i.test(url)?url:''}
 async function findWebsite(company, client = null, identity = {}, {linkedinOnly=false,officialWebsite=''} = {}) {
   // Verified official domains for common demo/test accounts, not guessed assets.
-  const known = {microsoft:'https://www.microsoft.com/',shopify:'https://www.shopify.com/',lovable:'https://lovable.dev/',loveable:'https://lovable.dev/',adidas:'https://www.adidas-group.com/en/',addidas:'https://www.adidas-group.com/en/'}
+  const known = {nike:'https://www.nike.com/',spotify:'https://www.spotify.com/',microsoft:'https://www.microsoft.com/',shopify:'https://www.shopify.com/',lovable:'https://lovable.dev/',loveable:'https://lovable.dev/',adidas:'https://www.adidas-group.com/en/',addidas:'https://www.adidas-group.com/en/'}
   const official = known[String(company).trim().toLowerCase()]
   if (official && !linkedinOnly) return official
   if (!linkedinOnly && /^(https:\/\/)?[a-z0-9.-]+\.[a-z]{2,}(\/.*)?$/i.test(company)) return company.startsWith('https://') ? company : `https://${company}`
@@ -155,8 +156,12 @@ async function findWebsite(company, client = null, identity = {}, {linkedinOnly=
   const seen = new Set(run.evidence.map(e=>e.host)), urls = new Set(run.urls)
   const text = run.text
   let result
-  try { const parsed=JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));result=parsed.website;const linkedin=companyLinkedIn(parsed.linkedinUrl);if(linkedin&&[...urls].some(u=>u.replace(/\/$/,'')===linkedin.replace(/\/$/,'')))identity.linkedinUrl=linkedin } catch {}
+  try { const parsed=JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));result=parsed.website;
+    identity.brandPages=(Array.isArray(parsed.brandPages)?parsed.brandPages:[]).filter(u=>{try{const a=new URL(u),b=new URL(result),ah=a.hostname.replace(/^www\./,''),bh=b.hostname.replace(/^www\./,'');return a.protocol==='https:'&&urls.has(u)&&(ah===bh||ah.endsWith('.'+bh)||bh.endsWith('.'+ah))}catch{return false}}).slice(0,2);
+    identity.candidates=(Array.isArray(parsed.candidates)?parsed.candidates:[]).flatMap(c=>{try{const u=new URL(c.website);return u.protocol==='https:'&&!u.username&&!u.password&&seen.has(u.hostname.replace(/^www\./,''))?[{name:String(c.name||'').slice(0,120),website:u.href}]:[]}catch{return []}}).filter((c,i,list)=>list.findIndex(x=>new URL(x.website).hostname===new URL(c.website).hostname)===i).slice(0,5)
+    const linkedin=companyLinkedIn(parsed.linkedinUrl);if(linkedin&&[...urls].some(u=>u.replace(/\/$/,'')===linkedin.replace(/\/$/,'')))identity.linkedinUrl=linkedin } catch {}
   if(linkedinOnly)return officialWebsite
+  if(!result&&identity.candidates?.length>1)return ''
   if (!result || !seen.has(new URL(result).hostname.replace(/^www\./, ''))) throw new Error('Please enter the official website so we use the right company.')
   return result
 }
@@ -166,6 +171,7 @@ export async function discoverBrand({ company, website }, fetcher = fetchPublic,
   fetcher=async(url,options)=>{if(Date.now()>deadline)throw Error('Brand asset budget exhausted');return sourceFetcher(url,options)}
   const identity = {}
   const target = website || await findWebsite(company, client, identity)
+  if(!target&&identity.candidates?.length>1)return normalizeBrand({status:'error',message:'Several companies match. Which one is this case for?',companyCandidates:identity.candidates})
   let home
   try { home = await fetcher(target) } catch (error) {
     // Official brand pages can remain public when a homepage blocks automated requests.
@@ -184,18 +190,31 @@ export async function discoverBrand({ company, website }, fetcher = fetchPublic,
     const text = r.value.buffer.toString('utf8'); css += '\n' + text; cssBases.push({ text, url: r.value.url }); sources.push(r.value.url)
   }
   const parsed = parseBrand(html, css, home.url, company)
+  const sourceNotes=[]
+  // Follow only published official-site links. A brand kit supplies logo variants;
+  // its documentation UI must not replace the company's homepage typography.
+  const officialResources={'spotify.com':['https://newsroom.spotify.com/media-kit/logo-and-brand-assets/'],'shopify.com':['https://www.shopify.com/brand-assets']}
+  const host=new URL(target).hostname.replace(/^www\./,'')
+  const resourceUrls=[...new Set([...(identity.brandPages||[]),...(officialResources[host]||[]),...brandPageLinks(html,home.url)])].slice(0,2)
+  const kits=await Promise.allSettled(resourceUrls.map(url=>fetcher(url)))
+  for(const result of kits)if(result.status==='fulfilled'&&/html/i.test(result.value.type)){
+    const page=result.value,kit=page.buffer.toString('utf8')
+    const marks=[...brandKitDownloads(kit,page.url,company),...logoCandidates(kit,page.url,company).filter(c=>c.score>=70).map(c=>({...c,score:c.score>=95?85:105,sourcePage:page.url,authority:'official-brand-kit'}))]
+    parsed.candidates.push(...marks)
+    if(marks.length){sources.push(page.url);sourceNotes.push({url:page.url,status:'used',message:'Official brand resources checked for published logo variants.'})}
+  }
+  parsed.candidates.sort((a,b)=>b.score-a.score)
   const linkedInFromSite=[...html.matchAll(/<a\b[^>]*>/gi)].map(m=>companyLinkedIn(absolute(attr(m[0],'href'),home.url))).find(Boolean)
   if(!linkedInFromSite&&!identity.linkedinUrl&&client&&Date.now()<deadline-15000)try{await findWebsite(company,client,identity,{linkedinOnly:true,officialWebsite:home.url})}catch{}
   const linkedinUrl=linkedInFromSite||identity.linkedinUrl||''
-  const sourceNotes=[]
   if(linkedinUrl&&Date.now()<deadline-10000)try{
     const profile=await fetcher(linkedinUrl,{limit:1000000})
     const profileBrand=/html/i.test(profile.type)?parseBrand(profile.buffer.toString('utf8'),'',profile.url,company||new URL(home.url).hostname.replace(/^www\./,'').split('.')[0]):null
-    const candidates=profileBrand?.candidates.filter(c=>c.score>=50).map(c=>({...c,sourcePage:profile.url}))||[]
+    const candidates=profileBrand?.candidates.filter(c=>c.score===70||c.score===90).map(c=>({...c,sourcePage:profile.url}))||[]
     if(candidates.length){parsed.candidates=[...parsed.candidates.filter(c=>c.score>0),...candidates,...parsed.candidates.filter(c=>c.score===0)];sources.push(profile.url);sourceNotes.push({url:linkedinUrl,status:'used',message:'Public company LinkedIn page checked for a logo. Fonts and palette come from the official website.'})}
     else sourceNotes.push({url:linkedinUrl,status:'unavailable',message:'No publicly usable company logo found on LinkedIn. No LinkedIn asset was substituted.'})
   }catch{sourceNotes.push({url:linkedinUrl,status:'unavailable',message:'LinkedIn could not be read publicly; no LinkedIn assets were used.'})}
-  const eligible=parsed.candidates.some(c=>c.score>0)?parsed.candidates.filter(c=>c.score>0):parsed.candidates
+  const eligible=parsed.candidates.filter(c=>c.score>0)
   const unique=eligible.filter((c,i,list)=>list.findIndex(x=>(x.url||x.svg)===(c.url||c.svg))===i).slice(0,4)
   const loaded=await Promise.allSettled(unique.map(async candidate=>{
     let dataUrl='',svg='',sourceUrl=home.url
@@ -210,10 +229,12 @@ export async function discoverBrand({ company, website }, fetcher = fetchPublic,
       if(mime.includes('svg')){svg=asset.buffer.toString();if(!safeSvg(svg))throw Error('Unsupported SVG')}
       dataUrl='data:'+mime+';base64,'+asset.buffer.toString('base64');sourceUrl=asset.url
     }
+    const bytes=Buffer.from(dataUrl.split(',')[1],'base64'),mime=dataUrl.slice(5,dataUrl.indexOf(';'))
+    const dimensions=inspectBrandImage(bytes,mime)
     const fills=[...svg.matchAll(/(?:fill|stroke)=["'](#[0-9a-f]{3,6}|white|black)["']/gi)].map(m=>m[1].toLowerCase())
     const allWhite=fills.length&&fills.every(c=>['white','#fff','#ffffff'].includes(c)),allBlack=fills.length&&fills.every(c=>['black','#000','#000000'].includes(c))
     const variant=allWhite?'light':allBlack?'dark':!svg&&/white/i.test(candidate.url||'')?'light':!svg&&/black/i.test(candidate.url||'')?'dark':'unknown'
-    return {dataUrl,sourceUrl,sourcePage:candidate.sourcePage||home.url,variant,score:candidate.score,location:candidate.sourcePage?'Public company LinkedIn logo':candidate.score>=95?'Official homepage mark':candidate.score===90?'Organization logo':candidate.score===0?'Favicon':'Official site logo'}
+    return {dataUrl,sourceUrl,dimensions,authority:candidate.authority||(candidate.sourcePage?'company-profile':'official-site'),sourcePage:candidate.sourcePage||home.url,variant,score:candidate.score,location:candidate.authority==='official-brand-kit'?'Official brand resource':candidate.sourcePage?'Public company LinkedIn logo':candidate.score>=95?'Official homepage mark':candidate.score===90?'Organization logo':candidate.score===0?'Favicon':'Official site logo'}
   }))
   const logos=loaded.filter(r=>r.status==='fulfilled').map(r=>r.value)
   let icon = ''
@@ -225,6 +246,7 @@ export async function discoverBrand({ company, website }, fetcher = fetchPublic,
     try {
       const asset = await fetcher(url, { limit: 400_000 })
       const mime = asset.type.split(';')[0]
+      inspectBrandImage(asset.buffer,mime,{icon:true})
       if (mime === 'image/svg+xml' ? safeSvg(asset.buffer.toString()) : /^image\/(png|jpeg|webp)$/.test(mime)) {
         icon = 'data:' + mime + ';base64,' + asset.buffer.toString('base64'); sources.push(asset.url)
       }
@@ -236,7 +258,7 @@ export async function discoverBrand({ company, website }, fetcher = fetchPublic,
   if(curated.selected&&!sources.includes(curated.selected.sourceUrl))sources.push(curated.selected.sourceUrl)
   const fontFaces=[],fontCache=new Map()
   for(const family of [...new Set([selected.headingFont,selected.bodyFont])]){
-    const face=parsed.faces.find(f=>fontName(f.match(/font-family\s*:\s*([^;]+)/i)?.[1]).toLowerCase()===family.toLowerCase())
+    const face=parsed.faces.filter(f=>fontName(f.match(/font-family\s*:\s*([^;]+)/i)?.[1]).toLowerCase()===family.toLowerCase()).sort((a,b)=>{const score=f=>(/font-style\s*:\s*(?:italic|oblique)|italic/i.test(f)?0:4)+(/font-weight\s*:\s*(?:400|normal)\b/i.test(f)?2:0);return score(b)-score(a)})[0]
     const src=face?.match(/url\(\s*["']?([^"')\s]+)["']?\s*\)/i)?.[1]
     if(!src)continue
     const base=cssBases.find(s=>s.text.includes(face))?.url||assetBase,url=absolute(src,base)
@@ -250,9 +272,13 @@ export async function discoverBrand({ company, website }, fetcher = fetchPublic,
       fontFaces.push({family,data:fontCache.get(url)})
     }catch{}
   }
+  curated.review.checks.assetBytesValidated=!!curated.selected
+  curated.review.checks.officialSource=!!curated.selected&&curated.selected.authority!=='company-profile'
+  if(curated.selected)curated.review.decisions[0].sourceUrl=curated.selected.sourcePage
+  if(loaded.some(r=>r.status==='rejected'))curated.review.warnings.push('Unusable logo candidates were rejected automatically.')
   const headingFile=fontFaces.find(f=>f.family===selected.headingFont)
   for(const family of [...new Set([selected.headingFont,selected.bodyFont])])if(!fontFaces.some(f=>f.family===family))curated.review.warnings.push('The '+family+' font file is unavailable; other devices may use a fallback.')
-  return normalizeBrand({...selected,website:home.url,linkedinUrl,sourceNotes,sources,fontFaces,fontData:headingFile?.data||'',fontName:headingFile?.family||'',review:curated.review,
-    status:selected.logo?'ready':'error',message:!selected.logo?'Company website found, but no usable company logo could be extracted. Review the brand/media page or upload a logo.':(curated.review.mode==='agent-selected'?'Brand assets selected from verified candidates.':'Brand assets extracted; no validated model selection was available.')+' Review the logo, fonts and palette before continuing.'})
+  return normalizeBrand({...selected,logoVariants:logos.filter(l=>l!==curated.selected&&l.dataUrl.length<250000).slice(0,3).map(l=>({logo:l.dataUrl,sourceUrl:l.sourcePage,authority:l.authority})),website:home.url,linkedinUrl,sourceNotes,sources,fontFaces,fontData:headingFile?.data||'',fontName:headingFile?.family||'',review:curated.review,
+    status:selected.logo?'ready':'error',message:!selected.logo?'Company website found, but no usable company logo could be extracted. Your case can continue with the company name.':'Brand assets found. Checking display and font loading…'})
 
 }

@@ -1,5 +1,14 @@
 import https from 'node:https'
 import { lookup } from 'node:dns/promises'
+import {gunzipSync,inflateSync,brotliDecompressSync} from 'node:zlib'
+
+export function decodePublicBody(buffer,encoding,limit){
+  const options={maxOutputLength:limit}
+  if(encoding==='gzip'||(buffer[0]===31&&buffer[1]===139))return gunzipSync(buffer,options)
+  if(encoding==='br')return brotliDecompressSync(buffer,options)
+  if(encoding==='deflate')return inflateSync(buffer,options)
+  return buffer
+}
 
 export function publicAddress(address) {
   if (address.includes(':')) return /^[23][0-9a-f]{3}:/i.test(address) && !/^2001:(db8|0):/i.test(address)
@@ -33,7 +42,7 @@ export async function fetchPublic(input, { limit = 1_500_000, redirects = 3 } = 
       const chunks = []
       let length = 0
       res.on('data', c => { length += c.length; if (length > limit) req.destroy(new Error('Brand asset is too large.')); else chunks.push(c) })
-      res.on('end', () => resolve({ buffer: Buffer.concat(chunks), type: String(res.headers['content-type'] || ''), url: url.href }))
+      res.on('end', () => {try{resolve({ buffer: decodePublicBody(Buffer.concat(chunks),String(res.headers['content-encoding']||''),limit), type: String(res.headers['content-type'] || ''), url: url.href })}catch{reject(new Error('Website content could not be decoded within the size limit.'))}})
       res.on('error', reject)
     })
     req.setTimeout(7000, () => req.destroy(new Error('Website took too long to respond.')))

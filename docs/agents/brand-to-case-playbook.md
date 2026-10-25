@@ -34,7 +34,7 @@ Choose charts for meaningful supplied quantities and maps for actual relationshi
 
 Look at the actual output: cover first, then dense figures, comparison and stakeholder sections. Check the original mark's visibility, loaded font families, line breaks, text density, chart labels and mobile overflow. Check other formats preserve the same company identity. Fix the weakest section rather than adding decoration everywhere.
 
-The sample work included human visual inspection and iteration. The server currently checks sources, candidate validity and contrast; it does not run a browser or certify visual quality. The app’s brand preview and “Brand decisions and checks” section expose the selected values and limitations. A human still reviews the actual preview. Do not claim a screenshot/font/layout check ran unless it did.
+The sample work included human visual inspection and iteration. The server currently checks sources, candidate validity and contrast; it does not run a browser or certify visual quality. The app’s brand preview and “Brand decisions and checks” section expose the selected values and limitations. The browser now automatically decodes embedded logos, checks visible ink against the canvas, tries other published variants before adding a neutral field, and loads embedded fonts. It removes unusable marks rather than assigning Chris a mandatory correction task. Semantic identity and overall layout quality are not certified by pixel checks. Do not claim a screenshot/font/layout check ran unless it did.
 
 ## 6. Definition of a good result
 
@@ -54,6 +54,9 @@ These describe design decisions, not an official reusable brand-asset library or
 ## Where this runs
 
 - `server/brand.js`: identity/source extraction, real logo/font retrieval.
+- `server/brandAssets.js`: bounded official-resource link discovery and SVG/raster validation.
+- `src/verifyBrand.js`: the shared onboarding/chat browser display gate.
+- `scripts/review-brand-assets.mjs`: repeatable six-company, four-format and mobile render checks.
 - `server/brandSelection.js`: candidate catalog, bounded model selection, validation and review report.
 - `server/agent-commands/brandSelectionPrompt.js`: trusted instructions for the selection phase.
 - `src/brand.js`: one portable brand snapshot, font-face definitions and export identity.
