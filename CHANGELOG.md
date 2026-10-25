@@ -23,7 +23,7 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ---
 
-## Unreleased (planned v0.7.0): the agent can change the deal
+## v0.7.0 (2026-10-25): the agent can change the deal
 
 - Agent tab in every project, plus a split-screen mode beside Input sheet,
   Deck and Person lookup, with a draggable divider (width remembered).
