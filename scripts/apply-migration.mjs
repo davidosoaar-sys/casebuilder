@@ -13,5 +13,5 @@ const q = async query => {
 }
 const file = process.argv[2]
 console.log('apply', file, JSON.stringify(await q(fs.readFileSync(file, 'utf8'))))
-console.log('columns', (await q(`select column_name from information_schema.columns where table_schema='public' and table_name='waitlist' and column_name like 'approval%' order by 1`)).map(r => r.column_name).join(', '))
-console.log('fn has pending', (await q(`select count(*)::int n from pg_proc where proname in ('approve_email','invite_from_waitlist') and prosrc like '%pending%'`))[0].n)
+if (process.argv[3] !== '--no-waitlist-check') console.log('columns', (await q(`select column_name from information_schema.columns where table_schema='public' and table_name='waitlist' and column_name like 'approval%' order by 1`)).map(r => r.column_name).join(', '))
+if (process.argv[3] !== '--no-waitlist-check') console.log('fn has pending', (await q(`select count(*)::int n from pg_proc where proname in ('approve_email','invite_from_waitlist') and prosrc like '%pending%'`))[0].n)
