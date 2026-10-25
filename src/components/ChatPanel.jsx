@@ -10,6 +10,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabase.js'
 import { describeValue } from '../agentEdits.js'
 import { useModelKeys } from './Settings.jsx'
+import { activeKey } from '../modelProviders.js'
 import AgentComposer, { AGENT_MODELS } from './AgentComposer.jsx'
 import CommandCards from './CommandCards.jsx'
 import ToolTrace from './ToolTrace.jsx'
@@ -58,7 +59,8 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
   const { keys } = useModelKeys(userId)
   const list = useRef(null)
   const applied = project.agentLog || {}
-  const noKey = keys && !keys.some(k => k.provider === 'anthropic')
+  const noKey = keys && keys.length === 0
+  const provider = activeKey(keys)?.provider || 'anthropic'
 
   const reload = async () => {
     const { data, error } = await supabase.from('chat_messages').select(SELECT).eq('deal_id', dealId).order('id', { ascending: true }).limit(300)
@@ -133,7 +135,7 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
   }, [messages.length, pending, loading])
 
   async function send({ text, attachments = [], model, effort, web }) {
-    if (noKey) { setError('Add your Anthropic API key in Settings first.'); return false }
+    if (noKey) { setError('Add an AI model key in Settings first.'); return false }
     if (pending) return false
     setError('')
     const meta = attachments.length ? { attachments: attachments.map(a => ({ name: a.name, size: a.text.length })) } : {}
@@ -212,9 +214,9 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
       </div>
 
       <div className="chat-bottom">
-        {noKey && <p className="chat-note">The agent needs your Anthropic API key first. <button type="button" className="link-btn" onClick={onSettings}>Add it in Settings</button></p>}
+        {noKey && <p className="chat-note">The agent needs an AI model key first (Anthropic, OpenAI, Gemini or OpenRouter). <button type="button" className="link-btn" onClick={onSettings}>Add it in Settings</button></p>}
         {error && <p className="auth-error chat-error" role="alert">{error}</p>}
-        <AgentComposer disabled={noKey} busy={!!pending} onSend={send} showWelcome={!loading && visible.length === 0}
+        <AgentComposer provider={provider} disabled={noKey} busy={!!pending} onSend={send} showWelcome={!loading && visible.length === 0}
           title={`What should we work on${userName ? ', ' + userName.split(' ')[0] : ''}?`}
           subtitle={`Ask about ${project.name || 'this deal'}, or tell the agent what to change. Every change can be undone.`} />
       </div>

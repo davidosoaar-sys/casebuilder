@@ -52,7 +52,7 @@ export default function People({
         body: JSON.stringify({ command:AGENT_COMMANDS.FIND_STAKEHOLDERS,company, role: role.role })
       })
       const data = await res.json().catch(() => ({}))
-      if (res.status === 503 && data.error === 'no_key') throw new Error('Add your Anthropic API key in Settings to use the AI agent.')
+      if (res.status === 503 && data.error === 'no_key') throw new Error('Add an AI model key in Settings to use the AI agent.')
       if (res.status === 503 && data.error === 'account_keys_unavailable') throw new Error(data.message)
       if (res.status === 503) return setSetup(true)
       if (res.status === 401) return setNeedCode(true)
@@ -113,10 +113,9 @@ export default function People({
 
       {setup && (
         <div className="notice">
-          <strong>The AI agent isn't connected yet.</strong> It needs an Anthropic API key. Locally,
-          put <code>ANTHROPIC_API_KEY=your-key</code> in a file called <code>.env.local</code> and
-          restart the dev server. On Vercel, add it under Project Settings → Environment Variables
-          and redeploy.
+          <strong>The AI agent isn't connected yet.</strong> Add an AI model key in Settings
+          (Anthropic, OpenAI, Google Gemini or OpenRouter). Running your own copy without accounts?
+          Put <code>ANTHROPIC_API_KEY=your-key</code> in <code>.env.local</code> and restart the dev server.
         </div>
       )}
 

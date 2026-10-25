@@ -191,7 +191,7 @@ async function findWebsite(company, client = null, identity = {}, {linkedinOnly=
   const official = known[String(company).trim().toLowerCase()]
   if (official && !linkedinOnly) return official
   if (!linkedinOnly && /^(https:\/\/)?[a-z0-9.-]+\.[a-z]{2,}(\/.*)?$/i.test(company)) return company.startsWith('https://') ? company : `https://${company}`
-  if (!client) throw new Error('Enter the official company website to scan its branding. Company-name search needs an Anthropic API key (add yours in Settings).')
+  if (!client) throw new Error('Enter the official company website to scan its branding. Company-name search needs an AI model key (add one in Settings).')
   const run = await runWithSearch({
     client, model: process.env.RESEARCH_MODEL || 'claude-sonnet-5-5', maxTokens: linkedinOnly ? 800 : 1200,
     maxSearches: linkedinOnly ? 1 : 2, thinking: null, effort: null,

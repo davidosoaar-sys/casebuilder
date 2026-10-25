@@ -433,3 +433,38 @@ class ApprovalEmail(unittest.TestCase):
             self.assertEqual(worker.send_approval_emails(), 0)
         finally:
             worker.GMAIL_APP_PASSWORD = old
+
+
+class AnyProvider(unittest.TestCase):
+    def test_tiers_map_per_provider(self):
+        self.assertEqual(worker.provider_model("anthropic", "claude-opus-5-5"), "claude-opus-5-5")
+        self.assertEqual(worker.provider_model("openai", "claude-opus-5-5"), "gpt-5.6-sol")
+        self.assertEqual(worker.provider_model("google", "claude-haiku-5-5"), "gemini-3.5-flash-lite")
+        self.assertEqual(worker.provider_model("openrouter", "claude-sonnet-5-5"), "anthropic/claude-sonnet-5.5")
+
+    def test_hermes_gets_the_right_flag_env_var_and_model(self):
+        import tempfile, subprocess as sp
+        seen = {}
+        def fake_run(cmd, cwd=None, env=None, capture_output=None, text=None, timeout=None):
+            if cmd[0] == "shred":
+                os.unlink(cmd[-1]); return sp.CompletedProcess(cmd, 0, "", "")
+            seen["cmd"] = cmd
+            seen["envfile"] = open(os.path.join(env["HERMES_HOME"], ".env")).read()
+            seen["env"] = env
+            return sp.CompletedProcess(cmd, 0, "ok", "")
+        old = (worker.HOME, worker.subprocess.run)
+        with tempfile.TemporaryDirectory() as h:
+            os.makedirs(os.path.join(h, "profiles", "p"))
+            worker.HOME, worker.subprocess.run = h, fake_run
+            os.environ["OPENAI_API_KEY"] = "leak"
+            try:
+                worker.run_hermes("p", "hi", "sk-or-v1-abc", "claude-opus-5-5", provider="openrouter")
+            finally:
+                worker.HOME, worker.subprocess.run = old
+                os.environ.pop("OPENAI_API_KEY", None)
+        cmd = seen["cmd"]
+        self.assertEqual(cmd[cmd.index("--provider") + 1], "openrouter")
+        self.assertEqual(cmd[cmd.index("-m") + 1], "anthropic/claude-opus-5.5")
+        self.assertIn("OPENROUTER_API_KEY=sk-or-v1-abc", seen["envfile"])
+        self.assertNotIn("ANTHROPIC_API_KEY", seen["envfile"])
+        self.assertNotIn("OPENAI_API_KEY", seen["env"])  # no other key leaks in from the worker's env

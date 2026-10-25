@@ -24,6 +24,29 @@ MODEL = os.environ.get("CB_MODEL", "claude-sonnet-5-5")
 # Models the app may pick per message (anything else falls back to MODEL).
 MODELS = ("claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5")
 MAX_ATTACH_CHARS = 60000
+# Bring your own key, any provider (migration 0009). For each provider: the
+# Hermes --provider id, the env var Hermes reads the key from, and the model
+# used for each tier the app can pick (the app's picker names Claude tiers).
+PROVIDERS = {
+    "anthropic":  {"hermes": "anthropic",  "env": "ANTHROPIC_API_KEY",  "label": "Anthropic",
+                   "models": {"fast": "claude-haiku-5-5", "balanced": "claude-sonnet-5-5", "best": "claude-opus-5-5"}},
+    "openai":     {"hermes": "openai-api", "env": "OPENAI_API_KEY",     "label": "OpenAI",
+                   "models": {"fast": "gpt-5.6-luna", "balanced": "gpt-5.6-terra", "best": "gpt-5.6-sol"}},
+    "google":     {"hermes": "gemini",     "env": "GEMINI_API_KEY",     "label": "Google Gemini",
+                   "models": {"fast": "gemini-3.5-flash-lite", "balanced": "gemini-3.8-flash", "best": "gemini-3.1-pro-preview"}},
+    "openrouter": {"hermes": "openrouter", "env": "OPENROUTER_API_KEY", "label": "OpenRouter",
+                   "models": {"fast": "anthropic/claude-haiku-5.5", "balanced": "anthropic/claude-sonnet-5.5", "best": "anthropic/claude-opus-5.5"}},
+}
+KEY_ENVS = tuple(p["env"] for p in PROVIDERS.values())
+
+
+def tier_of(model):
+    m = str(model or "")
+    return "best" if "opus" in m else "fast" if "haiku" in m else "balanced"
+
+
+def provider_model(provider, model):
+    return PROVIDERS[provider]["models"][tier_of(model)]
 EFFORTS = ("low", "medium", "high")
 TOOLSETS = os.environ.get("CB_TOOLSETS", "web,memory,todo")
 TIMEOUT = int(os.environ.get("CB_TIMEOUT", "480"))
@@ -765,7 +788,7 @@ class Progress:
         self.thread.join(timeout=10)
 
 
-def run_hermes(profile, prompt, api_key, model=MODEL, effort=None, web=True):
+def run_hermes(profile, prompt, api_key, model=MODEL, effort=None, web=True, provider="anthropic"):
     """Run one job in the account's own Hermes home.
 
     The key is handed over through the profile's .env (0600) for the length of
@@ -776,14 +799,14 @@ def run_hermes(profile, prompt, api_key, model=MODEL, effort=None, web=True):
     """
     home = os.path.join(HOME, "profiles", profile)
     env = {k: v for k, v in os.environ.items()
-           if not k.startswith("SUPABASE_") and k not in ("ANTHROPIC_API_KEY", "TAVILY_API_KEY")}  # agent never sees DB creds
+           if not k.startswith("SUPABASE_") and not k.startswith("GMAIL_") and k not in KEY_ENVS + ("TAVILY_API_KEY",)}  # agent never sees DB creds
     env["HERMES_HOME"] = home
     workdir = os.path.join(home, "work")
     os.makedirs(workdir, exist_ok=True)
     envfile = os.path.join(home, ".env")
     fd = os.open(envfile, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w") as f:
-        f.write(f"ANTHROPIC_API_KEY={api_key}\n")
+        f.write(f"{PROVIDERS[provider]['env']}={api_key}\n")
         # Shared search key (team's, not the account's): Hermes reads it from the
         # same profile .env, and shreds with it after the job.
         if os.environ.get("TAVILY_API_KEY"):
@@ -792,7 +815,8 @@ def run_hermes(profile, prompt, api_key, model=MODEL, effort=None, web=True):
         usage_path = u.name
     try:
         tools = TOOLSETS if web else ",".join(t for t in TOOLSETS.split(",") if t.strip() != "web") or "memory"
-        cmd = [HERMES, "-z", prompt, "--provider", "anthropic", "-m", model, "-t", tools, "--usage-file", usage_path]
+        cmd = [HERMES, "-z", prompt, "--provider", PROVIDERS[provider]["hermes"], "-m", provider_model(provider, model),
+               "-t", tools, "--usage-file", usage_path]
         if effort in EFFORTS:
             cmd += ["--reasoning", effort]
         r = subprocess.run(cmd,
@@ -818,10 +842,11 @@ def run_hermes(profile, prompt, api_key, model=MODEL, effort=None, web=True):
 def handle(job):
     jid, owner = job["id"], job["owner_id"]
     log("claimed", jid, job["kind"], "attempt", job["attempts"])
-    key = rpc("get_model_key", p_owner=owner, p_provider="anthropic")
+    active = rpc("get_active_model_key", p_owner=owner) or []
+    provider, key = (active[0]["provider"], active[0]["key"]) if active and active[0].get("provider") in PROVIDERS else (None, None)
     if not key:
         # Not worth retrying: tell the user in the chat and finish the job.
-        msg = "I can't answer yet: there is no Anthropic API key on your account. Add one in Settings, then send your message again."
+        msg = "I can't answer yet: there is no AI model key on your account. Add one in Settings (Anthropic, OpenAI, Google Gemini or OpenRouter), then send your message again."
         if job.get("deal_id") and job["kind"] == "chat":
             api("POST", "/rest/v1/chat_messages", {"deal_id": job["deal_id"], "owner_id": owner, "role": "assistant",
                 "content": msg, "job_id": jid, "meta": {"error": "no_key"}}, prefer="return=minimal")
@@ -854,7 +879,8 @@ def handle(job):
         prompt = build_research_prompt(job, deal, files_text) if research else build_prompt(job, deal, history, files_text, research_text)
     conn_steps = connector_context(deal)[1] + file_steps + research_steps
     with Progress(jid, profile, t0, conn_steps):
-        raw, usage = run_hermes(profile, prompt, key, model, effort, False if brief else (True if research else web))
+        raw, usage = run_hermes(profile, prompt, key, model, effort, False if brief else (True if research else web), provider)
+    model = provider_model(provider, model)
     secs = round(time.time() - t0, 1)
     trace = conn_steps + session_trace(profile, t0)
     if brief:

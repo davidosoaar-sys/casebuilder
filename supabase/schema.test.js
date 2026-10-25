@@ -62,6 +62,7 @@ before(async () => {
   await db.exec(readFileSync(new URL('./migrations/0006_waitlist_passthrough.sql', import.meta.url), 'utf8'))
   await db.exec(readFileSync(new URL('./migrations/0007_stakeholder_briefs.sql', import.meta.url), 'utf8'))
   await db.exec(readFileSync(new URL('./migrations/0008_approval_emails.sql', import.meta.url), 'utf8'))
+  await db.exec(readFileSync(new URL('./migrations/0009_any_provider_keys.sql', import.meta.url), 'utf8'))
   for (const [uid, id] of [[A, 'deal-a'], [B, 'deal-b']]) {
     await user(uid, tx => tx.query(
       'insert into public.deals (id, owner_id, name, data) values ($1, $2, $3, $4)',
@@ -356,4 +357,33 @@ test('approving queues one confirmation email; joined accounts and repeat approv
   assert.equal(await q('fresh@example.com'), 'pending')
   await user(ADMIN, tx => tx.query(`select public.approve_email('b@x.com')`))
   assert.notEqual(await q('b@x.com'), 'pending')
+})
+
+test('any provider: prefixes are checked, the newest key is the one the agent uses, the user can switch', async () => {
+  const D = '00000000-0000-0000-0000-00000000000d'
+  await service(tx => tx.query(`insert into public.waitlist (email, status) values ('d@x.com', 'invited') on conflict do nothing`))
+  await db.query(`insert into auth.users (id, email) values ($1, 'd@x.com')`, [D])
+  const set = (p, k) => user(D, tx => tx.query(`select public.set_model_key($1, $2)`, [p, k]))
+  const active = async () => (await service(tx => tx.query(`select provider, key from public.get_active_model_key($1)`, [D]))).rows[0] || null
+  const OR = 'sk-or-v1-' + 'o'.repeat(40), OA = 'sk-proj-' + 'p'.repeat(40), GG = 'AIza' + 'g'.repeat(35)
+  await rejects(set('openrouter', OA), /start with sk-or-/)
+  await rejects(set('openai', OR), /OpenAI keys start with sk-/)
+  await rejects(set('google', OA), /start with AIza/)
+  await rejects(set('mistral', OA), /unsupported provider/)
+  assert.equal(await active(), null)
+  await set('openai', OA)
+  assert.deepEqual(await active(), { provider: 'openai', key: OA })
+  await set('openrouter', OR)
+  assert.deepEqual(await active(), { provider: 'openrouter', key: OR })
+  await set('google', GG)
+  assert.equal((await active()).provider, 'google')
+  const prefs = await user(D, tx => tx.query(`select provider from public.model_keys where preferred`))
+  assert.deepEqual(prefs.rows.map(r => r.provider), ['google'])
+  await user(D, tx => tx.query(`select public.set_preferred_model_key('openai')`))
+  assert.equal((await active()).provider, 'openai')
+  await rejects(user(D, tx => tx.query(`select public.set_preferred_model_key('anthropic')`)), /no saved key/)
+  // Removing the preferred key hands it to another saved key, never to nothing.
+  await user(D, tx => tx.query(`select public.delete_model_key('openai')`))
+  assert.ok(['google', 'openrouter'].includes((await active()).provider))
+  await rejects(user(A, tx => tx.query(`select * from public.get_active_model_key($1)`, [D])), /permission denied/)
 })

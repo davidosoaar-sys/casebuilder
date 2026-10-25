@@ -84,7 +84,7 @@ function Result({ job, projects }) {
         : job.status === 'failed' || job.status === 'cancelled'
           ? <div role="alert" className="lookup-error"><strong>This research could not finish.</strong><p>{job.error || 'The agent stopped.'}</p></div>
           : r.error === 'no_key'
-            ? <div role="alert" className="lookup-error"><strong>No Anthropic API key on your account.</strong><p>Add one in Settings and ask again.</p></div>
+            ? <div role="alert" className="lookup-error"><strong>No AI model key on your account.</strong><p>Add one in Settings and ask again.</p></div>
             : <><Answer text={r.text || ''} sources={r.sources || []} /><Sources sources={r.sources || []} dropped={r.dropped_sources || 0} /></>}
     </article>
   )
@@ -99,7 +99,7 @@ export default function Research({ userId, projects = [], project, personPage, o
   const [error, setError] = useState('')
   const [sending, setSending] = useState(false)
   const { keys } = useModelKeys(userId)
-  const noKey = keys && !keys.some(k => k.provider === 'anthropic')
+  const noKey = keys && keys.length === 0
   const box = useRef(null)
 
   useEffect(() => {
@@ -123,7 +123,7 @@ export default function Research({ userId, projects = [], project, personPage, o
 
   async function ask(e) {
     e?.preventDefault()
-    if (noKey) { setError('Add your Anthropic API key in Settings first.'); return }
+    if (noKey) { setError('Add an AI model key in Settings first.'); return }
     if (!question.trim() || sending) return
     setSending(true); setError('')
     try {
@@ -174,7 +174,7 @@ export default function Research({ userId, projects = [], project, personPage, o
               </div>
               <p className="research-hint">Searches the web with Tavily and reads pages in full. Usually 30 to 90 seconds.</p>
             </form>
-            {noKey && <p className="chat-note">Research runs on your own Anthropic API key. <button type="button" className="link-btn" onClick={onSettings}>Add it in Settings</button></p>}
+            {noKey && <p className="chat-note">Research runs on your own AI model key. <button type="button" className="link-btn" onClick={onSettings}>Add it in Settings</button></p>}
             {!history.length && <div className="lookup-empty research-empty">
               <h2>Start with a question</h2>
               <p>Who owns developer experience at a company, what changed in their last earnings call, how a competitor prices. You get an answer, the sources, and every search the agent ran.</p>

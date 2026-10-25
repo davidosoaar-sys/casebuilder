@@ -12,15 +12,19 @@
 //    "working" instead of pretending to cancel
 //  - several files at once: PDF, Word, PowerPoint, Excel and text, read in the
 //    browser with the same reader as project Files (the agent gets their text)
+import { providerById } from '../modelProviders.js'
 import React, { useEffect, useRef, useState } from 'react'
 import { extractText, ACCEPT } from '../fileText.js'
 import { motion, AnimatePresence } from 'framer-motion'
 
+// The ids stay Claude tier names (the worker maps each tier to the account's
+// provider); the names shown come from the provider the agent runs on.
 export const AGENT_MODELS = [
-  { id: 'claude-sonnet-5-5', name: 'Sonnet 5.5', tag: 'Balanced', defaultLevel: 'medium' },
-  { id: 'claude-haiku-5-5', name: 'Haiku 5.5', tag: 'Fastest', defaultLevel: 'low' },
-  { id: 'claude-opus-5-5', name: 'Opus 5.5', tag: 'Most capable', defaultLevel: 'medium' }
+  { id: 'claude-sonnet-5-5', tier: 'balanced', name: 'Sonnet 5.5', tag: 'Balanced', defaultLevel: 'medium' },
+  { id: 'claude-haiku-5-5', tier: 'fast', name: 'Haiku 5.5', tag: 'Fastest', defaultLevel: 'low' },
+  { id: 'claude-opus-5-5', tier: 'best', name: 'Opus 5.5', tag: 'Most capable', defaultLevel: 'medium' }
 ]
+const modelName = (provider, m) => providerById(provider)?.models[m.tier] || m.name
 export const LEVELS = [
   { id: 'low', label: 'Low', desc: 'Quick answers, light reasoning' },
   { id: 'medium', label: 'Medium', desc: 'Step-by-step reasoning for most requests' },
@@ -94,7 +98,7 @@ function Eye({ emotion, blink, x, y }) {
 }
 
 // ---------- the composer ----------
-export default function AgentComposer({ onSend, busy = false, disabled = false, showWelcome = false, title = 'What should we work on?', subtitle = 'Ask about this deal, or tell the agent what to change' }) {
+export default function AgentComposer({ onSend, busy = false, disabled = false, provider = 'anthropic', showWelcome = false, title = 'What should we work on?', subtitle = 'Ask about this deal, or tell the agent what to change' }) {
   const [text, setText] = useState('')
   const [files, setFiles] = useState([])
   const [fileError, setFileError] = useState('')
@@ -201,8 +205,8 @@ export default function AgentComposer({ onSend, busy = false, disabled = false, 
             <div className="mascot-left">
               <div className="mascot-model" ref={menuRef}>
                 <button type="button" className="mascot-model-btn" onClick={() => setMenu(m => !m)} disabled={disabled} aria-haspopup="true" aria-expanded={menu}>
-                  <span className="mascot-anthropic"><I d={ic.anthropic} size={13} fill /></span>
-                  <span className="mascot-model-name">{model.name}</span>
+                  {provider === 'anthropic' && <span className="mascot-anthropic"><I d={ic.anthropic} size={13} fill /></span>}
+                  <span className="mascot-model-name">{modelName(provider, model)}</span>
                   <span className="mascot-level">{level.label}</span>
                   <span className={`mascot-caret${menu ? ' open' : ''}`}><I d={ic.caret} size={12} /></span>
                 </button>
@@ -210,11 +214,11 @@ export default function AgentComposer({ onSend, busy = false, disabled = false, 
                   {menu && (
                     <motion.div className="mascot-menu" role="menu"
                       initial={{ opacity: 0, y: 8, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.95 }} transition={{ duration: 0.15 }}>
-                      <div className="mascot-menu-head"><span>Model</span><span>Anthropic</span></div>
+                      <div className="mascot-menu-head"><span>Model</span><span>{providerById(provider)?.short || 'Anthropic'}</span></div>
                       {AGENT_MODELS.map(m => (
                         <button key={m.id} type="button" role="menuitemradio" aria-checked={m.id === model.id} className={`mascot-opt${m.id === model.id ? ' is-on' : ''}`} onClick={() => setModelId(m.id)}>
-                          <span className="mascot-anthropic"><I d={ic.anthropic} size={15} fill /></span>
-                          <span className="mascot-opt-text"><strong>{m.name}</strong><small>{m.tag} · {(levels[m.id] || m.defaultLevel).toUpperCase()}</small></span>
+                          {provider === 'anthropic' && <span className="mascot-anthropic"><I d={ic.anthropic} size={15} fill /></span>}
+                          <span className="mascot-opt-text"><strong>{modelName(provider, m)}</strong><small>{m.tag} · {(levels[m.id] || m.defaultLevel).toUpperCase()}</small></span>
                           {m.id === model.id && <span className="mascot-check"><I d={ic.check} size={13} /></span>}
                         </button>
                       ))}

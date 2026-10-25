@@ -41,7 +41,7 @@ async function post(path, body) {
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
     const msg = data.error === 'account_keys_unavailable' ? data.message
-      : data.error === 'no_key' ? 'Add your Anthropic API key in Settings first.'
+      : data.error === 'no_key' ? 'Add an AI model key in Settings first.'
       : data.error === 'not_configured' ? 'The AI agent is not set up on this server.'
       : data.error === 'access_code' ? 'This needs the workspace access code.'
       : data.error || `The command failed (${res.status}).`

@@ -5,7 +5,7 @@ import { accountKey, anthropicFor } from './accountKey.js'
 const ENV = { VITE_SUPABASE_URL: 'https://p.supabase.co', VITE_SUPABASE_PUBLISHABLE_KEY: 'pub', SUPABASE_SECRET_KEY: 'sec' }
 
 // Fake Supabase: token "good" belongs to user u1, who has key "sk-user" unless noKey.
-function fakeSupabase({ noKey = false } = {}) {
+function fakeSupabase({ noKey = false, provider = 'anthropic' } = {}) {
   const calls = []
   const fetchImpl = async (url, init = {}) => {
     calls.push({ url, init })
@@ -13,10 +13,10 @@ function fakeSupabase({ noKey = false } = {}) {
       const ok = init.headers.Authorization === 'Bearer good' && init.headers.apikey === 'pub'
       return { ok, json: async () => (ok ? { id: 'u1' } : { msg: 'bad jwt' }) }
     }
-    if (url.endsWith('/rest/v1/rpc/get_model_key')) {
+    if (url.endsWith('/rest/v1/rpc/get_active_model_key')) {
       assert.equal(init.headers.apikey, 'sec', 'key lookup must use the service key')
-      assert.deepEqual(JSON.parse(init.body), { p_owner: 'u1', p_provider: 'anthropic' }, 'key lookup must be for the verified user only')
-      return { ok: true, json: async () => (noKey ? null : 'sk-user') }
+      assert.deepEqual(JSON.parse(init.body), { p_owner: 'u1' }, 'key lookup must be for the verified user only')
+      return { ok: true, json: async () => (noKey ? [] : [{ provider, key: provider === 'anthropic' ? 'sk-user' : 'sk-or-v1-user' }]) }
     }
     throw new Error('unexpected ' + url)
   }
@@ -40,7 +40,7 @@ test('a forged or expired token gets no account key', async () => {
   const { fetchImpl, calls } = fakeSupabase()
   const r = await anthropicFor({ authorization: 'Bearer forged' }, { env: ENV, fetchImpl })
   assert.equal(r.error.body.error, 'not_configured')
-  assert.ok(!calls.some(c => c.url.includes('get_model_key')), 'must not look up a key without a verified user')
+  assert.ok(!calls.some(c => c.url.includes('model_key')), 'must not look up a key without a verified user')
 })
 
 test('signed in without a saved key and no server key: tells the user to add one', async () => {
@@ -85,4 +85,12 @@ test('signed in but the server lacks SUPABASE_SECRET_KEY: says so, not "access c
   // Signed out on the same server: still the access-code gate.
   const out = await anthropicFor({}, { env, fetchImpl, needsCode: () => true })
   assert.equal(out.error.body.error, 'access_code')
+})
+
+test('a saved OpenRouter key runs through the OpenAI-compatible client, not Anthropic', async () => {
+  const { fetchImpl } = fakeSupabase({ provider: 'openrouter' })
+  const r = await anthropicFor({ authorization: 'Bearer good' }, { env: ENV, fetchImpl })
+  assert.equal(r.provider, 'openrouter')
+  assert.equal(r.client.provider, 'openrouter')
+  assert.equal(typeof r.client.messages.stream, 'function')
 })

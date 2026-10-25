@@ -6,15 +6,13 @@ import { createPortal } from 'react-dom'
 import { supabase } from '../supabase.js'
 import ChangePassword from './ChangePassword.jsx'
 
-const PROVIDERS = [
-  { id: 'anthropic', name: 'Anthropic (Claude)', prefix: 'sk-ant-', where: 'platform.claude.com → API Keys' }
-]
+import { MODEL_PROVIDERS as PROVIDERS, activeKey, providerById } from '../modelProviders.js'
 
 export function useModelKeys(userId) {
   const [keys, setKeys] = useState(null) // null = loading
   const [error, setError] = useState('')
   const load = async () => {
-    const { data, error } = await supabase.from('model_keys').select('provider, last4, updated_at').eq('owner_id', userId)
+    const { data, error } = await supabase.from('model_keys').select('provider, last4, updated_at, preferred').eq('owner_id', userId)
     if (error) { setError(error.message); setKeys([]) } else { setError(''); setKeys(data) }
   }
   useEffect(() => { load() }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -94,9 +92,10 @@ export default function Settings({ account, name, onName, theme, onTheme, onClos
           )}
 
           <section className="settings-section" id="api-key">
-            <h3>AI model key</h3>
-            <p className="settings-help">Your agent runs on your own API key. It is stored encrypted and only used for your jobs. Nobody can read it back, including you, so keep your own copy.</p>
+            <h3>AI model keys</h3>
+            <p className="settings-help">Your agent runs on your own API key, from any of these providers. Keys are stored encrypted and only used for your jobs. Nobody can read them back, including you, so keep your own copy.</p>
             {keysError && <p className="auth-error" role="alert">Could not load your key status: {keysError}</p>}
+            <ActiveProvider keys={keys} onChange={reload} />
             {PROVIDERS.map(p => <KeyRow key={p.id} provider={p} saved={keys?.find(k => k.provider === p.id)} loading={keys === null} onChange={reload} />)}
           </section>
 
@@ -130,7 +129,7 @@ function KeyRow({ provider, saved, loading, onChange }) {
     setValue(''); setEditing(false); onChange()
   }
   async function remove() {
-    if (!window.confirm(`Remove your ${provider.name} key? Your agent stops working until you add one again.`)) return
+    if (!window.confirm(`Remove your ${provider.short} key?`)) return
     setBusy(true); setError('')
     const { error } = await supabase.rpc('delete_model_key', { p_provider: provider.id })
     setBusy(false)
@@ -157,7 +156,32 @@ function KeyRow({ provider, saved, loading, onChange }) {
           <button className="ghost" type="button" onClick={remove} disabled={busy}>Remove</button>
         </div>
       )}
-      {!saved && !loading && <p className="settings-help">Get one at {provider.where}. API usage is billed by the provider, separately from any Claude subscription.</p>}
+      {!saved && !loading && <p className="settings-help">Get one at {provider.where}. Usage is billed by {provider.short}, separately from any chat subscription.</p>}
+      {error && <p className="auth-error" role="alert">{error}</p>}
+    </div>
+  )
+}
+
+// Which saved key the agent uses. Only shown once there is a choice to make.
+function ActiveProvider({ keys, onChange }) {
+  const [error, setError] = useState('')
+  if (!keys?.length) return <p className="settings-help key-none">No key saved yet. Add one below to turn the agent on.</p>
+  const active = activeKey(keys)
+  const name = providerById(active.provider)?.short || active.provider
+  if (keys.length === 1) return <p className="settings-help key-active">The agent runs on your <strong>{name}</strong> key.</p>
+  async function choose(id) {
+    setError('')
+    const { error } = await supabase.rpc('set_preferred_model_key', { p_provider: id })
+    if (error) setError(error.message); else onChange()
+  }
+  return (
+    <div className="settings-row key-active">
+      <span className="settings-label">The agent uses</span>
+      <div className="segmented" role="radiogroup" aria-label="Provider the agent uses">
+        {PROVIDERS.filter(p => keys.some(k => k.provider === p.id)).map(p => (
+          <button key={p.id} type="button" role="radio" aria-checked={active.provider === p.id} className={active.provider === p.id ? 'seg-on' : ''} onClick={() => choose(p.id)}>{p.short}</button>
+        ))}
+      </div>
       {error && <p className="auth-error" role="alert">{error}</p>}
     </div>
   )
