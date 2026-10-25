@@ -85,3 +85,26 @@ test('photoOnPage reads JSON-LD Person with the exact name only', ()=>{
  assert.equal(photoOnPage(ld('Dana Ruiz'),'Dana Ruiz'),'https://p.example/h.png')
  assert.equal(photoOnPage(ld('Dana Ruizz'),'Dana Ruiz'),'')
 })
+
+test('photoOnPage: alt with a suffix, file name with the name, never icons or group shots', ()=>{
+ assert.equal(photoOnPage('<img src="/a.jpg" alt="Dana Ruiz LeadDev">','Dana Ruiz'),'/a.jpg')
+ assert.equal(photoOnPage('<img src="https://cdn.example/speakers/Dana Ruiz.jpg" class="x">','Dana Ruiz'),'https://cdn.example/speakers/Dana Ruiz.jpg')
+ assert.equal(photoOnPage('<img src="/up/dana-ruiz-300x300.jpg" alt="">','Dana Ruiz'),'/up/dana-ruiz-300x300.jpg')
+ assert.equal(photoOnPage('<img src="/static/linkedin.png" alt="Dana Ruiz">','Dana Ruiz'),'')
+ assert.equal(photoOnPage('<img src="/g.jpg" alt="Dana Ruiz and Sam Lee">','Dana Ruiz'),'')
+ assert.equal(photoOnPage('<img src="/dana-ruiz-team.jpg" alt="Dana Ruiz with the team">','Dana Ruiz'),'')
+ assert.equal(photoOnPage('<img src="/u/profile_banners/1/1500x500" alt="Dana Ruiz">','Dana Ruiz'),'')
+ assert.equal(photoOnPage('<img src="/x.jpg" alt="Dana Ruizz">','Dana Ruiz'),'')
+ assert.equal(photoOnPage('<img src="/w/Dana_Ruiz_Signature.png" alt="Dana Ruiz\'s signature">','Dana Ruiz'),'')
+ // exact alt beats a file-name match elsewhere on the page
+ assert.equal(photoOnPage('<img src="/dana-ruiz.jpg"><img src="/b.jpg" alt="Dana Ruiz">','Dana Ruiz'),'/b.jpg')
+})
+
+test('photoOnPage: file name must be the name plus size noise; og:image only on the person\'s own page', ()=>{
+ assert.equal(photoOnPage('<img src="/w/Dana_Ruiz,_CEO_of_Acme_at_launch.jpg">','Dana Ruiz'),'')
+ assert.equal(photoOnPage('<img src="/w/Dana_Ruiz_headshot_2024.webp">','Dana Ruiz'),'/w/Dana_Ruiz_headshot_2024.webp')
+ const og='<meta property="og:image" content="https://cdn.example/dana.jpg">'
+ assert.equal(photoOnPage('<title>Dana Ruiz - Wikipedia</title>'+og,'Dana Ruiz'),'https://cdn.example/dana.jpg')
+ assert.equal(photoOnPage('<title>Acme leadership team</title>'+og,'Dana Ruiz'),'')
+ assert.equal(photoOnPage('<title>Dana Ruiz | Acme</title><meta property="og:image" content="https://cdn.example/social-image-default.png">','Dana Ruiz'),'')
+})
