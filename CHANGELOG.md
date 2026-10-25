@@ -36,17 +36,20 @@ Every version that lands on `main` gets a line here and a git tag.
 
 - Waitlist: new people join a waitlist instead of creating an account (?waitlist,
   with an optional ?ref= tag to see where they came from). The form asks name,
-  email and a role picked from a short list (Account Executive, Sales Engineer,
-  Sales leader, Founder, Consultant, Student, Other). Only emails an admin
-  invited can create an account; the database enforces it (migration 0005).
-  Existing accounts were carried over as joined. Admins get a Waitlist page:
-  counts, a shareable link, Invite per person and a copyable invite link
-  (?invited&email=). Inviting does not send email; the team sends the link.
-  Team-created accounts (worker/create_account.py) are invited first.
+  email and a role from a short list (Account Executive, Sales Engineer, Sales
+  leader, Founder, Consultant, Student, Other). An approved email goes straight
+  from the form to choosing a password; anyone else sees "You're on the list";
+  an existing account is sent to Sign in. Only approved emails can create an
+  account, enforced in the database (migrations 0005, 0006); existing accounts
+  were carried over. Admins get a Waitlist page: counts, a shareable link with a
+  source tag, Approve per person, and "Let someone in" to approve an email before
+  they join. Approving sends no email; the team tells the person.
+  Team-created accounts (worker/create_account.py) are approved first.
 
-Checks: 333 app tests, 34 worker tests, build OK. scripts/review-waitlist.mjs on the
-live database: 18/18 (name/email/role form, join, refused before invite, admin invites, non-admin cannot
-see or read the list, invited sign-up reaches the email code, cleanup).
+Checks: 334 app tests, 34 worker tests, build OK. scripts/review-waitlist.mjs on the
+live database: 16/16 (form fields, on the list, refused before approval, admin
+pre-approves, approved email goes straight to password and the email code, existing
+account sent to Sign in, non-admin cannot see, read or approve, cleanup).
 scripts/review-files.mjs on the
 real worker: 15/15 (four real files uploaded and read; agent answered three facts
 that exist only in the PDF, Word and Excel files, with Search off, and followed

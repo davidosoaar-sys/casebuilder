@@ -2,9 +2,10 @@
 // the page is only in the menu for admins, and the database refuses the
 // list and the invite to anyone else (RLS + invite_from_waitlist).
 //
-// Inviting marks them invited; it does not send an email. Copy the invite
-// link and send it from your own inbox (Amr's rule: every outbound message is
-// reviewed by a person first).
+// Approving marks an email as allowed; it does not send an email. When that
+// person enters the email on the waitlist form they go straight to choosing a
+// password. The team tells them itself (every outbound message is reviewed by
+// a person first).
 import React, { useEffect, useMemo, useState } from 'react'
 import PageHead from './PageHead.jsx'
 import { supabase } from '../supabase.js'
@@ -16,7 +17,6 @@ export async function isAdmin(userId) {
 
 const when = iso => iso ? new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''
 const appUrl = () => (typeof window !== 'undefined' ? window.location.origin : '')
-export const inviteLink = email => `${appUrl()}/?invited&email=${encodeURIComponent(email)}`
 export const joinLink = ref => `${appUrl()}/?waitlist${ref ? `&ref=${encodeURIComponent(ref)}` : ''}`
 
 export default function WaitlistAdmin() {
@@ -25,6 +25,8 @@ export default function WaitlistAdmin() {
   const [filter, setFilter] = useState('waiting')
   const [copied, setCopied] = useState('')
   const [ref, setRef] = useState('')
+  const [approveEmail, setApproveEmail] = useState('')
+  const [approved, setApproved] = useState('')
 
   const load = async () => {
     const { data, error } = await supabase.from('waitlist').select('id, email, name, company, role, use_case, source, status, created_at, invited_at, joined_at').order('created_at', { ascending: false })
@@ -36,7 +38,7 @@ export default function WaitlistAdmin() {
   const TEAM = ['existing account', 'team-created']
   const counts = useMemo(() => {
     const c = { waiting: 0, invited: 0, joined: 0, signups: 0 }
-    for (const r of rows || []) { c[r.status]++; if (!TEAM.includes(r.source)) c.signups++ }
+    for (const r of rows || []) { c[r.status]++; if (!TEAM.includes(r.source) && r.name) c.signups++ } // name = they filled the form; an admin pre-approval alone is not a sign-up
     return c
   }, [rows]) // eslint-disable-line react-hooks/exhaustive-deps
   const shown = (rows || []).filter(r => filter === 'all' || r.status === filter)
@@ -47,6 +49,15 @@ export default function WaitlistAdmin() {
     if (error) { setError(error.message); return }
     setRows(rs => rs.map(x => x.id === r.id ? { ...x, status: 'invited', invited_at: new Date().toISOString() } : x))
   }
+  async function approve(e) {
+    e.preventDefault()
+    setError(''); setApproved('')
+    const em = approveEmail.trim().toLowerCase()
+    const { error } = await supabase.rpc('approve_email', { p_email: em })
+    if (error) { setError(/valid email/.test(error.message) ? 'Enter a valid email.' : error.message); return }
+    await load()
+    setApproved(em); setApproveEmail('')
+  }
   async function copy(text, key) {
     try { await navigator.clipboard.writeText(text) } catch {}
     setCopied(key); setTimeout(() => setCopied(c => c === key ? '' : c), 1500)
@@ -54,14 +65,14 @@ export default function WaitlistAdmin() {
 
   return (
     <section className="page wl-page" aria-label="Waitlist">
-      <PageHead title="Waitlist" sub="People who asked for access. Invite the ones you want testing it.">
+      <PageHead title="Waitlist" sub="People who asked for access. Approve the ones you want testing it.">
         <button type="button" className="ghost" onClick={load}>Refresh</button>
       </PageHead>
 
       <section className="wl-stats" aria-label="Totals">
-        <div><strong>{rows ? counts.signups : '…'}</strong><span>signed up via the waitlist</span></div>
+        <div><strong>{rows ? counts.signups : '…'}</strong><span>filled in the waitlist form</span></div>
         <div><strong>{rows ? counts.waiting : '…'}</strong><span>waiting</span></div>
-        <div><strong>{rows ? counts.invited : '…'}</strong><span>invited, not signed up</span></div>
+        <div><strong>{rows ? counts.invited : '…'}</strong><span>approved, no account yet</span></div>
         <div><strong>{rows ? counts.joined : '…'}</strong><span>have an account</span></div>
       </section>
 
@@ -75,10 +86,20 @@ export default function WaitlistAdmin() {
         </div>
       </section>
 
+      <section className="wl-share wl-approve">
+        <h2>Let someone in</h2>
+        <p>Approve an email. When that person fills in the waitlist form with it, they go straight to choosing a password. They don't need to be on the list yet.</p>
+        <form className="wl-share-row" onSubmit={approve}>
+          <input type="email" value={approveEmail} onChange={e => setApproveEmail(e.target.value)} placeholder="name@company.com" aria-label="Email to approve" className="wl-approve-input" />
+          <button type="submit" className="primary" disabled={!approveEmail.trim()}>Approve</button>
+        </form>
+        {approved && <p className="wl-approved" role="status">{approved} is approved. Send them the waitlist link; they'll go straight through.</p>}
+      </section>
+
       <div className="wl-filters" role="tablist" aria-label="Filter">
         {['waiting', 'invited', 'joined', 'all'].map(f => (
           <button key={f} type="button" role="tab" aria-selected={filter === f} className={filter === f ? 'is-on' : ''} onClick={() => setFilter(f)}>
-            {f[0].toUpperCase() + f.slice(1)}{f !== 'all' && rows ? ` ${counts[f]}` : ''}
+            {({ waiting: 'Waiting', invited: 'Approved', joined: 'Has account', all: 'All' })[f]}{f !== 'all' && rows ? ` ${counts[f]}` : ''}
           </button>
         ))}
       </div>
@@ -94,10 +115,10 @@ export default function WaitlistAdmin() {
               </div>
               <div className="wl-meta">
                 <span>Joined {when(r.created_at)}{r.source ? ` · via ${r.source}` : ''}</span>
-                {r.status === 'waiting' && <button type="button" className="primary" onClick={() => invite(r)}>Invite</button>}
+                {r.status === 'waiting' && <button type="button" className="primary" onClick={() => invite(r)}>Approve</button>}
                 {r.status === 'invited' && <>
-                  <span className="wl-badge">Invited {when(r.invited_at)}</span>
-                  <button type="button" className="ghost" onClick={() => copy(inviteLink(r.email), r.id)}>{copied === r.id ? 'Copied' : 'Copy invite link'}</button>
+                  <span className="wl-badge">Approved {when(r.invited_at)}</span>
+                  <button type="button" className="ghost" onClick={() => copy(joinLink(''), r.id)}>{copied === r.id ? 'Copied' : 'Copy link to send'}</button>
                 </>}
                 {r.status === 'joined' && <span className="wl-badge is-joined">Has an account</span>}
               </div>
@@ -105,7 +126,7 @@ export default function WaitlistAdmin() {
           ))}
         </ul>
       )}
-      <p className="wl-note">Invite only marks them as allowed. Send the invite link yourself, so every message is one you've read.</p>
+      <p className="wl-note">Approving does not send an email. Tell them yourself; when they enter their email on the waitlist form, they go straight through.</p>
     </section>
   )
 }

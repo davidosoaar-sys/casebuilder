@@ -146,7 +146,7 @@ function AuthScreens({ onReset = () => {} }) {
           <h1>Reset your password</h1>
           <p className="auth-note auth-note-top">Enter your account email. We will send you a 6-digit code.</p>
           <label htmlFor="auth-email">Email</label>
-          <input id="auth-email" type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} autoFocus required />
+          <input id="auth-email" type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} autoFocus={!signup || !email} required />
           {error && <p className="auth-error" role="alert">{error}</p>}
           <button className="primary" type="submit" disabled={busy || !email.trim()}>{busy ? 'Sending…' : 'Send reset code'}</button>
           <p className="auth-switch">Remembered it? <button type="button" className="link-btn" onClick={() => go('signin')}>Sign in</button></p>
@@ -188,13 +188,15 @@ function AuthScreens({ onReset = () => {} }) {
           <input id="auth-code" className="auth-code" inputMode="numeric" autoComplete="one-time-code" maxLength={10} value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ''))} autoFocus required />
           {error && <p className="auth-error" role="alert">{error}</p>}
           <button className="primary" type="submit" disabled={busy || code.trim().length < 6}>{busy ? 'Checking…' : 'Confirm and continue'}</button>
-          <p className="auth-switch">No email? <button type="button" className="link-btn" onClick={resend}>Send a new code</button> · <button type="button" className="link-btn" onClick={() => go('signup')}>Use a different email</button></p>
+          <p className="auth-switch">No email? <button type="button" className="link-btn" onClick={resend}>Send a new code</button> · <button type="button" className="link-btn" onClick={() => go('waitlist')}>Use a different email</button></p>
         </form>
       </main>
     )
   }
 
-  if (mode === 'waitlist' || mode === 'joined') return <Waitlist email={email} setEmail={setEmail} joined={mode === 'joined'} onJoined={() => setMode('joined')} onSignIn={() => go('signin')} onInvited={() => go('signup')} />
+  if (mode === 'waitlist' || mode === 'joined') return <Waitlist email={email} setEmail={setEmail} joined={mode === 'joined'} onJoined={() => setMode('joined')}
+    onSignIn={msg => { go('signin'); if (msg) setNotice(msg) }}
+    onApproved={name => { go('signup'); setNotice(`You're approved${name.trim() ? `, ${name.trim().split(' ')[0]}` : ''}. Choose a password to create your account.`) }} />
 
   const signup = mode === 'signup'
   return (
@@ -202,12 +204,13 @@ function AuthScreens({ onReset = () => {} }) {
       <form className="auth-card" onSubmit={signup ? signUp : signIn}>
         <AppLogo />
         <h1>{signup ? 'Create your account' : 'Sign in'}</h1>
+        {notice && (mode === 'signin' || signup) && <p className="auth-notice" role="status">{notice}</p>}
         <label htmlFor="auth-email">Email</label>
-        <input id="auth-email" type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} autoFocus required />
+        <input id="auth-email" type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} autoFocus={!signup || !email} required />
         <label htmlFor="auth-password">Password</label>
-        <input id="auth-password" type="password" autoComplete={signup ? 'new-password' : 'current-password'} value={password} onChange={e => setPassword(e.target.value)} required />
+        <input id="auth-password" type="password" autoComplete={signup ? 'new-password' : 'current-password'} value={password} onChange={e => setPassword(e.target.value)} autoFocus={signup && !!email} required />
         {signup
-          ? <p className="auth-hint">At least 10 characters. Use the email you were invited with.</p>
+          ? <p className="auth-hint">At least 10 characters.</p>
           : <p className="auth-forgot"><button type="button" className="link-btn" onClick={() => { setError(''); setNotice(''); setMode('forgot') }}>Forgot password?</button></p>}
         {error && <p className="auth-error" role="alert">{error}</p>}
         <button className="primary" type="submit" disabled={busy || !email.trim() || !password}>
@@ -233,7 +236,7 @@ export const WAITLIST_ROLES = [
   'Other'
 ]
 
-function Waitlist({ email, setEmail, joined, onJoined, onSignIn, onInvited }) {
+function Waitlist({ email, setEmail, joined, onJoined, onSignIn, onApproved }) {
   const [name, setName] = useState('')
   const [role, setRole] = useState('')
   const [busy, setBusy] = useState(false)
@@ -242,9 +245,11 @@ function Waitlist({ email, setEmail, joined, onJoined, onSignIn, onInvited }) {
   async function join(e) {
     e.preventDefault()
     setBusy(true); setError('')
-    const { error } = await supabase.rpc('join_waitlist', { p_email: email.trim(), p_name: name, p_role: role, p_source: sourceParam() })
+    const { data: status, error } = await supabase.rpc('join_waitlist', { p_email: email.trim(), p_name: name, p_role: role, p_source: sourceParam() })
     setBusy(false)
     if (error) { setError(/valid email/.test(error.message) ? 'Enter a valid email.' : /too many/.test(error.message) ? 'Too many sign-ups right now. Try again in a little while.' : error.message); return }
+    if (status === 'invited') return onApproved(name)
+    if (status === 'joined') return onSignIn('You already have an account. Sign in.')
     onJoined()
   }
 
@@ -253,8 +258,7 @@ function Waitlist({ email, setEmail, joined, onJoined, onSignIn, onInvited }) {
       <div className="auth-card waitlist-card">
         <AppLogo />
         <h1>You're on the list</h1>
-        <p className="waitlist-lede">Thanks{name.trim() ? `, ${name.trim().split(' ')[0]}` : ''}. We're letting people in by hand while we test with real sellers. We'll email {email.trim()} when your account is ready.</p>
-        <p className="auth-switch">Already invited? <button type="button" className="link-btn" onClick={onInvited}>Create your account</button></p>
+        <p className="waitlist-lede">Thanks{name.trim() ? `, ${name.trim().split(' ')[0]}` : ''}. We're letting people in by hand while we test with real sellers. We'll let you know at {email.trim()} when you're in. Then come back here, enter the same email, and you'll go straight through.</p>
       </div>
     </main>
   )
@@ -276,8 +280,7 @@ function Waitlist({ email, setEmail, joined, onJoined, onSignIn, onInvited }) {
         </select>
         {error && <p className="auth-error" role="alert">{error}</p>}
         <button className="primary" type="submit" disabled={busy || !email.trim() || !name.trim() || !role}>{busy ? 'Joining…' : 'Join the waitlist'}</button>
-        <p className="auth-switch">Already have an account? <button type="button" className="link-btn" onClick={onSignIn}>Sign in</button></p>
-        <p className="auth-switch waitlist-invited">Got an invite? <button type="button" className="link-btn" onClick={onInvited}>Create your account</button></p>
+        <p className="auth-switch">Already have an account? <button type="button" className="link-btn" onClick={() => onSignIn()}>Sign in</button></p>
       </form>
     </main>
   )
