@@ -23,16 +23,24 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ---
 
-## v0.13.0 (2026-10-25): Live Room templates and stakeholder requirements
+## Unreleased
 
-- Lead Case Artifacts with the Live Room; preserve company fonts, logo and colors across formats. Add optional sourced company imagery and refreshed website/one-pager layouts.
-- Add trackable stakeholder requirements and private preparation notes. Client outputs omit internal strategy and source metadata.
-- Add private Evidence review and optional customer workflow context. Preserve equations, saved inputs and authored slides.
-- Refresh the Nike sample once with official imagery and illustrative requirement statuses, preserving existing edits.
-- Show the installed version in the sidebar; document product scope, design and shared working/release instructions.
-- Merge Amr’s v0.12.0 research, connector and upload improvements. Shared Live Room links still require republishing after edits.
-- Validation: app/server tests, production and plugin builds; prior six-brand desktop/mobile export checks. See product storyboard and Chris demo guide for workflow.
+## v0.14.0 (2026-10-26): stakeholder briefs, brand lookup fixed, the Agent sees project research
 
+- Fixed: finding a company's branding failed for many names (Apple, Visa and others)
+  with an API error about a "thinking block". The search loop removed the search tool
+  after the last allowed search, and the model's thinking is bound to the tool list, so
+  the API rejected the next turn. The tool list now stays the same on every turn.
+- Brand lookup finds more official sites: a homepage proposed from evidence (e.g. a
+  Wikipedia infobox) is accepted when the page itself names the company, or when it is
+  plainly the company's own domain and the site blocks automated requests; otherwise one
+  plain search is tried, keeping only the company's own domains (never a subdomain of a
+  site builder). Large homepages (Netflix) and sites that refuse non-browser requests
+  (Uber) now load.
+- The Agent sees the project's research: each chat reads the last six finished research
+  runs on the project, with their sources, and lists "Read earlier research" in Used N
+  tools. This is the first step of the decision to make research a chat mode with one
+  shared history; the merged chat/research history list is not built yet.
 - Stakeholder briefs: every stakeholder on the map has a "Brief" link that opens their
   own page. The agent reads the project's files and connector material (no web search)
   and writes a synthesis about that one person: where they stand (Champion to Blocker),
@@ -45,11 +53,29 @@ Every version that lands on `main` gets a line here and a git tag.
   about decks). Refresh brief re-runs it; the latest is remembered.
   New job kind stakeholder_brief (migration 0007, applied live).
 
-Checks: 335 app tests and 42 worker tests pass. scripts/review-stakeholder-brief.mjs on
+ scripts/review-stakeholder-brief.mjs on
 localhost against the real worker: 14/14 (fictional Spotify call + Slack thread; the
 Finance brief named Priya Raman, the 12-month payback bar and the security review from
 the thread; status chips; quotes verbatim; no 80-character run copied outside quotes;
 saved brief shown on reopen).
+
+Checks: 349 app tests and 44 worker tests pass. On localhost with the test account and
+the real worker: review-new-project-brand.mjs (New project -> branding finds the logo for
+Apple, Visa, Netflix); check-brand-names.mjs through the server code, 16 of 17 companies
+found (Tesla blocks automated requests and asks for its brand page; Visa can resolve to a
+regional Visa site); review-chat-sees-research.mjs 4/4; review-stakeholder-brief.mjs 14/14;
+review-nav-instructions.mjs 19/19; review-connectors.mjs 9/9; review-chat-attach.mjs 4/4;
+review-new-project-dialog.mjs 3/3.
+
+## v0.13.0 (2026-10-25): Live Room templates and stakeholder requirements
+
+- Lead Case Artifacts with the Live Room; preserve company fonts, logo and colors across formats. Add optional sourced company imagery and refreshed website/one-pager layouts.
+- Add trackable stakeholder requirements and private preparation notes. Client outputs omit internal strategy and source metadata.
+- Add private Evidence review and optional customer workflow context. Preserve equations, saved inputs and authored slides.
+- Refresh the Nike sample once with official imagery and illustrative requirement statuses, preserving existing edits.
+- Show the installed version in the sidebar; document product scope, design and shared working/release instructions.
+- Merge Amr’s v0.12.0 research, connector and upload improvements. Shared Live Room links still require republishing after edits.
+- Validation: app/server tests, production and plugin builds; prior six-brand desktop/mobile export checks. See product storyboard and Chris demo guide for workflow.
 
 ## v0.12.0 (2026-10-25): Case inputs, Case artifacts and Live room, Research in the project, new connectors
 

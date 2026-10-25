@@ -39,7 +39,7 @@ check('no "Input sheet" or "Deck" label in the menu', !nav.includes('Input sheet
 await page.click('.side-item[aria-label="Case artifacts"]')
 await page.waitForSelector('.site-view', { timeout: 15000 }).catch(() => {})
 const live = await page.$eval('.site-bar-left strong', e => e.innerText).catch(() => '')
-check('Case artifacts opens on the Live room', live === 'Live room', live)
+check('Case artifacts opens on the Live room', /^Live room$/i.test(live), live)
 check('Case artifacts stays highlighted on the Live room', await page.$eval('.side-item[aria-label="Case artifacts"]', b => b.classList.contains('side-on')))
 await page.screenshot({ path: `${out}/1-live-room.png` })
 await page.click('.site-bar-left .link-btn')

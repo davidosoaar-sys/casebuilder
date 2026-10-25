@@ -23,6 +23,7 @@ await page.waitForSelector('.dashboard', { timeout: 20000 })
 await page.click('.side-item[aria-label="Connectors"]')
 await page.waitForSelector('[data-testid=connections]')
 
+await page.waitForFunction(() => [...document.querySelectorAll('.connector img')].every(i => i.complete && i.naturalWidth > 0), { timeout: 10000 }).catch(() => {})
 const cards = await page.$$eval('.connector', l => l.map(c => ({ key: c.dataset.connector, name: c.querySelector('strong').innerText, logo: c.querySelector('img').complete && c.querySelector('img').naturalWidth > 0 })))
 for (const k of ['granola', 'sheets', 'excel', 'figma', 'canva']) {
   const c = cards.find(c => c.key === k)
