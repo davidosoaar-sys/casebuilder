@@ -60,6 +60,7 @@ before(async () => {
   // The waitlist gate goes on after the seed accounts exist, as it did in production.
   await db.exec(readFileSync(new URL('./migrations/0005_waitlist.sql', import.meta.url), 'utf8'))
   await db.exec(readFileSync(new URL('./migrations/0006_waitlist_passthrough.sql', import.meta.url), 'utf8'))
+  await db.exec(readFileSync(new URL('./migrations/0007_stakeholder_briefs.sql', import.meta.url), 'utf8'))
   for (const [uid, id] of [[A, 'deal-a'], [B, 'deal-b']]) {
     await user(uid, tx => tx.query(
       'insert into public.deals (id, owner_id, name, data) values ($1, $2, $3, $4)',
@@ -151,6 +152,15 @@ test('queue: claim -> complete, and two workers never get the same job', async (
   await service(tx => tx.query(`select public.complete_job($1, 'w1', '{"leads":10}')`, [w1.rows[0].id]))
   const { rows } = await user(A, tx => tx.query('select status, result from public.jobs'))
   assert.deepEqual(rows[0], { status: 'done', result: { leads: 10 } })
+})
+
+test('stakeholder briefs: a user can queue one for their own deal, not for another account', async () => {
+  await service(tx => tx.query(`delete from public.jobs`))
+  await user(A, tx => tx.query(`insert into public.jobs (owner_id, deal_id, kind, payload) values ($1, 'deal-a', 'stakeholder_brief', '{"role_key":"finance"}')`, [A]))
+  const { rows } = await user(A, tx => tx.query(`select kind, status from public.jobs`))
+  assert.deepEqual(rows, [{ kind: 'stakeholder_brief', status: 'queued' }])
+  await rejects(user(A, tx => tx.query(`insert into public.jobs (owner_id, deal_id, kind) values ($1, 'deal-b', 'stakeholder_brief')`, [A])), /row-level security/)
+  await rejects(user(A, tx => tx.query(`insert into public.jobs (owner_id, deal_id, kind) values ($1, 'deal-a', 'not_a_kind')`, [A])), /jobs_kind_check/)
 })
 
 test('queue: a failing job retries with backoff, then fails for good', async () => {

@@ -2,6 +2,8 @@ import React, { useState } from 'react'
 import InputSheet from './InputSheet.jsx'
 import StakeholderMap from './StakeholderMap.jsx'
 import People from './People.jsx'
+import StakeholderBrief from './StakeholderBrief.jsx'
+import { resolveStakeholder } from '../deck/stakeholders.js'
 import { uid } from '../projects.js'
 import { ORIGIN, emptySource } from '../source.js'
 import { dealMarkdown, markdownFilename } from '../dealReport.js'
@@ -19,9 +21,15 @@ export default function Details({
   onFields,
   onStakeholders,
   onPeople,
-  onReset
+  onReset,
+  userId,
+  onFiles
 }) {
   const [tab, setTab] = useState('inputs')
+  const [briefKey, setBriefKey] = useState(null)
+  const briefFor = briefKey && project.stakeholders.find(s => s.key === briefKey)
+  const briefResolved = briefFor && resolveStakeholder(briefFor)
+  const briefStakeholder = briefResolved && { ...briefResolved, key: briefFor.key, namedPeople: briefFor.namedPeople || [] }
   const peopleCount = Object.values(project.people || {}).reduce((n, l) => n + l.length, 0)
 
   return (
@@ -81,7 +89,9 @@ export default function Details({
       )}
 
       {tab === 'stakeholders' && (
-        <StakeholderMap embedded company={project.name} stakeholders={project.stakeholders} people={project.people} onChange={onStakeholders} />
+        briefStakeholder && userId
+          ? <StakeholderBrief key={briefKey} project={project} stakeholder={briefStakeholder} userId={userId} onBack={() => setBriefKey(null)} onFiles={onFiles} />
+          : <StakeholderMap embedded company={project.name} stakeholders={project.stakeholders} people={project.people} onChange={onStakeholders} onOpen={userId ? setBriefKey : undefined} />
       )}
 
       {tab === 'people' && (

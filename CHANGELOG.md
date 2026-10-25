@@ -25,6 +25,24 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
+- Stakeholder briefs: every stakeholder on the map has a "Brief" link that opens their
+  own page. The agent reads the project's files and connector material (no web search)
+  and writes a synthesis about that one person: where they stand (Champion to Blocker),
+  what they care about, their concerns, requirements and open asks as status chips
+  (Actioned / In progress / Waiting for approval / Open, with who it is on), decisions
+  with dates, the next step before the next conversation, and their own words. It is
+  not a copy of the transcripts. Every quote is checked word for word against the
+  material by the worker and dropped if it is not there; a named person is only shown
+  if the material names them. Project instructions are left out of briefs (they are
+  about decks). Refresh brief re-runs it; the latest is remembered.
+  New job kind stakeholder_brief (migration 0007, applied live).
+
+Checks: 335 app tests and 42 worker tests pass. scripts/review-stakeholder-brief.mjs on
+localhost against the real worker: 14/14 (fictional Spotify call + Slack thread; the
+Finance brief named Priya Raman, the 12-month payback bar and the security review from
+the thread; status chips; quotes verbatim; no 80-character run copied outside quotes;
+saved brief shown on reopen).
+
 ## v0.12.0 (2026-10-25): Case inputs, Case artifacts and Live room, Research in the project, new connectors
 
 - Project menu renamed from Ali's feedback: "Input sheet" is now **Case inputs**;

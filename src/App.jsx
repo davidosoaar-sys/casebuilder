@@ -321,6 +321,8 @@ export default function App({ account }) {
             onFields={onFields}
             onStakeholders={onStakeholders}
             onPeople={onPeople}
+            userId={account.session.user.id}
+            onFiles={() => navigate('files')}
             onReset={() => {
               if (window.confirm('Reset this project’s inputs, stakeholders and deck to the defaults?')) {
                 update({ fields: defaultFields(), stakeholders: defaultStakeholders(), deck: defaultDeck(), documents: [] })

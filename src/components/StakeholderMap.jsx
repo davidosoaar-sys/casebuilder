@@ -26,7 +26,8 @@ export default function StakeholderMap({
   onContinue,
   continueLabel = 'Continue',
   showStep = true,
-  embedded = false
+  embedded = false,
+  onOpen
 }) {
   const mapRef = useRef(null)
   const [dragKey, setDragKey] = useState(null)
@@ -44,7 +45,7 @@ export default function StakeholderMap({
   const moved = items.some(s => s.pos)
 
   function startDrag(e, key) {
-    if (e.target.closest('.map-x')) return
+    if (e.target.closest('.map-x, .map-open')) return
     e.currentTarget.setPointerCapture(e.pointerId)
     setDragKey(key)
   }
@@ -127,6 +128,7 @@ export default function StakeholderMap({
                 <span className="map-people">
                   {found > 0 ? `${found} ${found === 1 ? 'person' : 'people'} found` : 'No one found yet'}
                 </span>
+                {onOpen && <button type="button" className="link-btn map-open" onClick={() => onOpen(s.key)} aria-label={`Open the brief for ${s.role}`}>Brief →</button>}
               </span>
             </div>
           )
