@@ -147,7 +147,7 @@ export default function App({ account }) {
   function navigate(next) {
     setStage(null)
     if (next === 'settings') { setSettingsOpen(true); return } // overlay: never leaves the current page
-    if (['projects', 'dashboard', 'research', 'waitlist'].includes(next)) { saving.flush(); setCurrentId(null) }
+    if (['projects', 'dashboard', 'waitlist'].includes(next)) { saving.flush(); setCurrentId(null) }
     if (next === 'agent') { if (view !== 'agent') backFromAgent.current = view; setSplit(false) }
     setView(next)
   }
@@ -287,7 +287,7 @@ export default function App({ account }) {
   }
 
   // Details and Deck need a project; without one, fall back to the list.
-  const page = ['connections', 'lookup', 'dashboard', 'research', 'waitlist'].includes(view) ? view : project ? view : 'projects'
+  const page = ['connections', 'lookup', 'dashboard', 'waitlist'].includes(view) ? view : project ? view : 'projects'
   const insideProject = !!project && page !== 'projects'
   const agentFull = insideProject && page === 'agent'
   const agentSplit = insideProject && split && !agentFull
@@ -342,8 +342,8 @@ export default function App({ account }) {
           <WaitlistAdmin />
         ) : page === 'files' && project ? (
           <ProjectFiles key={project.id} project={project} userId={account.session.user.id} />
-        ) : page === 'research' ? (
-          <Research userId={account.session.user.id} projects={projects} project={project}
+        ) : page === 'research' && project ? (
+          <Research key={project.id} userId={account.session.user.id} projects={projects} project={project}
             personPage={<PersonLookup embedded lookup={lookup} project={project}
               onAdd={person => update(p => addPersonToDeal(p, person))}
               onInput={suggestion => setPendingPersonInput({ dealId: project.id, suggestion })} />}

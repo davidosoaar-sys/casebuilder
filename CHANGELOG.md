@@ -25,6 +25,19 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
+- Project menu renamed from Ali's feedback: "Input sheet" is now **Case inputs**;
+  "Deck" is now **Case artifacts** and opens on the **Live room** (was "Website"),
+  with "Edit deck" to reach the slides.
+- Research moved into the project: it sits in the project menu, runs for that
+  project only (its files and connectors), and lists only that project's research.
+  The global Research tab is gone.
+- Files: saved instructions show as text with an Edit button instead of an open
+  box. Edit opens the box with Cancel and Save changes.
+
+Checks: 334 app tests pass. scripts/review-nav-instructions.mjs on localhost with
+the test account: 18/18 (menu names and order, Live room default, Research inside
+the project, instructions saved view, edit, cancel, save changes, reload).
+
 ## v0.11.0 (2026-10-25): Project Files and the waitlist
 
 - Project Files: each project has a Files page, like a Claude Project's files.

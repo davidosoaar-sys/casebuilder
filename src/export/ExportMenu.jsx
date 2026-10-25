@@ -104,7 +104,7 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
     { name: 'PDF', note: 'Preview the paginated document', run: () => show('pdf') },
     { name: 'Slides', note: 'Present one slide at a time', run: () => show('slides') },
     { name: 'One-pager', note: 'A concise executive brief', run: () => show('onepager') },
-    { name: 'Website', note: 'Explore perspectives and scenarios', run: () => show('website') }
+    { name: 'Live room', note: 'Explore perspectives and scenarios', run: () => show('website') }
   ]
 
   return (
