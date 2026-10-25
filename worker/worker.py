@@ -13,8 +13,10 @@ Stdlib only. Config from env (see worker.env.example):
   CB_TIMEOUT    seconds per job, default 480 (< 10 min stale-claim window)
   CB_POLL       idle poll interval seconds, default 3
   CB_ONCE=1     process at most one job then exit (tests)
+  GMAIL_USER, GMAIL_APP_PASSWORD   optional: send waitlist approval emails
+  CB_APP_URL    link in those emails, default https://casebuilder-three.vercel.app
 """
-import json, os, re, socket, sqlite3, subprocess, sys, tempfile, threading, time, urllib.error, urllib.parse, urllib.request
+import json, os, re, smtplib, socket, sqlite3, subprocess, sys, tempfile, threading, time, urllib.error, urllib.parse, urllib.request
 
 URL = os.environ["SUPABASE_URL"].rstrip("/")
 KEY = os.environ["SUPABASE_SECRET_KEY"]
@@ -884,6 +886,62 @@ def handle(job):
     log("done", jid, f"{secs}s", f"edits={len(edits)} commands={len(commands)} rejected={len(rejected)}", f"tokens in={u.get('input_tokens')} out={u.get('output_tokens')} calls={u.get('api_calls')}")
 
 
+# ---------------------------------------------------------------- approval emails
+# An admin approving someone queues approval_email='pending' (migration 0008).
+# The worker claims each row (pending -> sending, so two workers never both send),
+# sends one plain-text email over Gmail SMTP, and records sent / failed.
+GMAIL_USER = os.environ.get("GMAIL_USER", "")
+GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD", "")
+APP_URL = os.environ.get("CB_APP_URL", "https://casebuilder-three.vercel.app").rstrip("/")
+
+
+def approval_message(to, name, app_url=APP_URL, sender=GMAIL_USER):
+    from email.message import EmailMessage
+    first = (name or "").strip().split(" ")[0]
+    m = EmailMessage()
+    m["Subject"] = "You're in: your CaseBuilder access is confirmed"
+    m["From"] = f"CaseBuilder <{sender}>"
+    m["To"] = to
+    m.set_content(
+        f"Hi{(' ' + first) if first else ''},\n\n"
+        "You've been approved for CaseBuilder.\n\n"
+        "To get started:\n"
+        f"1. Go to {app_url}\n"
+        f"2. Sign up with {to}, the address this email was sent to.\n"
+        "3. Choose a password, and you're in.\n\n"
+        "Thanks for your patience while we test it.\n"
+        "The CaseBuilder team\n")
+    return m
+
+
+def send_approval_emails(smtp_factory=None, limit=10):
+    if not (GMAIL_USER and GMAIL_APP_PASSWORD):
+        return 0
+    rows = api("GET", "/rest/v1/waitlist?approval_email=eq.pending&select=id,email,name"
+               f"&order=invited_at.asc&limit={limit}") or []
+    sent = 0
+    for r in rows:
+        claimed = api("PATCH", f"/rest/v1/waitlist?id=eq.{r['id']}&approval_email=eq.pending",
+                      {"approval_email": "sending"}, prefer="return=representation") or []
+        if not claimed:
+            continue  # another worker took it
+        try:
+            smtp = (smtp_factory or (lambda: smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=30)))()
+            with smtp:
+                smtp.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+                smtp.send_message(approval_message(r["email"], r.get("name")))
+            api("PATCH", f"/rest/v1/waitlist?id=eq.{r['id']}", {"approval_email": "sent",
+                "approval_email_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "approval_email_error": None},
+                prefer="return=minimal")
+            sent += 1
+            log("approval email sent to", r["email"])
+        except Exception as e:
+            api("PATCH", f"/rest/v1/waitlist?id=eq.{r['id']}", {"approval_email": "failed",
+                "approval_email_error": str(e)[:300]}, prefer="return=minimal")
+            log("approval email failed for", r["email"], str(e)[:200])
+    return sent
+
+
 def main():
     log("worker", WORKER_ID, "model", MODEL, "tools", TOOLSETS)
     while True:
@@ -892,6 +950,10 @@ def main():
         except Exception as e:
             log("claim error:", e); time.sleep(10); continue
         if not jobs:
+            try:
+                send_approval_emails()
+            except Exception as e:
+                log("approval email error:", str(e)[:200])
             if ONCE:
                 log("no job"); return
             time.sleep(POLL); continue

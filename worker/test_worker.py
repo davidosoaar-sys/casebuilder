@@ -388,3 +388,48 @@ class ProjectResearchInChat(unittest.TestCase):
 
     def test_no_research_adds_nothing(self):
         self.assertEqual(worker.research_prompt([]), ("", []))
+
+
+class ApprovalEmail(unittest.TestCase):
+    def test_wording_names_the_recipient_address(self):
+        m = worker.approval_message("mia@example.com", "Mia Mail", app_url="https://app.example", sender="cb@gmail.com")
+        body = m.get_content()
+        self.assertIn("Hi Mia,", body)
+        self.assertIn("Sign up with mia@example.com, the address this email was sent to.", body)
+        self.assertIn("https://app.example", body)
+        self.assertNotIn("enter this email", body.lower())
+        self.assertEqual(m["To"], "mia@example.com")
+        self.assertEqual(m["From"], "CaseBuilder <cb@gmail.com>")
+        self.assertNotIn("Hi ,", worker.approval_message("x@y.com", "").get_content())
+
+    def test_claims_sends_and_records(self):
+        calls, sent = [], []
+        def fake_api(method, path, body=None, prefer=None):
+            calls.append((method, path, body))
+            if method == "GET":
+                return [{"id": "1", "email": "a@x.com", "name": "Ann"}, {"id": "2", "email": "b@x.com", "name": ""}]
+            if body == {"approval_email": "sending"}:
+                return [] if "id=eq.2" in path else [{"id": "1"}]  # row 2 taken by another worker
+            return None
+        class FakeSMTP:
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+            def login(self, u, p): pass
+            def send_message(self, m): sent.append(m["To"])
+        old = (worker.api, worker.GMAIL_USER, worker.GMAIL_APP_PASSWORD)
+        worker.api, worker.GMAIL_USER, worker.GMAIL_APP_PASSWORD = fake_api, "cb@gmail.com", "pw"
+        try:
+            self.assertEqual(worker.send_approval_emails(smtp_factory=FakeSMTP), 1)
+        finally:
+            worker.api, worker.GMAIL_USER, worker.GMAIL_APP_PASSWORD = old
+        self.assertEqual(sent, ["a@x.com"])
+        final = [b for m, p, b in calls if m == "PATCH" and "id=eq.1" in p and b.get("approval_email") == "sent"]
+        self.assertEqual(len(final), 1)
+
+    def test_no_credentials_sends_nothing(self):
+        old = worker.GMAIL_APP_PASSWORD
+        worker.GMAIL_APP_PASSWORD = ""
+        try:
+            self.assertEqual(worker.send_approval_emails(), 0)
+        finally:
+            worker.GMAIL_APP_PASSWORD = old

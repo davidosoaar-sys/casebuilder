@@ -2026,3 +2026,6 @@ a.research-cite:hover { background: var(--accent); color: var(--accent-ink) !imp
 .sb-card blockquote cite { display: block; margin-top: 2px; color: var(--ink-faint); font-size: 12px; font-style: normal; }
 .sb-none { margin: 0; color: var(--ink-faint); font-size: 13px; }
 .sb-note { margin: 0; color: var(--ink-faint); font-size: 12px; }
+
+.wl-mail.is-sent { color: var(--accent, #2a9d8f); }
+.wl-mail.is-failed { color: #d14343; }

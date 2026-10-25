@@ -61,6 +61,7 @@ before(async () => {
   await db.exec(readFileSync(new URL('./migrations/0005_waitlist.sql', import.meta.url), 'utf8'))
   await db.exec(readFileSync(new URL('./migrations/0006_waitlist_passthrough.sql', import.meta.url), 'utf8'))
   await db.exec(readFileSync(new URL('./migrations/0007_stakeholder_briefs.sql', import.meta.url), 'utf8'))
+  await db.exec(readFileSync(new URL('./migrations/0008_approval_emails.sql', import.meta.url), 'utf8'))
   for (const [uid, id] of [[A, 'deal-a'], [B, 'deal-b']]) {
     await user(uid, tx => tx.query(
       'insert into public.deals (id, owner_id, name, data) values ($1, $2, $3, $4)',
@@ -336,4 +337,23 @@ test('waitlist: an approved email passes straight through; existing accounts are
   await user(ADMIN, tx => tx.query(`select public.approve_email('a@x.com')`))
   const st = await service(tx => tx.query(`select email, status from public.waitlist where email in ('later@example.com', 'a@x.com') order by email`))
   assert.deepEqual(st.rows.map(r => r.status), ['joined', 'invited'])
+})
+
+test('approving queues one confirmation email; joined accounts and repeat approvals do not', async () => {
+  await anon(tx => tx.query(`select public.join_waitlist('mail.me@example.com', 'Mia Mail')`))
+  const id = (await service(tx => tx.query(`select id from public.waitlist where email = 'mail.me@example.com'`))).rows[0].id
+  const q = async e => (await service(tx => tx.query(`select approval_email from public.waitlist where email = $1`, [e]))).rows[0]?.approval_email ?? null
+  assert.equal(await q('mail.me@example.com'), null)
+  await user(ADMIN, tx => tx.query(`select public.invite_from_waitlist($1)`, [id]))
+  assert.equal(await q('mail.me@example.com'), 'pending')
+  // The worker sends it; a second click on an already-invited row does not queue it again.
+  await service(tx => tx.query(`update public.waitlist set approval_email = 'sent' where id = $1`, [id]))
+  await user(ADMIN, tx => tx.query(`select public.invite_from_waitlist($1)`, [id]))
+  await user(ADMIN, tx => tx.query(`select public.approve_email('mail.me@example.com')`))
+  assert.equal(await q('mail.me@example.com'), 'sent')
+  // Approve-by-email for someone new queues it too; an existing account gets nothing.
+  await user(ADMIN, tx => tx.query(`select public.approve_email('fresh@example.com')`))
+  assert.equal(await q('fresh@example.com'), 'pending')
+  await user(ADMIN, tx => tx.query(`select public.approve_email('b@x.com')`))
+  assert.notEqual(await q('b@x.com'), 'pending')
 })

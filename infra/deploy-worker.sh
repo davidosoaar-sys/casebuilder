@@ -6,7 +6,9 @@ cd "$(dirname "$0")/.."
 scp -q worker/worker.py casebuilder-vps:/tmp/cb-worker.py
 # worker.env -> server, stripped to the two needed vars, owner-only.
 { grep -E '^(SUPABASE_URL|SUPABASE_SECRET_KEY)=' ~/.config/casebuilder/worker.env
-  grep -E '^TAVILY_API_KEY=tvly-' ~/.config/casebuilder/search.env 2>/dev/null || true; } | ssh casebuilder-vps 'cat > /tmp/cb-worker.env'
+  grep -E '^TAVILY_API_KEY=tvly-' ~/.config/casebuilder/search.env 2>/dev/null || true
+  # Waitlist approval emails go out from this Gmail (app password, same as sign-up codes).
+  grep -E '^GMAIL_APP_PASSWORD=.{16}$' ~/.config/casebuilder/gmail-smtp.env 2>/dev/null && echo 'GMAIL_USER=casebuilder.app@gmail.com' || true; } | ssh casebuilder-vps 'cat > /tmp/cb-worker.env'
 ssh casebuilder-vps 'bash -s' <<'EOF'
 set -e
 sudo install -d -o casebuilder -g casebuilder -m 700 /home/casebuilder/worker

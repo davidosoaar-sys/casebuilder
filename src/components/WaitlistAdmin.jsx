@@ -2,10 +2,10 @@
 // the page is only in the menu for admins, and the database refuses the
 // list and the invite to anyone else (RLS + invite_from_waitlist).
 //
-// Approving marks an email as allowed; it does not send an email. When that
-// person enters the email on the waitlist form they go straight to choosing a
-// password. The team tells them itself (every outbound message is reviewed by
-// a person first).
+// Approving marks an email as allowed and queues one confirmation email
+// (migration 0008); the worker sends it and the row shows whether it went.
+// When that person signs up with that address they go straight to choosing a
+// password.
 import React, { useEffect, useMemo, useState } from 'react'
 import PageHead from './PageHead.jsx'
 import { supabase } from '../supabase.js'
@@ -29,7 +29,7 @@ export default function WaitlistAdmin() {
   const [approved, setApproved] = useState('')
 
   const load = async () => {
-    const { data, error } = await supabase.from('waitlist').select('id, email, name, company, role, use_case, source, status, created_at, invited_at, joined_at').order('created_at', { ascending: false })
+    const { data, error } = await supabase.from('waitlist').select('id, email, name, company, role, use_case, source, status, created_at, invited_at, joined_at, approval_email, approval_email_error').order('created_at', { ascending: false })
     if (error) { setError(error.message); setRows([]) } else setRows(data)
   }
   useEffect(() => { load() }, [])
@@ -47,7 +47,7 @@ export default function WaitlistAdmin() {
     setError('')
     const { error } = await supabase.rpc('invite_from_waitlist', { p_id: r.id })
     if (error) { setError(error.message); return }
-    setRows(rs => rs.map(x => x.id === r.id ? { ...x, status: 'invited', invited_at: new Date().toISOString() } : x))
+    setRows(rs => rs.map(x => x.id === r.id ? { ...x, status: 'invited', invited_at: new Date().toISOString(), approval_email: 'pending' } : x))
   }
   async function approve(e) {
     e.preventDefault()
@@ -88,12 +88,12 @@ export default function WaitlistAdmin() {
 
       <section className="wl-share wl-approve">
         <h2>Let someone in</h2>
-        <p>Approve an email. When that person fills in the waitlist form with it, they go straight to choosing a password. They don't need to be on the list yet.</p>
+        <p>Approve an email address. We email them a confirmation, and when they sign up with that address they go straight to choosing a password. They don't need to be on the list yet.</p>
         <form className="wl-share-row" onSubmit={approve}>
           <input type="email" value={approveEmail} onChange={e => setApproveEmail(e.target.value)} placeholder="name@company.com" aria-label="Email to approve" className="wl-approve-input" />
           <button type="submit" className="primary" disabled={!approveEmail.trim()}>Approve</button>
         </form>
-        {approved && <p className="wl-approved" role="status">{approved} is approved. Send them the waitlist link; they'll go straight through.</p>}
+        {approved && <p className="wl-approved" role="status">{approved} is approved. A confirmation email is on its way.</p>}
       </section>
 
       <div className="wl-filters" role="tablist" aria-label="Filter">
@@ -118,6 +118,7 @@ export default function WaitlistAdmin() {
                 {r.status === 'waiting' && <button type="button" className="primary" onClick={() => invite(r)}>Approve</button>}
                 {r.status === 'invited' && <>
                   <span className="wl-badge">Approved {when(r.invited_at)}</span>
+                  <EmailStatus row={r} />
                   <button type="button" className="ghost" onClick={() => copy(joinLink(''), r.id)}>{copied === r.id ? 'Copied' : 'Copy link to send'}</button>
                 </>}
                 {r.status === 'joined' && <span className="wl-badge is-joined">Has an account</span>}
@@ -126,7 +127,14 @@ export default function WaitlistAdmin() {
           ))}
         </ul>
       )}
-      <p className="wl-note">Approving does not send an email. Tell them yourself; when they enter their email on the waitlist form, they go straight through.</p>
+      <p className="wl-note">Approving sends one confirmation email from the CaseBuilder Gmail. If it fails, the row says so; send them the link yourself.</p>
     </section>
   )
+}
+
+function EmailStatus({ row }) {
+  const s = row.approval_email
+  if (!s) return null
+  const text = { pending: 'Email queued', sending: 'Sending email', sent: 'Email sent', failed: 'Email failed' }[s]
+  return <span className={`wl-badge wl-mail is-${s}`} title={s === 'failed' ? row.approval_email_error || '' : ''}>{text}</span>
 }

@@ -1,5 +1,5 @@
 // Temporarily set the TEST account's role, for exercising admin-only UI.
-// Usage: node scripts/test-account-role.mjs admin|user   (prints the role read back)
+// Usage: node scripts/set-role-test-account.mjs admin|user   (prints the role read back)
 import fs from 'node:fs'
 import os from 'node:os'
 const envFile = p => Object.fromEntries(fs.readFileSync(p, 'utf8').split('\n').filter(l => /^[A-Z_]+=/.test(l)).map(l => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1).trim()]))
