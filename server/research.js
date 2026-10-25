@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import {enrichPublicProfile} from './publicProfile.js'
+import {enrichPublicProfile,findPublicPhoto} from './publicProfile.js'
 import { agentPrompt } from './agent-commands/index.js'
 import { AGENT_COMMANDS } from '../src/agentCommands.js'
 import { runWithSearch } from './agentSearch.js'
@@ -24,7 +24,7 @@ const norm = u =>
 const LINKEDIN = /^https:\/\/([a-z]{2,3}\.)?linkedin\.com\/in\/[^\s?#]+/i
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-export async function research({ company, role }, client = new Anthropic(), {fetcher} = {}) {
+export async function research({ company, role }, client = new Anthropic(), {fetcher, photoSearch} = {}) {
   const messages = [
     {
       role: 'user',
@@ -89,7 +89,14 @@ export async function research({ company, role }, client = new Anthropic(), {fet
     })
   }
 
-  return { people: people.slice(0, 3), note: clean(parsed.note, 300) || null, search: run.search }
+  const top = people.slice(0, 3)
+  // No verified headshot from the agent: look for one on public pages, in parallel.
+  await Promise.all(top.map(async p => {
+    if (p.photo) return
+    const photo = await findPublicPhoto({ name: p.name, company }, { ...(photoSearch !== undefined ? { search: photoSearch } : {}), ...(fetcher ? { fetcher } : {}) }).catch(() => null)
+    if (photo) p.photo = photo
+  }))
+  return { people: top, note: clean(parsed.note, 300) || null, search: run.search }
 }
 
 const clean = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '')

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {enrichPublicProfile} from './publicProfile.js'
+import {enrichPublicProfile,findPublicPhoto,photoOnPage} from './publicProfile.js'
 import {sanitizePerson,addPersonToDeal} from '../src/personLookup.js'
 import {searchPerson} from './personAgent.js'
 import {research} from './research.js'
@@ -54,4 +54,34 @@ test('selected portraits and public links survive case-file roundtrip',async()=>
  project.people={champion:[{name:'Alex Example',title:'Head of Platform',...media,sources:[source],found:true}]}
  const restored=caseFileToProject(projectToCaseFile(project)).people.champion[0]
  assert.deepEqual(restored.photo,media.photo);assert.deepEqual(restored.links,media.links);assert.equal(restored.emailSourceUrl,source)
+})
+
+
+const JPEG=Buffer.from([255,216,255,224,0,16,74,70,73,70,0,1])
+const fakeSearch=urls=>({search:async()=>urls.map(url=>({url}))})
+const pages=map=>async url=>{const v=map[url];if(!v)throw new Error('404 '+url);return typeof v==='string'?{type:'text/html',buffer:Buffer.from(v),url}:{type:'image/jpeg',buffer:v,url}}
+
+test('photo fallback: exact-name headshot on a page that names the company', async()=>{
+ const p=await findPublicPhoto({name:'Dana Ruiz',company:'Acme'},{search:fakeSearch(['https://conf.example/speakers/dana']),fetcher:pages({
+  'https://conf.example/speakers/dana':'<h1>Dana Ruiz</h1><p>VP Engineering at Acme</p><img src="/img/dana.jpg" alt="Dana Ruiz">',
+  'https://conf.example/img/dana.jpg':JPEG})})
+ assert.equal(p.imageUrl,'https://conf.example/img/dana.jpg');assert.equal(p.sourceUrl,'https://conf.example/speakers/dana');assert.match(p.dataUrl,/^data:image\/jpeg;base64,/)
+})
+
+test('photo fallback refuses: other alt, page without the company, social sites, non-images', async()=>{
+ const map={
+  'https://a.example/1':'<p>Dana Ruiz, Acme</p><img src="/x.jpg" alt="Dana Ruiz and team">',
+  'https://a.example/2':'<p>Dana Ruiz at Globex</p><img src="/y.jpg" alt="Dana Ruiz">',
+  'https://a.example/3':'<p>Dana Ruiz, Acme</p><img src="/z.jpg" alt="Dana Ruiz">',
+  'https://a.example/x.jpg':JPEG,'https://a.example/y.jpg':JPEG,
+  'https://a.example/z.jpg':Buffer.from('<html>not an image</html>')}
+ const fetcher=async url=>url.endsWith('/z.jpg')?{type:'text/html',buffer:map[url],url}:pages(map)(url)
+ assert.equal(await findPublicPhoto({name:'Dana Ruiz',company:'Acme'},{search:fakeSearch(['https://www.linkedin.com/in/dana','https://a.example/1','https://a.example/2','https://a.example/3']),fetcher}),null)
+ assert.equal(await findPublicPhoto({name:'Dana Ruiz',company:'Acme'},{search:null,fetcher}),null)
+})
+
+test('photoOnPage reads JSON-LD Person with the exact name only', ()=>{
+ const ld=n=>`<script type="application/ld+json">{"@graph":[{"@type":"Person","name":"${n}","image":{"url":"https://p.example/h.png"}}]}</script>`
+ assert.equal(photoOnPage(ld('Dana Ruiz'),'Dana Ruiz'),'https://p.example/h.png')
+ assert.equal(photoOnPage(ld('Dana Ruizz'),'Dana Ruiz'),'')
 })
