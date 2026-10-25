@@ -16337,7 +16337,12 @@ var CONNECTORS = [
   { key: "hubspot", label: "HubSpot", blurb: "CRM deal and contact records", allows: "read CRM deal and contact records", accepts: "a CSV export of the deal", docLabel: "HubSpot export" },
   { key: "slack", label: "Slack", blurb: "Internal threads", allows: "read internal threads", accepts: "a pasted thread or export", docLabel: "Slack thread" },
   { key: "clay", label: "Clay", blurb: "Company and contact enrichment", allows: "read company and contact enrichment", accepts: "a CSV export or pasted record", docLabel: "Clay record" },
-  { key: "lemlist", label: "Lemlist", blurb: "Outreach campaigns and replies", allows: "read outreach campaigns and replies", accepts: "a CSV export or pasted replies", docLabel: "Lemlist export" }
+  { key: "lemlist", label: "Lemlist", blurb: "Outreach campaigns and replies", allows: "read outreach campaigns and replies", accepts: "a CSV export or pasted replies", docLabel: "Lemlist export" },
+  { key: "granola", label: "Granola", blurb: "Meeting notes and call summaries", allows: "read meeting notes and call summaries", accepts: "pasted notes or an exported .md / .txt / .pdf", docLabel: "Granola notes" },
+  { key: "sheets", label: "Google Sheets", blurb: "Finance models and forecasts", allows: "read finance models and forecasts", accepts: "a sheet downloaded as .xlsx or .csv", docLabel: "Google Sheet" },
+  { key: "excel", label: "Excel", blurb: "Finance models and forecasts", allows: "read finance models and forecasts", accepts: "an .xlsx or .csv file", docLabel: "Excel workbook" },
+  { key: "figma", label: "Figma", blurb: "Design specs and handoff notes", allows: "read design specs and handoff notes", accepts: "a design spec exported as .pdf, or pasted notes", docLabel: "Figma export" },
+  { key: "canva", label: "Canva", blurb: "Decks and one-pagers", allows: "read decks and one-pagers", accepts: "a design downloaded as .pdf or .pptx", docLabel: "Canva design" }
 ];
 var connectorByKey = Object.fromEntries(CONNECTORS.map((c) => [c.key, c]));
 var defaultConnectors = () => Object.fromEntries(CONNECTORS.map((c) => [c.key, false]));
