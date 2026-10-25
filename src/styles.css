@@ -1789,3 +1789,21 @@ body.is-resizing iframe { pointer-events: none; }
 
 .person-meta dd .profile-link-source{margin-left:8px}
 .brand-review{margin:16px 0;padding:12px 0;border-top:1px solid var(--line);font-size:12px;color:var(--ink-dim)}.brand-review summary{cursor:pointer;color:var(--ink);padding:4px 0}.brand-review p{line-height:1.6}.brand-review dl{margin:12px 0}.brand-review dl>div{display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}.brand-review dt{text-transform:capitalize;color:var(--ink)}.brand-review dd{margin:0;overflow-wrap:anywhere}.brand-review dd small{display:inline-block;margin-left:8px}.brand-review dd a{margin-left:8px}
+
+/* ---- v0.9.1: brand icon + logo sizing ---- */
+.brand-setup-marks { display: flex; align-items: center; gap: 22px; margin-bottom: 18px; }
+.brand-setup-preview .brand-setup-icon { width: 64px; height: 64px; object-fit: contain; }
+.brand-setup-preview .brand-setup-logo { height: 44px; max-width: 280px; object-fit: contain; }
+.brand-icon-preview img { width: 48px; height: 48px; object-fit: contain; }
+/* Wordmarks are wide and short: size by height so they read at a glance. */
+.deck-company-logo { height: 44px; width: auto; max-width: 300px; max-height: none; }
+.projects-page .project-company-logo img, .project-company-logo img { width: 30px; height: 30px; }
+
+/* v0.9.1: deck pieces must use the DECK's colours, never the app's.
+   The objection box used var(--bg) (the app's #111), so on a light deck it was
+   a black box with dark text, readable only on hover. */
+.customer-deck .slide { --bg: var(--deck-surface); --panel: var(--deck-surface); --line: color-mix(in srgb, var(--deck-text) 14%, transparent); --line-2: color-mix(in srgb, var(--deck-text) 22%, transparent); }
+.customer-deck .slide blockquote { background: var(--deck-surface); color: var(--deck-text); border-left-color: var(--deck-primary); }
+/* Every page shares one background; the title page no longer fades to a different tone. */
+.customer-deck .slide-hero { background: var(--deck-bg); }
+@media print { .customer-deck .slide blockquote { background: var(--deck-surface)!important; color: var(--deck-text)!important; } .customer-deck .slide-hero { background: var(--page-background, var(--deck-bg))!important; } }

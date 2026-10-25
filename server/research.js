@@ -2,9 +2,10 @@ import Anthropic from '@anthropic-ai/sdk'
 import {enrichPublicProfile} from './publicProfile.js'
 import { agentPrompt } from './agent-commands/index.js'
 import { AGENT_COMMANDS } from '../src/agentCommands.js'
+import { runWithSearch } from './agentSearch.js'
 
 // The people-finder agent. One call researches one role at one company with
-// Claude's web search tool, then every claim is checked against what the search
+// our own web search (Tavily, see agentSearch.js), then every claim is checked against what the search
 // actually returned before it reaches the UI. Nothing here guesses: a person
 // without a source is dropped, an email that is not on a public page is dropped,
 // and a LinkedIn link that never appeared in the results is dropped.
@@ -31,51 +32,21 @@ export async function research({ company, role }, client = new Anthropic(), {fet
     }
   ]
 
-  let message
-  const blocks = [] // every content block across paused turns, so evidence is never lost
-  for (let turn = 0; turn < 4; turn++) {
-    const stream = client.messages.stream({
-      model: MODEL,
-      max_tokens: 8000,
-      thinking: { type: 'adaptive' },
-      output_config: { effort: 'low' },
-      system: agentPrompt(AGENT_COMMANDS.FIND_STAKEHOLDERS),
-      tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: MAX_SEARCHES }],
-      messages
-    })
-    message = await stream.finalMessage()
-    blocks.push(...message.content)
-    // The server-side search loop can pause long turns; resume where it left off.
-    if (message.stop_reason !== 'pause_turn') break
-    messages.push({ role: 'assistant', content: message.content })
-  }
-
+  const run = await runWithSearch({
+    client, model: MODEL, maxTokens: 8000, maxSearches: MAX_SEARCHES,
+    system: agentPrompt(AGENT_COMMANDS.FIND_STAKEHOLDERS),
+    messages
+  })
+  const message = run.message
   if (message.stop_reason === 'refusal') {
     return { people: [], note: 'The model declined this request.' }
   }
+  // Everything the search really returned: result URLs and their text.
+  const seen = new Set(run.urls.map(norm))
+  const corpus = run.corpus.toLowerCase()
 
-  // Everything the search really returned: result URLs and the quoted text.
-  const seen = new Set()
-  let corpus = ''
-  const observedUrls=[],citations={}
-  for (const block of blocks) {
-    if (block.type === 'web_search_tool_result' && Array.isArray(block.content)) {
-      for (const r of block.content) if (r.url) {seen.add(norm(r.url));observedUrls.push(r.url)}
-    }
-    if (block.type === 'text') {
-      for (const c of block.citations || []) {
-        if (c.url) {seen.add(norm(c.url));observedUrls.push(c.url);citations[c.url]=(citations[c.url]||'')+' '+(c.cited_text||'')}
-        if (c.cited_text) corpus += `\n${c.cited_text}`
-      }
-    }
-  }
-  corpus = corpus.toLowerCase()
-
-  const text = (message.content || [])
-    .filter(b => b.type === 'text')
-    .map(b => b.text)
-    .join('\n')
-  const parsed = extractJson(text)
+  const observedUrls=run.urls,citations=run.citations
+  const parsed = extractJson(run.text)
   if (!parsed) return { people: [], note: 'The agent did not return a usable answer. Try again.' }
 
   const people = []
@@ -118,7 +89,7 @@ export async function research({ company, role }, client = new Anthropic(), {fet
     })
   }
 
-  return { people: people.slice(0, 3), note: clean(parsed.note, 300) || null }
+  return { people: people.slice(0, 3), note: clean(parsed.note, 300) || null, search: run.search }
 }
 
 const clean = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '')

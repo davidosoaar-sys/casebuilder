@@ -25,6 +25,11 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
+## v0.10.0 (2026-10-25) — local preparation, not released
+
+- Merged Amr’s v0.9.1 Tavily research, separate company icons and deck color fixes with the unfinished agent-command, sourced-profile and brand-selection work. Research uses the shared search loop and expanded command contracts; source evidence and both sets of branding controls are preserved.
+- Validation: 306 app/server tests, 18 worker tests, 11 offline command evaluations, production build and plugin packaging pass. Shared-search regression checks preserve sourced evidence for both Tavily and Anthropic fallback. Branding verification remains work in progress; this version has not been pushed, tagged or deployed.
+
 - 2026-10-25: Translated the manually refined sample workflow into an executable brand-selection phase and a research-to-design playbook. The agent selects only sourced candidate IDs; code checks choices/contrast and records fallbacks for preview review. Added separate heading/body font embedding and a neutral logo field when no appropriate official variant is available, reused across previews/exports. Full layout generation and server-side visual approval remain explicitly unsupported.
 
 - 2026-10-25: Fixed the reproduced Adidas discovery failure: honor HTML base paths, recognize home-link title attributes even when the input name is misspelled, prioritize declared heading/body fonts over generic CSS reset fonts, and accept signature-validated TTF/OTF font files. Added the verified Adidas corporate domain/spelling alias. Missing logos now produce an explicit incomplete/error state rather than a misleading ready result. Validation: all 290 tests and production build pass; actual localhost API requests for both Adidas and addidas return HTTP 200 with an official logo and embedded font.
@@ -33,6 +38,25 @@ Every version that lands on `main` gets a line here and a git tag.
 
 - 2026-10-25: Expanded all seven command briefs with explicit triggers, real input/source limits, processing, fictional output examples, quality gates, deterministic boundaries and judgment criteria. The four live services now share an inspectable full prompt builder and separate provider response contracts; future design contracts remain inactive. Preserved the v0.9.0 prompt snapshot and added generated current prompt documentation and a human scorecard.
 - Added an offline command evaluation suite and regression checks. Fixed chat LinkedIn lookup payload naming, restricted suggestion searches to blank fields, and protected manually entered values from late suggestion responses. Existing model equations and client deck are unchanged. Validation: all 277 tests, 11 offline command evaluations and the production build pass. Live model search quality has not been evaluated for this prompt revision.
+
+## v0.9.1 (2026-10-25): research on Tavily, brand icon, deck colour fixes
+
+- Research (Find people, Suggest values, Person lookup, brand website lookup) now
+  searches through Tavily via our own search loop (server/agentSearch.js), not
+  Anthropic's built-in search. Every source is still checked against what the
+  search returned. With no search key configured it falls back to Anthropic
+  search and reports search: "anthropic".
+- The chat agent's Hermes is pinned to Tavily (web.backend: tavily) per account.
+- Brand discovery also finds the square icon (no wordmark) from the site's icon
+  links; project cards use it. Brand settings can upload/remove the icon. Deck
+  title logos are sized by height so wide wordmarks are readable.
+- Deck: the objection box used the app's dark background and was unreadable on
+  light decks until hovered; it now uses the deck colours. The title page no
+  longer fades to a different grey; cards use a shade of the page colour.
+- Deploy needs TAVILY_API_KEY and SUPABASE_SECRET_KEY in Vercel (server-only).
+
+Checks: 269 app tests, 18 worker tests, build OK; end-to-end agent commands
+ALL PASS with Tavily; one Find people run made 1 Tavily + 2 Anthropic requests.
 
 ## v0.9.0 (2026-10-25)
 

@@ -1,3 +1,4 @@
+import { runWithSearch } from './agentSearch.js'
 import { fetchPublic } from './publicWeb.js'
 import {publicProfileUrl} from '../src/profileMedia.js'
 export { fetchPublic, publicAddress } from './publicWeb.js'
@@ -54,6 +55,36 @@ export function logoCandidates(html, website, company = '', assetBase = document
   }
   return candidates.sort((a,b) => b.score - a.score)
 }
+// The square brand mark (no wordmark), from the site's own icon links. Order:
+// SVG icon > large apple-touch-icon > large PNG icon. Favicons under 64px and
+// .ico files are skipped: too small to look right on a slide or a card.
+// A card colour from the page colour: slightly darker (light pages) or lighter
+// (dark pages), keeping the same warmth instead of a fixed grey.
+function shade(hex, amount) {
+  const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16))
+  const to = amount < 0 ? 0 : 255, t = Math.abs(amount)
+  return '#' + c.map(v => Math.round(v + (to - v) * t).toString(16).padStart(2, '0')).join('')
+}
+
+export function iconCandidates(html, base) {
+  const out = []
+  for (const tag of html.match(/<link\b[^>]*>/gi) || []) {
+    const rel = (attr(tag, 'rel') || '').toLowerCase()
+    if (!/(^|\s)(icon|apple-touch-icon|apple-touch-icon-precomposed|mask-icon)(\s|$)/.test(rel)) continue
+    const href = absolute(attr(tag, 'href') || '', base)
+    if (!href || /\.ico(\?|$)/i.test(href)) continue
+    const type = (attr(tag, 'type') || '').toLowerCase()
+    const size = Math.max(0, ...String(attr(tag, 'sizes') || '').split(/\s+/).map(v => parseInt(v, 10) || 0))
+    const svg = type.includes('svg') || /\.svg(\?|$)/i.test(href)
+    if (rel.includes('mask-icon')) continue // single-colour silhouettes, not the real mark
+    if (!svg && size && size < 64) continue
+    const score = svg ? 1000 : rel.includes('apple-touch-icon') ? 500 + size : size || 100
+    out.push({ url: href, score })
+  }
+  const seen = new Set()
+  return out.sort((a, b) => b.score - a.score).filter(c => !seen.has(c.url) && seen.add(c.url)).map(c => c.url)
+}
+
 const safeSvg = text => !/<(?:script|foreignObject|iframe|use|image)\b|\bon[a-z]+\s*=|(?:href|src)\s*=|<!ENTITY/i.test(text) && !/url\s*\(/i.test(text.replace(/url\(\s*["']?#[\w-]+["']?\s*\)/gi,''))
 export function parseBrand(html, css, website, company = '') {
   const assetBase=documentBase(html,website)
@@ -103,7 +134,7 @@ export function parseBrand(html, css, website, company = '') {
   const textColor = color(themeVariables['marketing-foreground'] || variables['color-text'] || variables['text-color'] || variables['ifm-font-color-base'] || bodyRule.match(/(?:^|;)\s*color\s*:\s*([^;}]+)/i)?.[1] || '')
   const light = background && parseInt(background.slice(1,3),16)*.299+parseInt(background.slice(3,5),16)*.587+parseInt(background.slice(5,7),16)*.114 > 150
   const colorEvidence=Object.entries(themeVariables).filter(([key])=>/brand|accent|primary|background|foreground|surface|^bg-|^fg-|text-color|color-text/i.test(key)).flatMap(([token,raw])=>{const value=color(raw);if(!value)return [];const role=/background|^bg-base|^bg-primary/.test(token)?'background':/surface/.test(token)?'surface':/foreground|^fg-primary|text-color|color-text/.test(token)?'text':/accent|primary|brand/.test(token)?'primary':'';return [{token,label:'--'+token,value,role,origin:'observed'}]}).slice(0,40)
-  return { ...(background ? {background, surface: light ? '#f5f5f5' : '#1e1e1e', text: textColor || (light ? '#161616' : '#ffffff'), muted: light ? '#555555' : '#b8b8b8'} : {}), candidates, colorEvidence, faces, derivedColors:['surface','muted',...(!textColor?['text']:[])], primary: color(themeVariables['marketing-primary'] || themeVariables['ds-theme-background-accent-strong-normal'] || '') || named || saturated[0], headingFont: !/var\(/.test(heading) ? heading : '', bodyFont: !/var\(/.test(body) ? body : '', logoUrl, face, colors: ranked.slice(0, 8) }
+  return { ...(background ? {background, surface: shade(background, light ? -0.035 : 0.06), text: textColor || (light ? '#161616' : '#ffffff'), muted: light ? '#555555' : '#b8b8b8'} : {}), candidates, colorEvidence, faces, derivedColors:['surface','muted',...(!textColor?['text']:[])], primary: color(themeVariables['marketing-primary'] || themeVariables['ds-theme-background-accent-strong-normal'] || '') || named || saturated[0], headingFont: !/var\(/.test(heading) ? heading : '', bodyFont: !/var\(/.test(body) ? body : '', logoUrl, face, colors: ranked.slice(0, 8) }
 }
 
 const companyLinkedIn = value => {const url=publicProfileUrl(value);return /^https:\/\/(?:[a-z]{2,3}\.|www\.)?linkedin\.com\/company\/[^/?#]+\/?(?:[?#].*)?$/i.test(url)?url:''}
@@ -114,18 +145,15 @@ async function findWebsite(company, client = null, identity = {}, {linkedinOnly=
   if (official && !linkedinOnly) return official
   if (!linkedinOnly && /^(https:\/\/)?[a-z0-9.-]+\.[a-z]{2,}(\/.*)?$/i.test(company)) return company.startsWith('https://') ? company : `https://${company}`
   if (!client) throw new Error('Enter the official company website to scan its branding. Company-name search needs an Anthropic API key (add yours in Settings).')
-  const message = await client.messages.create({
-    model: process.env.RESEARCH_MODEL || 'claude-sonnet-5-5', max_tokens: linkedinOnly ? 800 : 1200,
-    tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: linkedinOnly ? 1 : 2 }],
+  const run = await runWithSearch({
+    client, model: process.env.RESEARCH_MODEL || 'claude-sonnet-5-5', maxTokens: linkedinOnly ? 800 : 1200,
+    maxSearches: linkedinOnly ? 1 : 2, thinking: null, effort: null,
     system: agentPrompt(AGENT_COMMANDS.DISCOVER_BRAND),
-    messages: [{ role: 'user', content: `Company: ${company}${officialWebsite ? '\nVerified official website: '+officialWebsite+'\nFind only the verified company LinkedIn page; do not replace this website.' : ''}` }]
-  }, {signal:AbortSignal.timeout(linkedinOnly ? 12000 : 30000)})
-  const seen = new Set(), urls = new Set()
-  for (const b of message.content) {
-    if (b.type === 'web_search_tool_result' && Array.isArray(b.content)) for (const r of b.content) if (r.url) { urls.add(r.url); try { seen.add(new URL(r.url).hostname.replace(/^www\./, '')) } catch {} }
-    if (b.type === 'text') for (const c of b.citations || []) if (c.url) { urls.add(c.url); try { seen.add(new URL(c.url).hostname.replace(/^www\./, '')) } catch {} }
-  }
-  const text = message.content.filter(b => b.type === 'text').map(b => b.text).join('')
+    messages: [{role:'user',content: 'Company: '+company+(officialWebsite ? '\nVerified official website: '+officialWebsite+'\nFind only the verified company LinkedIn page; do not replace this website.' : '')}],
+    signal: AbortSignal.timeout(linkedinOnly ? 12000 : 30000)
+  })
+  const seen = new Set(run.evidence.map(e=>e.host)), urls = new Set(run.urls)
+  const text = run.text
   let result
   try { const parsed=JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));result=parsed.website;const linkedin=companyLinkedIn(parsed.linkedinUrl);if(linkedin&&[...urls].some(u=>u.replace(/\/$/,'')===linkedin.replace(/\/$/,'')))identity.linkedinUrl=linkedin } catch {}
   if(linkedinOnly)return officialWebsite
@@ -167,7 +195,8 @@ export async function discoverBrand({ company, website }, fetcher = fetchPublic,
     if(candidates.length){parsed.candidates=[...parsed.candidates.filter(c=>c.score>0),...candidates,...parsed.candidates.filter(c=>c.score===0)];sources.push(profile.url);sourceNotes.push({url:linkedinUrl,status:'used',message:'Public company LinkedIn page checked for a logo. Fonts and palette come from the official website.'})}
     else sourceNotes.push({url:linkedinUrl,status:'unavailable',message:'No publicly usable company logo found on LinkedIn. No LinkedIn asset was substituted.'})
   }catch{sourceNotes.push({url:linkedinUrl,status:'unavailable',message:'LinkedIn could not be read publicly; no LinkedIn assets were used.'})}
-  const unique=parsed.candidates.filter((c,i,list)=>list.findIndex(x=>(x.url||x.svg)===(c.url||c.svg))===i).slice(0,4)
+  const eligible=parsed.candidates.some(c=>c.score>0)?parsed.candidates.filter(c=>c.score>0):parsed.candidates
+  const unique=eligible.filter((c,i,list)=>list.findIndex(x=>(x.url||x.svg)===(c.url||c.svg))===i).slice(0,4)
   const loaded=await Promise.allSettled(unique.map(async candidate=>{
     let dataUrl='',svg='',sourceUrl=home.url
     if(candidate.svg){
@@ -187,7 +216,21 @@ export async function discoverBrand({ company, website }, fetcher = fetchPublic,
     return {dataUrl,sourceUrl,sourcePage:candidate.sourcePage||home.url,variant,score:candidate.score,location:candidate.sourcePage?'Public company LinkedIn logo':candidate.score>=95?'Official homepage mark':candidate.score===90?'Organization logo':candidate.score===0?'Favicon':'Official site logo'}
   }))
   const logos=loaded.filter(r=>r.status==='fulfilled').map(r=>r.value)
-  const baseline={...parsed,logo:logos[0]?.dataUrl||'',website:home.url,linkedinUrl,sourceNotes,sources}
+  let icon = ''
+  const iconUrls = iconCandidates(html, assetBase)
+  // A site's standard icon paths, if the page does not link one.
+  if (!iconUrls.length) iconUrls.push(new URL('/icon.svg', home.url).href, new URL('/apple-touch-icon.png', home.url).href)
+  for (const url of iconUrls.slice(0, 4)) {
+    if (icon) break
+    try {
+      const asset = await fetcher(url, { limit: 400_000 })
+      const mime = asset.type.split(';')[0]
+      if (mime === 'image/svg+xml' ? safeSvg(asset.buffer.toString()) : /^image\/(png|jpeg|webp)$/.test(mime)) {
+        icon = 'data:' + mime + ';base64,' + asset.buffer.toString('base64'); sources.push(asset.url)
+      }
+    } catch {}
+  }
+  const baseline={...parsed,logo:logos[0]?.dataUrl||'',icon,website:home.url,linkedinUrl,sourceNotes,sources}
   const curated=await curateBrand({company,website:home.url,parsed,logos,cssSources:cssBases,baseline,client,timeBudget:Math.max(0,Math.min(10000,deadline-Date.now()-7000))})
   const selected=curated.brand
   if(curated.selected&&!sources.includes(curated.selected.sourceUrl))sources.push(curated.selected.sourceUrl)
