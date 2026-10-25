@@ -23,6 +23,28 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ---
 
+## v0.9.2 (2026-10-25): Research page, "Used N tools" trace, search toggle
+
+- Research: the main menu's "Person lookup" is now "Research". Ask any question,
+  optionally for one project; the account's own agent researches it (Tavily search
+  and full-page reads, plus connectors switched on for that project) and answers
+  with inline numbered citations and a sources list. A cited link the agent's
+  searches never returned is removed and the count is shown. Past research is
+  listed and reopens after reload. A "Person" tab runs the existing person lookup.
+  Inside a project, Person lookup stays in the project menu.
+- "Used N tools" on chat replies and research answers: a timeline of every search
+  (query and results), page read and connector, read from the agent's own session
+  log on the worker, not from the model's account. Steps appear live while it works.
+- Chat search toggle: with Search on the agent is told to search for anything that
+  can change; with Search off it has no search tools and the reply is marked
+  "search off". Connector material switched on for a deal is now given to the chat
+  agent too; switched-off connectors are never read.
+
+Checks: 274 app tests (5 new), 30 worker tests (13 new), build OK.
+`scripts/review-research.mjs` against the real worker: 15/15 (research answer with
+Tavily trace and sources, live steps, reopen after reload, chat trace with Search
+on, no web tools with Search off, mobile width, no page or Supabase errors).
+
 ## v0.9.1 (2026-10-25): research on Tavily, brand icon, deck colour fixes
 
 - Research (Find people, Suggest values, Person lookup, brand website lookup) now

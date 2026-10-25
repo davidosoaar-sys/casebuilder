@@ -12,6 +12,7 @@ import { describeValue } from '../agentEdits.js'
 import { useModelKeys } from './Settings.jsx'
 import AgentComposer, { AGENT_MODELS } from './AgentComposer.jsx'
 import CommandCards from './CommandCards.jsx'
+import ToolTrace from './ToolTrace.jsx'
 import { resolveStakeholder } from '../deck/stakeholders.js'
 
 const POLL_MS = 3000
@@ -51,6 +52,7 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [pending, setPending] = useState(null) // job id waiting for a reply
+  const [live, setLive] = useState([]) // tool steps of the running job, as the worker reports them
   const [editing, setEditing] = useState(null) // { id, text }
   const [copied, copy] = useCopy()
   const { keys } = useModelKeys(userId)
@@ -88,10 +90,12 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
 
   // While waiting, poll the job too, in case Realtime drops.
   useEffect(() => {
+    setLive([])
     if (!pending) return
     const t = setInterval(async () => {
-      const { data: job } = await supabase.from('jobs').select('status, error').eq('id', pending).single()
+      const { data: job } = await supabase.from('jobs').select('status, error, result').eq('id', pending).single()
       if (!job) return
+      if (job.status === 'running' && Array.isArray(job.result?.trace)) setLive(job.result.trace)
       if (job.status === 'done' || job.status === 'failed' || job.status === 'cancelled') {
         const data = await reload()
         if (!data.some(m => m.job_id === pending)) {
@@ -191,6 +195,7 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
             </div>
           ) : (
             <div key={m.id} className={`chat-msg chat-assistant${m.meta?.error ? ' is-error' : ''}`}>
+              <ToolTrace steps={m.meta?.trace} />
               <div className="chat-bubble">{m.content}</div>
               <ChangeCard log={applied[m.id]} meta={m.meta} onUndo={() => onUndo(m.id)} />
               {m.meta?.commands?.length > 0 && (runs[m.id]
@@ -198,11 +203,11 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
                 : <div className="cmd-cards"><div className="cmd-card"><p className="cmd-note">This research was not run. <button type="button" className="link-btn" onClick={() => onRun?.(m.id, m.meta.commands)}>Run it now</button></p></div></div>)}
               <div className="msg-actions">
                 <button type="button" className="icon-btn sm" onClick={() => copy(m.id, m.content)} title="Copy" aria-label="Copy reply"><Icon d={copied === m.id ? icons.check : icons.copy} size={14} /></button>
-                {m.meta?.model && <span className="msg-meta">{AGENT_MODELS.find(x => x.id === m.meta.model)?.name || m.meta.model}{m.meta.seconds ? ` · ${Math.round(m.meta.seconds)}s` : ''}</span>}
+                {m.meta?.model && <span className="msg-meta">{AGENT_MODELS.find(x => x.id === m.meta.model)?.name || m.meta.model}{m.meta.seconds ? ` · ${Math.round(m.meta.seconds)}s` : ''}{m.meta.web === false ? ' · search off' : ''}</span>}
               </div>
             </div>
           ))}
-          {pending && <div className="chat-msg chat-assistant"><div className="chat-bubble chat-typing" role="status" aria-label="The agent is working"><span /><span /><span /></div></div>}
+          {pending && <div className="chat-msg chat-assistant">{live.length > 0 && <ToolTrace steps={live} running defaultOpen />}<div className="chat-bubble chat-typing" role="status" aria-label="The agent is working"><span /><span /><span /></div></div>}
         </div>
       </div>
 

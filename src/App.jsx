@@ -31,6 +31,7 @@ import { stakeholdersForArchetype } from './valueModel.js'
 import { DEFAULT_BRAND } from './brand.js'
 import { AGENT_COMMANDS } from './agentCommands.js'
 import PersonLookup from './components/PersonLookup.jsx'
+import Research from './components/Research.jsx'
 import usePersonLookup from './usePersonLookup.js'
 import { addPersonToDeal, acceptPersonInput } from './personLookup.js'
 
@@ -140,7 +141,7 @@ export default function App({ account }) {
   function navigate(next) {
     setStage(null)
     if (next === 'settings') { setSettingsOpen(true); return } // overlay: never leaves the current page
-    if (['projects', 'dashboard'].includes(next)) { saving.flush(); setCurrentId(null) }
+    if (['projects', 'dashboard', 'research'].includes(next)) { saving.flush(); setCurrentId(null) }
     if (next === 'agent') { if (view !== 'agent') backFromAgent.current = view; setSplit(false) }
     setView(next)
   }
@@ -280,7 +281,7 @@ export default function App({ account }) {
   }
 
   // Details and Deck need a project; without one, fall back to the list.
-  const page = ['connections', 'lookup', 'dashboard'].includes(view) ? view : project ? view : 'projects'
+  const page = ['connections', 'lookup', 'dashboard', 'research'].includes(view) ? view : project ? view : 'projects'
   const insideProject = !!project && page !== 'projects'
   const agentFull = insideProject && page === 'agent'
   const agentSplit = insideProject && split && !agentFull
@@ -331,6 +332,12 @@ export default function App({ account }) {
             onConnections={fn => connectionProject ? updateConnectionProject(p => ({ connectors: fn(p.connectors || connections) })) : setConnections(fn)}
             onDocuments={fn => updateConnectionProject(p => ({ documents: fn(p.documents || []) }))}
           />
+        ) : page === 'research' ? (
+          <Research userId={account.session.user.id} projects={projects} project={project}
+            personPage={<PersonLookup embedded lookup={lookup} project={project}
+              onAdd={person => update(p => addPersonToDeal(p, person))}
+              onInput={suggestion => setPendingPersonInput({ dealId: project.id, suggestion })} />}
+            onSettings={openSettings} />
         ) : page === 'lookup' ? (
           lookupPage
         ) : page === 'deck' ? (

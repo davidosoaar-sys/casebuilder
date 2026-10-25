@@ -157,5 +157,122 @@ class Prompt(unittest.TestCase):
         self.assertLess(p.count("x"), worker.MAX_ATTACH_CHARS + 100)
 
 
+SEARCH_RESULT = ('<untrusted_tool_result source="web_search">\nDATA\n\n{"success": true, "data": {"web": ['
+                 '{"title": "Backstage releases", "url": "https://github.com/backstage/backstage/releases", "description": "v1.56.2"},'
+                 '{"title": "Docs", "url": "https://backstage.io/docs", "description": "d"}]}}\n</untrusted_tool_result>')
+EXTRACT_RESULT = ('<untrusted_tool_result source="web_extract">\n{"results": [{"url": "https://www.betakit.com/a", '
+                  '"title": "Shopify CTO departs", "content": "...", "error": null}]}\n</untrusted_tool_result>')
+
+
+def fake_state_db(home, profile, started, calls):
+    """A Hermes state.db with the two tables and columns session_trace reads."""
+    import json, sqlite3
+    d = os.path.join(home, "profiles", profile)
+    os.makedirs(d, exist_ok=True)
+    db = sqlite3.connect(os.path.join(d, "state.db"))
+    db.execute("create table sessions (id text, started_at real)")
+    db.execute("create table messages (id integer primary key, session_id text, role text, tool_calls text, tool_call_id text, content text, tool_name text)")
+    db.execute("insert into sessions values ('old', ?)", (started - 500,))
+    db.execute("insert into messages (session_id, role, tool_calls) values ('old', 'assistant', ?)",
+               (json.dumps([{"id": "o1", "function": {"name": "web_search", "arguments": '{"query": "old run"}'}}]),))
+    db.execute("insert into sessions values ('new', ?)", (started + 1,))
+    for i, (name, args, result) in enumerate(calls):
+        db.execute("insert into messages (session_id, role, tool_calls) values ('new', 'assistant', ?)",
+                   (json.dumps([{"id": f"c{i}", "function": {"name": name, "arguments": json.dumps(args)}}]),))
+        db.execute("insert into messages (session_id, role, tool_call_id, content, tool_name) values ('new', 'tool', ?, ?, ?)",
+                   (f"c{i}", result, name))
+    db.commit(); db.close()
+
+
+class Trace(unittest.TestCase):
+    def test_search_step_lists_query_and_results(self):
+        s = worker.trace_step("web_search", {"query": "Backstage latest release"}, SEARCH_RESULT)
+        self.assertEqual(s["provider"], "Tavily")
+        self.assertIn("Backstage latest release", s["title"])
+        self.assertEqual(s["output"], "2 results")
+        self.assertEqual(s["results"][0]["url"], "https://github.com/backstage/backstage/releases")
+        self.assertTrue(s["ok"])
+
+    def test_extract_step_names_the_site(self):
+        s = worker.trace_step("web_extract", {"urls": ["https://www.betakit.com/a"]}, EXTRACT_RESULT)
+        self.assertEqual(s["title"], "Read betakit.com")
+        self.assertEqual(s["output"], "Read 1 of 1 page")
+
+    def test_failed_search_is_marked(self):
+        s = worker.trace_step("web_search", {"query": "x"}, '{"success": false, "error": "rate limited"}')
+        self.assertFalse(s["ok"])
+
+    def test_session_trace_reads_only_this_run_and_skips_tool_search(self):
+        import tempfile, time
+        with tempfile.TemporaryDirectory() as home:
+            t0 = time.time()
+            fake_state_db(home, "acct-t", t0, [
+                ("tool_search", {"q": "web"}, "{}"),
+                ("web_search", {"query": "Backstage latest release"}, SEARCH_RESULT),
+                ("web_extract", {"urls": ["https://www.betakit.com/a"]}, EXTRACT_RESULT)])
+            old, worker.HOME = worker.HOME, home
+            try:
+                steps = worker.session_trace("acct-t", t0)
+            finally:
+                worker.HOME = old
+        self.assertEqual([s["tool"] for s in steps], ["web_search", "web_extract"])
+        self.assertNotIn("old run", steps[0]["title"])
+
+    def test_missing_db_gives_empty_trace(self):
+        self.assertEqual(worker.session_trace("acct-does-not-exist", 0), [])
+
+
+CONN_DEAL = {"name": "Acme", "data": {"name": "Acme", "connectors": {"gong": True, "slack": False},
+             "documents": [{"source": "gong", "name": "Discovery call", "text": "They run 40 squads."},
+                           {"source": "slack", "name": "Internal thread", "text": "SECRET-SLACK"}]}}
+
+
+class Connectors(unittest.TestCase):
+    def test_only_switched_on_connectors_are_read(self):
+        text, steps = worker.connector_context(CONN_DEAL)
+        self.assertIn("40 squads", text)
+        self.assertNotIn("SECRET-SLACK", text)
+        self.assertEqual([(s["provider"], s["title"]) for s in steps], [("Gong", "Read Discovery call")])
+
+    def test_nothing_on_nothing_read(self):
+        self.assertEqual(worker.connector_context({"data": {"documents": CONN_DEAL["data"]["documents"]}}), ("", []))
+
+    def test_chat_prompt_includes_connector_material(self):
+        p = worker.build_prompt({"kind": "chat", "payload": {"message": "hi"}}, CONN_DEAL)
+        self.assertIn("40 squads", p)
+        self.assertNotIn("SECRET-SLACK", p)
+
+
+class Research(unittest.TestCase):
+    TRACE = [worker.trace_step("web_search", {"query": "q"}, SEARCH_RESULT),
+             {"tool": "connector", "connector": "gong", "results": [], "input": {}}]
+
+    def test_prompt_has_question_context_and_sources_contract(self):
+        p = worker.build_research_prompt({"kind": "research", "payload": {"question": "Who leads platform at Acme?"}}, CONN_DEAL)
+        self.assertIn("Who leads platform at Acme?", p)
+        self.assertIn("deal with Acme", p)
+        self.assertIn(worker.SOURCES_FENCE, p)
+        self.assertNotIn("SECRET-SLACK", p)
+        self.assertNotIn("casebuilder-edits", p)
+
+    def test_prompt_without_deal(self):
+        p = worker.build_research_prompt({"kind": "research", "payload": {"question": "What is Backstage?"}}, None)
+        self.assertNotIn("Context:", p)
+
+    def test_sources_kept_only_when_tools_returned_them(self):
+        text = ("Backstage is at v1.56.2 [1]. Squads [2]. Made up [3].\n```casebuilder-sources\n"
+                '[{"n":1,"url":"https://github.com/backstage/backstage/releases/","title":"Releases"},'
+                '{"n":2,"url":"gong","title":"Gong"},'
+                '{"n":3,"url":"https://invented.example.com/x","title":"Fake"}]\n```')
+        clean, sources, dropped = worker.parse_sources(text, self.TRACE)
+        self.assertNotIn("casebuilder-sources", clean)
+        self.assertEqual([s["n"] for s in sources], [1, 2])
+        self.assertEqual(sources[1]["connector"], "gong")
+        self.assertEqual(dropped, 1)
+
+    def test_no_block_no_sources(self):
+        self.assertEqual(worker.parse_sources("plain answer", self.TRACE), ("plain answer", [], 0))
+
+
 if __name__ == "__main__":
     unittest.main()

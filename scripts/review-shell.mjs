@@ -63,11 +63,11 @@ heads.Dashboard = await headOf()
 await nav('Projects'); await page.waitForSelector('.projects-page .page-head'); heads.Projects = await headOf()
 await shot('6-projects')
 await nav('Connectors'); await page.waitForSelector('.connections-page .page-head'); heads.Connectors = await headOf()
-await nav('Person lookup'); await page.waitForSelector('.lookup-page .page-head'); heads['Person lookup'] = await headOf()
+await nav('Research'); await page.waitForSelector('.research-page .page-head'); heads['Research'] = await headOf()
 console.log('      heads', JSON.stringify(heads))
 check('every page has the mint label naming the page', Object.entries(heads).every(([k, h]) => h.label === k))
 check('every page title is the same size', new Set(Object.values(heads).map(h => h.size)).size === 1)
-check('Dashboard, Projects, Person lookup titles line up', new Set([heads.Dashboard.x, heads.Projects.x, heads['Person lookup'].x]).size === 1)
+check('Dashboard, Projects, Research titles line up', new Set([heads.Dashboard.x, heads.Projects.x, heads['Research'].x]).size === 1)
 
 // --- Projects index
 await nav('Projects'); await page.waitForSelector('.project-card')
