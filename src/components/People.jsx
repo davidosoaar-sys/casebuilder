@@ -3,6 +3,7 @@ import { resolve } from './Deck.jsx'
 import AppLogo from './AppLogo.jsx'
 import { uid } from '../projects.js'
 import { AGENT_COMMANDS } from '../agentCommands.js'
+import { apiHeaders } from '../apiAuth.js'
 
 // The people step. For each stakeholder role an AI agent searches the public
 // web for who holds it at the company and returns names, titles, public emails,
@@ -45,10 +46,11 @@ export default function People({
     try {
       const res = await fetch('/api/research', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(code ? { 'x-access-code': code } : {}) },
+        headers: await apiHeaders(code ? { 'x-access-code': code } : {}),
         body: JSON.stringify({ command:AGENT_COMMANDS.FIND_STAKEHOLDERS,company, role: role.role })
       })
       const data = await res.json().catch(() => ({}))
+      if (res.status === 503 && data.error === 'no_key') throw new Error('Add your Anthropic API key in Settings to use the AI agent.')
       if (res.status === 503) return setSetup(true)
       if (res.status === 401) return setNeedCode(true)
       if (!res.ok) throw new Error(data.error || 'The search failed.')

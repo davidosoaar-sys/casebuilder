@@ -68,6 +68,50 @@ class ParseEdits(unittest.TestCase):
         self.assertIn("never say an earlier update failed", p)
 
 
+class ParseCommands(unittest.TestCase):
+    D = {"data": {**DEAL["data"], "stakeholders": [{"key": "champion", "builtin": True}, {"key": "economic", "builtin": True}]}}
+
+    def block(self, b):
+        return f"Running it.\n```casebuilder-commands\n{b}\n```"
+
+    def test_valid_commands_and_block_removed(self):
+        text, cmds, rej = worker.parse_commands(self.block('[{"command":"FIND_STAKEHOLDERS","role_key":"champion"},{"command":"SUGGEST_INPUTS","keys":["engineers","nope"]},{"command":"LOOKUP_PERSON","name":"Ada Lovelace","company":"Acme"},{"command":"DISCOVER_BRAND"}]'), self.D)
+        self.assertEqual(text, "Running it.")
+        self.assertEqual(cmds[0], {"command": "FIND_STAKEHOLDERS", "role_key": "champion"})
+        self.assertEqual(cmds[1], {"command": "SUGGEST_INPUTS", "keys": ["engineers"]})
+        self.assertEqual(cmds[2], {"command": "LOOKUP_PERSON", "name": "Ada Lovelace", "company": "Acme"})
+        self.assertEqual(cmds[3], {"command": "DISCOVER_BRAND"})
+        self.assertEqual(rej, [])
+
+    def test_unknown_command_role_and_empty_lookup_rejected(self):
+        _, cmds, rej = worker.parse_commands(self.block('[{"command":"DELETE_DEAL"},{"command":"FIND_STAKEHOLDERS","role_key":"ceo"},{"command":"LOOKUP_PERSON"},{"command":"FIND_STAKEHOLDERS","role_key":"all"}]'), self.D)
+        self.assertEqual(cmds, [{"command": "FIND_STAKEHOLDERS", "role_key": "all"}])
+        self.assertEqual(len(rej), 3)
+
+    def test_capped_and_bad_json(self):
+        five = ",".join(['{"command":"DISCOVER_BRAND"}'] * 6)
+        _, cmds, rej = worker.parse_commands(self.block(f"[{five}]"), self.D)
+        self.assertEqual(len(cmds), worker.MAX_COMMANDS)
+        _, cmds, rej = worker.parse_commands(self.block("[{nope"), self.D)
+        self.assertEqual(cmds, [])
+        self.assertEqual(len(rej), 1)
+
+    def test_edits_and_commands_in_one_reply(self):
+        raw = 'Set it and searching.\n```casebuilder-edits\n[{"key":"engineers","value":900,"from_user":true}]\n```\n```casebuilder-commands\n[{"command":"FIND_STAKEHOLDERS","role_key":"economic"}]\n```'
+        text, cmds, _ = worker.parse_commands(raw, self.D)
+        text, edits, _ = worker.parse_edits(text, worker.editable_fields(self.D))
+        self.assertEqual(text, "Set it and searching.")
+        self.assertEqual(len(cmds), 1)
+        self.assertEqual(edits[0]["value"], 900)
+
+    def test_prompt_lists_commands_and_role_names(self):
+        p = worker.build_prompt({"kind": "chat", "payload": {"message": "find the VP", "roles": [{"key": "champion", "role": "Director / VP Engineering", "tag": "Usually the champion"}, {"key": "finance", "role": "Finance / Procurement"}]}}, self.D)
+        self.assertIn("FIND_STAKEHOLDERS", p)
+        self.assertIn("- champion: Director / VP Engineering (Usually the champion)", p)
+        self.assertIn("- finance: Finance / Procurement", p)
+        self.assertIn("Never show command names", p)
+
+
 class Prompt(unittest.TestCase):
     def test_uses_the_users_name_not_chris(self):
         p = worker.build_prompt({"kind": "chat", "payload": {"message": "hi", "user_name": "Amr"}}, DEAL)

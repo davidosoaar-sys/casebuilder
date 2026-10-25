@@ -20,6 +20,8 @@ A case started in one can be finished in the other: both read and write the same
 ```bash
 npm install        # run again after every pull that changes package.json
 cp .env.example .env.local   # then fill in VITE_SUPABASE_URL + VITE_SUPABASE_PUBLISHABLE_KEY
+# optional, so the AI buttons use each user's own saved key (ask Amr, never commit):
+#   echo "SUPABASE_SECRET_KEY=..." > .env.server.local
 npm run dev        # http://localhost:5173 (fails instead of switching ports if it is taken)
 npm run build
 ```

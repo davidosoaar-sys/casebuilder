@@ -70,10 +70,9 @@ export function parseBrand(html, css, website) {
   return { primary: named || saturated[0], headingFont: !/var\(/.test(heading) ? heading : '', bodyFont: !/var\(/.test(body) ? body : '', logoUrl, face, colors: ranked.slice(0, 8) }
 }
 
-async function findWebsite(company) {
+async function findWebsite(company, client = null) {
   if (/^(https:\/\/)?[a-z0-9.-]+\.[a-z]{2,}(\/.*)?$/i.test(company)) return company.startsWith('https://') ? company : `https://${company}`
-  if (!process.env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_AUTH_TOKEN) throw new Error('Enter the official company website to scan its branding. Company-name search needs the research API key.')
-  const client = new Anthropic()
+  if (!client) throw new Error('Enter the official company website to scan its branding. Company-name search needs an Anthropic API key (add yours in Settings).')
   const message = await client.messages.create({
     model: process.env.RESEARCH_MODEL || 'claude-sonnet-5-5', max_tokens: 1200,
     tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 2 }],
@@ -92,8 +91,8 @@ async function findWebsite(company) {
   return result
 }
 
-export async function discoverBrand({ company, website }, fetcher = fetchPublic) {
-  const home = await fetcher(website || await findWebsite(company))
+export async function discoverBrand({ company, website }, fetcher = fetchPublic, client = null) {
+  const home = await fetcher(website || await findWebsite(company, client))
   if (!/html/i.test(home.type)) throw new Error('Enter the company homepage, rather than an asset URL.')
   const html = home.buffer.toString('utf8')
   const sources = [home.url]

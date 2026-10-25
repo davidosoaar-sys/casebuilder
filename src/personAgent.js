@@ -1,9 +1,10 @@
 // Transport only: provider and search logic live behind server/personAgent.js.
 import { AGENT_COMMANDS } from './agentCommands.js'
+import { apiHeaders } from './apiAuth.js'
 export async function* searchPerson(request, { signal, fetchImpl = fetch } = {}) {
   let code = ''
   try { code = localStorage.getItem('casebuilder.access') || '' } catch {}
-  const response = await fetchImpl('/api/person', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(code ? { 'x-access-code': code } : {}) }, body: JSON.stringify({...request,command:AGENT_COMMANDS.LOOKUP_PERSON}), signal })
+  const response = await fetchImpl('/api/person', { method: 'POST', headers: await apiHeaders(code ? { 'x-access-code': code } : {}), body: JSON.stringify({...request,command:AGENT_COMMANDS.LOOKUP_PERSON}), signal })
   if (!response.ok) {
     const body = await response.json().catch(() => ({}))
     throw new Error(body.error || `Person lookup is unavailable (${response.status}).`)
