@@ -41,7 +41,9 @@ const dealId = await page.evaluate(() => {
   return window.__cbDealId || null
 })
 const before = await page.$eval('#engineers', e => e.value)
-check('deal open, chat panel shown', Boolean(await page.$('.chat-panel')), `engineers=${before}`)
+if (!(await page.$('.chat-split'))) await page.click('.chat-open')
+await page.waitForSelector('.chat-split', { timeout: 10000 })
+check('deal open, agent split pane shown', true, `engineers=${before}`)
 
 const target = String(Number(before) === 1234 ? 1235 : 1234)
 await page.waitForFunction(() => !document.querySelector('.chat-empty') || /Ask a question/.test(document.querySelector('.chat-empty').innerText), { timeout: 15000 })
@@ -49,7 +51,7 @@ await sleep(1000)
 const cardsBefore = (await page.$$('.chat-changes')).length
 const t0 = Date.now()
 await page.type('#chat-input', `They have ${Number(target).toLocaleString('en-US')} engineers. Please update the deal.`)
-await page.click('.chat-form button[type=submit]')
+await page.click('.composer button[type=submit]')
 await page.waitForSelector('.chat-typing', { timeout: 10000 })
 check('message sent, agent working', true)
 await page.waitForFunction(n => document.querySelectorAll('.chat-changes').length > n, { timeout: 180000 }, cardsBefore)
@@ -73,9 +75,14 @@ check('saved to Supabase', String(saved?.value) === target, `db=${saved?.value} 
 // Deck recalculates.
 const [deckBtn] = await page.$$('xpath/.//aside//button[contains(., "Deck")]'); await deckBtn.click(); await sleep(1500)
 const deckText = await page.evaluate(() => document.querySelector('.content')?.innerText || '')
-check('deck page still renders with chat open', deckText.length > 100 && Boolean(await page.$('.chat-panel')))
+check('deck page still renders with agent split open', deckText.length > 100 && Boolean(await page.$('.chat-split')))
 await page.screenshot({ path: '/tmp/agent-2-deck.png' })
 const [sheetBtn] = await page.$$('xpath/.//aside//button[contains(., "Input sheet")]'); await sheetBtn.click()
+// copy icon on the reply, edit icon on hover of the user's message
+const users = await page.$$('.chat-user'); await users[users.length - 1].hover(); await new Promise(r => setTimeout(r, 300))
+const hoverOpacity = await page.$$eval('.chat-user .msg-actions.on-hover', es => getComputedStyle(es[es.length - 1]).opacity)
+check('user message shows copy + edit on hover', hoverOpacity === '1' && (await page.$$('.chat-user [aria-label="Edit message"]')).length > 0)
+check('replies have a copy button', (await page.$$('.chat-assistant [aria-label="Copy reply"]')).length > 0)
 await page.waitForSelector('#engineers')
 
 // Undo.

@@ -72,8 +72,18 @@ export default function App({ account }) {
   const [view, setView] = useState('dashboard') // 'dashboard' | 'projects' | 'details' | 'deck' | 'website' | 'settings' | ...
   const [createRequest, setCreateRequest] = useState(0)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [chatOpen, setChatOpen] = useState(() => { try { return localStorage.getItem('casebuilder.chat-open') !== '0' } catch { return true } })
-  useEffect(() => { try { localStorage.setItem('casebuilder.chat-open', chatOpen ? '1' : '0') } catch {} }, [chatOpen])
+  // Agent: its own tab, or split beside the other tabs (width remembered).
+  const [split, setSplit] = useState(() => { try { return localStorage.getItem('casebuilder.agent-split') === '1' } catch { return false } })
+  const [chatWidth, setChatWidth] = useState(() => { try { return Number(localStorage.getItem('casebuilder.agent-width')) || 420 } catch { return 420 } })
+  useEffect(() => { try { localStorage.setItem('casebuilder.agent-split', split ? '1' : '0') } catch {} }, [split])
+  useEffect(() => { try { localStorage.setItem('casebuilder.agent-width', String(chatWidth)) } catch {} }, [chatWidth])
+  const backFromAgent = useRef('details')
+  function startResize(e) {
+    e.preventDefault()
+    const move = ev => setChatWidth(Math.round(Math.min(Math.max(window.innerWidth - (ev.touches?.[0]?.clientX ?? ev.clientX), 320), Math.min(900, window.innerWidth - 420))))
+    const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); document.body.classList.remove('is-resizing') }
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up); document.body.classList.add('is-resizing')
+  }
   const openSettings = () => setSettingsOpen(true)
   const [websiteAudience, setWebsiteAudience] = useState(null)
   const [previewRequest, setPreviewRequest] = useState(null)
@@ -126,6 +136,7 @@ export default function App({ account }) {
     setStage(null)
     if (next === 'settings') { setSettingsOpen(true); return } // overlay: never leaves the current page
     if (['projects', 'dashboard'].includes(next)) { saving.flush(); setCurrentId(null) }
+    if (next === 'agent') { if (view !== 'agent') backFromAgent.current = view; setSplit(false) }
     setView(next)
   }
   const projectSidebar = <Sidebar view={view} project={project} projectMode onNav={navigate} onSettings={openSettings} settingsOpen={settingsOpen} saveStatus={saving.status} account={account} />
@@ -222,14 +233,20 @@ export default function App({ account }) {
   // Details and Deck need a project; without one, fall back to the list.
   const page = ['connections', 'lookup', 'dashboard'].includes(view) ? view : project ? view : 'projects'
   const insideProject = !!project && page !== 'projects'
+  const agentFull = insideProject && page === 'agent'
+  const agentSplit = insideProject && split && !agentFull
+  const userName = (user || '').trim() || account.session.user.email.split('@')[0]
+  const chatProps = insideProject && { key: project.id, project, userId: account.session.user.id, userName, onApply: applyFromChat, onUndo: undoFromChat, onSettings: openSettings }
 
   return (
     <div className="layout">
       <Sidebar view={page} project={project} projectMode={insideProject} onNav={navigate} onSettings={openSettings} settingsOpen={settingsOpen} saveStatus={saving.status} account={account} />
 
-      <div className={`lookup-content-wrap${insideProject && chatOpen ? ' with-chat' : ''}`}>
-      <main className="content">
-        {page === 'dashboard' ? (
+      <div className={`lookup-content-wrap${agentSplit ? ' with-chat' : ''}`} style={agentSplit ? { '--chat-w': `${chatWidth}px` } : undefined}>
+      <main className={`content${agentFull ? ' content-agent' : ''}`}>
+        {agentFull ? (
+          <ChatPanel {...chatProps} mode="full" onSplit={() => { setSplit(true); setView(backFromAgent.current === 'agent' ? 'details' : backFromAgent.current) }} />
+        ) : page === 'dashboard' ? (
           <Dashboard
             account={account}
             name={user}
@@ -336,9 +353,16 @@ export default function App({ account }) {
           />
         )}
       </main>
-      {insideProject && (chatOpen
-        ? <ChatPanel key={project.id} project={project} userId={account.session.user.id} onApply={applyFromChat} onUndo={undoFromChat} onClose={() => setChatOpen(false)} onSettings={openSettings} />
-        : <button type="button" className="chat-open primary" onClick={() => setChatOpen(true)}>Ask the agent</button>)}
+      {agentSplit && <>
+        <div className="chat-resizer" role="separator" aria-orientation="vertical" aria-label="Resize agent panel" tabIndex={0}
+          onPointerDown={startResize}
+          onKeyDown={e => { if (e.key === 'ArrowLeft') setChatWidth(w => Math.min(w + 24, 900)); if (e.key === 'ArrowRight') setChatWidth(w => Math.max(w - 24, 320)) }} />
+        <ChatPanel {...chatProps} mode="split" onClose={() => setSplit(false)} onFull={() => navigate('agent')} />
+      </>}
+      {insideProject && !agentSplit && !agentFull && (
+        <button type="button" className="chat-open" onClick={() => setSplit(true)} title="Open the agent beside this tab">
+          <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true"><rect x="2" y="3" width="12" height="10" rx="1.5" /><path d="M9.5 3v10" /></svg>Agent
+        </button>)}
       </div>
       {pendingPersonInput && project?.id === pendingPersonInput.dealId && <div className="modal-backdrop" onClick={() => setPendingPersonInput(null)}>
         <section className="modal" role="dialog" aria-modal="true" aria-labelledby="person-input-review" onClick={e => e.stopPropagation()}>

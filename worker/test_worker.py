@@ -68,5 +68,19 @@ class ParseEdits(unittest.TestCase):
         self.assertIn("never say an earlier update failed", p)
 
 
+class Prompt(unittest.TestCase):
+    def test_uses_the_users_name_not_chris(self):
+        p = worker.build_prompt({"kind": "chat", "payload": {"message": "hi", "user_name": "Amr"}}, DEAL)
+        self.assertIn("called Amr", p)
+        self.assertNotIn("Chris", p)
+
+    def test_attachments_included_and_capped(self):
+        big = "x" * (worker.MAX_ATTACH_CHARS + 5000)
+        p = worker.build_prompt({"kind": "chat", "payload": {"message": "see file", "attachments": [{"name": "call.txt", "text": "They have 900 engineers."}, {"name": "big.txt", "text": big}]}}, DEAL)
+        self.assertIn("--- file: call.txt ---", p)
+        self.assertIn("900 engineers", p)
+        self.assertLess(p.count("x"), worker.MAX_ATTACH_CHARS + 100)
+
+
 if __name__ == "__main__":
     unittest.main()
