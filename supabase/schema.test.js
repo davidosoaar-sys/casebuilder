@@ -63,6 +63,7 @@ before(async () => {
   await db.exec(readFileSync(new URL('./migrations/0007_stakeholder_briefs.sql', import.meta.url), 'utf8'))
   await db.exec(readFileSync(new URL('./migrations/0008_approval_emails.sql', import.meta.url), 'utf8'))
   await db.exec(readFileSync(new URL('./migrations/0009_any_provider_keys.sql', import.meta.url), 'utf8'))
+  await db.exec(readFileSync(new URL('./migrations/0010_chat_history.sql', import.meta.url), 'utf8'))
   for (const [uid, id] of [[A, 'deal-a'], [B, 'deal-b']]) {
     await user(uid, tx => tx.query(
       'insert into public.deals (id, owner_id, name, data) values ($1, $2, $3, $4)',
@@ -119,12 +120,18 @@ test('save_deal cannot reach another account\'s deal', async () => {
   await rejects(user(A, tx => tx.query('select public.save_deal($1, $2, $3, $4)', ['deal-b', 'x', deal('deal-b'), 1])), /deal_not_found/)
 })
 
-test('chat: users post only user messages, only on their own deals', async () => {
-  await user(A, tx => tx.query(`insert into public.chat_messages (deal_id, owner_id, role, content) values ('deal-a', $1, 'user', 'find 10 leads')`, [A]))
-  await rejects(user(A, tx => tx.query(`insert into public.chat_messages (deal_id, owner_id, role, content) values ('deal-a', $1, 'assistant', 'fake')`, [A])), /row-level security/)
-  await rejects(user(A, tx => tx.query(`insert into public.chat_messages (deal_id, owner_id, role, content) values ('deal-b', $1, 'user', 'hi')`, [A])), /row-level security/)
+test('chat: users post only user messages, only into their own chats on their own deals', async () => {
+  const chat = (await user(A, tx => tx.query(`insert into public.chats (deal_id, owner_id, title) values ('deal-a', $1, 'Leads') returning id`, [A]))).rows[0].id
+  const chatB = (await user(B, tx => tx.query(`insert into public.chats (deal_id, owner_id) values ('deal-b', $1) returning id`, [B]))).rows[0].id
+  await user(A, tx => tx.query(`insert into public.chat_messages (deal_id, owner_id, chat_id, role, content) values ('deal-a', $1, $2, 'user', 'find 10 leads')`, [A, chat]))
+  await rejects(user(A, tx => tx.query(`insert into public.chat_messages (deal_id, owner_id, chat_id, role, content) values ('deal-a', $1, $2, 'assistant', 'fake')`, [A, chat])), /row-level security/)
+  await rejects(user(A, tx => tx.query(`insert into public.chat_messages (deal_id, owner_id, chat_id, role, content) values ('deal-b', $1, $2, 'user', 'hi')`, [A, chatB])), /row-level security/)
+  // Not into another user's chat, and not into own chat under a different deal id.
+  await rejects(user(A, tx => tx.query(`insert into public.chat_messages (deal_id, owner_id, chat_id, role, content) values ('deal-a', $1, $2, 'user', 'hi')`, [A, chatB])), /row-level security/)
+  await rejects(user(A, tx => tx.query(`insert into public.chats (deal_id, owner_id) values ('deal-b', $1)`, [A])), /row-level security/)
   const { rows } = await user(B, tx => tx.query('select * from public.chat_messages'))
   assert.equal(rows.length, 0)
+  assert.equal((await user(B, tx => tx.query(`select id from public.chats where id = $1`, [chat]))).rows.length, 0)
 })
 
 test('jobs: a user cannot pre-complete, pre-lock or forge a job', async () => {
@@ -386,4 +393,41 @@ test('any provider: prefixes are checked, the newest key is the one the agent us
   await user(D, tx => tx.query(`select public.delete_model_key('openai')`))
   assert.ok(['google', 'openrouter'].includes((await active()).provider))
   await rejects(user(A, tx => tx.query(`select * from public.get_active_model_key($1)`, [D])), /permission denied/)
+})
+
+test('chat history: renaming and deleting a chat is owner-only, deleting removes its messages, posting bumps it', async () => {
+  const mk = async t => (await user(A, tx => tx.query(`insert into public.chats (deal_id, owner_id, title) values ('deal-a', $1, $2) returning id, updated_at`, [A, t]))).rows[0]
+  const one = await mk('One'), two = await mk('Two')
+  await user(A, tx => tx.query(`update public.chats set title = 'Pricing questions' where id = $1`, [one.id]))
+  assert.equal((await service(tx => tx.query(`select title from public.chats where id = $1`, [one.id]))).rows[0].title, 'Pricing questions')
+  assert.equal((await user(B, tx => tx.query(`update public.chats set title = 'pwned' where id = $1`, [one.id]))).affectedRows, 0)
+  await rejects(user(A, tx => tx.query(`update public.chats set owner_id = $2 where id = $1`, [one.id, B])), /permission denied/)
+  await new Promise(r => setTimeout(r, 15))
+  await user(A, tx => tx.query(`insert into public.chat_messages (deal_id, owner_id, chat_id, role, content) values ('deal-a', $1, $2, 'user', 'bump')`, [A, one.id]))
+  const after = (await service(tx => tx.query(`select updated_at from public.chats where id = $1`, [one.id]))).rows[0].updated_at
+  assert.ok(new Date(after) > new Date(one.updated_at), 'posting bumps the chat')
+  assert.equal((await user(B, tx => tx.query(`delete from public.chats where id = $1`, [two.id]))).affectedRows, 0)
+  await user(A, tx => tx.query(`delete from public.chats where id = $1`, [one.id]))
+  assert.equal((await service(tx => tx.query(`select count(*)::int n from public.chat_messages where chat_id = $1`, [one.id]))).rows[0].n, 0)
+})
+
+test('chat history: the pre-v0.15.0 app and worker (no chat id) still work, into the latest chat', async () => {
+  // A deal with no chats: an old-style message creates "Earlier chat".
+  await user(B, tx => tx.query(`insert into public.deals (id, owner_id, name, data) values ('deal-b2', $1, 'Globex', $2)`, [B, deal('deal-b2')]))
+  await user(B, tx => tx.query(`insert into public.chat_messages (deal_id, owner_id, role, content) values ('deal-b2', $1, 'user', 'old app')`, [B]))
+  const first = (await service(tx => tx.query(`select c.id, c.title from public.chat_messages m join public.chats c on c.id = m.chat_id where m.content = 'old app'`))).rows[0]
+  assert.equal(first.title, 'Earlier chat')
+  // With chats already there, it goes into the most recent one.
+  const latest = (await service(tx => tx.query(`select id from public.chats where deal_id = 'deal-b' order by updated_at desc limit 1`))).rows[0].id
+  await user(B, tx => tx.query(`insert into public.chat_messages (deal_id, owner_id, role, content) values ('deal-b', $1, 'user', 'old app 2')`, [B]))
+  assert.equal((await service(tx => tx.query(`select chat_id from public.chat_messages where content = 'old app 2'`))).rows[0].chat_id, latest)
+  // The old worker replies without a chat id: same chat.
+  await service(tx => tx.query(`insert into public.chat_messages (deal_id, owner_id, role, content) values ('deal-b2', $1, 'assistant', 'old worker')`, [B]))
+  const reply = (await service(tx => tx.query(`select chat_id from public.chat_messages where content = 'old worker'`))).rows[0]
+  assert.equal(reply.chat_id, first.id)
+  // Still cannot post into someone else's deal by leaving the chat id out.
+  const chatsBefore = (await service(tx => tx.query(`select count(*)::int n from public.chats where deal_id = 'deal-b'`))).rows[0].n
+  await rejects(user(A, tx => tx.query(`insert into public.chat_messages (deal_id, owner_id, role, content) values ('deal-b', $1, 'user', 'sneak')`, [A])), /row-level security|null value/)
+  assert.equal((await service(tx => tx.query(`select count(*)::int n from public.chats where deal_id = 'deal-b'`))).rows[0].n, chatsBefore, 'no chat created in another account\'s deal')
+  assert.equal((await service(tx => tx.query(`select count(*)::int n from public.chats where owner_id = $1 and deal_id = 'deal-b'`, [A]))).rows[0].n, 0)
 })

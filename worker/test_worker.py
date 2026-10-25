@@ -468,3 +468,18 @@ class AnyProvider(unittest.TestCase):
         self.assertIn("OPENROUTER_API_KEY=sk-or-v1-abc", seen["envfile"])
         self.assertNotIn("ANTHROPIC_API_KEY", seen["envfile"])
         self.assertNotIn("OPENAI_API_KEY", seen["env"])  # no other key leaks in from the worker's env
+
+
+class ChatHistory(unittest.TestCase):
+    def test_reply_goes_to_the_payload_chat(self):
+        cid = "11111111-2222-3333-4444-555555555555"
+        self.assertEqual(worker.chat_for({"payload": {"chat_id": cid}, "deal_id": "d", "owner_id": "o"}), cid)
+
+    def test_old_jobs_fall_back_to_the_latest_user_message_chat(self):
+        old = worker.api
+        worker.api = lambda m, p, b=None, prefer=None: [{"chat_id": "abc"}] if "role=eq.user" in p else []
+        try:
+            self.assertEqual(worker.chat_for({"payload": {"chat_id": "not-a-uuid"}, "deal_id": "d", "owner_id": "o"}), "abc")
+            self.assertIsNone(worker.chat_for({"payload": {}, "owner_id": "o"}))
+        finally:
+            worker.api = old

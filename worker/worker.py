@@ -839,6 +839,19 @@ def run_hermes(profile, prompt, api_key, model=MODEL, effort=None, web=True, pro
             pass
 
 
+def chat_for(job):
+    """The chat a job's reply belongs to: the payload's chat_id, else the chat of
+    the user message that started it (jobs queued before migration 0010)."""
+    cid = (job.get("payload") or {}).get("chat_id")
+    if cid and re.fullmatch(r"[0-9a-f-]{36}", str(cid)):
+        return cid
+    if not job.get("deal_id"):
+        return None
+    rows = api("GET", f"/rest/v1/chat_messages?deal_id=eq.{job['deal_id']}&owner_id=eq.{job['owner_id']}"
+                      "&role=eq.user&select=chat_id&order=id.desc&limit=1") or []
+    return rows[0]["chat_id"] if rows else None
+
+
 def handle(job):
     jid, owner = job["id"], job["owner_id"]
     log("claimed", jid, job["kind"], "attempt", job["attempts"])
@@ -849,17 +862,20 @@ def handle(job):
         msg = "I can't answer yet: there is no AI model key on your account. Add one in Settings (Anthropic, OpenAI, Google Gemini or OpenRouter), then send your message again."
         if job.get("deal_id") and job["kind"] == "chat":
             api("POST", "/rest/v1/chat_messages", {"deal_id": job["deal_id"], "owner_id": owner, "role": "assistant",
-                "content": msg, "job_id": jid, "meta": {"error": "no_key"}}, prefer="return=minimal")
+                "chat_id": chat_for(job), "content": msg, "job_id": jid, "meta": {"error": "no_key"}}, prefer="return=minimal")
         rpc("complete_job", p_id=jid, p_worker=WORKER_ID, p_result={"error": "no_key"})
         log("done", jid, "no key")
         return
+    chat_id = chat_for(job)
     deal = None
     if job.get("deal_id"):
         rows = api("GET", f"/rest/v1/deals?id=eq.{job['deal_id']}&owner_id=eq.{owner}&select=id,name,data")
         deal = rows[0] if rows else None
     history = []
     if job["kind"] == "chat" and job.get("deal_id") and deal:
-        history = api("GET", f"/rest/v1/chat_messages?deal_id=eq.{job['deal_id']}&owner_id=eq.{owner}"
+        # History comes from this chat only (migration 0010); old jobs without a chat id use the deal.
+        scope = f"chat_id=eq.{chat_id}" if chat_id else f"deal_id=eq.{job['deal_id']}"
+        history = api("GET", f"/rest/v1/chat_messages?{scope}&owner_id=eq.{owner}"
                              "&role=in.(user,assistant)&select=role,content&order=id.desc&limit=9") or []
         history = list(reversed(history))[:-1]  # oldest first, minus the request itself
     profile = profile_for(owner)
@@ -904,7 +920,7 @@ def handle(job):
     rejected += cmd_rejected
     result = {"text": text, "edits": edits, "commands": commands, "rejected": rejected, "trace": trace, "model": model, "seconds": secs, "usage": usage}
     if job.get("deal_id") and deal:
-        api("POST", "/rest/v1/chat_messages", {"deal_id": job["deal_id"], "owner_id": owner,
+        api("POST", "/rest/v1/chat_messages", {"deal_id": job["deal_id"], "owner_id": owner, "chat_id": chat_id,
             "role": "assistant", "content": text, "job_id": jid,
             "meta": {"model": model, "effort": effort, "web": web, "seconds": secs, "edits": edits, "commands": commands, "rejected": rejected, "trace": trace}}, prefer="return=minimal")
     rpc("complete_job", p_id=jid, p_worker=WORKER_ID, p_result=result)
@@ -996,7 +1012,7 @@ def main():
             if job.get("kind") == "chat" and job.get("deal_id") and job.get("attempts", 0) >= job.get("max_attempts", 3):
                 try:
                     api("POST", "/rest/v1/chat_messages", {"deal_id": job["deal_id"], "owner_id": job["owner_id"],
-                        "role": "assistant", "job_id": job["id"], "meta": {"error": "failed"},
+                        "chat_id": chat_for(job), "role": "assistant", "job_id": job["id"], "meta": {"error": "failed"},
                         "content": "Sorry, I couldn't finish that request. Please try again."}, prefer="return=minimal")
                 except Exception as e3:
                     log("could not post failure:", e3)

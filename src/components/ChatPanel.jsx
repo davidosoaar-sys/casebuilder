@@ -34,7 +34,8 @@ const icons = {
   full: <><path d="M6 2.5H2.5V6M10 2.5h3.5V6M6 13.5H2.5V10M10 13.5h3.5V10" /></>,
   close: <path d="M4 4l8 8M12 4l-8 8" />,
   file: <><path d="M4 1.8h5l3 3v9.4H4z" /><path d="M9 1.8v3h3" /></>,
-  chevron: <path d="M4.5 6.5L8 10l3.5-3.5" />
+  chevron: <path d="M4.5 6.5L8 10l3.5-3.5" />,
+  trash: <><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5" /></>
 }
 
 function useCopy() {
@@ -58,37 +59,69 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
   const [copied, copy] = useCopy()
   const { keys } = useModelKeys(userId)
   const list = useRef(null)
+  // Chat history (migration 0010): a project has many chats. chatId null = a new,
+  // unsaved chat; it is created when the first message is sent.
+  const [chats, setChats] = useState(null)
+  const [chatId, setChatIdState] = useState(null)
+  const lastKey = `casebuilder.chat.${dealId}`
+  const setChatId = id => { setChatIdState(id); try { id ? localStorage.setItem(lastKey, id) : localStorage.removeItem(lastKey) } catch {} }
+  const chat = chats?.find(c => c.id === chatId) || null
   const applied = project.agentLog || {}
   const noKey = keys && keys.length === 0
   const provider = activeKey(keys)?.provider || 'anthropic'
 
-  const reload = async () => {
-    const { data, error } = await supabase.from('chat_messages').select(SELECT).eq('deal_id', dealId).order('id', { ascending: true }).limit(300)
+  const loadChats = async () => {
+    const { data, error } = await supabase.from('chats').select('id, title, kind, updated_at').eq('deal_id', dealId).order('updated_at', { ascending: false }).limit(200)
+    if (error) { setError(error.message); setChats([]); return [] }
+    setChats(data); return data
+  }
+  const reload = async (id = chatId) => {
+    if (!id) { setMessages([]); return [] }
+    const { data, error } = await supabase.from('chat_messages').select(SELECT).eq('chat_id', id).order('id', { ascending: true }).limit(300)
     if (error) setError(error.message)
     if (data) setMessages(data)
     return data || []
   }
 
+  // Open the chat used last on this project, else the most recent, else a new one.
+  useEffect(() => {
+    let alive = true
+    setChats(null); setChatIdState(null)
+    ;(async () => {
+      const list = await loadChats()
+      if (!alive) return
+      let last = null; try { last = localStorage.getItem(lastKey) } catch {}
+      setChatIdState(list.find(c => c.id === last)?.id || list[0]?.id || null)
+    })()
+    const ch = supabase.channel(`chats-${dealId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chats', filter: `deal_id=eq.${dealId}` }, () => loadChats())
+      .subscribe()
+    return () => { alive = false; supabase.removeChannel(ch) }
+  }, [dealId]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Load + subscribe. On load, pick up a job that is still running (e.g. the
   // user left and came back), so the typing indicator and the reply show.
   useEffect(() => {
     let alive = true
-    setLoading(true); setMessages([]); setPending(null)
+    setMessages([]); setPending(null); setEditing(null); setError('')
+    if (chats === null) { setLoading(true); return }
+    if (!chatId) { setLoading(false); return }
+    setLoading(true)
     ;(async () => {
-      const data = await reload()
+      const data = await reload(chatId)
       if (!alive) return
       setLoading(false)
-      const { data: open } = await supabase.from('jobs').select('id').eq('deal_id', dealId).eq('kind', 'chat').in('status', ['queued', 'running']).order('created_at', { ascending: false }).limit(1)
+      const { data: open } = await supabase.from('jobs').select('id').eq('deal_id', dealId).in('kind', ['chat', 'research']).eq('payload->>chat_id', chatId).in('status', ['queued', 'running']).order('created_at', { ascending: false }).limit(1)
       if (alive && open?.[0] && !data.some(m => m.job_id === open[0].id)) setPending(open[0].id)
     })()
-    const ch = supabase.channel(`chat-${dealId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `deal_id=eq.${dealId}` },
+    const ch = supabase.channel(`chat-${chatId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `chat_id=eq.${chatId}` },
         payload => setMessages(ms => ms.some(m => m.id === payload.new.id) ? ms : [...ms, payload.new]))
       .subscribe()
-    const onVisible = () => { if (document.visibilityState === 'visible') reload() }
+    const onVisible = () => { if (document.visibilityState === 'visible') reload(chatId) }
     document.addEventListener('visibilitychange', onVisible)
     return () => { alive = false; supabase.removeChannel(ch); document.removeEventListener('visibilitychange', onVisible) }
-  }, [dealId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [chatId, chats === null]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // While waiting, poll the job too, in case Realtime drops.
   useEffect(() => {
@@ -107,7 +140,7 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
       }
     }, POLL_MS)
     return () => clearInterval(t)
-  }, [pending, dealId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pending, chatId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (pending && messages.some(m => m.role === 'assistant' && m.job_id === pending)) setPending(null)
@@ -138,29 +171,60 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
     if (noKey) { setError('Add an AI model key in Settings first.'); return false }
     if (pending) return false
     setError('')
+    // First message of a new chat: create the chat, titled from the message.
+    let id = chatId
+    if (!id) {
+      const title = (text || attachments[0]?.name || 'New chat').replace(/\s+/g, ' ').trim().slice(0, 60) || 'New chat'
+      const { data: c, error: ec } = await supabase.from('chats').insert({ deal_id: dealId, owner_id: userId, title }).select('id, title, kind, updated_at').single()
+      if (ec) { setError(/foreign key|not present|violates row-level/i.test(ec.message) ? 'This deal has not finished saving yet. Try again in a second.' : ec.message); return false }
+      id = c.id
+      setChats(cs => [c, ...(cs || []).filter(x => x.id !== c.id)])
+      setChatId(id)
+    }
     const meta = attachments.length ? { attachments: attachments.map(a => ({ name: a.name, size: a.text.length })) } : {}
     if (model) meta.model = model
     if (effort) meta.effort = effort
     if (web === false) meta.web = false
     const { data: msg, error: e1 } = await supabase.from('chat_messages')
-      .insert({ deal_id: dealId, owner_id: userId, role: 'user', content: text || '(attached files)', meta }).select(SELECT).single()
+      .insert({ deal_id: dealId, owner_id: userId, chat_id: id, role: 'user', content: text || '(attached files)', meta }).select(SELECT).single()
     if (e1) { setError(/foreign key|not present|violates row-level/i.test(e1.message) ? 'This deal has not finished saving yet. Try again in a second.' : e1.message); return false }
     setMessages(ms => ms.some(m => m.id === msg.id) ? ms : [...ms, msg])
     const roles = (project.stakeholders || []).map(s => { const r = resolveStakeholder(s); return r ? { key: s.key, role: r.role || '', tag: r.tag || '' } : null }).filter(Boolean)
-    const payload = { message: text, model, effort, web: web !== false, roles, user_name: userName || '', attachments: attachments.map(a => ({ name: a.name, text: a.text })) }
+    const payload = { chat_id: id, message: text, model, effort, web: web !== false, roles, user_name: userName || '', attachments: attachments.map(a => ({ name: a.name, text: a.text })) }
     const { data: job, error: e2 } = await supabase.from('jobs').insert({ owner_id: userId, deal_id: dealId, kind: 'chat', payload }).select('id').single()
     if (e2) { setError(/rate|limit/i.test(e2.message) ? 'Too many requests just now. Wait a minute and try again.' : e2.message); return false }
     setPending(job.id)
     return true
   }
 
+  async function renameChat(id, title) {
+    const t = title.replace(/\s+/g, ' ').trim().slice(0, 120)
+    if (!t) return
+    setChats(cs => cs.map(c => c.id === id ? { ...c, title: t } : c))
+    const { error } = await supabase.from('chats').update({ title: t }).eq('id', id)
+    if (error) { setError(error.message); loadChats() }
+  }
+  async function deleteChat(id) {
+    const c = chats?.find(x => x.id === id)
+    if (!window.confirm(`Delete "${c?.title || 'this chat'}"? Its messages are deleted too. Changes it made to the deal stay.`)) return
+    const { error } = await supabase.from('chats').delete().eq('id', id)
+    if (error) { setError(error.message); return }
+    const rest = (chats || []).filter(x => x.id !== id)
+    setChats(rest)
+    if (id === chatId) setChatId(rest[0]?.id || null)
+  }
+
   const visible = messages.filter(m => m.role !== 'status')
 
-  return (
+  const panel = (
     <section className={`chat-panel chat-${mode}${!loading && visible.length === 0 ? ' is-empty' : ''}`} aria-label="Agent chat">
       <header className="chat-head">
-        <div className="chat-title"><span className="chat-dot" aria-hidden="true" /><h2>Agent</h2><span className="chat-deal">{project.name}</span></div>
+        <div className="chat-title"><span className="chat-dot" aria-hidden="true" /><h2>Agent</h2>
+          {mode === 'full' ? <span className="chat-deal">{chat?.title || project.name}</span>
+            : <ChatMenu chats={chats} chatId={chatId} onPick={setChatId} onNew={() => setChatId(null)} onRename={renameChat} onDelete={deleteChat} label={chat?.title || 'New chat'} />}
+        </div>
         <div className="chat-head-actions">
+          <button type="button" className="icon-btn" onClick={() => setChatId(null)} disabled={!chatId} title="New chat" aria-label="New chat"><Icon d={icons.plus} /></button>
           {mode === 'full'
             ? <button type="button" className="icon-btn" onClick={onSplit} title="Split screen: show the agent beside your tabs" aria-label="Split screen"><Icon d={icons.split} /></button>
             : <>
@@ -221,6 +285,91 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
           subtitle={`Ask about ${project.name || 'this deal'}, or tell the agent what to change. Every change can be undone.`} />
       </div>
     </section>
+  )
+  if (mode !== 'full') return panel
+  return (
+    <div className="chat-shell">
+      <ChatRail chats={chats} chatId={chatId} onPick={setChatId} onNew={() => setChatId(null)} onRename={renameChat} onDelete={deleteChat} />
+      {panel}
+    </div>
+  )
+}
+
+const ago = iso => {
+  const s = (Date.now() - new Date(iso).getTime()) / 1000
+  if (s < 60) return 'just now'
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`
+  if (s < 86400 * 7) return `${Math.floor(s / 86400)}d ago`
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
+// One row in the chat list: click to open, pencil to rename inline, bin to delete.
+function ChatRow({ c, on, onPick, onRename, onDelete }) {
+  const [edit, setEdit] = useState(false)
+  const [t, setT] = useState(c.title)
+  useEffect(() => { setT(c.title) }, [c.title])
+  if (edit) return (
+    <li className="chat-row is-editing">
+      <input autoFocus value={t} maxLength={120} aria-label="Chat name" onChange={e => setT(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') { onRename(c.id, t); setEdit(false) } if (e.key === 'Escape') { setT(c.title); setEdit(false) } }}
+        onBlur={() => { if (t.trim() && t !== c.title) onRename(c.id, t); setEdit(false) }} />
+    </li>
+  )
+  return (
+    <li className={`chat-row${on ? ' is-on' : ''}`}>
+      <button type="button" className="chat-row-open" onClick={() => onPick(c.id)} aria-current={on ? 'true' : undefined}>
+        <span className="chat-row-title">{c.title}</span>
+        <span className="chat-row-when">{c.kind === 'research' ? 'Deep research · ' : ''}{ago(c.updated_at)}</span>
+      </button>
+      <span className="chat-row-actions">
+        <button type="button" className="icon-btn sm" onClick={() => setEdit(true)} title="Rename" aria-label={`Rename ${c.title}`}><Icon d={icons.edit} size={13} /></button>
+        <button type="button" className="icon-btn sm" onClick={() => onDelete(c.id)} title="Delete" aria-label={`Delete ${c.title}`}><Icon d={icons.trash} size={13} /></button>
+      </span>
+    </li>
+  )
+}
+
+function ChatList({ chats, chatId, onPick, onRename, onDelete }) {
+  if (chats === null) return <p className="chat-rail-empty">Loading…</p>
+  if (!chats.length) return <p className="chat-rail-empty">No chats yet. Your first message starts one.</p>
+  return <ul className="chat-rows">{chats.map(c => <ChatRow key={c.id} c={c} on={c.id === chatId} onPick={onPick} onRename={onRename} onDelete={onDelete} />)}</ul>
+}
+
+// Full page: the list sits on the left, like Claude.
+function ChatRail(props) {
+  return (
+    <aside className="chat-rail" aria-label="Chats">
+      <button type="button" className="ghost chat-rail-new" onClick={props.onNew}><Icon d={icons.plus} size={13} /> New chat</button>
+      <p className="mono-label chat-rail-head">Chats</p>
+      <ChatList {...props} />
+    </aside>
+  )
+}
+
+// Split screen: the same list in a dropdown under the chat's name.
+function ChatMenu({ label, ...props }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  useEffect(() => {
+    if (!open) return
+    const off = e => { if (!ref.current?.contains(e.target)) setOpen(false) }
+    const esc = e => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', off); document.addEventListener('keydown', esc)
+    return () => { document.removeEventListener('mousedown', off); document.removeEventListener('keydown', esc) }
+  }, [open])
+  return (
+    <div className="chat-menu" ref={ref}>
+      <button type="button" className="chat-menu-btn" onClick={() => setOpen(o => !o)} aria-haspopup="true" aria-expanded={open} title="Your chats on this project">
+        <span>{label}</span><Icon d={icons.chevron} size={12} />
+      </button>
+      {open && (
+        <div className="chat-menu-pop" role="menu">
+          <button type="button" className="ghost chat-rail-new" onClick={() => { props.onNew(); setOpen(false) }}><Icon d={icons.plus} size={13} /> New chat</button>
+          <ChatList {...props} onPick={id => { props.onPick(id); setOpen(false) }} />
+        </div>
+      )}
+    </div>
   )
 }
 
