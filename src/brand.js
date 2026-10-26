@@ -1,3 +1,4 @@
+import {coBrandHtml} from './coBrand.js'
 import {publicProfileUrl} from './profileMedia.js'
 import { websiteThemeCss } from './export/websiteFramework.js'
 // Customer branding is scoped to a deck. It never themes the application chrome.
@@ -62,7 +63,7 @@ export function fontFaceCss(value) {
 export function brandLogoHtml(value, fallback = '') {
   const b = normalizeBrand(value)
   if (b.hideLogo) return ''
-  return b.logo ? `<img src="${b.logo}" alt="Company logo" style="height:40px;width:auto;max-width:220px;object-fit:contain;${b.logoBackground!=='transparent'?'background:'+b.logoBackground+';padding:8px;border-radius:4px;':''}">` : fallback
+  return coBrandHtml(b.logo ? `<img src="${b.logo}" alt="Company logo" style="height:40px;width:auto;max-width:220px;object-fit:contain;${b.logoBackground!=='transparent'?'background:'+b.logoBackground+';padding:8px;border-radius:4px;':''}">` : fallback)
 }
 // Apply the palette after the default CSS, only in exported client documents.
 export function brandDocument(html, value) {

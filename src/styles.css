@@ -3027,3 +3027,4 @@ body::after { content: ''; position: fixed; inset: 0; z-index: 200; pointer-even
 /* Connectors inside Customize: intro at body size, list as wide as the Skills grid. */
 .connections-embedded .sub { margin: 0 0 6px; max-width: 70ch; font-size: 14.5px; line-height: 1.6; color: var(--ink-dim); }
 .connections-embedded .connector-list { max-width: none; }
+.undo-redo-labels .undo-btn { width: auto; padding: 8px 10px; gap: 6px; display: inline-flex; align-items: center; }

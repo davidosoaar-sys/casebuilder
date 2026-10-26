@@ -10,6 +10,7 @@ import { NO_ONE, resolveStakeholder } from '../deck/stakeholders.js'
 import { fileToDataUrl } from '../deck/image.js'
 import { slideName } from '../agentDeckEdits.js'
 import { stepId } from '../useHistory.js'
+import { inheritSlideStyle } from '../deck/inheritStyle.js'
 import {
   TEXT_STYLES,
   STAT_KEYS,
@@ -178,7 +179,7 @@ export default function Deck({ inputs, model, fields, connectors, stakeholders, 
     undoToast('Page deleted', `Deleted page ${i + 1}`, list => list.filter(s => s.id !== id))
   }
   const addSlide = (make, afterId) => {
-    const made = make()
+    const made = inheritSlideStyle(make(), deck.find(s => s.id === (afterId || page)) || deck[deck.length - 1])
     const at = afterId ? pageIndex(afterId) + 1 : deck.length
     edit(list => [...list.slice(0, at), made, ...list.slice(at)], `Added page ${at + 1}`)
     setTimeout(() => goTo(made.id), 60)
@@ -262,7 +263,7 @@ export default function Deck({ inputs, model, fields, connectors, stakeholders, 
             </div>
           </div>
           <div className="toolbar-actions">
-            <UndoRedo history={history} />
+            <UndoRedo history={history} labels />
             <button className="ghost" onClick={() => setDesignOpen(v => !v)} aria-expanded={designOpen}>Deck design{brand?.status === 'scanning' ? ' · scanning' : ''}</button>
             <ExportMenu
               requestedView={previewRequest}

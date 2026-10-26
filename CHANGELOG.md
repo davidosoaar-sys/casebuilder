@@ -25,6 +25,20 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ---
 
+## v0.17.0 (2026-10-26): Connected Claude prototype, skills and deck refinements
+
+- Release checks: 407 offline src/server/plugin tests pass; application and plugin builds pass. The unrestricted test discovery also encounters a live-account helper requiring local credentials and an existing locale-sensitive schedule assertion (pm versus PM). Real Claude sign-in and worker deployment remain unverified.
+
+- Strengthen the four platform skills with explicit trigger/source boundaries, processing, examples, evaluation and deterministic/judgment rules shared by manual and scheduled runs. Add customer × Backstage co-branding to deck logo blocks and shared HTML brand output. Validation: skills/export tests and builds; live worker requires its normal deployment.
+
+- Remove the separate Evidence review tab (input sources remain intact). Make deck Undo/Redo buttons visibly labeled and inherit active-page appearance for newly added pages, retaining company branding and template content. Validation: style inheritance test, history tests and production build.
+
+- Specify Claude onboarding: explicit source selection, account connection and scoped context review, then requested output formats/audience. Add Pranav's eight-part framework mapping and host acceptance scorecard. Uses host choice UI where available, text fallback otherwise; no standalone checkbox screen. Validation: plugin packaging and MCP integration test.
+
+- Extend the Claude plugin with a local MCP bridge for case creation, reviewed sourced inputs, canonical calculations and existing artifact exporters. Add source-connection guidance and a connected-case skill; no automatic account authorization, remote hosting or app sync. Validation: stdio workflow integration test and plugin build.
+
+- Add Gmail to Connectors with its logo, default-off read permission and project-scoped pasted/uploaded email context. Uses the existing material-upload flow; no live inbox access or email sending. Validation: connector permission tests and production build.
+
 ## Unreleased
 
 ## v0.16.0 (2026-10-26): The redesign: Dashboard, Skills, Scheduled, Customize, agent deck editing, undo

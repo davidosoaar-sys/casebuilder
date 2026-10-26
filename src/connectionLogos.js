@@ -11,5 +11,6 @@ import sheets from './assets/connections/sheets.png'
 import excel from './assets/connections/excel.png'
 import figma from './assets/connections/figma.png'
 import canva from './assets/connections/canva.png'
+import gmail from './assets/connections/gmail.png'
 
-export const LOGOS = { claude, gong, hubspot, slack, clay, lemlist, granola, sheets, excel, figma, canva }
+export const LOGOS = { gmail, claude, gong, hubspot, slack, clay, lemlist, granola, sheets, excel, figma, canva }

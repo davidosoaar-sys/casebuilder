@@ -7,7 +7,7 @@ import { anthropicFor } from './accountKey.js'
 import { runWithSearch } from './agentSearch.js'
 
 const CONNECTORS = ['claude', 'gong', 'hubspot', 'slack', 'clay', 'lemlist', 'granola', 'sheets', 'excel', 'figma', 'canva']
-const CONNECTOR_DOMAINS = { claude: ['claude.ai'], gong: ['gong.io', 'gong.com'], hubspot: ['hubspot.com', 'hubspot.net'], slack: ['slack.com'], clay: ['clay.com'], lemlist: ['lemlist.com'], granola: ['granola.ai', 'granola.so'], sheets: ['docs.google.com'], excel: ['office.com', 'sharepoint.com', 'live.com'], figma: ['figma.com'], canva: ['canva.com'] }
+const CONNECTOR_DOMAINS = { gmail: ['mail.google.com', 'gmail.com'], claude: ['claude.ai'], gong: ['gong.io', 'gong.com'], hubspot: ['hubspot.com', 'hubspot.net'], slack: ['slack.com'], clay: ['clay.com'], lemlist: ['lemlist.com'], granola: ['granola.ai', 'granola.so'], sheets: ['docs.google.com'], excel: ['office.com', 'sharepoint.com', 'live.com'], figma: ['figma.com'], canva: ['canva.com'] }
 const clean = (v, n = 800) => typeof v === 'string' ? v.trim().slice(0, n) : ''
 const httpUrl = v => { try { const u = new URL(v); return ['https:', 'http:'].includes(u.protocol) && !u.username && !u.password ? u.href : null } catch { return null } }
 const hostedConnector = url => { const host = new URL(url).hostname; return CONNECTORS.find(key => CONNECTOR_DOMAINS[key].some(domain => host === domain || host.endsWith(`.${domain}`))) }

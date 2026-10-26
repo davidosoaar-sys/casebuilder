@@ -5,6 +5,10 @@ argument-hint: <company> [case file or discovery files] [requested formats]
 
 Arguments: $ARGUMENTS
 
+When connected meeting/email context is requested, first read
+`${CLAUDE_PLUGIN_ROOT}/skills/connected-case/SKILL.md`. Use the bundled CaseBuilder
+MCP tools when available, and use only services Chris has explicitly authorized.
+
 Read `${CLAUDE_PLUGIN_ROOT}/skills/case-workflow/SKILL.md`. Planner action:
 `run-case`. Create/reuse the case, extract sourced inputs, discover brand assets
 when enabled, propose stakeholders, calculate with the CLI and build requested
