@@ -74,7 +74,7 @@ function useCopy() {
   }]
 }
 
-export default function ChatPanel({ project, userId, userName, mode = 'split', onApply, onUndo, onRedo, onRun, onPick, onClose, onSplit, onFull, onSettings, onFlush, onViewCase, skillRequest, onSkillRequestDone }) {
+export default function ChatPanel({ project, userId, userName, mode = 'split', onApply, onUndo, onRedo, onRun, onPick, onClose, onSplit, onFull, onSettings, onFlush, onViewCase, skillRequest, onSkillRequestDone, fillRequest, onFillRequestDone }) {
   const dealId = project.id
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
@@ -110,6 +110,12 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
     if (sk) { setChatId(null); setSkillPick({ skill: sk, inputs: {} }) }
     onSkillRequestDone?.()
   }, [skillRequest, skills, chats === null]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Opened from the Dashboard ("Find the CTO"): a new chat with the text in the box, not sent.
+  useEffect(() => {
+    if (!fillRequest?.text || chats === null) return
+    setChatId(null); setSkillPick(null); setFill({ text: fillRequest.text })
+    onFillRequestDone?.()
+  }, [fillRequest, chats === null]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { setResearchOn(chat?.kind === 'research') }, [chatId, chat?.kind])
   const applied = project.agentLog || {}
   const noKey = keys && keys.length === 0

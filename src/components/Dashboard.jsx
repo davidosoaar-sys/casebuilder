@@ -1,134 +1,162 @@
-// Dashboard: what a seller needs at a glance.
-// 1. Pipeline numbers  2. What needs attention  3. Recent deals  4. Agent status.
-// Everything is computed from the account's own deals with the same model the
-// deck uses, so a number here always matches the deck.
+// Dashboard: which deal needs me before my next meeting?
+// Needs attention (least confirmed first, one next action each), then what
+// changed since the last visit, then the other deals. Every figure comes from
+// the same model the deck uses (src/dashboard.js), and value is a range.
 import React, { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabase.js'
-import { computeModel } from '../model.js'
-import { confidence, unconfirmed } from '../valueModel.js'
-import { fmtMoney } from '../format.js'
+import { safeAsset } from '../brand.js'
 import { useModelKeys } from './Settings.jsx'
 import PageHead from './PageHead.jsx'
 import { Skeleton, SkeletonText } from './ui.jsx'
+import {
+  READINESS, dealSummary, triage, pipelineLine, coverageLine, fmtRange,
+  readSeen, writeSeen, changesSince, ago, sinceLabel
+} from '../dashboard.js'
 
-function dealStats(deal) {
-  const inputs = Object.fromEntries(deal.fields.map(f => [f.key, f.value]))
-  let value = null
-  try {
-    const m = computeModel(inputs)
-    const v = m.figures.totalValue?.value
-    if (Number.isFinite(v) && v > 0) value = v
-  } catch {}
-  return { deal, value, confidence: confidence(deal.fields), open: unconfirmed(deal.fields).length }
-}
+const initials = name => (name || '?').split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()
+const stagger = i => ({ '--stagger': `${Math.min(i * 40, 200)}ms` })
 
-const ago = ms => {
-  const s = Math.round((Date.now() - ms) / 1000)
-  if (s < 60) return 'just now'
-  if (s < 3600) return `${Math.round(s / 60)} min ago`
-  if (s < 86400) return `${Math.round(s / 3600)} h ago`
-  return `${Math.round(s / 86400)} d ago`
-}
-
-export default function Dashboard({ account, name, deals, loading, onOpen, onNav, onSettings, onCreate }) {
-  const stats = useMemo(() => deals.map(dealStats), [deals])
-  const { keys } = useModelKeys(account.session.user.id)
-  const [jobs, setJobs] = useState(null)
-  useEffect(() => {
-    supabase.from('jobs').select('id, kind, status, created_at, updated_at, deal_id, error')
-      .eq('owner_id', account.session.user.id).order('created_at', { ascending: false }).limit(5)
-      .then(({ data }) => setJobs(data || []))
-  }, [account.session.user.id])
-
-  const valued = stats.filter(s => s.value !== null)
-  const pipeline = valued.reduce((sum, s) => sum + s.value, 0)
-  const avgConf = stats.length ? Math.round(stats.reduce((a, s) => a + s.confidence, 0) / stats.length) : 0
-  const attention = [...stats].filter(s => s.open > 0).sort((a, b) => a.confidence - b.confidence).slice(0, 4)
-  const recent = [...stats].sort((a, b) => b.deal.updatedAt - a.deal.updatedAt).slice(0, 5)
+export default function Dashboard({ account, name, deals, loading, onOpen, onSettings, onCreate, onReview, onFind, onRescan }) {
+  const userId = account.session.user.id
+  const { keys } = useModelKeys(userId)
   const hasKey = Boolean(keys?.length)
-  const dealName = id => deals.find(d => d.id === id)?.name || 'a deal'
+  const summaries = useMemo(() => deals.map(dealSummary), [deals])
+  const { attention, rest } = useMemo(() => triage(summaries), [summaries])
+
+  // "Last looked" is read once and only moved forward when you leave, so the
+  // list does not empty itself while you read it.
+  const [seen] = useState(() => readSeen(localStorage, userId))
+  useEffect(() => () => writeSeen(localStorage, userId), [userId])
+  const [files, setFiles] = useState([])
+  const ids = deals.map(d => d.id).join(',')
+  useEffect(() => {
+    if (!ids) return
+    let live = true
+    supabase.from('project_files').select('deal_id, name, created_at').in('deal_id', ids.split(','))
+      .gt('created_at', new Date(seen).toISOString()).order('created_at', { ascending: false }).limit(30)
+      .then(({ data }) => { if (live) setFiles(data || []) })
+    return () => { live = false }
+  }, [ids, seen])
+  const feed = useMemo(() => changesSince(deals, seen, files), [deals, seen, files])
+
+  const act = s => {
+    const a = s.action
+    if (a.kind === 'find') onFind(s.deal.id, a.prompt)
+    else if (a.kind === 'rescan') onRescan(s.deal.id)
+    else onReview(s.deal.id)
+  }
 
   return (
     <div className="page dashboard">
-      <PageHead label="Dashboard" title={name ? `Hello, ${name}.` : 'Hello.'}>
+      <PageHead label="Dashboard" title={name ? `Hello, ${name}.` : 'Hello.'}
+        sub={loading ? <SkeletonText label="Loading pipeline" width="22ch" /> : pipelineLine(summaries)}>
         <button className="primary" onClick={onCreate}>New project</button>
       </PageHead>
 
       {keys && !hasKey && (
         <div className="dash-banner" role="status">
-          <span>Your agent needs an API key before it can research or write. </span>
-          <button className="link-btn" onClick={onSettings}>Add it in Settings →</button>
+          <span>Your agent needs an API key before it can research or write.</span>
+          <button className="link-btn" onClick={onSettings}>Add it in Settings</button>
         </div>
       )}
 
-      <section className="dash-stats" aria-label="Pipeline">
-        <Stat label="Open deals" value={loading ? <SkeletonText width="2ch" /> : String(stats.length)} />
-        <Stat label="Pipeline value" value={loading ? <SkeletonText width="5ch" /> : valued.length ? fmtMoney(pipeline) : '—'} note={!loading && valued.length < stats.length ? `${valued.length} of ${stats.length} deals have enough inputs to value` : 'yearly value across your deals'} />
-        <Stat label="Avg. confirmed" value={loading ? <SkeletonText width="3ch" /> : `${avgConf}%`} note="inputs backed by a customer source" />
+      <section className="dash-section" aria-labelledby="dash-attention">
+        <div className="dash-section-head">
+          <h2 id="dash-attention">Needs attention</h2>
+          {!loading && attention.length > 0 && <span className="dash-hint">Least confirmed first</span>}
+          <Legend />
+        </div>
+        {loading ? <Skeleton label="Loading deals" rows={3} height={64} listClass="dash-list dash-skeleton" /> : attention.length === 0 ? (
+          <p className="dash-empty">{deals.length ? 'Nothing needs you right now. Every case is confirmed, staffed and branded.' : 'No deals yet. Start one with New project.'}</p>
+        ) : (
+          <ul className="dash-rows" aria-label="Deals that need attention">
+            {attention.map((s, i) => <DealRow key={s.deal.id} s={s} i={i} onOpen={onOpen} onAct={act} />)}
+          </ul>
+        )}
       </section>
 
-      <div className="dash-grid">
-        <section className="dash-card">
-          <h2>Needs attention</h2>
-          {loading ? <Skeleton label="Loading deals" rows={3} height={50} listClass="dash-list dash-skeleton" /> : attention.length === 0 ? <p className="empty">Nothing waiting on you.</p> : (
-            <ul className="dash-list">
-              {attention.map(s => (
-                <li key={s.deal.id}>
-                  <button className="dash-row" onClick={() => onOpen(s.deal.id)}>
-                    <strong>{s.deal.name}</strong>
-                    <span>{s.open} input{s.open === 1 ? '' : 's'} to confirm · {s.confidence}% confirmed</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+      <section className="dash-section" aria-labelledby="dash-since">
+        <div className="dash-section-head"><h2 id="dash-since">Since you last looked</h2></div>
+        {loading ? <Skeleton label="Loading changes" rows={2} height={40} listClass="dash-list dash-skeleton" /> : feed.length === 0 ? (
+          <p className="dash-empty">Nothing new since {sinceLabel(seen)}.</p>
+        ) : (
+          <ul className="dash-feed">
+            {feed.map((it, i) => (
+              <li key={`${it.dealId}-${it.kind}`} className="stagger-in" style={stagger(i)}>
+                <span className={`dash-feed-dot feed-${it.kind}`} aria-hidden="true" />
+                <button type="button" className="dash-feed-deal" onClick={() => onOpen(it.dealId)}>{it.dealName}</button>
+                <span className="dash-feed-text">{it.text}</span>
+                <time className="dash-feed-time" dateTime={new Date(it.at).toISOString()}>{ago(it.at)}</time>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
-        <section className="dash-card">
-          <h2>Recent deals</h2>
-          {loading ? <Skeleton label="Loading deals" rows={3} height={50} listClass="dash-list dash-skeleton" /> : recent.length === 0 ? <p className="empty">No deals yet.</p> : (
-            <ul className="dash-list">
-              {recent.map(s => (
-                <li key={s.deal.id}>
-                  <button className="dash-row" onClick={() => onOpen(s.deal.id)}>
-                    <strong>{s.deal.name}</strong>
-                    <span>{s.value !== null ? `${fmtMoney(s.value)}/yr · ` : ''}{ago(s.deal.updatedAt)}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <button className="link-btn dash-more" onClick={() => onNav('projects')}>All projects →</button>
+      {!loading && rest.length > 0 && (
+        <section className="dash-section" aria-labelledby="dash-rest">
+          <div className="dash-section-head"><h2 id="dash-rest">Other deals</h2></div>
+          <ul className="dash-rows dash-rows-compact" aria-label="Other deals">
+            {rest.map((s, i) => <DealRow key={s.deal.id} s={s} i={i} onOpen={onOpen} compact />)}
+          </ul>
         </section>
-
-        <section className="dash-card">
-          <h2>Agent</h2>
-          <p className="dash-agent-status">
-            <span className={`dot ${hasKey ? 'dot-ok' : 'dot-off'}`} aria-hidden="true" />
-            {keys === null ? 'Checking…' : hasKey ? `Ready · key ends in …${keys[0].last4}` : 'Not set up'}
-          </p>
-          {jobs === null ? <Skeleton label="Loading agent activity" rows={3} height={50} listClass="dash-list dash-skeleton" /> : jobs.length === 0 ? <p className="empty">No agent activity yet.</p> : (
-            <ul className="dash-list">
-              {jobs.map(j => (
-                <li key={j.id} className="dash-job">
-                  <strong>{j.kind === 'chat' ? 'Chat reply' : j.kind[0].toUpperCase() + j.kind.slice(1).replace(/_/g, ' ')}</strong>
-                  <span>{j.deal_id ? `${dealName(j.deal_id)} · ` : ''}{j.status === 'done' ? 'done' : j.status === 'failed' ? 'failed' : j.status} · {ago(new Date(j.created_at).getTime())}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
+      )}
     </div>
   )
 }
 
-function Stat({ label, value, note }) {
+function DealRow({ s, i, onOpen, onAct, compact = false }) {
+  const { deal, readiness: r, coverage: c, range, action } = s
+  const logo = deal.brand?.hideLogo ? '' : safeAsset(deal.brand?.icon) || safeAsset(deal.brand?.logo) || safeAsset(deal.projectLogo)
+  const scanning = deal.brand?.status === 'scanning'
+  const open = () => onOpen(deal.id)
   return (
-    <div className="dash-stat">
-      <span className="mono-label">{label}</span>
-      <strong>{value}</strong>
-      {note && <span className="dash-note">{note}</span>}
-    </div>
+    <li className="dash-deal stagger-in" style={stagger(i)} onClick={open} data-deal={deal.id} data-confirmed={r.confirmedShare.toFixed(4)}>
+      <span className="dash-logo">{logo ? <img src={logo} alt="" /> : <span aria-hidden="true">{initials(deal.name)}</span>}</span>
+      <span className="dash-deal-name">
+        <button type="button" className="dash-deal-open" onClick={e => { e.stopPropagation(); open() }}>{deal.name}</button>
+        <span className="dash-people">{coverageLine(c)}</span>
+      </span>
+      <ReadinessBar r={r} delay={Math.min(i * 40, 200)} />
+      <span className={`dash-value${range ? '' : ' dash-value-none'}`}>{range ? fmtRange(range) : 'Not enough inputs to value yet'}</span>
+      {!compact && (
+        <span className="dash-action">
+          {action && (
+            <button type="button" className="ghost dash-action-btn" data-kind={action.kind} disabled={action.kind === 'rescan' && scanning}
+              onClick={e => { e.stopPropagation(); onAct(s) }}>
+              {action.kind === 'rescan' && scanning ? 'Finding branding' : action.label}
+            </button>
+          )}
+        </span>
+      )}
+    </li>
+  )
+}
+
+function ReadinessBar({ r, delay }) {
+  const pct = Math.round(r.confirmedShare * 100)
+  const summary = READINESS.map(x => `${r.counts[x.state]} ${x.label.toLowerCase()}`).join(', ')
+  return (
+    <span className="dash-ready" tabIndex={0} aria-label={`${pct}% confirmed: ${summary}, of ${r.total} inputs`}>
+      <span className="dash-bar" style={{ '--bar-delay': `${delay}ms` }} aria-hidden="true">
+        {r.segments.filter(x => x.share > 0).map(x => (
+          <span key={x.state} className={`dash-seg seg-${x.state}`} data-state={x.state} data-count={x.count} style={{ width: `${x.share}%` }} />
+        ))}
+      </span>
+      <span className="dash-ready-pct" aria-hidden="true">{pct}% confirmed</span>
+      <span className="dash-ready-tip" role="tooltip">
+        {READINESS.map(x => (
+          <span key={x.state}><i className={`seg-${x.state}`} />{x.label}<b>{r.counts[x.state]}</b></span>
+        ))}
+      </span>
+    </span>
+  )
+}
+
+function Legend() {
+  return (
+    <span className="dash-legend" aria-hidden="true">
+      {READINESS.map(x => <span key={x.state}><i className={`seg-${x.state}`} />{x.label}</span>)}
+    </span>
   )
 }

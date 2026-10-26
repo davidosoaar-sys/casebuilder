@@ -1,6 +1,7 @@
 // The content around the model: what the inputs are, how they are grouped under
 // Spotify's three pillars, who the stakeholders are, and how archetypes bias the
-// case. The arithmetic itself lives in model.js; nothing here calculates a figure.
+// case. The arithmetic itself lives in model.js; nothing here calculates a figure
+// (valueRange only re-runs that model with inputs moved).
 //
 // Every formula comes from Chris's written answer to Q8 ("What inputs and KPIs
 // do you use to calculate ROI?"). Every saving is a difference, so the inputs
@@ -8,6 +9,7 @@
 
 import { fmtMoney, fmtHours, fmtMonths } from './format.js'
 import { emptySource, stateOf, sourceFromLegacy, validSource, ORIGIN } from './source.js'
+import { computeModel } from './model.js'
 
 export { fmtMoney, fmtMoneyFull, fmtNum, fmtDec, fmtHours, fmtMonths } from './format.js'
 
@@ -172,7 +174,7 @@ export const PAIRS = [
   { key: 'tool', group: 'Scale', label: 'Overlapping tool spend', unit: '$/yr', today: 'toolSpendToday', portal: 'toolSpendPortal', saved: 'a year saved', valueFigure: 'toolingValue', driver: 'tooling', money: true }
 ]
 
-const isClaim = f => !f.deleted && (f.type === 'number' || f.type === 'percent') && !f.structural
+export const isClaim = f => !f.deleted && (f.type === 'number' || f.type === 'percent') && !f.structural
 
 // Confidence counts INPUTS only: numbers the customer stated or a public source
 // shows. Assumptions and suggestions do not count, and neither do blanks.
@@ -185,6 +187,30 @@ export function confidence(fields) {
 // Everything still to confirm: blank, assumed or only suggested.
 export function unconfirmed(fields) {
   return fields.filter(f => isClaim(f) && stateOf(f) !== 'input')
+}
+
+// The yearly value as a range, so one falsely precise figure is never shown.
+// Confirmed inputs stay fixed; every assumed or suggested number moves by
+// `band` (20%) in whichever direction lowers the total for `low` and raises it
+// for `high`. The arithmetic is still computeModel's. null = the model cannot
+// compute a total yet. { low, mid, high } in dollars a year.
+export const RANGE_BAND = 0.2
+export function valueRange(fields, band = RANGE_BAND) {
+  const base = Object.fromEntries(fields.filter(f => !f.deleted).map(f => [f.key, f.value]))
+  const total = inputs => computeModel(inputs).figures.totalValue
+  const mid = total(base)
+  if (mid.incomplete) return null
+  const loose = fields.filter(f => isClaim(f) && (stateOf(f) === 'assumption' || stateOf(f) === 'suggestion') && Number.isFinite(Number(f.value)))
+  const low = { ...base }
+  const high = { ...base }
+  for (const f of loose) {
+    const n = Number(f.value)
+    const down = total({ ...base, [f.key]: n * (1 - band) }).value
+    const up = total({ ...base, [f.key]: n * (1 + band) }).value
+    low[f.key] = down <= up ? n * (1 - band) : n * (1 + band)
+    high[f.key] = down <= up ? n * (1 + band) : n * (1 - band)
+  }
+  return { low: Math.min(total(low).value, mid.value), mid: mid.value, high: Math.max(total(high).value, mid.value) }
 }
 
 // ---------------------------------------------------------------------------

@@ -166,6 +166,7 @@ export default function App({ account }) {
   const lookup = usePersonLookup({ project, connections: dealConnections })
   const [pendingPersonInput, setPendingPersonInput] = useState(null)
   const [skillRequest, setSkillRequest] = useState(null) // Skills page "Use" -> the Agent
+  const [fillRequest, setFillRequest] = useState(null) // Dashboard "Find the CTO" -> the Agent's composer, not sent
   const [scheduleSkill, setScheduleSkill] = useState(null) // Skills page "Schedule" -> Scheduled
   const lookupPage = <PersonLookup lookup={lookup} project={project}
     onAdd={person => update(p => addPersonToDeal(p, person))}
@@ -358,7 +359,8 @@ export default function App({ account }) {
   const userName = (user || '').trim() || account.session.user.email.split('@')[0]
   const chatProps = insideProject && { project, userId: account.session.user.id, userName, onApply: applyFromChat, onUndo: undoFromChat, onRedo: redoFromChat, onRun: runFromChat, onPick: pickFromChat, onSettings: openSettings,
     onFlush: saving.flush, onViewCase: () => { if (page === 'agent') setSplit(true); setView('website') },
-    skillRequest: skillRequest?.dealId === project?.id ? skillRequest : null, onSkillRequestDone: () => setSkillRequest(null) }
+    skillRequest: skillRequest?.dealId === project?.id ? skillRequest : null, onSkillRequestDone: () => setSkillRequest(null),
+    fillRequest: fillRequest?.dealId === project?.id ? fillRequest : null, onFillRequestDone: () => setFillRequest(null) }
 
   return (
     <div className="layout">
@@ -374,9 +376,11 @@ export default function App({ account }) {
             name={user}
             deals={projects}
             loading={dealsLoading}
-            onNav={navigate}
             onSettings={openSettings}
             onOpen={id => { saving.flush(); setCurrentId(id); setView('details') }}
+            onReview={id => { saving.flush(); setCurrentId(id); setView('details') }}
+            onFind={(id, text) => { saving.flush(); setFillRequest({ dealId: id, text }); setCurrentId(id); backFromAgent.current = 'details'; setSplit(false); setView('agent') }}
+            onRescan={id => { const d = projects.find(p => p.id === id); if (d) scanBrand(id, d.name, d.brand?.website || '') }}
             onCreate={() => { setView('projects'); setCreateRequest(n => n + 1) }}
           />
         ) : page === 'details' ? (
