@@ -72,3 +72,47 @@ test('a provider error surfaces its status and message', async () => {
   const client = compatClient('google', 'AIzaBAD', { env: {}, fetchImpl: async () => ({ ok: false, status: 401, json: async () => ({ error: { message: 'API key not valid' } }) }) })
   await assert.rejects(client.messages.create({ model: 'x', max_tokens: 5, messages: [] }), e => e.status === 401 && /Google Gemini returned 401: API key not valid/.test(e.message))
 })
+
+// Gemini uses Google's native API (new AQ. keys are rejected by its OpenAI-compatible endpoint).
+test('google: native generateContent, key in x-goog-api-key, tools and thought signatures round-trip', async () => {
+  const { toGemini, fromGemini } = await import('./compatClient.js')
+  const seen = []
+  const reply1 = { candidates: [{ finishReason: 'STOP', content: { role: 'model', parts: [
+    { text: 'thinking…', thought: true },
+    { functionCall: { name: 'search', args: { q: 'spotify cfo' } }, thoughtSignature: 'SIG1' }] } }],
+    usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 4 }, modelVersion: 'gemini-3.8-flash' }
+  const reply2 = { candidates: [{ finishReason: 'STOP', content: { role: 'model', parts: [{ text: 'Done.' }] } }], usageMetadata: {} }
+  const client = compatClient('google', 'AQ.Ab-test', { env: {}, fetchImpl: async (url, init) => {
+    seen.push({ url, init: { ...init, body: JSON.parse(init.body) } })
+    return { ok: true, json: async () => (seen.length === 1 ? reply1 : reply2) }
+  } })
+  const tools = [{ name: 'search', description: 'Search', input_schema: { type: 'object', properties: { q: { type: 'string' } }, required: ['q'] } }]
+  const first = await client.messages.create({ model: 'claude-sonnet-5-5', max_tokens: 100, system: 'Be brief.', tools, messages: [{ role: 'user', content: 'Find the CFO' }] })
+  assert.match(seen[0].url, /^https:\/\/generativelanguage\.googleapis\.com\/v1beta\/models\/gemini-3\.8-flash:generateContent$/)
+  assert.equal(seen[0].init.headers['x-goog-api-key'], 'AQ.Ab-test')
+  assert.ok(!seen[0].url.includes('AQ.'), 'key never in the URL')
+  assert.ok(!('authorization' in seen[0].init.headers))
+  assert.deepEqual(seen[0].init.body.systemInstruction, { parts: [{ text: 'Be brief.' }] })
+  assert.equal(seen[0].init.body.tools[0].functionDeclarations[0].parametersJsonSchema.required[0], 'q')
+  assert.equal(first.stop_reason, 'tool_use')
+  assert.equal(first.content.length, 1, 'thought parts dropped')
+  const call = first.content[0]
+  assert.equal(call.name, 'search'); assert.deepEqual(call.input, { q: 'spotify cfo' }); assert.equal(call.thoughtSignature, 'SIG1')
+  assert.deepEqual(first.usage, { input_tokens: 10, output_tokens: 4 })
+  const second = await client.messages.stream({ model: 'claude-sonnet-5-5', max_tokens: 100, tools, messages: [
+    { role: 'user', content: 'Find the CFO' },
+    { role: 'assistant', content: first.content },
+    { role: 'user', content: [{ type: 'tool_result', tool_use_id: call.id, content: [{ type: 'text', text: 'Jane Doe' }] }] }] }).finalMessage()
+  const c = seen[1].init.body.contents
+  assert.deepEqual(c.map(x => x.role), ['user', 'model', 'user'])
+  assert.equal(c[1].parts[0].thoughtSignature, 'SIG1')
+  assert.deepEqual(c[2].parts[0], { functionResponse: { name: 'search', response: { result: 'Jane Doe' } } })
+  assert.equal(second.content[0].text, 'Done.'); assert.equal(second.stop_reason, 'end_turn')
+  // History from another provider (no signature) uses Google's skip value; forced tool -> mode ANY.
+  const { body } = toGemini({ model: 'claude-haiku-5-5', max_tokens: 5, tool_choice: { type: 'tool', name: 'search' }, tools,
+    messages: [{ role: 'assistant', content: [{ type: 'tool_use', id: 't1', name: 'search', input: {} }] }] }, {})
+  assert.equal(body.contents[0].parts[0].thoughtSignature, 'skip_thought_signature_validator')
+  assert.deepEqual(body.toolConfig, { functionCallingConfig: { mode: 'ANY', allowedFunctionNames: ['search'] } })
+  assert.equal(fromGemini({ candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ text: 'a' }, { text: 'b' }] } }] }, 'm').content[0].text, 'ab')
+  assert.equal(fromGemini({ candidates: [{ finishReason: 'SAFETY', content: { parts: [] } }] }, 'm').stop_reason, 'refusal')
+})

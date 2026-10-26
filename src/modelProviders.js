@@ -6,7 +6,7 @@ export const MODEL_PROVIDERS = [
     models: { fast: 'Haiku 5.5', balanced: 'Sonnet 5.5', best: 'Opus 5.5' } },
   { id: 'openai', name: 'OpenAI', short: 'OpenAI', prefix: 'sk-', where: 'platform.openai.com → API keys',
     models: { fast: 'GPT-5.6 Luna', balanced: 'GPT-5.6 Terra', best: 'GPT-5.6 Sol' } },
-  { id: 'google', name: 'Google Gemini', short: 'Gemini', prefix: 'AIza', where: 'aistudio.google.com → Get API key',
+  { id: 'google', name: 'Google Gemini', short: 'Gemini', prefix: 'AQ.', where: 'aistudio.google.com → Get API key (starts with AQ.)',
     models: { fast: 'Gemini 3.5 Flash Lite', balanced: 'Gemini 3.8 Flash', best: 'Gemini 3.1 Pro' } },
   { id: 'openrouter', name: 'OpenRouter (any model, one key)', short: 'OpenRouter', prefix: 'sk-or-', where: 'openrouter.ai → Keys',
     models: { fast: 'Claude Haiku 5.5', balanced: 'Claude Sonnet 5.5', best: 'Claude Opus 5.5' } }
