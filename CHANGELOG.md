@@ -27,12 +27,27 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
-## v0.16.1 (2026-10-27): Gemini keys work again, any provider's key falls back, setup shows its progress
+## v0.17.1 (2026-10-27): Gemini keys work again, any provider's key falls back, setup shows its progress
 
 - Gemini: Google AI Studio now issues keys that start with `AQ.`; Settings only accepted the old `AIza` keys, so a new Gemini key could not be saved. Both are accepted now (migration 0014, applied live). The buttons (Find people, Suggest values, Person lookup, brand) reach Gemini through Google's own API instead of its OpenAI-compatible endpoint, which rejects the new keys.
 - Every provider (Anthropic, OpenAI, Gemini, OpenRouter): when a model refuses the key (out of quota, overloaded, not on the account), the request runs on the next model down instead of failing. Free Gemini keys get no Gemini 3.1 Pro and 20 Flash requests a day, so a free key now still answers on Flash Lite. A model that hangs is cut off after 60 seconds (buttons). A rejected key is not retried: the chat says the key was rejected and to check Settings, instead of "couldn't finish that request". The key never appears in the message.
 - Project setup: brand discovery and Find people show what the agent is doing while it works (the steps, a placeholder in the shape of the result, the time taken), instead of a button that only said "Searching…".
 - Tests: app 452/452, worker 87/87. Through the app on the VPS test copy: a real Gemini key saves and the agent answers on Gemini, a wrong key gets the clear message (8/8); Anthropic agent chat 16/16; brand discovery for Apple and Visa 4/4.
+
+
+## v0.17.0 (2026-10-26): Connected Claude prototype, skills and deck refinements
+
+- Release checks: 407 offline src/server/plugin tests pass; application and plugin builds pass. The unrestricted test discovery also encounters a live-account helper requiring local credentials and an existing locale-sensitive schedule assertion (pm versus PM). Real Claude sign-in and worker deployment remain unverified.
+
+- Strengthen the four platform skills with explicit trigger/source boundaries, processing, examples, evaluation and deterministic/judgment rules shared by manual and scheduled runs. Add customer × Backstage co-branding to deck logo blocks and shared HTML brand output. Validation: skills/export tests and builds; live worker requires its normal deployment.
+
+- Remove the separate Evidence review tab (input sources remain intact). Make deck Undo/Redo buttons visibly labeled and inherit active-page appearance for newly added pages, retaining company branding and template content. Validation: style inheritance test, history tests and production build.
+
+- Specify Claude onboarding: explicit source selection, account connection and scoped context review, then requested output formats/audience. Add Pranav's eight-part framework mapping and host acceptance scorecard. Uses host choice UI where available, text fallback otherwise; no standalone checkbox screen. Validation: plugin packaging and MCP integration test.
+
+- Extend the Claude plugin with a local MCP bridge for case creation, reviewed sourced inputs, canonical calculations and existing artifact exporters. Add source-connection guidance and a connected-case skill; no automatic account authorization, remote hosting or app sync. Validation: stdio workflow integration test and plugin build.
+
+- Add Gmail to Connectors with its logo, default-off read permission and project-scoped pasted/uploaded email context. Uses the existing material-upload flow; no live inbox access or email sending. Validation: connector permission tests and production build.
 
 ## v0.16.0 (2026-10-26): The redesign: Dashboard, Skills, Scheduled, Customize, agent deck editing, undo
 

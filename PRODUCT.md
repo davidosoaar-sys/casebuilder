@@ -30,6 +30,21 @@ finance system or slide-generation playground. No new connector/backend claims
 without a working integration. No fake customer evidence or testimonials.
 
 ## Current work — 2026-10-25
+The four platform built-in skills share source-safe, framework-based instructions
+for manual and scheduled runs. Client logo blocks pair customer × Backstage while
+preserving company fonts/colors. Worker changes take effect on worker deployment.
+The separate Evidence review tab is removed; input source data remains available.
+Deck Undo/Redo have visible labels; added pages inherit the active page's styles
+within the existing company theme. Creating a separate new project does not copy
+another company's branding.
+Claude onboarding now explicitly requests sources, connection/scope, input review
+and output selection. Choices use host controls if available or text; no custom
+graphical onboarding or automatic third-party authorization is claimed.
+2026-10-26: The Claude package includes a local MCP prototype for reviewed case
+inputs, canonical calculations and artifact builds. Claude uses separately
+authorized host connectors; the prototype does not host OAuth or sync app deals.
+2026-10-26: Gmail is available as a default-off connector for project email threads
+pasted or uploaded by Chris. This does not connect to a live inbox or send email.
 Local meeting work: evidence review, optional case context and impact-first new
 templates. Implemented locally: Live Room first, optional/automatically sourced brand imagery, refined one-pager, client-safe stakeholder requirements/statuses, sourced portrait support, and product/demo storytelling. Private notes remain internal.
 Local v0.16.0 work (2026-10-26): the Agent can revise the case artifacts from chat

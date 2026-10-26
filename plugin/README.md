@@ -1,5 +1,46 @@
 # CaseBuilder for Claude
 
+## Connected-case prototype (local, unreleased)
+
+Onboarding asks Chris to choose sources, connect selected accounts, confirm scope,
+review evidence/inputs and choose Live Room, one-pager or editable deck. It uses
+Claude's multi-select UI only if the host provides it, with text choices otherwise;
+there is no custom checkbox screen in this ZIP. Output selection is not inferred
+as "all". See skills/connected-case/onboarding.md and pranav-framework.md for the
+flow, eight-part framework and acceptance scorecard.
+
+The plugin now includes a local stdio MCP server with six tools: inspect the input
+schema, create/read a case, apply reviewed sourced inputs, calculate and build.
+The tools call the same bundled CaseBuilder model/exporters as the existing CLI.
+No Anthropic API key is needed by this local bridge: Claude supplies the reasoning.
+
+1. Build with `npm run build:plugin -- --zip`.
+2. In Claude Code: `claude --plugin-dir ./plugin`, then `/mcp` to check CaseBuilder.
+3. Run `/casebuilder:connect Granola` and connect through Claude's service settings.
+   Granola's official endpoint is https://mcp.granola.ai/mcp. This package does not
+   silently install external connectors or authenticate accounts. Gong and other
+   services require their supported connector and workspace permission.
+4. Try: "Build a Northwind case from these uploaded notes. Propose the inputs for
+   my approval, then generate a one-pager and editable PPTX."
+
+Claude Desktop supports a manual local MCP entry pointing `node` at the absolute
+path to `plugin/scripts/mcp.mjs`; enable the plugin's skills in a compatible host.
+For example, in Desktop's MCP configuration:
+
+```json
+{"mcpServers":{"casebuilder":{"command":"node","args":["C:/absolute/path/to/plugin/scripts/mcp.mjs"]}}}
+```
+
+Local cases/artifacts are stored under `~/.casebuilder` or CASEBUILDER_HOME, outside
+the plugin installation. The server cannot publish or send email. The upload ZIP
+does not make a local server available to cloud-only chat/Cowork: those need a
+separately hosted, authenticated remote endpoint. Supabase deal sync and live
+account integrations are not implemented by this prototype.
+
+Offline test: `node --test plugin-src/mcp.test.mjs` exercises the real stdio tools,
+source round-trip, write approval, path rejection and actual artifact generation.
+The Claude-host/Granola sign-in smoke test still needs to be run in your account.
+
 A local Claude plugin that turns a company name and supplied discovery material
 into a sourced case file and requested business-case deliverables. It contains
 commands, reusable skills, templates, design references, a deterministic model

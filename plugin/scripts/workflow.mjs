@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 // src/connectors.js
 var CONNECTORS = [
+  { key: "gmail", label: "Gmail", blurb: "Customer email threads and follow-ups", allows: "read uploaded or pasted Gmail email threads", accepts: "a pasted email thread or a .txt / .pdf export", docLabel: "Gmail thread" },
   { key: "claude", label: "Claude", blurb: "Conversation exports and research notes", allows: "read Claude conversations and research notes", accepts: "a pasted conversation or a .txt / .md export", docLabel: "Claude conversation" },
   { key: "gong", label: "Gong", blurb: "Call transcripts", allows: "read call transcripts", accepts: "a transcript (paste, or a .txt / .vtt file)", docLabel: "Call transcript" },
   { key: "hubspot", label: "HubSpot", blurb: "CRM deal and contact records", allows: "read CRM deal and contact records", accepts: "a CSV export of the deal", docLabel: "HubSpot export" },
@@ -284,7 +285,7 @@ var STAKEHOLDERS = [
 
 // src/personLookup.js
 var publicTypes = /* @__PURE__ */ new Set(["web", "linkedin", "github", "blog", "conference", "podcast", "earnings", "public"]);
-var connectorDomains = { claude: ["claude.ai"], gong: ["gong.io", "gong.com"], hubspot: ["hubspot.com", "hubspot.net"], slack: ["slack.com"], clay: ["clay.com"], lemlist: ["lemlist.com"] };
+var connectorDomains = { gmail: ["mail.google.com", "gmail.com"], claude: ["claude.ai"], gong: ["gong.io", "gong.com"], hubspot: ["hubspot.com", "hubspot.net"], slack: ["slack.com"], clay: ["clay.com"], lemlist: ["lemlist.com"] };
 function sourceFor(item, enabledSources = []) {
   if (!item || typeof item.sourceUrl !== "string") return null;
   try {

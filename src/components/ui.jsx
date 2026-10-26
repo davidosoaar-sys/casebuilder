@@ -393,16 +393,16 @@ export function Toaster() {
 }
 
 // Undo / redo arrows for a toolbar. history: what useHistory returns.
-export function UndoRedo({ history }) {
+export function UndoRedo({ history, labels = false }) {
   if (!history) return null
   return (
-    <div className="undo-redo" role="group" aria-label="History">
+    <div className={`undo-redo${labels ? ' undo-redo-labels' : ''}`} role="group" aria-label="History">
       <button type="button" className="icon-btn undo-btn" onClick={history.undo} disabled={!history.canUndo} aria-label={history.undoLabel} title={history.undoLabel} data-tip={history.undoLabel}>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5.5 3.5L2.5 6.5l3 3" /><path d="M2.5 6.5h7a4 4 0 0 1 0 8H7" /></svg>
-      </button>
+      {labels && <span>Undo</span>}</button>
       <button type="button" className="icon-btn undo-btn" onClick={history.redo} disabled={!history.canRedo} aria-label={history.redoLabel} title={history.redoLabel} data-tip={history.redoLabel}>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10.5 3.5l3 3-3 3" /><path d="M13.5 6.5h-7a4 4 0 0 0 0 8H9" /></svg>
-      </button>
+      {labels && <span>Redo</span>}</button>
     </div>
   )
 }

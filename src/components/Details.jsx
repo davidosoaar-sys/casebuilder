@@ -1,5 +1,4 @@
 import StakeholderRequirements from './StakeholderRequirements.jsx'
-import EvidenceReview from './EvidenceReview.jsx'
 import CaseContext from './CaseContext.jsx'
 import {CASE_CONTEXT} from '../caseContext.js'
 import React, { useState } from 'react'
@@ -51,7 +50,6 @@ export default function Details({
       <div className="details-tabs" role="tablist">
         {[
           ['inputs', 'Inputs', null],
-          ['evidence', 'Evidence review', null],
           ['stakeholders', 'Stakeholders', project.stakeholders.length],
           ['people', 'People', peopleCount]
         ].map(([key, label, count]) => (
@@ -69,7 +67,6 @@ export default function Details({
       </div>
 
       {tab === 'inputs' && <CaseContext fields={project.fields} onFields={onFields}/>}
-      {tab === 'evidence' && <EvidenceReview project={project}/>}
       {tab === 'inputs' && (
         <InputSheet
           fields={project.fields.filter(f=>!CASE_CONTEXT.some(c=>c.key===f.key))}

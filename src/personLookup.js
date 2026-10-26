@@ -5,7 +5,7 @@ import { uid } from './uid.js'
 import {publicProfileUrl,profilePhotoData} from './profileMedia.js'
 
 const publicTypes = new Set(['web', 'linkedin', 'github', 'blog', 'conference', 'podcast', 'earnings', 'public'])
-const connectorDomains = { claude: ['claude.ai'], gong: ['gong.io', 'gong.com'], hubspot: ['hubspot.com', 'hubspot.net'], slack: ['slack.com'], clay: ['clay.com'], lemlist: ['lemlist.com'] }
+const connectorDomains = { gmail: ['mail.google.com', 'gmail.com'], claude: ['claude.ai'], gong: ['gong.io', 'gong.com'], hubspot: ['hubspot.com', 'hubspot.net'], slack: ['slack.com'], clay: ['clay.com'], lemlist: ['lemlist.com'] }
 export function sourceFor(item, enabledSources = []) {
   if (!item || typeof item.sourceUrl !== 'string') return null
   try {

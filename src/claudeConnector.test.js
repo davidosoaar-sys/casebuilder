@@ -3,6 +3,15 @@ import assert from 'node:assert/strict'
 import { defaultConnectors, connectorByKey, enabledLabels,loadConnections,saveConnections } from './connectors.js'
 import { sourceFor } from './personLookup.js'
 
+test('Gmail is default-off and private email citations require Gmail permission',()=>{
+  assert.equal(defaultConnectors().gmail,false)
+  assert.equal(connectorByKey.gmail.docLabel,'Gmail thread')
+  assert.deepEqual(enabledLabels({gmail:true}),['Gmail'])
+  const claim={sourceUrl:'https://mail.google.com/mail/u/0/#inbox/example',sourceType:'web'}
+  assert.equal(sourceFor(claim,['web']),null)
+  assert.equal(sourceFor(claim,['gmail'])?.sourceType,'gmail')
+})
+
 test('Claude is off by default and its permission persists like other connectors',()=>{
   const old=globalThis.localStorage
   const values=new Map()

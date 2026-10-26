@@ -3059,3 +3059,4 @@ body::after { content: ''; position: fixed; inset: 0; z-index: 200; pointer-even
 @media (prefers-reduced-motion: reduce) {
   .ghost-box::after, .agent-progress-steps li.is-now .agent-progress-dot::after { animation: none; }
 }
+.undo-redo-labels .undo-btn { width: auto; padding: 8px 10px; gap: 6px; display: inline-flex; align-items: center; }
