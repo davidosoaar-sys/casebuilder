@@ -52,7 +52,10 @@ test('quota on every tier: the last error surfaces', async () => {
   assert.equal(urls.length, 3)
 })
 
-test('a model that hangs is cut off and the next tier answers; a user abort is not retried', async () => {
+test('a model that hangs is cut off and the next tier answers; a user abort is not retried', async t => {
+  // AbortSignal.timeout's timer does not keep Node running; in a test with nothing else
+  // pending the loop could end mid-test. A real server always has the loop alive.
+  const alive = setInterval(() => {}, 1000); t.after(() => clearInterval(alive))
   const urls = []
   const c = compatClient('google', 'AQ.Ab-x', { env: { PROVIDER_TIER_TIMEOUT_MS: '50' }, fetchImpl: (url, init) => {
     const m = url.match(/models\/([^:]+)/)[1]; urls.push(m)
