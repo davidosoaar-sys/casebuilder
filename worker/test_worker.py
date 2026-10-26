@@ -546,3 +546,40 @@ class ScheduledRuns(unittest.TestCase):
         self.assertEqual(worker.scheduled_meta({"payload": {}}), {})
         m = worker.scheduled_meta({"schedule_id": "s1", "payload": {"title": "Weekly news"}})
         self.assertEqual(m, {"scheduled": True, "schedule_id": "s1", "schedule_title": "Weekly news"})
+
+
+class Skills(unittest.TestCase):
+    def test_prebuilt_file_loads_four_skills(self):
+        self.assertEqual(sorted(worker.PREBUILT_SKILLS), ["account_news", "objection_prep", "pre_meeting_brief", "stakeholder_map"])
+
+    def test_fill_settings_inputs_and_audience(self):
+        t = worker.fill_skill(worker.PREBUILT_SKILLS["objection_prep"], {"count": "3"}, {"audience": "the CFO"})
+        self.assertIn("List the 3 objections this deal is most likely to meet from the CFO,", t)
+        t = worker.fill_skill(worker.PREBUILT_SKILLS["objection_prep"], {"count": "999"}, {})
+        self.assertIn("List the 5 objections this deal is most likely to meet,", t)  # bad setting -> default
+        t = worker.fill_skill(worker.PREBUILT_SKILLS["pre_meeting_brief"], {}, {"who": "Gustav", "when": "Thursday"})
+        self.assertIn('If short is "short"', t.replace("{length}", "short"))
+        self.assertIn("Who are you meeting? Gustav", t)
+        self.assertNotIn("{", t)
+
+    def test_custom_skill_must_belong_to_owner_and_project(self):
+        seen = []
+        old = worker.api
+        worker.api = lambda m, p, b=None, prefer=None: (seen.append(p), [])[1]
+        try:
+            self.assertIsNone(worker.skill_for({"deal_id": "d", "owner_id": "o", "payload": {"skill_id": "11111111-2222-3333-4444-555555555555"}}))
+        finally:
+            worker.api = old
+        self.assertIn("owner_id=eq.o", seen[0]); self.assertIn("deal_id=eq.d", seen[0]); self.assertIn("enabled=eq.true", seen[0])
+
+    def test_switched_off_prebuilt_does_not_run(self):
+        old = worker.api
+        worker.api = lambda m, p, b=None, prefer=None: [{"enabled": False, "settings": {}}]
+        try:
+            self.assertIsNone(worker.skill_for({"deal_id": "d", "owner_id": "o", "payload": {"skill_key": "account_news"}}))
+        finally:
+            worker.api = old
+
+    def test_skill_sits_before_the_request(self):
+        p = worker.build_research_prompt({"payload": {"question": "go"}}, None, "", (), worker.skill_block(("News", "Do X", "research")))
+        self.assertLess(p.index("<skill>"), p.index("Question:"))

@@ -4,6 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 scp -q worker/worker.py casebuilder-vps:/tmp/cb-worker.py
+scp -q src/prebuiltSkills.json casebuilder-vps:/tmp/cb-prebuiltSkills.json
 # worker.env -> server, stripped to the two needed vars, owner-only.
 { grep -E '^(SUPABASE_URL|SUPABASE_SECRET_KEY)=' ~/.config/casebuilder/worker.env
   grep -E '^TAVILY_API_KEY=tvly-' ~/.config/casebuilder/search.env 2>/dev/null || true
@@ -13,8 +14,9 @@ ssh casebuilder-vps 'bash -s' <<'EOF'
 set -e
 sudo install -d -o casebuilder -g casebuilder -m 700 /home/casebuilder/worker
 sudo install -o casebuilder -g casebuilder -m 644 /tmp/cb-worker.py /home/casebuilder/worker/worker.py
+sudo install -o casebuilder -g casebuilder -m 644 /tmp/cb-prebuiltSkills.json /home/casebuilder/worker/prebuiltSkills.json
 sudo install -o casebuilder -g casebuilder -m 600 /tmp/cb-worker.env /home/casebuilder/worker/worker.env
-shred -u /tmp/cb-worker.env; rm -f /tmp/cb-worker.py
+shred -u /tmp/cb-worker.env; rm -f /tmp/cb-worker.py /tmp/cb-prebuiltSkills.json
 sudo tee /etc/systemd/system/casebuilder-worker.service >/dev/null <<'UNIT'
 [Unit]
 Description=CaseBuilder Hermes worker (Supabase job queue)

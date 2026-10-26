@@ -33,6 +33,7 @@ import { DEFAULT_BRAND } from './brand.js'
 import { AGENT_COMMANDS } from './agentCommands.js'
 import PersonLookup from './components/PersonLookup.jsx'
 import Scheduled from './components/Scheduled.jsx'
+import Skills from './components/Skills.jsx'
 import ProjectFiles from './components/ProjectFiles.jsx'
 import WaitlistAdmin, { isAdmin } from './components/WaitlistAdmin.jsx'
 import usePersonLookup from './usePersonLookup.js'
@@ -148,6 +149,8 @@ export default function App({ account }) {
   }
   const lookup = usePersonLookup({ project, connections: dealConnections })
   const [pendingPersonInput, setPendingPersonInput] = useState(null)
+  const [skillRequest, setSkillRequest] = useState(null) // Skills page "Use" -> the Agent
+  const [scheduleSkill, setScheduleSkill] = useState(null) // Skills page "Schedule" -> Scheduled
   const lookupPage = <PersonLookup lookup={lookup} project={project}
     onAdd={person => update(p => addPersonToDeal(p, person))}
     onInput={suggestion => setPendingPersonInput({ dealId: project.id, suggestion })} />
@@ -300,7 +303,8 @@ export default function App({ account }) {
   const agentFull = insideProject && page === 'agent'
   const agentSplit = insideProject && split && !agentFull
   const userName = (user || '').trim() || account.session.user.email.split('@')[0]
-  const chatProps = insideProject && { project, userId: account.session.user.id, userName, onApply: applyFromChat, onUndo: undoFromChat, onRun: runFromChat, onPick: pickFromChat, onSettings: openSettings }
+  const chatProps = insideProject && { project, userId: account.session.user.id, userName, onApply: applyFromChat, onUndo: undoFromChat, onRun: runFromChat, onPick: pickFromChat, onSettings: openSettings,
+    skillRequest: skillRequest?.dealId === project?.id ? skillRequest : null, onSkillRequestDone: () => setSkillRequest(null) }
 
   return (
     <div className="layout">
@@ -350,8 +354,13 @@ export default function App({ account }) {
           />
         ) : page === 'waitlist' && admin ? (
           <WaitlistAdmin />
+        ) : page === 'skills' && project ? (
+          <Skills key={project.id} project={project} userId={account.session.user.id}
+            onUse={sk => { setSkillRequest({ dealId: project.id, key: sk.key, id: sk.id }); navigate('agent') }}
+            onSchedule={sk => { setScheduleSkill({ dealId: project.id, skill: sk }); navigate('scheduled') }} />
         ) : page === 'scheduled' && project ? (
           <Scheduled key={project.id} project={project} userId={account.session.user.id}
+            skillToSchedule={scheduleSkill?.dealId === project.id ? scheduleSkill.skill : null} onSkillScheduled={() => setScheduleSkill(null)}
             onOpenChat={chatId => { try { localStorage.setItem(`casebuilder.chat.${project.id}`, chatId) } catch {} ; navigate('agent') }} />
         ) : page === 'files' && project ? (
           <ProjectFiles key={project.id} project={project} userId={account.session.user.id} />

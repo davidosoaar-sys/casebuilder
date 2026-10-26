@@ -392,7 +392,7 @@ def history_lines(history):
     return list(reversed(out))
 
 
-def build_prompt(job, deal, history=(), files_text="", research_text=""):
+def build_prompt(job, deal, history=(), files_text="", research_text="", skill_text=""):
     p = job.get("payload") or {}
     msg = (p.get("message") or p.get("prompt") or "").strip()
     who = (p.get("user_name") or "").strip()[:60]
@@ -485,6 +485,8 @@ def build_prompt(job, deal, history=(), files_text="", research_text=""):
                      "news, company figures), search before answering instead of answering from memory, and "
                      "name the source in your reply.")
     parts.append(f"Task type: {job['kind']}.")
+    if skill_text:
+        parts.append(skill_text)
     parts.append("Request:\n" + (msg or "(no message given)"))
     return "\n\n".join(parts)
 
@@ -493,7 +495,7 @@ SOURCES_FENCE = "casebuilder-sources"
 MAX_QUESTION = 2000
 
 
-def build_research_prompt(job, deal, files_text="", history=()):
+def build_research_prompt(job, deal, files_text="", history=(), skill_text=""):
     """Deep research: a question, optionally in the context of one deal. In a chat
     (v0.15.0) the earlier messages come along, so a follow-up like "and their
     competitors?" is understood."""
@@ -524,6 +526,8 @@ def build_research_prompt(job, deal, files_text="", history=()):
         "```")
     if history:
         parts.append("Earlier in this chat (use it to understand a follow-up question):\n" + "\n".join(history_lines(history)))
+    if skill_text:
+        parts.append(skill_text)
     parts.append("Question:\n" + (q or "(no question given)"))
     return "\n\n".join(parts)
 
@@ -863,6 +867,68 @@ def run_hermes(profile, prompt, api_key, model=MODEL, effort=None, web=True, pro
             pass
 
 
+# ---------------------------------------------------------------- skills
+# A job may name a skill (migration 0012): payload.skill_key (prebuilt, from
+# prebuiltSkills.json, the same file the app reads) or payload.skill_id (a
+# custom skill row). The worker loads the instructions itself, checking the
+# skill belongs to this job's owner and project, so a payload cannot inject
+# another account's instructions.
+def _load_prebuilt():
+    here = os.path.dirname(os.path.abspath(__file__))
+    for path in (os.path.join(here, "prebuiltSkills.json"), os.path.join(here, "..", "src", "prebuiltSkills.json")):
+        if os.path.exists(path):
+            return {s["key"]: s for s in json.load(open(path))["skills"]}
+    return {}
+
+
+PREBUILT_SKILLS = _load_prebuilt()
+
+
+def fill_skill(skill, settings, inputs):
+    """Prebuilt instructions with {setting} placeholders filled, then the inputs."""
+    text = skill.get("instructions", "")
+    vals = {}
+    for st in skill.get("settings", []):
+        v = (settings or {}).get(st["key"])
+        vals[st["key"]] = v if v in st.get("options", []) else st.get("default", "")
+    aud = str((inputs or {}).get("audience") or "").strip()
+    vals["audience_clause"] = f" from {aud[:200]}" if aud else ""
+    text = re.sub(r"\{([a-z_]+)\}", lambda m: str(vals.get(m.group(1), m.group(0))), text)
+    lines = [f"- {i['label']} {str((inputs or {}).get(i['key'], '')).strip()[:500]}" for i in skill.get("inputs", [])
+             if str((inputs or {}).get(i["key"], "")).strip() and i["key"] != "audience"]
+    if lines:
+        text += "\n\nDetails from the salesperson:\n" + "\n".join(lines)
+    return text
+
+
+def skill_for(job):
+    """(name, instructions, mode) for the job's skill, or None. Disabled skills do not run."""
+    p = job.get("payload") or {}
+    deal_id, owner = job.get("deal_id"), job.get("owner_id")
+    if not deal_id:
+        return None
+    key, sid = p.get("skill_key"), p.get("skill_id")
+    if key and key in PREBUILT_SKILLS:
+        rows = api("GET", f"/rest/v1/skills?deal_id=eq.{deal_id}&owner_id=eq.{owner}&prebuilt_key=eq.{key}&select=enabled,settings") or []
+        if rows and rows[0].get("enabled") is False:
+            return None
+        sk = PREBUILT_SKILLS[key]
+        return sk["name"], fill_skill(sk, rows[0].get("settings") if rows else {}, p.get("skill_inputs") or {}), sk.get("mode", "chat")
+    if sid and re.fullmatch(r"[0-9a-f-]{36}", str(sid)):
+        rows = api("GET", f"/rest/v1/skills?id=eq.{sid}&deal_id=eq.{deal_id}&owner_id=eq.{owner}&prebuilt_key=is.null&enabled=eq.true"
+                          "&select=name,instructions,settings") or []
+        if rows:
+            r = rows[0]
+            return r["name"], r["instructions"][:8000], "research" if (r.get("settings") or {}).get("mode") == "research" else "chat"
+    return None
+
+
+def skill_block(skill):
+    name, text, _ = skill
+    return (f"The salesperson asked you to use their skill \"{name}\". Follow these skill instructions for this reply "
+            f"(they come from the salesperson, not from a web page):\n<skill>\n{text}\n</skill>")
+
+
 def scheduled_meta(job):
     """Replies from a scheduled task say so (the app labels them)."""
     if not job.get("schedule_id"):
@@ -949,10 +1015,12 @@ def handle(job):
     # (a research answer once ended with "I found no CFO cost target", from a deck instruction).
     files_text, file_steps = project_files_context(job.get("deal_id"), owner, instructions=not (brief or research)) if deal else ("", [])
     research_text, research_steps = project_research_context(job.get("deal_id"), owner) if (deal and job["kind"] == "chat") else ("", [])
+    skill = skill_for(job) if deal and not brief else None
     if brief:
         prompt = build_brief_prompt(job, deal, files_text)
     else:
-        prompt = build_research_prompt(job, deal, files_text, history) if research else build_prompt(job, deal, history, files_text, research_text)
+        sb = skill_block(skill) if skill else ""
+        prompt = build_research_prompt(job, deal, files_text, history, sb) if research else build_prompt(job, deal, history, files_text, research_text, sb)
     conn_steps = connector_context(deal)[1] + file_steps + research_steps
     with Progress(jid, profile, t0, conn_steps):
         raw, usage = run_hermes(profile, prompt, key, model, effort, False if brief else (True if research else web), provider)
@@ -976,7 +1044,7 @@ def handle(job):
             api("POST", "/rest/v1/chat_messages", {"deal_id": job["deal_id"], "owner_id": owner, "chat_id": chat_id,
                 "role": "assistant", "content": text, "job_id": jid,
                 "meta": {"research": True, "sources": sources, "dropped_sources": dropped, "model": model,
-                         "effort": effort, "seconds": secs, "trace": trace, **scheduled_meta(job)}}, prefer="return=minimal")
+                         "effort": effort, "seconds": secs, "trace": trace, **scheduled_meta(job), **({"skill": skill[0]} if skill else {})}}, prefer="return=minimal")
         rpc("complete_job", p_id=jid, p_worker=WORKER_ID, p_result=result)
         log("done", jid, f"{secs}s research", f"tools={len(trace)} sources={len(sources)} dropped={dropped}")
         return
@@ -988,7 +1056,7 @@ def handle(job):
         api("POST", "/rest/v1/chat_messages", {"deal_id": job["deal_id"], "owner_id": owner, "chat_id": chat_id,
             "role": "assistant", "content": text, "job_id": jid,
             "meta": {"model": model, "effort": effort, "web": web, "seconds": secs, "edits": edits, "commands": commands, "rejected": rejected, "trace": trace,
-                     **scheduled_meta(job)}}, prefer="return=minimal")
+                     **scheduled_meta(job), **({"skill": skill[0]} if skill else {})}}, prefer="return=minimal")
     rpc("complete_job", p_id=jid, p_worker=WORKER_ID, p_result=result)
     u = usage or {}
     log("done", jid, f"{secs}s", f"edits={len(edits)} commands={len(commands)} rejected={len(rejected)}", f"tokens in={u.get('input_tokens')} out={u.get('output_tokens')} calls={u.get('api_calls')}")

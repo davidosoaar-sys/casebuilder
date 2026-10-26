@@ -16,6 +16,8 @@ import CommandCards from './CommandCards.jsx'
 import ToolTrace from './ToolTrace.jsx'
 import { Answer, Sources } from './Research.jsx'
 import { MAX_QUESTION } from '../research.js'
+import { useSkills } from './Skills.jsx'
+import { skillMessage, skillRef, missingInput } from '../skills.js'
 import { resolveStakeholder } from '../deck/stakeholders.js'
 
 const POLL_MS = 3000
@@ -51,7 +53,7 @@ function useCopy() {
   }]
 }
 
-export default function ChatPanel({ project, userId, userName, mode = 'split', onApply, onUndo, onRun, onPick, onClose, onSplit, onFull, onSettings }) {
+export default function ChatPanel({ project, userId, userName, mode = 'split', onApply, onUndo, onRun, onPick, onClose, onSplit, onFull, onSettings, skillRequest, onSkillRequestDone }) {
   const dealId = project.id
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
@@ -67,11 +69,22 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
   const [chats, setChats] = useState(null)
   const [chatId, setChatIdState] = useState(null)
   const lastKey = `casebuilder.chat.${dealId}`
-  const setChatId = id => { setChatIdState(id); try { id ? localStorage.setItem(lastKey, id) : localStorage.removeItem(lastKey) } catch {} }
+  const picked = useRef(false)
+  const setChatId = id => { picked.current = true; setChatIdState(id); try { id ? localStorage.setItem(lastKey, id) : localStorage.removeItem(lastKey) } catch {} }
   const chat = chats?.find(c => c.id === chatId) || null
   // Deep research: per chat. A chat started in research mode stays in it; you can
   // switch either way at any time (each message records how it was asked).
   const [researchOn, setResearchOn] = useState(false)
+  const { skills } = useSkills(dealId)
+  const [skillPick, setSkillPick] = useState(null) // { skill, inputs } while filling a skill's details
+  const [skillMenu, setSkillMenu] = useState(false)
+  // Opened from the Skills page with "Use": start a new chat with that skill.
+  useEffect(() => {
+    if (!skillRequest || !skills || chats === null) return // after the chat list has opened its chat
+    const sk = skills.find(x => (skillRequest.key && x.key === skillRequest.key) || (skillRequest.id && x.id === skillRequest.id))
+    if (sk) { setChatId(null); setSkillPick({ skill: sk, inputs: {} }) }
+    onSkillRequestDone?.()
+  }, [skillRequest, skills, chats === null]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { setResearchOn(chat?.kind === 'research') }, [chatId, chat?.kind])
   const applied = project.agentLog || {}
   const noKey = keys && keys.length === 0
@@ -80,18 +93,31 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
   // The list loads a page at a time; "Show older" fetches the next page.
   const [chatLimit, setChatLimit] = useState(CHAT_PAGE)
   const [moreChats, setMoreChats] = useState(false)
-  const loadChats = async (limit = chatLimit) => {
+  // open=true (first load): also pick the chat to open, in the same render as the
+  // list, so nothing can run in between and see "list loaded, no chat open".
+  const loadChats = async (limit = chatLimit, open = false) => {
     const { data, error } = await supabase.from('chats').select('id, title, kind, updated_at').eq('deal_id', dealId).order('updated_at', { ascending: false }).limit(limit + 1)
     if (error) { setError(error.message); setChats([]); return [] }
     setMoreChats(data.length > limit)
     const page = data.slice(0, limit)
+    // Only the first load picks; once anything chose a chat (the user, "Use skill",
+    // a duplicate dev-mode load), a later load never overrides it.
+    if (open && !picked.current) {
+      picked.current = true
+      let last = null; try { last = localStorage.getItem(lastKey) } catch {}
+      setChatIdState(page.find(c => c.id === last)?.id || page[0]?.id || null)
+    }
     setChats(page); return page
   }
   const loadChatsRef = useRef(loadChats); loadChatsRef.current = () => loadChats()
   const showOlder = () => { const n = chatLimit + CHAT_PAGE; setChatLimit(n); loadChats(n) }
+  // A slow load of chat A must never paint over chat B after a switch.
+  const openChat = useRef(null)
+  openChat.current = chatId
   const reload = async (id = chatId) => {
     if (!id) { setMessages([]); return [] }
     const { data, error } = await supabase.from('chat_messages').select(SELECT).eq('chat_id', id).order('id', { ascending: true }).limit(300)
+    if (openChat.current !== id) return []
     if (error) setError(error.message)
     if (data) setMessages(data)
     return data || []
@@ -99,18 +125,12 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
 
   // Open the chat used last on this project, else the most recent, else a new one.
   useEffect(() => {
-    let alive = true
-    setChats(null); setChatIdState(null); setChatLimit(CHAT_PAGE)
-    ;(async () => {
-      const list = await loadChats(CHAT_PAGE)
-      if (!alive) return
-      let last = null; try { last = localStorage.getItem(lastKey) } catch {}
-      setChatIdState(list.find(c => c.id === last)?.id || list[0]?.id || null)
-    })()
+    setChats(null); setChatIdState(null); setChatLimit(CHAT_PAGE); picked.current = false
+    loadChats(CHAT_PAGE, true)
     const ch = supabase.channel(`chats-${dealId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chats', filter: `deal_id=eq.${dealId}` }, () => loadChatsRef.current())
       .subscribe()
-    return () => { alive = false; supabase.removeChannel(ch) }
+    return () => { supabase.removeChannel(ch) }
   }, [dealId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load + subscribe. On load, pick up a job that is still running (e.g. the
@@ -181,7 +201,8 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
     firstScroll.current = false
   }, [messages.length, pending, loading])
 
-  async function send({ text, attachments = [], model, effort, web, research = false }) {
+  async function send({ text, attachments = [], model, effort, web, research = false, skill = null, skillInputs = {} }) {
+    if (skill) { research = skill.mode === 'research'; text = skillMessage(skill, skillInputs); attachments = [] }
     if (noKey) { setError('Add an AI model key in Settings first.'); return false }
     if (pending) return false
     setError('')
@@ -200,15 +221,17 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
     if (effort) meta.effort = effort
     if (web === false && !research) meta.web = false
     if (research) meta.research = true
+    if (skill) meta.skill = skill.name
     const { data: msg, error: e1 } = await supabase.from('chat_messages')
       .insert({ deal_id: dealId, owner_id: userId, chat_id: id, role: 'user', content: text || '(attached files)', meta }).select(SELECT).single()
     if (e1) { setError(/foreign key|not present|violates row-level/i.test(e1.message) ? 'This deal has not finished saving yet. Try again in a second.' : e1.message); return false }
     setMessages(ms => ms.some(m => m.id === msg.id) ? ms : [...ms, msg])
     const roles = (project.stakeholders || []).map(s => { const r = resolveStakeholder(s); return r ? { key: s.key, role: r.role || '', tag: r.tag || '' } : null }).filter(Boolean)
     const files = attachments.map(a => ({ name: a.name, text: a.text }))
+    const ref = skill ? skillRef(skill, skillInputs) : {}
     const payload = research
-      ? { chat_id: id, question: [text, ...files.map(f => `Attached ${f.name}:\n${f.text.slice(0, 8000)}`)].filter(Boolean).join('\n\n').slice(0, MAX_QUESTION), model, effort }
-      : { chat_id: id, message: text, model, effort, web: web !== false, roles, user_name: userName || '', attachments: files }
+      ? { chat_id: id, question: [text, ...files.map(f => `Attached ${f.name}:\n${f.text.slice(0, 8000)}`)].filter(Boolean).join('\n\n').slice(0, MAX_QUESTION), model, effort, ...ref }
+      : { chat_id: id, message: text, model, effort, web: web !== false, roles, user_name: userName || '', attachments: files, ...ref }
     const { data: job, error: e2 } = await supabase.from('jobs').insert({ owner_id: userId, deal_id: dealId, kind: research ? 'research' : 'chat', payload }).select('id').single()
     if (e2) { setError(/rate|limit/i.test(e2.message) ? 'Too many requests just now. Wait a minute and try again.' : e2.message); return false }
     setPending(job.id)
@@ -275,7 +298,7 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
                   onSave={async t => { if (await send({ text: t, model: m.meta?.model, effort: m.meta?.effort, web: m.meta?.web, research: !!m.meta?.research })) setEditing(null) }} disabled={!!pending} />
               ) : <>
                 {m.meta?.attachments?.length > 0 && <div className="chat-files">{m.meta.attachments.map((a, i) => <span key={i} className="chat-file"><Icon d={icons.file} size={13} />{a.name}</span>)}</div>}
-                <div className="chat-bubble">{m.meta?.research && <span className="chat-research-ask">Deep research</span>}{m.content}</div>
+                <div className="chat-bubble">{m.meta?.skill ? <span className="chat-research-ask">Skill</span> : m.meta?.research && <span className="chat-research-ask">Deep research</span>}{m.content}</div>
                 <div className="msg-actions on-hover">
                   <button type="button" className="icon-btn sm" onClick={() => copy(m.id, m.content)} title="Copy" aria-label="Copy message"><Icon d={copied === m.id ? icons.check : icons.copy} size={14} /></button>
                   <button type="button" className="icon-btn sm" onClick={() => setEditing({ id: m.id, text: m.content })} disabled={!!pending} title="Edit and resend" aria-label="Edit message"><Icon d={icons.edit} size={14} /></button>
@@ -305,6 +328,31 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
       <div className="chat-bottom">
         {noKey && <p className="chat-note">The agent needs an AI model key first (Anthropic, OpenAI, Gemini or OpenRouter). <button type="button" className="link-btn" onClick={onSettings}>Add it in Settings</button></p>}
         {error && <p className="auth-error chat-error" role="alert">{error}</p>}
+        {skillPick ? (
+          <SkillRun pick={skillPick} onChange={setSkillPick} busy={!!pending} disabled={noKey}
+            onCancel={() => setSkillPick(null)}
+            onRun={async () => {
+              const miss = missingInput(skillPick.skill, skillPick.inputs)
+              if (miss) { setError(`Fill in "${miss.label}" first.`); return }
+              if (await send({ skill: skillPick.skill, skillInputs: skillPick.inputs, model: undefined })) setSkillPick(null)
+            }} />
+        ) : (
+          <div className="chat-skillbar">
+            <div className="chat-menu">
+              <button type="button" className="link-btn chat-skill-btn" onClick={() => setSkillMenu(o => !o)} disabled={noKey || !skills} aria-haspopup="true" aria-expanded={skillMenu}>Use a skill</button>
+              {skillMenu && skills && (
+                <div className="chat-menu-pop chat-skill-pop" role="menu">
+                  {skills.filter(x => x.enabled).map(x => (
+                    <button key={x.key || x.id} type="button" role="menuitem" className="chat-skill-opt" onClick={() => { setSkillPick({ skill: x, inputs: {} }); setSkillMenu(false) }}>
+                      <strong>{x.name}</strong><small>{x.description || (x.instructions || '').slice(0, 90)}</small>
+                    </button>
+                  ))}
+                  {skills.every(x => !x.enabled) && <p className="chat-rail-empty">All skills are switched off for this project.</p>}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         <AgentComposer provider={provider} research={researchOn} onResearch={setResearchOn} disabled={noKey} busy={!!pending} onSend={send} showWelcome={!loading && visible.length === 0}
           title={researchOn ? 'What should we research?' : `What should we work on${userName ? ', ' + userName.split(' ')[0] : ''}?`}
           subtitle={researchOn ? `Deep research searches widely, reads pages in full and cites every source. It reads ${project.name || 'this project'}'s files and connectors, and you can ask follow-ups.` : `Ask about ${project.name || 'this deal'}, or tell the agent what to change. Every change can be undone.`} />
@@ -398,6 +446,25 @@ function ChatMenu({ label, ...props }) {
         </div>
       )}
     </div>
+  )
+}
+
+// Filling in a skill's details before running it.
+function SkillRun({ pick, onChange, onRun, onCancel, busy, disabled }) {
+  const { skill, inputs } = pick
+  return (
+    <form className="chat-skillrun" onSubmit={e => { e.preventDefault(); onRun() }} aria-label={`Use ${skill.name}`}>
+      <div className="chat-skillrun-head"><span className="mono-label">Skill</span><strong>{skill.name}</strong><span className="sched-kind">{skill.mode === 'research' ? 'Deep research' : 'Agent'}</span></div>
+      {skill.description && <p className="chat-skillrun-desc">{skill.description}</p>}
+      {(skill.inputs || []).map((i, n) => (
+        <label key={i.key} className="sched-field"><span>{i.label}{i.required ? '' : ''}</span>
+          <input autoFocus={n === 0} value={inputs[i.key] || ''} maxLength={500} placeholder={i.placeholder || ''} onChange={e => onChange({ skill, inputs: { ...inputs, [i.key]: e.target.value } })} /></label>
+      ))}
+      <div className="sched-form-actions">
+        <button type="button" className="ghost" onClick={onCancel}>Cancel</button>
+        <button type="submit" className="primary" disabled={busy || disabled}>{busy ? 'Working…' : 'Run skill'}</button>
+      </div>
+    </form>
   )
 }
 

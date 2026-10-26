@@ -6,6 +6,8 @@ import React, { useEffect, useState } from 'react'
 import PageHead from './PageHead.jsx'
 import { supabase } from '../supabase.js'
 import { useModelKeys } from './Settings.jsx'
+import { useSkills } from './Skills.jsx'
+import { skillMessage, skillRef } from '../skills.js'
 import { SCHEDULE_LIMIT, MAX_PROMPT, parseEvery, everyInterval, everyError, describeEvery, toLocalInput, defaultFirstRun, fmtWhen, scheduleError } from '../schedules.js'
 
 const SELECT = 'id, title, kind, payload, every, timezone, next_run_at, enabled, created_at'
@@ -15,7 +17,7 @@ const EXAMPLES = [
   { title: 'Daily open questions', kind: 'chat', every: { n: 1, unit: 'days' }, text: 'List the inputs on this deal that are still unconfirmed, most important first, and say who could confirm each.' }
 ]
 
-export default function Scheduled({ project, userId, onOpenChat }) {
+export default function Scheduled({ project, userId, onOpenChat, skillToSchedule, onSkillScheduled }) {
   const [list, setList] = useState(null)
   const [total, setTotal] = useState(0) // across all projects: the cap is per account
   const [lastRuns, setLastRuns] = useState({})
@@ -40,6 +42,12 @@ export default function Scheduled({ project, userId, onOpenChat }) {
     }
   }
   useEffect(() => { setList(null); load() }, [project.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  // From the Skills page: open the form with that skill picked.
+  useEffect(() => {
+    if (!skillToSchedule) return
+    setEditing({ example: true, title: skillToSchedule.name, kind: skillToSchedule.mode === 'research' ? 'research' : 'chat', every: '7 days', payload: {}, skill: skillToSchedule })
+    onSkillScheduled?.()
+  }, [skillToSchedule]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function toggle(s) {
     setError('')
@@ -75,7 +83,7 @@ export default function Scheduled({ project, userId, onOpenChat }) {
 
   const full = total >= SCHEDULE_LIMIT
   return (
-    <section className="scheduled-page">
+    <section className="page scheduled-page">
       <PageHead label={project.name} title="Scheduled" sub="Tasks the agent runs for this project on a repeat. Each one has its own chat in the Agent, where every result lands.">
         <button type="button" className="primary" onClick={() => setEditing('new')} disabled={full || noKey} title={full ? `${SCHEDULE_LIMIT} tasks is the most an account can have` : ''}>New task</button>
       </PageHead>
@@ -101,7 +109,7 @@ export default function Scheduled({ project, userId, onOpenChat }) {
             return (
               <li key={s.id} className={`sched-card${s.enabled ? '' : ' is-off'}`}>
                 <div className="sched-main">
-                  <div className="sched-title"><strong>{s.title}</strong><span className="sched-kind">{s.kind === 'research' ? 'Deep research' : 'Agent prompt'}</span></div>
+                  <div className="sched-title"><strong>{s.title}</strong><span className="sched-kind">{s.payload?.skill_key || s.payload?.skill_id ? 'Skill' : s.kind === 'research' ? 'Deep research' : 'Agent prompt'}</span></div>
                   <p className="sched-prompt">{s.payload?.question || s.payload?.message}</p>
                   <p className="sched-meta">
                     <span>{describeEvery(s.every)}</span>
@@ -133,6 +141,13 @@ const hours = every => { const { n, unit } = parseEvery(every); return unit === 
 
 function TaskForm({ project, userId, initial, onClose, onSaved }) {
   const editing = initial && !initial.example
+  const { skills } = useSkills(project.id)
+  // A task can run a skill instead of a free prompt (value: 'k:<key>' or 'i:<id>').
+  const initialSkill = initial?.skill ? (initial.skill.prebuilt ? `k:${initial.skill.key}` : `i:${initial.skill.id}`)
+    : initial?.payload?.skill_key ? `k:${initial.payload.skill_key}` : initial?.payload?.skill_id ? `i:${initial.payload.skill_id}` : ''
+  const [skillVal, setSkillVal] = useState(initialSkill)
+  const [skillInputs, setSkillInputs] = useState(initial?.payload?.skill_inputs || {})
+  const skill = skills?.find(x => (x.prebuilt ? `k:${x.key}` : `i:${x.id}`) === skillVal) || null
   const [title, setTitle] = useState(initial?.title || '')
   const [kind, setKind] = useState(initial?.kind || 'chat')
   const [text, setText] = useState(initial?.payload?.question || initial?.payload?.message || '')
@@ -145,7 +160,9 @@ function TaskForm({ project, userId, initial, onClose, onSaved }) {
   async function save(e) {
     e.preventDefault()
     setError('')
-    if (!title.trim() || !text.trim()) { setError('Give the task a name and say what the agent should do.'); return }
+    if (!title.trim() || (!text.trim() && !skill)) { setError('Give the task a name and say what the agent should do.'); return }
+    const miss = skill && (skill.inputs || []).find(i => i.required && !String(skillInputs[i.key] || '').trim())
+    if (miss) { setError(`Fill in "${miss.label}" for the skill.`); return }
     if (eErr) { setError(eErr); return }
     const when = new Date(first)
     if (!(when > new Date())) { setError('The first run has to be in the future.'); return }
@@ -154,14 +171,17 @@ function TaskForm({ project, userId, initial, onClose, onSaved }) {
       // Each task has its own chat, created with the task, where every run lands.
       let chatId = initial?.payload?.chat_id
       if (!chatId) {
-        const { data: c, error: ec } = await supabase.from('chats').insert({ deal_id: project.id, owner_id: userId, title: title.trim().slice(0, 120), kind: kind === 'research' ? 'research' : 'chat' }).select('id').single()
+        const { data: c, error: ec } = await supabase.from('chats').insert({ deal_id: project.id, owner_id: userId, title: title.trim().slice(0, 120), kind: (skill ? skill.mode : kind) === 'research' ? 'research' : 'chat' }).select('id').single()
         if (ec) throw ec
         chatId = c.id
       }
-      const payload = kind === 'research'
-        ? { question: text.trim().slice(0, MAX_PROMPT), chat_id: chatId, title: title.trim() }
-        : { message: text.trim().slice(0, MAX_PROMPT), chat_id: chatId, title: title.trim(), web: true }
-      const row = { title: title.trim().slice(0, 120), kind, payload, every: everyInterval(every), timezone: TZ }
+      const runKind = skill ? (skill.mode === 'research' ? 'research' : 'chat') : kind
+      const body = skill ? skillMessage(skill, skillInputs) : text.trim().slice(0, MAX_PROMPT)
+      const ref = skill ? skillRef(skill, skillInputs) : {}
+      const payload = runKind === 'research'
+        ? { question: body, chat_id: chatId, title: title.trim(), ...ref }
+        : { message: body, chat_id: chatId, title: title.trim(), web: true, ...ref }
+      const row = { title: title.trim().slice(0, 120), kind: runKind, payload, every: everyInterval(every), timezone: TZ }
       const nextChanged = !editing || Math.abs(new Date(initial.next_run_at) - when) > 59000
       if (nextChanged) row.next_run_at = when.toISOString()
       const q = editing
@@ -178,6 +198,18 @@ function TaskForm({ project, userId, initial, onClose, onSaved }) {
       <div className="pf-section-head"><h2>{editing ? 'Edit task' : 'New scheduled task'}</h2></div>
       <label className="sched-field"><span>Name</span>
         <input value={title} maxLength={120} onChange={e => setTitle(e.target.value)} placeholder="e.g. Monday account news" autoFocus /></label>
+      <label className="sched-field"><span>Run a skill (optional)</span>
+        <select value={skillVal} onChange={e => setSkillVal(e.target.value)} aria-label="Skill">
+          <option value="">No skill: write the prompt yourself</option>
+          {(skills || []).filter(x => x.enabled).map(x => <option key={x.key || x.id} value={x.prebuilt ? `k:${x.key}` : `i:${x.id}`}>{x.name}</option>)}
+        </select>
+        {skill && <small>{skill.description}</small>}
+      </label>
+      {skill && (skill.inputs || []).map(i => (
+        <label key={i.key} className="sched-field"><span>{i.label}</span>
+          <input value={skillInputs[i.key] || ''} maxLength={500} placeholder={i.placeholder || ''} onChange={e => setSkillInputs(v => ({ ...v, [i.key]: e.target.value }))} /></label>
+      ))}
+      {!skill && <>
       <div className="sched-field"><span>Type</span>
         <div className="segmented" role="radiogroup" aria-label="Task type">
           <button type="button" role="radio" aria-checked={kind === 'chat'} className={kind === 'chat' ? 'seg-on' : ''} onClick={() => setKind('chat')}>Agent prompt</button>
@@ -187,6 +219,7 @@ function TaskForm({ project, userId, initial, onClose, onSaved }) {
       </div>
       <label className="sched-field"><span>{kind === 'research' ? 'Question' : 'What should the agent do?'}</span>
         <textarea rows={4} value={text} maxLength={MAX_PROMPT} onChange={e => setText(e.target.value)} placeholder={kind === 'research' ? 'e.g. What changed at this company in the last 7 days?' : 'e.g. List the inputs still unconfirmed, most important first.'} /></label>
+      </>}
       <div className="sched-row">
         <label className="sched-field"><span>Repeat every</span>
           <span className="sched-every">

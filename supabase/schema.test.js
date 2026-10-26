@@ -459,3 +459,21 @@ test('scheduled tasks screen (0011): only prompt/research, on a project, never i
   assert.deepEqual([job.kind, job.q, job.schedule_id], ['research', 'news', id])
   assert.equal((await user(B, tx => tx.query(`select * from public.schedules`))).rows.length, 0)
 })
+
+test('skills (0012): owner-only, one row per prebuilt per project, owner/deal/key pinned, custom cap', async () => {
+  await db.exec(readFileSync(new URL('./migrations/0012_skills.sql', import.meta.url), 'utf8'))
+  const add = (uid, deal, cols, vals, params = []) => user(uid, tx => tx.query(`insert into public.skills (owner_id, deal_id, ${cols}) values ($1, $2, ${vals}) returning id`, [uid, deal, ...params]))
+  const pre = (await add(A, 'deal-a', 'prebuilt_key, name, settings', `'pre_meeting_brief', 'Pre-meeting brief', '{"length":"short"}'`)).rows[0].id
+  await rejects(add(A, 'deal-a', 'prebuilt_key, name', `'pre_meeting_brief', 'again'`), /duplicate key|unique/)
+  const custom = (await add(A, 'deal-a', 'name, instructions', `'Champion check', 'List who is our champion.'`)).rows[0].id
+  await rejects(add(A, 'deal-b', 'name', `'x'`), /row-level security/)
+  await rejects(add(A, 'deal-a', 'prebuilt_key, name', `'Bad Key!', 'x'`), /check constraint/)
+  assert.equal((await user(B, tx => tx.query(`select * from public.skills`))).rows.length, 0)
+  assert.equal((await user(B, tx => tx.query(`update public.skills set name = 'pwned' where id = $1`, [custom]))).affectedRows, 0)
+  await user(A, tx => tx.query(`update public.skills set enabled = false, prebuilt_key = 'other', owner_id = $2 where id = $1`, [pre, B])).catch(() => {})
+  const r = (await service(tx => tx.query(`select enabled, prebuilt_key, owner_id from public.skills where id = $1`, [pre]))).rows[0]
+  assert.equal(r.prebuilt_key, 'pre_meeting_brief'); assert.equal(r.owner_id, A)
+  for (let i = 0; i < 49; i++) await add(A, 'deal-a', 'name', `$3`, [`c${i}`])
+  await rejects(add(A, 'deal-a', 'name', `'one too many'`), /skill_limit/)
+  await add(A, 'deal-a', 'prebuilt_key, name', `'stakeholder_map', 'Stakeholder map'`) // prebuilt rows do not count
+})
