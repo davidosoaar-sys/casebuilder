@@ -2112,3 +2112,5 @@ a.research-cite:hover { background: var(--accent); color: var(--accent-ink) !imp
 .chat-skillrun-head { display: flex; align-items: center; gap: 8px; }
 .chat-skillrun-head .mono-label { margin: 0; color: var(--accent); }
 .chat-skillrun-desc { margin: 0; color: var(--ink-faint); font-size: 13px; }
+.sched-project { font-size: 12px; color: var(--ink-faint); }
+.sched-project::before { content: '· '; }

@@ -96,11 +96,11 @@ export default function Sidebar({ view, project, projectMode = false, onNav, onS
           <Item id="agent" label="Agent" view={view} onNav={onNav} />
           <Item id="people-lookup" icon="research" label="Person lookup" view={view} onNav={onNav} title="Who is this? Look up one person before a call" />
           <Item id="files" label="Files" view={view} onNav={onNav} title="Context the agent reads for this project" />
-          <Item id="skills" label="Skills" view={view} onNav={onNav} title="Ready-made ways of working for the agent, and your own" />
-          <Item id="scheduled" label="Scheduled" view={view} onNav={onNav} title="Tasks the agent runs for this project on a repeat" />
         </> : <>
           <Item id="dashboard" label="Dashboard" view={view} onNav={onNav} />
           <Item id="projects" label="Projects" view={view} onNav={onNav} />
+          <Item id="scheduled" label="Scheduled" view={view} onNav={onNav} title="Tasks the agent runs on a repeat, across your projects" />
+          <Item id="skills" label="Skills" view={view} onNav={onNav} title="Ready-made ways of working for the agent, and your own" />
         </>}
         {!projectMode && <Item id="connections" label="Connectors" view={view} onNav={onNav} title="What the agent is allowed to read" />}
         {!projectMode && admin && <Item id="waitlist" label="Waitlist" view={view} onNav={onNav} title="Who asked for access" />}

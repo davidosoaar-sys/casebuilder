@@ -52,24 +52,35 @@ const [projects] = await page.$$('xpath/.//button[contains(., "Projects")]'); aw
 await page.waitForSelector('.project-card', { timeout: 15000 }); await (await page.$('.project-card')).click()
 await page.waitForSelector('#engineers', { timeout: 15000 })
 const nav = async label => { const [b] = await page.$$(`xpath/.//button[contains(@class,"side-item") and contains(., "${label}")]`); await b.click() }
+// v0.15.1: Skills and Scheduled are in the main menu (outside a project).
+const mainMenu = async label => {
+  if (await page.$('.project-sidebar-back')) { await page.click('.project-sidebar-back'); await page.waitForSelector('.project-card', { timeout: 15000 }) }
+  await nav(label)
+}
+// "Use" / "Schedule" ask which project: pick the one the test opened.
+const pickProject = async () => { await page.waitForSelector('.skill-pick select', { timeout: 8000 }); await page.select('.skill-pick select', dealId); await page.click('.skill-pick button[type=submit]') }
 const card = name => page.evaluateHandle(n => [...document.querySelectorAll('.skill-card')].find(c => c.querySelector('strong')?.innerText === n), name)
 const clickIn = async (h, text) => h.evaluate((c, t) => [...c.querySelectorAll('button')].find(b => b.innerText === t).click(), text)
 const dealId = await (async () => { await nav('Agent'); await page.waitForSelector('.chat-panel[data-deal]', { timeout: 15000 }); return page.$eval('.chat-panel[data-deal]', e => e.dataset.deal) })()
 const chatsBefore = (await (await rest(`chats?deal_id=eq.${dealId}&select=id`)).json()).map(c => c.id)
 
 try {
-  await nav('Skills'); await page.waitForSelector('.skills-page .skill-card', { timeout: 15000 })
+  const items = await page.$$eval('.sidebar-nav .side-item', l => l.map(e => e.innerText.trim()))
+  check('inside a project, the menu has no Skills or Scheduled', !items.includes('Skills') && !items.includes('Scheduled'), items.join(' | '))
+  await mainMenu('Skills'); await page.waitForSelector('.skills-page .skill-card', { timeout: 15000 })
+  const main = await page.$$eval('.sidebar-nav .side-item', l => l.map(e => e.innerText.trim()))
+  check('the main menu has Scheduled and Skills', main.includes('Skills') && main.includes('Scheduled'), main.join(' | '))
   const names = await page.$$eval('.skill-card strong', l => l.map(e => e.innerText))
   check('Skills page lists the 4 built-in skills', ['Pre-meeting brief', 'Account news digest', 'Stakeholder map', 'Objection prep'].every(n => names.includes(n)), names.join(' | '))
 
   // Configure Objection prep: 3 objections.
   let c = await card('Objection prep'); await clickIn(c, 'Configure')
   await page.waitForSelector('.skill-config select'); await page.select('.skill-config select', '3'); await sleep(1200)
-  const cfg = (await (await rest(`skills?deal_id=eq.${dealId}&prebuilt_key=eq.objection_prep&select=settings`)).json())[0]
+  const cfg = (await (await rest(`skills?owner_id=eq.${owner}&deal_id=is.null&prebuilt_key=eq.objection_prep&select=settings`)).json())[0]
   check('configure saves the setting for this project', cfg?.settings?.count === '3', JSON.stringify(cfg?.settings))
   // Switch Stakeholder map off.
   c = await card('Stakeholder map'); await c.evaluate(x => x.querySelector('.pf-toggle input').click()); await sleep(1200)
-  const off = (await (await rest(`skills?deal_id=eq.${dealId}&prebuilt_key=eq.stakeholder_map&select=enabled`)).json())[0]
+  const off = (await (await rest(`skills?owner_id=eq.${owner}&deal_id=is.null&prebuilt_key=eq.stakeholder_map&select=enabled`)).json())[0]
   check('switching a skill off is saved', off?.enabled === false)
 
   // Custom skill.
@@ -82,7 +93,9 @@ try {
 
   // Use Pre-meeting brief from the Skills page.
   c = await card('Pre-meeting brief'); await clickIn(c, 'Use')
+  await pickProject()
   await page.waitForSelector('.chat-skillrun', { timeout: 15000 })
+  check('"Use" opened the picked project\'s Agent', (await page.$eval('.chat-panel[data-deal]', e => e.dataset.deal)) === dealId)
   check('"Use" opens the Agent with the skill ready to fill in', /Pre-meeting brief/.test(await page.$eval('.chat-skillrun', e => e.innerText)))
   await sleep(800)
   check('"Use" starts a new chat (none open yet)', (await page.$$eval('.chat-full .chat-msg', l => l.length)) === 0)
@@ -116,15 +129,17 @@ try {
   check('the reply follows the custom instructions (a 3-line haiku)', lines.length === 3, JSON.stringify(haiku.slice(0, 120)))
 
   // Schedule from the Skills page.
-  await nav('Skills'); await page.waitForSelector('.skill-card', { timeout: 10000 })
+  await mainMenu('Skills'); await page.waitForSelector('.skill-card', { timeout: 10000 })
   c = await card('Account news digest'); await clickIn(c, 'Schedule')
+  await pickProject()
   await page.waitForSelector('.scheduled-page .sched-form', { timeout: 10000 })
   await page.waitForFunction(() => document.querySelector('.sched-form select[aria-label="Skill"]')?.value === 'k:account_news', { timeout: 10000 }).catch(() => {})
   const pick = await page.$eval('.sched-form select[aria-label="Skill"]', s => s.value).catch(() => '')
-  check('"Schedule" opens the Scheduled form with the skill picked', pick === 'k:account_news', pick)
+  const proj = await page.$eval('.sched-form select[aria-label="Project"]', s => s.value).catch(() => '')
+  check('"Schedule" opens the Scheduled form with the skill and project picked', pick === 'k:account_news' && proj === dealId, `${pick} ${proj === dealId}`)
   await page.click('.sched-form .ghost')
 } finally {
-  await rest(`skills?deal_id=eq.${dealId}`, { method: 'DELETE' })
+  await rest(`skills?owner_id=eq.${owner}`, { method: 'DELETE' })
   const after = (await (await rest(`chats?deal_id=eq.${dealId}&select=id`)).json()).map(c => c.id)
   const mine = after.filter(id => !chatsBefore.includes(id))
   for (const id of mine) await rest(`chats?id=eq.${id}`, { method: 'DELETE' })

@@ -10,14 +10,14 @@ import { useSkills } from './Skills.jsx'
 import { skillMessage, skillRef } from '../skills.js'
 import { SCHEDULE_LIMIT, MAX_PROMPT, parseEvery, everyInterval, everyError, describeEvery, toLocalInput, defaultFirstRun, fmtWhen, scheduleError } from '../schedules.js'
 
-const SELECT = 'id, title, kind, payload, every, timezone, next_run_at, enabled, created_at'
+const SELECT = 'id, deal_id, title, kind, payload, every, timezone, next_run_at, enabled, created_at'
 const TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' } catch { return 'UTC' } })()
 const EXAMPLES = [
   { title: 'Monday account news', kind: 'research', every: { n: 1, unit: 'weeks' }, text: 'What changed at this company in the last 7 days? Leadership, funding, layoffs, product launches, earnings. Only real news with dates.' },
   { title: 'Daily open questions', kind: 'chat', every: { n: 1, unit: 'days' }, text: 'List the inputs on this deal that are still unconfirmed, most important first, and say who could confirm each.' }
 ]
 
-export default function Scheduled({ project, userId, onOpenChat, skillToSchedule, onSkillScheduled }) {
+export default function Scheduled({ projects = [], userId, onOpenChat, skillToSchedule, onSkillScheduled }) {
   const [list, setList] = useState(null)
   const [total, setTotal] = useState(0) // across all projects: the cap is per account
   const [lastRuns, setLastRuns] = useState({})
@@ -27,12 +27,9 @@ export default function Scheduled({ project, userId, onOpenChat, skillToSchedule
   const noKey = keys && keys.length === 0
 
   async function load() {
-    const [{ data, error }, { count }] = await Promise.all([
-      supabase.from('schedules').select(SELECT).eq('deal_id', project.id).order('created_at', { ascending: true }),
-      supabase.from('schedules').select('id', { count: 'exact', head: true })
-    ])
+    const { data, error } = await supabase.from('schedules').select(SELECT).order('created_at', { ascending: true })
     if (error) { setError(error.message); setList([]); return }
-    setList(data); setTotal(count || 0)
+    setList(data); setTotal(data.length)
     if (data.length) {
       const { data: jobs } = await supabase.from('jobs').select('schedule_id, status, created_at, error')
         .in('schedule_id', data.map(s => s.id)).order('created_at', { ascending: false }).limit(200)
@@ -41,11 +38,12 @@ export default function Scheduled({ project, userId, onOpenChat, skillToSchedule
       setLastRuns(last)
     }
   }
-  useEffect(() => { setList(null); load() }, [project.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const projectName = id => projects.find(p => p.id === id)?.name || 'A project'
   // From the Skills page: open the form with that skill picked.
   useEffect(() => {
     if (!skillToSchedule) return
-    setEditing({ example: true, title: skillToSchedule.name, kind: skillToSchedule.mode === 'research' ? 'research' : 'chat', every: '7 days', payload: {}, skill: skillToSchedule })
+    setEditing({ example: true, title: skillToSchedule.skill.name, kind: skillToSchedule.skill.mode === 'research' ? 'research' : 'chat', every: '7 days', payload: {}, skill: skillToSchedule.skill, deal_id: skillToSchedule.dealId })
     onSkillScheduled?.()
   }, [skillToSchedule]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -73,30 +71,30 @@ export default function Scheduled({ project, userId, onOpenChat, skillToSchedule
     const text = s.payload?.question || s.payload?.message || ''
     const chatId = s.payload?.chat_id
     if (chatId) {
-      const { error: em } = await supabase.from('chat_messages').insert({ deal_id: project.id, owner_id: userId, chat_id: chatId, role: 'user', content: text, meta: s.kind === 'research' ? { research: true } : {} })
+      const { error: em } = await supabase.from('chat_messages').insert({ deal_id: s.deal_id, owner_id: userId, chat_id: chatId, role: 'user', content: text, meta: s.kind === 'research' ? { research: true } : {} })
       if (em) { setError(em.message); return }
     }
-    const { error } = await supabase.from('jobs').insert({ owner_id: userId, deal_id: project.id, kind: s.kind, payload: { ...s.payload, title: s.title, run_now: true } })
+    const { error } = await supabase.from('jobs').insert({ owner_id: userId, deal_id: s.deal_id, kind: s.kind, payload: { ...s.payload, title: s.title, run_now: true } })
     if (error) { setError(/rate|limit/i.test(error.message) ? 'Too many requests just now. Wait a minute and try again.' : error.message); return }
-    if (s.payload?.chat_id) onOpenChat?.(s.payload.chat_id)
+    if (s.payload?.chat_id) onOpenChat?.(s.deal_id, s.payload.chat_id)
   }
 
   const full = total >= SCHEDULE_LIMIT
   return (
     <section className="page scheduled-page">
-      <PageHead label={project.name} title="Scheduled" sub="Tasks the agent runs for this project on a repeat. Each one has its own chat in the Agent, where every result lands.">
-        <button type="button" className="primary" onClick={() => setEditing('new')} disabled={full || noKey} title={full ? `${SCHEDULE_LIMIT} tasks is the most an account can have` : ''}>New task</button>
+      <PageHead title="Scheduled" sub="Tasks the agent runs on a repeat, across your projects. Each one belongs to a project and has its own chat in that project's Agent, where every result lands.">
+        <button type="button" className="primary" onClick={() => setEditing('new')} disabled={full || noKey || !projects.length} title={full ? `${SCHEDULE_LIMIT} tasks is the most an account can have` : !projects.length ? 'Create a project first' : ''}>New task</button>
       </PageHead>
       {noKey && <p className="notice">Scheduled tasks run on your own AI model key. Add one in Settings first.</p>}
       {error && <p className="auth-error" role="alert">{error}</p>}
-      {editing && <TaskForm project={project} userId={userId} initial={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load() }} />}
+      {editing && <TaskForm projects={projects} userId={userId} initial={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load() }} />}
 
       {list === null ? <p className="pf-empty">Loading…</p> : list.length === 0 && !editing ? (
         <div className="sched-empty">
-          <p>No scheduled tasks on this project yet. Start from an example, or make your own.</p>
+          <p>No scheduled tasks yet. Start from an example, or make your own.</p>
           <div className="sched-examples">
             {EXAMPLES.map(x => (
-              <button key={x.title} type="button" className="sched-example" disabled={noKey || full} onClick={() => setEditing({ example: true, title: x.title, kind: x.kind, every: everyInterval(x.every), payload: x.kind === 'research' ? { question: x.text } : { message: x.text } })}>
+              <button key={x.title} type="button" className="sched-example" disabled={noKey || full || !projects.length} onClick={() => setEditing({ example: true, title: x.title, kind: x.kind, every: everyInterval(x.every), payload: x.kind === 'research' ? { question: x.text } : { message: x.text } })}>
                 <strong>{x.title}</strong><span>{describeEvery(everyInterval(x.every))} · {x.kind === 'research' ? 'Deep research' : 'Agent prompt'}</span><small>{x.text}</small>
               </button>
             ))}
@@ -109,7 +107,7 @@ export default function Scheduled({ project, userId, onOpenChat, skillToSchedule
             return (
               <li key={s.id} className={`sched-card${s.enabled ? '' : ' is-off'}`}>
                 <div className="sched-main">
-                  <div className="sched-title"><strong>{s.title}</strong><span className="sched-kind">{s.payload?.skill_key || s.payload?.skill_id ? 'Skill' : s.kind === 'research' ? 'Deep research' : 'Agent prompt'}</span></div>
+                  <div className="sched-title"><strong>{s.title}</strong><span className="sched-project">{projectName(s.deal_id)}</span><span className="sched-kind">{s.payload?.skill_key || s.payload?.skill_id ? 'Skill' : s.kind === 'research' ? 'Deep research' : 'Agent prompt'}</span></div>
                   <p className="sched-prompt">{s.payload?.question || s.payload?.message}</p>
                   <p className="sched-meta">
                     <span>{describeEvery(s.every)}</span>
@@ -118,7 +116,7 @@ export default function Scheduled({ project, userId, onOpenChat, skillToSchedule
                   </p>
                 </div>
                 <div className="sched-actions">
-                  {s.payload?.chat_id && <button type="button" className="ghost" onClick={() => onOpenChat?.(s.payload.chat_id)}>Open chat</button>}
+                  {s.payload?.chat_id && <button type="button" className="ghost" onClick={() => onOpenChat?.(s.deal_id, s.payload.chat_id)}>Open chat</button>}
                   <button type="button" className="ghost" onClick={() => runNow(s)} disabled={noKey}>Run now</button>
                   <label className="pf-toggle" title={s.enabled ? 'Pause this task' : 'Resume this task'}>
                     <input type="checkbox" checked={s.enabled} onChange={() => toggle(s)} aria-label={`${s.title} on`} />
@@ -132,16 +130,19 @@ export default function Scheduled({ project, userId, onOpenChat, skillToSchedule
           })}
         </ul>
       )}
-      <p className="sched-foot">{total} of {SCHEDULE_LIMIT} scheduled tasks used across your projects. Times are in your time zone ({TZ}). Each run uses your AI key like a normal message.</p>
+      <p className="sched-foot">{total} of {SCHEDULE_LIMIT} scheduled tasks used. Times are in your time zone ({TZ}). Each run uses your AI key like a normal message.</p>
     </section>
   )
 }
 
 const hours = every => { const { n, unit } = parseEvery(every); return unit === 'weeks' ? n * 168 : unit === 'days' ? n * 24 : n }
 
-function TaskForm({ project, userId, initial, onClose, onSaved }) {
+function TaskForm({ projects, userId, initial, onClose, onSaved }) {
   const editing = initial && !initial.example
-  const { skills } = useSkills(project.id)
+  const { skills } = useSkills()
+  // The project a task runs on. Fixed once saved: its chat lives in that project.
+  const [dealId, setDealId] = useState(initial?.deal_id || projects[0]?.id || '')
+  const project = projects.find(p => p.id === dealId) || { id: dealId }
   // A task can run a skill instead of a free prompt (value: 'k:<key>' or 'i:<id>').
   const initialSkill = initial?.skill ? (initial.skill.prebuilt ? `k:${initial.skill.key}` : `i:${initial.skill.id}`)
     : initial?.payload?.skill_key ? `k:${initial.payload.skill_key}` : initial?.payload?.skill_id ? `i:${initial.payload.skill_id}` : ''
@@ -160,6 +161,7 @@ function TaskForm({ project, userId, initial, onClose, onSaved }) {
   async function save(e) {
     e.preventDefault()
     setError('')
+    if (!dealId) { setError('Pick a project.'); return }
     if (!title.trim() || (!text.trim() && !skill)) { setError('Give the task a name and say what the agent should do.'); return }
     const miss = skill && (skill.inputs || []).find(i => i.required && !String(skillInputs[i.key] || '').trim())
     if (miss) { setError(`Fill in "${miss.label}" for the skill.`); return }
@@ -196,6 +198,12 @@ function TaskForm({ project, userId, initial, onClose, onSaved }) {
   return (
     <form className="sched-form pf-section" onSubmit={save} aria-label={editing ? 'Edit scheduled task' : 'New scheduled task'}>
       <div className="pf-section-head"><h2>{editing ? 'Edit task' : 'New scheduled task'}</h2></div>
+      <label className="sched-field"><span>Project</span>
+        <select value={dealId} onChange={e => setDealId(e.target.value)} disabled={!!editing} aria-label="Project">
+          {projects.map(p => <option key={p.id} value={p.id}>{p.name || 'Untitled project'}</option>)}
+        </select>
+        {editing && <small>A task stays on its project; its results are in that project's chat.</small>}
+      </label>
       <label className="sched-field"><span>Name</span>
         <input value={title} maxLength={120} onChange={e => setTitle(e.target.value)} placeholder="e.g. Monday account news" autoFocus /></label>
       <label className="sched-field"><span>Run a skill (optional)</span>

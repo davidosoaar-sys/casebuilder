@@ -562,7 +562,7 @@ class Skills(unittest.TestCase):
         self.assertIn("Who are you meeting? Gustav", t)
         self.assertNotIn("{", t)
 
-    def test_custom_skill_must_belong_to_owner_and_project(self):
+    def test_custom_skill_must_belong_to_owner(self):
         seen = []
         old = worker.api
         worker.api = lambda m, p, b=None, prefer=None: (seen.append(p), [])[1]
@@ -570,7 +570,7 @@ class Skills(unittest.TestCase):
             self.assertIsNone(worker.skill_for({"deal_id": "d", "owner_id": "o", "payload": {"skill_id": "11111111-2222-3333-4444-555555555555"}}))
         finally:
             worker.api = old
-        self.assertIn("owner_id=eq.o", seen[0]); self.assertIn("deal_id=eq.d", seen[0]); self.assertIn("enabled=eq.true", seen[0])
+        self.assertIn("owner_id=eq.o", seen[0]); self.assertIn("enabled=eq.true", seen[0])
 
     def test_switched_off_prebuilt_does_not_run(self):
         old = worker.api

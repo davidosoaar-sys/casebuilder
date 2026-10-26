@@ -477,3 +477,15 @@ test('skills (0012): owner-only, one row per prebuilt per project, owner/deal/ke
   await rejects(add(A, 'deal-a', 'name', `'one too many'`), /skill_limit/)
   await add(A, 'deal-a', 'prebuilt_key, name', `'stakeholder_map', 'Stakeholder map'`) // prebuilt rows do not count
 })
+
+test('skills are account-wide (0013): no project needed, one row per prebuilt per account', async () => {
+  await db.exec(readFileSync(new URL('./migrations/0013_account_skills.sql', import.meta.url), 'utf8'))
+  await service(tx => tx.query(`delete from public.skills`))
+  const add = (uid, cols, vals) => user(uid, tx => tx.query(`insert into public.skills (owner_id, ${cols}) values ($1, ${vals}) returning id`, [uid]))
+  await add(A, 'prebuilt_key, name', `'account_news', 'Account news digest'`)
+  await rejects(add(A, 'prebuilt_key, name', `'account_news', 'again'`), /duplicate key|unique/)
+  await add(B, 'prebuilt_key, name', `'account_news', 'Account news digest'`) // B has their own
+  const mine = (await add(A, 'name, instructions', `'Champion check', 'x'`)).rows[0].id
+  assert.equal((await user(B, tx => tx.query(`select id from public.skills where id = $1`, [mine]))).rows.length, 0)
+  await rejects(user(A, tx => tx.query(`insert into public.skills (owner_id, deal_id, name) values ($1, 'deal-b', 'x')`, [A])), /row-level security/)
+})

@@ -75,7 +75,7 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
   // Deep research: per chat. A chat started in research mode stays in it; you can
   // switch either way at any time (each message records how it was asked).
   const [researchOn, setResearchOn] = useState(false)
-  const { skills } = useSkills(dealId)
+  const { skills } = useSkills()
   const [skillPick, setSkillPick] = useState(null) // { skill, inputs } while filling a skill's details
   const [skillMenu, setSkillMenu] = useState(false)
   // Opened from the Skills page with "Use": start a new chat with that skill.

@@ -27,6 +27,17 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
+## v0.15.1 (2026-10-26): Scheduled and Skills move to the main menu
+
+- Scheduled and Skills are in the main menu (Dashboard, Projects, Scheduled, Skills,
+  Connectors), not inside a project.
+- Skills are now the account's: one library for every project. "Use" and "Schedule" ask
+  which project. Migration 0013 (no skills existed yet, nothing moved).
+- Scheduled lists every task across your projects, each card naming its project. A new
+  task starts by picking the project; its results still land in a chat in that project.
+- Tests: app 381/381, database 35/35, worker 62/62. Browser reviews: skills 19/19,
+  scheduled 18/18, with real agent runs.
+
 ## v0.15.0 (2026-10-26): any AI provider, chat history, Deep research in chat, scheduled tasks, skills
 
 - **Bring your own key, any provider.** Settings takes a key for Anthropic, OpenAI, Google

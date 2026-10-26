@@ -6,22 +6,24 @@ import PageHead from './PageHead.jsx'
 import { supabase } from '../supabase.js'
 import { librarySkills, MAX_SKILL_INSTRUCTIONS, PREBUILT } from '../skills.js'
 
-export async function loadSkillRows(dealId) {
-  const { data, error } = await supabase.from('skills').select('id, prebuilt_key, name, description, instructions, settings, enabled').eq('deal_id', dealId).order('created_at', { ascending: true })
+// Skills are the account's (migration 0013): one library across every project.
+export async function loadSkillRows() {
+  const { data, error } = await supabase.from('skills').select('id, prebuilt_key, name, description, instructions, settings, enabled').is('deal_id', null).order('created_at', { ascending: true })
   if (error) throw error
   return data
 }
 
-export function useSkills(dealId) {
+export function useSkills() {
   const [rows, setRows] = useState(null)
   const [error, setError] = useState('')
-  const reload = () => loadSkillRows(dealId).then(setRows).catch(e => { setError(e.message); setRows([]) })
-  useEffect(() => { setRows(null); reload() }, [dealId]) // eslint-disable-line react-hooks/exhaustive-deps
+  const reload = () => loadSkillRows().then(setRows).catch(e => { setError(e.message); setRows([]) })
+  useEffect(() => { reload() }, []) // eslint-disable-line react-hooks/exhaustive-deps
   return { skills: rows ? librarySkills(rows) : null, rows, error, reload }
 }
 
-export default function Skills({ project, userId, onUse, onSchedule }) {
-  const { skills, error: loadError, reload } = useSkills(project.id)
+export default function Skills({ userId, projects = [], onUse, onSchedule }) {
+  const { skills, error: loadError, reload } = useSkills()
+  const [using, setUsing] = useState(null) // { skill, action } while picking a project
   const [error, setError] = useState('')
   const [configuring, setConfiguring] = useState(null) // skill key
   const [editing, setEditing] = useState(null) // null | 'new' | custom skill
@@ -32,7 +34,7 @@ export default function Skills({ project, userId, onUse, onSchedule }) {
     const row = { name: skill.name, enabled: skill.enabled, settings: skill.settings, ...patch }
     const { error } = skill.id
       ? await supabase.from('skills').update(row).eq('id', skill.id)
-      : await supabase.from('skills').insert({ ...row, owner_id: userId, deal_id: project.id, prebuilt_key: skill.key })
+      : await supabase.from('skills').insert({ ...row, owner_id: userId, prebuilt_key: skill.key })
     if (error) setError(error.message); else reload()
   }
   async function toggleCustom(skill) {
@@ -49,11 +51,13 @@ export default function Skills({ project, userId, onUse, onSchedule }) {
   const custom = skills?.filter(s => !s.prebuilt) || []
   return (
     <section className="page skills-page">
-      <PageHead label={project.name} title="Skills" sub="Ready-made ways of working the agent can follow, and your own. Use one from the Agent, or schedule it.">
+      <PageHead title="Skills" sub="Ready-made ways of working the agent can follow, and your own. They work in every project: use one from a project's Agent, or schedule it.">
         <button type="button" className="primary" onClick={() => setEditing('new')}>New skill</button>
       </PageHead>
       {(error || loadError) && <p className="auth-error" role="alert">{error || loadError}</p>}
-      {editing && <SkillForm project={project} userId={userId} initial={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload() }} />}
+      {using && <ProjectPick projects={projects} skill={using.skill} action={using.action} onCancel={() => setUsing(null)}
+        onPick={dealId => { const u = using; setUsing(null); (u.action === 'use' ? onUse : onSchedule)?.(u.skill, dealId) }} />}
+      {editing && <SkillForm userId={userId} initial={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload() }} />}
       {skills === null ? <p className="pf-empty">Loading…</p> : <>
         <h2 className="skills-head">Built in</h2>
         <ul className="skill-grid">
@@ -61,7 +65,7 @@ export default function Skills({ project, userId, onUse, onSchedule }) {
             <li key={s.key} className={`skill-card${s.enabled ? '' : ' is-off'}`}>
               <div className="skill-top">
                 <strong>{s.name}</strong>
-                <label className="pf-toggle" title={s.enabled ? 'Switch off for this project' : 'Switch on for this project'}>
+                <label className="pf-toggle" title={s.enabled ? 'Switch off' : 'Switch on'}>
                   <input type="checkbox" checked={s.enabled} onChange={() => savePrebuilt(s, { enabled: !s.enabled })} aria-label={`${s.name} on`} />
                   <span>{s.enabled ? 'On' : 'Off'}</span>
                 </label>
@@ -80,15 +84,15 @@ export default function Skills({ project, userId, onUse, onSchedule }) {
                 </div>
               )}
               <div className="skill-actions">
-                <button type="button" className="ghost" disabled={!s.enabled} onClick={() => onUse?.(s)}>Use</button>
-                <button type="button" className="ghost" disabled={!s.enabled} onClick={() => onSchedule?.(s)}>Schedule</button>
+                <button type="button" className="ghost" disabled={!s.enabled} onClick={() => setUsing({ skill: s, action: 'use' })}>Use</button>
+                <button type="button" className="ghost" disabled={!s.enabled} onClick={() => setUsing({ skill: s, action: 'schedule' })}>Schedule</button>
                 {settingsList(s).length > 0 && <button type="button" className="link-btn" onClick={() => setConfiguring(c => c === s.key ? null : s.key)}>{configuring === s.key ? 'Done' : 'Configure'}</button>}
               </div>
             </li>
           ))}
         </ul>
         <h2 className="skills-head">Yours</h2>
-        {custom.length === 0 ? <p className="pf-empty">No skills of your own yet. Write down how you like something done once, and reuse it on this project.</p> : (
+        {custom.length === 0 ? <p className="pf-empty">No skills of your own yet. Write down how you like something done once, and reuse it on every project.</p> : (
           <ul className="skill-grid">
             {custom.map(s => (
               <li key={s.id} className={`skill-card${s.enabled ? '' : ' is-off'}`}>
@@ -99,8 +103,8 @@ export default function Skills({ project, userId, onUse, onSchedule }) {
                 <p className="skill-desc">{s.description || s.instructions.slice(0, 140)}</p>
                 <p className="skill-meta">{s.mode === 'research' ? 'Deep research' : 'Agent'} · yours</p>
                 <div className="skill-actions">
-                  <button type="button" className="ghost" disabled={!s.enabled} onClick={() => onUse?.(s)}>Use</button>
-                  <button type="button" className="ghost" disabled={!s.enabled} onClick={() => onSchedule?.(s)}>Schedule</button>
+                  <button type="button" className="ghost" disabled={!s.enabled} onClick={() => setUsing({ skill: s, action: 'use' })}>Use</button>
+                  <button type="button" className="ghost" disabled={!s.enabled} onClick={() => setUsing({ skill: s, action: 'schedule' })}>Schedule</button>
                   <button type="button" className="link-btn" onClick={() => setEditing(s)}>Edit</button>
                   <button type="button" className="icon-btn sm" onClick={() => removeCustom(s)} aria-label={`Delete ${s.name}`} title="Delete">×</button>
                 </div>
@@ -115,7 +119,7 @@ export default function Skills({ project, userId, onUse, onSchedule }) {
 
 const settingsList = s => (s.prebuilt ? PREBUILT.find(p => p.key === s.key)?.settings : []) || []
 
-function SkillForm({ project, userId, initial, onClose, onSaved }) {
+function SkillForm({ userId, initial, onClose, onSaved }) {
   const [name, setName] = useState(initial?.name || '')
   const [description, setDescription] = useState(initial?.description || '')
   const [instructions, setInstructions] = useState(initial?.instructions || '')
@@ -129,7 +133,7 @@ function SkillForm({ project, userId, initial, onClose, onSaved }) {
     const row = { name: name.trim().slice(0, 80), description: description.trim().slice(0, 300), instructions: instructions.trim().slice(0, MAX_SKILL_INSTRUCTIONS), settings: { mode } }
     const { error } = initial
       ? await supabase.from('skills').update(row).eq('id', initial.id)
-      : await supabase.from('skills').insert({ ...row, owner_id: userId, deal_id: project.id })
+      : await supabase.from('skills').insert({ ...row, owner_id: userId })
     setSaving(false)
     if (error) setError(/skill_limit/.test(error.message) ? 'You already have 50 skills of your own, the most an account can have.' : error.message); else onSaved()
   }
@@ -145,12 +149,31 @@ function SkillForm({ project, userId, initial, onClose, onSaved }) {
         </div>
       </div>
       <label className="sched-field"><span>Instructions for the agent</span>
-        <textarea rows={7} value={instructions} maxLength={MAX_SKILL_INSTRUCTIONS} onChange={e => setInstructions(e.target.value)} placeholder="Say what to do, what to look at, and how the answer should look. The agent follows this whenever you use the skill on this project." />
+        <textarea rows={7} value={instructions} maxLength={MAX_SKILL_INSTRUCTIONS} onChange={e => setInstructions(e.target.value)} placeholder="Say what to do, what to look at, and how the answer should look. The agent follows this whenever you use the skill, on any project." />
         <small>{instructions.length} / {MAX_SKILL_INSTRUCTIONS}</small></label>
       {error && <p className="auth-error" role="alert">{error}</p>}
       <div className="sched-form-actions">
         <button type="button" className="ghost" onClick={onClose}>Cancel</button>
         <button type="submit" className="primary" disabled={saving}>{saving ? 'Saving…' : initial ? 'Save' : 'Add skill'}</button>
+      </div>
+    </form>
+  )
+}
+
+// Which project to use or schedule a skill in.
+export function ProjectPick({ projects, skill, action, onPick, onCancel }) {
+  const [id, setId] = useState(projects[0]?.id || '')
+  if (!projects.length) return <p className="notice">Create a project first: a skill runs on a project's material.</p>
+  return (
+    <form className="sched-form pf-section skill-pick" onSubmit={e => { e.preventDefault(); if (id) onPick(id) }} aria-label="Pick a project">
+      <div className="pf-section-head"><h2>{action === 'use' ? `Use ${skill.name} on…` : `Schedule ${skill.name} on…`}</h2></div>
+      <label className="sched-field"><span>Project</span>
+        <select value={id} onChange={e => setId(e.target.value)} aria-label="Project">
+          {projects.map(p => <option key={p.id} value={p.id}>{p.name || 'Untitled project'}</option>)}
+        </select></label>
+      <div className="sched-form-actions">
+        <button type="button" className="ghost" onClick={onCancel}>Cancel</button>
+        <button type="submit" className="primary">{action === 'use' ? 'Open the Agent' : 'Continue'}</button>
       </div>
     </form>
   )

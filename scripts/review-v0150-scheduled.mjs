@@ -39,29 +39,26 @@ await page.waitForSelector('.project-card', { timeout: 15000 }); await (await pa
 await page.waitForSelector('#engineers', { timeout: 15000 })
 const nav = async label => { const [b] = await page.$$(`xpath/.//button[contains(@class,"side-item") and contains(., "${label}")]`); await b.click() }
 async function openScheduled() {
-  await page.waitForSelector('.dashboard, #engineers, .scheduled-page, .chat-rail', { timeout: 20000 })
-  if (!(await page.$('.sidebar-nav .project-sidebar-back'))) {
-    const [pr] = await page.$$('xpath/.//button[contains(., "Projects")]'); await pr.click()
-    await page.waitForSelector('.project-card', { timeout: 15000 }); await (await page.$('.project-card')).click()
-    await page.waitForSelector('#engineers', { timeout: 15000 })
-  }
+  await page.waitForSelector('.dashboard, #engineers, .scheduled-page, .chat-rail, .project-card', { timeout: 20000 })
+  if (await page.$('.project-sidebar-back')) { await page.click('.project-sidebar-back'); await page.waitForSelector('.project-card', { timeout: 15000 }) }
   await nav('Scheduled')
   await page.waitForSelector('.scheduled-page', { timeout: 10000 })
   await page.waitForFunction(() => !/Loading/.test(document.querySelector('.scheduled-page').innerText), { timeout: 10000 })
 }
+await nav('Agent'); await page.waitForSelector('.chat-panel[data-deal]', { timeout: 15000 })
+const dealId = await page.$eval('.chat-panel[data-deal]', e => e.dataset.deal)
 
 let schedId = null, chatId = null
 try {
-  await nav('Scheduled')
-  await page.waitForSelector('.scheduled-page', { timeout: 10000 })
-  await page.waitForFunction(() => !/Loading/.test(document.querySelector('.scheduled-page').innerText), { timeout: 10000 })
+  await openScheduled()
   const ex = await page.$$eval('.sched-example strong', l => l.map(e => e.innerText))
-  check('"Scheduled" is in the project menu, empty state offers examples', ex.length === 2, ex.join(' | '))
+  check('"Scheduled" is in the main menu, empty state offers examples', ex.length === 2, ex.join(' | '))
   await page.screenshot({ path: `${out}/v0150-7-scheduled-empty.png` })
 
   // Create from the research example, with our own name.
   await page.click('.sched-example')
   await page.waitForSelector('.sched-form')
+  await page.select('.sched-form select[aria-label="Project"]', dealId)
   const name = await page.$('.sched-form input:not([type])')
   await name.evaluate(i => i.select()); await page.keyboard.type(`News ${STAMP}`)
   const pre = await page.$eval('.sched-form textarea', t => t.value)
@@ -72,6 +69,7 @@ try {
   await page.click('.sched-form button[type=submit]')
   await page.waitForSelector('.sched-card', { timeout: 10000 })
   const card = await page.$eval('.sched-card', e => e.innerText.replace(/\n+/g, ' · '))
+  check('the card names the project', !!(await page.$eval('.sched-card .sched-project', e => e.innerText).catch(() => '')))
   check('the task is listed with its repeat, next run and "Not run yet"', /Every week/.test(card) && /Next: Tomorrow, 9:00 AM/.test(card) && /Not run yet/.test(card), card.slice(0, 160))
   const row = (await (await rest(`schedules?owner_id=eq.${owner}&title=eq.${encodeURIComponent('News ' + STAMP)}&select=id,payload,every,timezone,kind`)).json())[0]
   schedId = row?.id; chatId = row?.payload?.chat_id
@@ -122,7 +120,7 @@ try {
   const label = await page.$eval('.chat-full .chat-scheduled-run .mono-label', e => e.innerText).catch(() => '')
   const ans = await page.$eval('.chat-full .chat-research', e => e.innerText).catch(() => '')
   const title = await page.$eval('.chat-full .chat-deal', e => e.innerText).catch(() => '')
-  check('"Open chat" opens the task\'s own chat', title === `News ${STAMP}`, title)
+  check('"Open chat" opens the task\'s own chat in its project', title === `News ${STAMP}` && (await page.$eval('.chat-panel[data-deal]', e => e.dataset.deal)) === dealId, title)
   check('the run is labelled as a scheduled run with the task name', /SCHEDULED RUN · News/i.test(label), label)
   check('the cited answer is in the chat', /SPOT/.test(ans) && /NYSE|New York Stock Exchange/i.test(ans), ans.replace(/\n+/g, ' ').slice(0, 140))
   await page.screenshot({ path: `${out}/v0150-9-scheduled-run-chat.png` })

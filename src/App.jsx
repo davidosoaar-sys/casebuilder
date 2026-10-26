@@ -298,8 +298,8 @@ export default function App({ account }) {
   }
 
   // Details and Deck need a project; without one, fall back to the list.
-  const page = ['connections', 'lookup', 'dashboard', 'waitlist'].includes(view) ? view : project ? view : 'projects'
-  const insideProject = !!project && page !== 'projects'
+  const page = ['connections', 'lookup', 'dashboard', 'waitlist', 'skills', 'scheduled'].includes(view) ? view : project ? view : 'projects'
+  const insideProject = !!project && !['projects', 'skills', 'scheduled'].includes(page)
   const agentFull = insideProject && page === 'agent'
   const agentSplit = insideProject && split && !agentFull
   const userName = (user || '').trim() || account.session.user.email.split('@')[0]
@@ -354,14 +354,14 @@ export default function App({ account }) {
           />
         ) : page === 'waitlist' && admin ? (
           <WaitlistAdmin />
-        ) : page === 'skills' && project ? (
-          <Skills key={project.id} project={project} userId={account.session.user.id}
-            onUse={sk => { setSkillRequest({ dealId: project.id, key: sk.key, id: sk.id }); navigate('agent') }}
-            onSchedule={sk => { setScheduleSkill({ dealId: project.id, skill: sk }); navigate('scheduled') }} />
-        ) : page === 'scheduled' && project ? (
-          <Scheduled key={project.id} project={project} userId={account.session.user.id}
-            skillToSchedule={scheduleSkill?.dealId === project.id ? scheduleSkill.skill : null} onSkillScheduled={() => setScheduleSkill(null)}
-            onOpenChat={chatId => { try { localStorage.setItem(`casebuilder.chat.${project.id}`, chatId) } catch {} ; navigate('agent') }} />
+        ) : page === 'skills' ? (
+          <Skills userId={account.session.user.id} projects={projects}
+            onUse={(sk, dealId) => { saving.flush(); setSkillRequest({ dealId, key: sk.key, id: sk.id }); setCurrentId(dealId); setView('agent') }}
+            onSchedule={(sk, dealId) => { setScheduleSkill({ dealId, skill: sk }); navigate('scheduled') }} />
+        ) : page === 'scheduled' ? (
+          <Scheduled userId={account.session.user.id} projects={projects}
+            skillToSchedule={scheduleSkill} onSkillScheduled={() => setScheduleSkill(null)}
+            onOpenChat={(dealId, chatId) => { try { localStorage.setItem(`casebuilder.chat.${dealId}`, chatId) } catch {} ; saving.flush(); setCurrentId(dealId); setView('agent') }} />
         ) : page === 'files' && project ? (
           <ProjectFiles key={project.id} project={project} userId={account.session.user.id} />
         ) : (page === 'people-lookup' || page === 'research') && project ? (

@@ -902,20 +902,22 @@ def fill_skill(skill, settings, inputs):
 
 
 def skill_for(job):
-    """(name, instructions, mode) for the job's skill, or None. Disabled skills do not run."""
+    """(name, instructions, mode) for the job's skill, or None. Disabled skills do not
+    run. A skill must belong to the job's owner (skills are account-wide)."""
     p = job.get("payload") or {}
     deal_id, owner = job.get("deal_id"), job.get("owner_id")
     if not deal_id:
         return None
     key, sid = p.get("skill_key"), p.get("skill_id")
     if key and key in PREBUILT_SKILLS:
-        rows = api("GET", f"/rest/v1/skills?deal_id=eq.{deal_id}&owner_id=eq.{owner}&prebuilt_key=eq.{key}&select=enabled,settings") or []
+        # Skills are account-wide since migration 0013 (deal_id null).
+        rows = api("GET", f"/rest/v1/skills?deal_id=is.null&owner_id=eq.{owner}&prebuilt_key=eq.{key}&select=enabled,settings") or []
         if rows and rows[0].get("enabled") is False:
             return None
         sk = PREBUILT_SKILLS[key]
         return sk["name"], fill_skill(sk, rows[0].get("settings") if rows else {}, p.get("skill_inputs") or {}), sk.get("mode", "chat")
     if sid and re.fullmatch(r"[0-9a-f-]{36}", str(sid)):
-        rows = api("GET", f"/rest/v1/skills?id=eq.{sid}&deal_id=eq.{deal_id}&owner_id=eq.{owner}&prebuilt_key=is.null&enabled=eq.true"
+        rows = api("GET", f"/rest/v1/skills?id=eq.{sid}&owner_id=eq.{owner}&prebuilt_key=is.null&enabled=eq.true"
                           "&select=name,instructions,settings") or []
         if rows:
             r = rows[0]
