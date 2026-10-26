@@ -418,6 +418,20 @@ export function resolveSlides(deck, env) {
     .map(({ dropped, ...s }) => s)
 }
 
+// The pages resolveSlides leaves out because none of their figures can be
+// computed yet, and the inputs (by label) that would bring them back.
+export function hiddenPages(deck, env) {
+  const missing = new Set()
+  let count = 0
+  for (const s of deck) {
+    const live = s.blocks.map(b => resolveBlock(b, env)).filter(r => LIVE.has(r.kind))
+    if (!live.length || !live.every(isEmptyLive)) continue
+    count++
+    for (const r of live) for (const label of r.waiting || []) missing.add(label)
+  }
+  return { count, missing: [...missing] }
+}
+
 // True when a slide has figures in it but none can be computed yet, so the client
 // deck leaves the whole page out. (The editor still shows it, with what is missing.)
 export function slideIsEmpty(slide, env) {

@@ -3,6 +3,10 @@ import { buildSiteHtml, hashText } from '../export/site.js'
 import { download } from '../export/download.js'
 import { SITE_CONFIG } from '../../server/publish.js'
 import { Menu, Select } from './ui.jsx'
+import ExportMenu from '../export/ExportMenu.jsx'
+import { HiddenPagesNotice } from '../export/Preview.jsx'
+import { hiddenForClient } from '../export/prepare.js'
+import { resolveStakeholder } from '../deck/stakeholders.js'
 
 const FORMATS = [{ value: 'pdf', label: 'PDF' }, { value: 'slides', label: 'Slides' }, { value: 'onepager', label: 'One-pager' }, { value: 'website', label: 'Live Room' }, { value: 'editor', label: 'Slide editor' }]
 
@@ -44,7 +48,9 @@ async function copyText(text) {
   }
 }
 
-export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, onScenario, audienceKey, onView }) {
+export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, onScenario, audienceKey, onView, onFillInputs }) {
+  const stakeholders = useMemo(() => project.stakeholders.map(resolveStakeholder).filter(Boolean), [project.stakeholders])
+  const hidden = useMemo(() => hiddenForClient({ deck: project.deck, inputs, fields: project.fields, stakeholders, activeKey: audienceKey }), [project.deck, project.fields, inputs, stakeholders, audienceKey])
   const frame = useRef(null)
   const scenarioRef = useRef(null)
   scenarioRef.current = { saved: project.scenario, onScenario }
@@ -201,6 +207,8 @@ export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, o
           <button className={`ghost ${editing ? 'ghost-on' : ''}`} onClick={() => {if(!editing)setShown(current);setEditing(e => !e)}}>
             {editing ? 'Finish editing' : 'Edit content'}
           </button>
+          <ExportMenu triggerClass="ghost" company={project.name} deck={project.deck} inputs={inputs} fields={project.fields} stakeholders={stakeholders}
+            activeKey={audienceKey} brand={project.brand} onWebsite={() => {}} onFillInputs={onFillInputs} />
           <Menu label="More ways to share" title="More" className="icon-btn site-more" items={[
             { label: 'Open in new tab', onSelect: openTab, disabled: busy },
             { label: 'Download .html', onSelect: saveHtml, disabled: busy },
@@ -211,6 +219,8 @@ export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, o
           </button>
         </div>
       </div>
+
+      <HiddenPagesNotice hidden={hidden} onFill={onFillInputs} />
 
       {site?.url && !problem && !needCode && (
         <div className="preview-note preview-ok no-print" role="status">

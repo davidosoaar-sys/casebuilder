@@ -248,7 +248,8 @@ export function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, na
         )
       }
       case 'room':
-        return '<section class="client-requirements"><h3>Requirements</h3>'+((st.requirements||[]).length?'<ul>'+st.requirements.map(r=>'<li><span aria-hidden="true" class="requirement-box '+(r.status==='Actioned'?'is-done':'')+'"></span><span>'+esc(r.text)+'</span><small>'+esc(r.status)+'</small></li>').join('')+'</ul>':'<p>No requirements recorded yet.</p>')+'</section>'
+        // No requirements: no block. Client output never shows an empty placeholder.
+        return (st.requirements||[]).length?'<section class="client-requirements"><h3>Requirements</h3><ul>'+st.requirements.map(r=>'<li><span aria-hidden="true" class="requirement-box '+(r.status==='Actioned'?'is-done':'')+'"></span><span>'+esc(r.text)+'</span><small>'+esc(r.status)+'</small></li>').join('')+'</ul></section>':''
       default:
         return ''
     }

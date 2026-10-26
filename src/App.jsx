@@ -404,6 +404,7 @@ export default function App({ account }) {
             company={project.name}
             onDeck={fn => update(p => ({ deck: fn(p.deck) }))}
             onWebsite={key => { setWebsiteAudience(key); setView('website') }}
+            onFillInputs={() => navigate('details')}
           />
         ) : page === 'website' ? (
           <WebsiteView
@@ -416,6 +417,7 @@ export default function App({ account }) {
             onSite={site => update({ site })}
             onScenario={fn => update(p => ({ scenario: fn(p.scenario || {}) }))}
             onBack={() => setView('deck')}
+            onFillInputs={() => navigate('details')}
           />
         ) : (
           <ProjectList

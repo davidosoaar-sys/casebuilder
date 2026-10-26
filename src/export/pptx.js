@@ -277,7 +277,8 @@ async function layoutBlock(b, deps, theme = DEFAULTS) {
       }
     }
     case 'room': {
-      const lines=(b.requirements||[]).map(r=>r.text+' — '+r.status),copy='Requirements\n'+(lines.join('\n')||'No requirements recorded yet.');return {h:Math.max(.8,textHeight(copy,15,CW)),draw:(s,y,k)=>s.addText(copy,{x:MX,y,w:CW,h:Math.max(.8,textHeight(copy,15,CW))*k,fontFace:FONT,fontSize:15*k,color:C.ink,margin:0})}
+      // No requirements: no block (client output never shows an empty placeholder).
+      const lines=(b.requirements||[]).map(r=>r.text+' — '+r.status),copy='Requirements\n'+lines.join('\n');if(!lines.length)return { h: 0, draw: () => {} };return {h:Math.max(.8,textHeight(copy,15,CW)),draw:(s,y,k)=>s.addText(copy,{x:MX,y,w:CW,h:Math.max(.8,textHeight(copy,15,CW))*k,fontFace:FONT,fontSize:15*k,color:C.ink,margin:0})}
     }
     default:
       return { h: 0, draw: () => {} }

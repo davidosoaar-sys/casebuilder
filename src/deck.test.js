@@ -15,7 +15,7 @@ import {
   migrateOldInputs,
   driversByPillar
 } from './valueModel.js'
-import { buildEnv, resolveSlides, defaultDeck } from './deck/model.js'
+import { buildEnv, resolveSlides, defaultDeck, hiddenPages } from './deck/model.js'
 import { resolveStakeholder } from './deck/stakeholders.js'
 import { stripModules } from './export/html.js'
 import { migrateDeck } from './deck/model.js'
@@ -283,6 +283,19 @@ test('a slide whose figures are all missing is dropped from the client deck', ()
   assert.ok(kept.every(s => s.blocks.every(b => !['drivers', 'pairs', 'stats', 'versus'].includes(b.kind))))
   // with data, every page comes back
   assert.equal(resolveSlides(defaultDeck(), buildEnv(inputsOf(), fieldsOf(), stake('champion'))).length, 6)
+})
+
+test('hiddenPages counts the dropped pages and names the inputs that bring them back', () => {
+  const blank = Object.fromEntries(INPUT_FIELDS.map(f => [f.key, f.value]))
+  const env = buildEnv(blank, fieldsOf(), stake('champion'))
+  const hidden = hiddenPages(defaultDeck(), env)
+  assert.equal(hidden.count, defaultDeck().length - resolveSlides(defaultDeck(), env).length)
+  assert.ok(hidden.count > 0)
+  assert.ok(hidden.missing.length > 0)
+  const labels = new Set(INPUT_FIELDS.map(f => f.label))
+  assert.ok(hidden.missing.every(m => labels.has(m)), hidden.missing.join(', '))
+  assert.equal(new Set(hidden.missing).size, hidden.missing.length)
+  assert.deepEqual(hiddenPages(defaultDeck(), buildEnv(inputsOf(), fieldsOf(), stake('champion'))), { count: 0, missing: [] })
 })
 
 test('the client deck carries no state, origin, source or confidence metadata', () => {

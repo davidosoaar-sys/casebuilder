@@ -1,6 +1,7 @@
 import {normalizeBrand,COLOR_KEYS} from '../src/brand.js'
 import {contrast,luminance} from '../src/export/websiteFramework.js'
 import {agentPrompt} from './agent-commands/index.js'
+import {fitLogo} from './logoFit.js'
 import {AGENT_COMMANDS} from '../src/agentCommands.js'
 
 const HEX=/^#[0-9a-f]{6}$/i
@@ -59,9 +60,14 @@ export function applyBrandSelection({catalog,logos,baseline,proposal,mode='deter
   if(incompatible(selected)){
     const alternative=logos.find(l=>l.variant!=='unknown'&&!incompatible(l))
     if(alternative){selected=alternative;adjustments.push('Used an available official logo variant suited to the canvas.')}
-    else{brand.logoBackground=selected.variant==='light'?'#111111':'#ffffff';adjustments.push('Added a bounded neutral field behind the original logo; the mark was not recolored.')}
   }
-  brand.logo=selected?.dataUrl||''
+  // A single-colour mark whose ink would vanish on the canvas (a black glyph on
+  // a dark page): recolour the SVG to the text colour, or back a PNG.
+  const fit=selected?fitLogo(selected.dataUrl,brand.background,brand.text):{dataUrl:''}
+  if(fit.recoloured)adjustments.push('The single-colour logo was shown in '+fit.recoloured+' so it reads on the page background.')
+  else if(fit.logoBackground){brand.logoBackground=fit.logoBackground;adjustments.push('Added a plain field behind the single-colour logo so it reads on the page background.')}
+  else if(incompatible(selected)){brand.logoBackground=selected.variant==='light'?'#111111':'#ffffff';adjustments.push('Added a bounded neutral field behind the original logo; the mark was not recolored.')}
+  brand.logo=fit.dataUrl||''
   if(selected)decisions.push({field:'Logo',value:selected.location,sourceUrl:selected.sourceUrl,origin:'observed'})
   for(const key of COLOR_KEYS){const evidence=catalog.colors.find(c=>c.value.toLowerCase()===brand[key].toLowerCase());decisions.push({field:key,value:brand[key],sourceUrl:evidence?.sourceUrl||'',origin:evidence?.origin||'fallback'})}
   for(const role of ['heading','body']){const family=brand[role+'Font'];const e=catalog.fonts.find(f=>f.family===family);decisions.push({field:role+' font',value:family,sourceUrl:e?.sourceUrl||'',origin:e?'observed':'fallback'});if(!e)warnings.push(role+' font was not established; '+family+' is a fallback.')}

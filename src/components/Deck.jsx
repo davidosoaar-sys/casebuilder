@@ -48,7 +48,7 @@ const TEXT_TAG = {
 }
 const SINGLE_LINE = new Set(['hero', 'headline', 'title', 'label', 'eyebrow', 'tag', 'forwhom'])
 
-export default function Deck({ inputs, model, fields, connectors, stakeholders, onStakeholders, deck, onDeck, company, onWebsite, brand, onBrand, onScanBrand, initialAudienceKey, previewRequest, onPreviewOpened }) {
+export default function Deck({ inputs, model, fields, connectors, stakeholders, onStakeholders, deck, onDeck, company, onWebsite, brand, onBrand, onScanBrand, initialAudienceKey, previewRequest, onPreviewOpened, onFillInputs }) {
   const [designOpen, setDesignOpen] = useState(false)
   const available = stakeholders.map(resolve).filter(Boolean)
   const [activeKey, setActiveKey] = useState(initialAudienceKey || available[0]?.key)
@@ -128,6 +128,7 @@ export default function Deck({ inputs, model, fields, connectors, stakeholders, 
             stakeholders={available}
             activeKey={active.key}
             onWebsite={key => onWebsite(key || active.key)}
+            onFillInputs={onFillInputs}
           />
         </div>
       </nav>

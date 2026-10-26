@@ -748,9 +748,27 @@ body { font-family: var(--font); }
 /* ------------------------------------------------------------- export */
 
 .export { position: relative; }
-.export-menu { left: auto; right: 0; min-width: 260px; }
-.export-item { display: flex; flex-direction: column; gap: 1px; }
-.export-item span { font-size: 12px; color: var(--ink-faint); }
+.export-trigger { display: inline-flex; align-items: center; gap: 7px; }
+.export-chevron { margin-left: 1px; opacity: .8; transition: transform .16s var(--ease-out); }
+.export-trigger[aria-expanded="true"] .export-chevron { transform: rotate(180deg); }
+/* The shared menu look (ui.jsx Menu), scaling in from the trigger's corner. */
+.export-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; width: 344px; max-width: calc(100vw - 24px); display: flex; flex-direction: column; padding: 5px; background: var(--panel); border: 1px solid var(--line-2); border-radius: 10px; transform-origin: top right; box-shadow: 0 2px 6px rgb(0 0 0 / .2), 0 16px 40px -12px color-mix(in srgb, var(--accent) 14%, rgb(0 0 0 / .55)); }
+.export-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 9px 10px; border: 0; border-radius: 7px; background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: background-color .12s ease, color .12s ease, transform .12s var(--ease-out); }
+.export-item:hover, .export-item:focus-visible { outline: none; background: color-mix(in srgb, var(--ink-strong) 8%, transparent); color: var(--ink-strong); }
+.export-item:active { background: color-mix(in srgb, var(--ink-strong) 12%, transparent); transform: scale(.99); }
+.export-item-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.export-item-text strong { font-size: 13.5px; font-weight: 600; }
+.export-item-text span { font-size: 12px; line-height: 1.4; color: var(--ink-faint); }
+.export-item-gets { flex-shrink: 0; padding: 2px 7px; border: 1px solid var(--line-2); border-radius: 999px; font-size: 11px; font-weight: 500; letter-spacing: .02em; color: var(--ink-dim); white-space: nowrap; }
+.export-item:is(:hover, :focus-visible) .export-item-gets { border-color: color-mix(in srgb, var(--accent) 45%, var(--line-2)); color: var(--ink); }
+/* Pages left out of client output, and the way back to the inputs. */
+.hidden-pages { display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--accent) 6%, var(--panel)); color: var(--ink); font-size: 13px; line-height: 1.45; flex-shrink: 0; }
+.hidden-pages > svg { flex-shrink: 0; color: var(--accent); }
+.hidden-pages p { margin: 0; flex: 1; min-width: 0; }
+.hidden-pages-list { color: var(--ink-dim); }
+.hidden-pages-fill { flex-shrink: 0; padding: 5px 12px; font-size: 13px; }
+.preview-bar .cselect span { color: inherit; font-size: inherit; }
+.cselect.preview-format { height: 36px; min-width: 128px; }
 .export-toast { position: fixed; right: 24px; bottom: 24px; background: var(--panel-2); border: 1px solid var(--line-2); border-radius: 8px; padding: 12px 16px; z-index: 60; font-size: 14px; }
 .export-error { border-color: var(--bad); }
 .export-error button { margin-left: 10px; background: none; border: 0; color: var(--accent-mint); cursor: pointer; font: inherit; text-decoration: underline; }
@@ -1089,7 +1107,8 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .brand-panel details { margin: 10px 0; font-size: 12px; }
 .brand-panel details a { display: block; overflow-wrap: anywhere; color: var(--accent); margin: 6px 0; }
 .brand-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
-.brand-logo-preview { background: var(--panel-2); padding: 12px; border-radius: 5px; margin-bottom: 12px; }
+/* The logo on the deck's own background (set inline), so what you see is what the client sees. */
+.brand-logo-preview { background: var(--panel-2); padding: 12px; border: 1px solid var(--line-2); border-radius: 8px; margin-bottom: 12px; }
 .brand-logo-preview img { max-width: 100%; max-height: 65px; }
 .deck-company-logo { max-width: 240px; max-height: 65px; object-fit: contain; display: block; }
 .slide-color-control { display: inline-flex; gap: 5px; align-items: center; font-size: 11px; color: var(--ink-dim); }
