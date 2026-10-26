@@ -28,3 +28,10 @@ const [deal] = await (await rest(`deals?id=eq.e4q7d2d&owner_id=eq.${owner}&selec
 const fields = deal.data.fields.map(f => f.key === 'engineers' ? { ...f, value: '', source: { state: 'empty', origin: '' } } : f)
 const up = await (await rest(`deals?id=eq.e4q7d2d&owner_id=eq.${owner}`, { method: 'PATCH', body: JSON.stringify({ data: { ...deal.data, fields } }) })).json()
 console.log('visa engineers reset', up.length, JSON.stringify(up[0]?.data.fields.find(f => f.key === 'engineers')?.value))
+// Stray replies the OLD live worker posted into the Spotify sample's "Earlier chat" after the test deleted
+// the chat they belonged to (the bug fixed in 6b1d21e). Only today's assistant messages after 19:00.
+const spChat = (await (await rest(`chats?owner_id=eq.${owner}&deal_id=like.sample-spotify*&title=eq.Earlier%20chat&created_at=lt.2026-10-26T00:00:00Z&select=id`)).json())
+for (const c of spChat) {
+  const del = await (await rest(`chat_messages?chat_id=eq.${c.id}&owner_id=eq.${owner}&role=eq.assistant&created_at=gte.2026-10-26T19:00:00Z`, { method: 'DELETE' })).json()
+  console.log('removed stray Spotify replies', del.length, del.map(m => String(m.content).slice(0, 40)).join(' | '))
+}
