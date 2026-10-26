@@ -35,11 +35,11 @@ function useDismiss(open, refs, close) {
 }
 
 // Where a popover goes: under its trigger, or above when there is no room.
-function place(el, height, alignRight = false) {
+function place(el, height, alignRight = false, width = 180) {
   const r = el.getBoundingClientRect()
   const up = r.bottom + height + 8 > window.innerHeight && r.top > height + 8
   const y = up ? { bottom: window.innerHeight - r.top + 6 } : { top: r.bottom + 6 }
-  const x = alignRight ? { right: Math.max(8, window.innerWidth - r.right) } : { left: Math.max(8, Math.min(r.left, window.innerWidth - Math.max(r.width, 180) - 8)) }
+  const x = alignRight ? { right: Math.max(8, window.innerWidth - r.right) } : { left: Math.max(8, Math.min(r.left, window.innerWidth - Math.max(r.width, width) - 8)) }
   return { ...x, ...y, width: r.width, origin: `${up ? 'bottom' : 'top'} ${alignRight ? 'right' : 'left'}` }
 }
 
@@ -137,13 +137,16 @@ export function Select({ value, onChange, options, placeholder = '', disabled = 
 
 // "..." menu, portalled so list clipping never cuts it. Escape or a click
 // outside closes it; arrow keys move between items. Items: [{ label,
-// description?, onSelect, disabled?, danger? }].
-export function Menu({ label, items, className = 'icon-btn sched-more', title = 'More' }) {
+// description?, onSelect, disabled?, danger? }]. children replace the dots in
+// the trigger; align="left" opens it from the trigger's left edge; itemHeight
+// is the row height used to decide whether it opens up or down.
+export function Menu({ label, items, className = 'icon-btn sched-more', title = 'More', children, align = 'right', itemHeight = 44, menuWidth = 180, disabled = false, menuClass = '' }) {
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState(null)
   const btn = useRef(null)
   const pop = useRef(null)
-  useLayoutEffect(() => { if (open) setPos(place(btn.current, items.length * 44 + 12, true)) }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+  const right = align !== 'left'
+  useLayoutEffect(() => { if (open) setPos(place(btn.current, items.length * itemHeight + 12, right, menuWidth)) }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
   useDismiss(open, [btn, pop], () => setOpen(false))
   useEffect(() => {
     if (!open) return
@@ -161,14 +164,14 @@ export function Menu({ label, items, className = 'icon-btn sched-more', title = 
   }
   return (
     <>
-      <button ref={btn} type="button" className={className} aria-label={label} title={title} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(o => !o)}>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="3.5" cy="8" r="1.3" /><circle cx="8" cy="8" r="1.3" /><circle cx="12.5" cy="8" r="1.3" /></svg>
+      <button ref={btn} type="button" className={className} aria-label={label} title={title} aria-haspopup="menu" aria-expanded={open} disabled={disabled} onClick={() => setOpen(o => !o)}>
+        {children || <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="3.5" cy="8" r="1.3" /><circle cx="8" cy="8" r="1.3" /><circle cx="12.5" cy="8" r="1.3" /></svg>}
       </button>
       {portal(
         <AnimatePresence>
           {open && pos && (
-            <motion.div ref={pop} className="sched-menu" role="menu" aria-label={label} onKeyDown={onKey}
-              style={{ right: pos.right, top: pos.top, bottom: pos.bottom, transformOrigin: pos.origin }} {...POP_IN}>
+            <motion.div ref={pop} className={`sched-menu ${menuClass}`.trim()} role="menu" aria-label={label} onKeyDown={onKey}
+              style={{ left: right ? undefined : pos.left, right: right ? pos.right : undefined, top: pos.top, bottom: pos.bottom, transformOrigin: pos.origin }} {...POP_IN}>
               {items.map(it => (
                 <button key={it.label} type="button" role="menuitem" tabIndex={-1} disabled={it.disabled} className={`${it.danger ? 'is-danger' : ''}${it.description ? ' has-desc' : ''}`}
                   onClick={() => { setOpen(false); btn.current?.focus(); it.onSelect() }}>

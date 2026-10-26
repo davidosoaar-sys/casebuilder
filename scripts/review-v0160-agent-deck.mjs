@@ -90,7 +90,7 @@ async function ask(text) {
 
 try {
   // 1) the title page heading
-  await page.click('.chat-rail-new'); await sleep(300)
+  await page.click('.chat-head button[aria-label="New chat"]'); await sleep(300)
   const heading = `${STAMP} Platform case`
   let r = await ask(`Change the title page heading to ${heading}`)
   check('reply 1 ran on the harness', !!r.run, r.run?.out)

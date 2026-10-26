@@ -6,8 +6,11 @@
 // up). Replies arrive over Supabase Realtime, with a job poll as a fallback.
 // A reply can carry edits; they are applied straight away, once (the deal
 // records which replies it has applied), and shown as a change card with Undo.
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { AnimatePresence, MotionConfig, motion } from 'framer-motion'
 import { supabase } from '../supabase.js'
+import { extractSources } from '../research.js'
+import { EASE_IN_OUT, EASE_OUT, Menu } from './ui.jsx'
 import { describeValue } from '../agentEdits.js'
 import { useModelKeys } from './Settings.jsx'
 import { activeKey } from '../modelProviders.js'
@@ -23,6 +26,23 @@ import { resolveStakeholder } from '../deck/stakeholders.js'
 const POLL_MS = 3000
 const CHAT_PAGE = 50
 const SELECT = 'id, role, content, meta, job_id, created_at'
+// The list follows new messages only while you are this close to the bottom.
+const NEAR_BOTTOM = 96
+// Empty chat: two case prompts and two artifact prompts. A chip fills the box.
+const STARTERS = ["What's still missing from this case?", 'Find the VP of Engineering', 'Make the title page punchier', 'Add a page on the rollout plan']
+// New messages fade and rise; the one you send rises from the composer.
+const ENTER = { initial: { opacity: 0, transform: 'translateY(6px)' }, animate: { opacity: 1, transform: 'translateY(0px)' }, transition: { duration: 0.15, ease: EASE_OUT } }
+const SENT = { initial: { opacity: 0, transform: 'translateY(32px)' }, animate: { opacity: 1, transform: 'translateY(0px)' }, transition: { duration: 0.2, ease: EASE_OUT } }
+
+// "3:42 PM" today, "Oct 25, 3:42 PM" before.
+const stamp = iso => {
+  const d = new Date(iso)
+  const today = d.toDateString() === new Date().toDateString()
+  return d.toLocaleString(undefined, { ...(today ? {} : { month: 'short', day: 'numeric' }), hour: 'numeric', minute: '2-digit' })
+}
+
+// The agent's mark at the start of each of its turns: the mascot's screen.
+const AgentMark = () => <span className="agent-mark" aria-hidden="true"><i /><i /></span>
 
 const Icon = ({ d, size = 15 }) => (
   <svg viewBox="0 0 16 16" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>
@@ -40,7 +60,8 @@ const icons = {
   close: <path d="M4 4l8 8M12 4l-8 8" />,
   file: <><path d="M4 1.8h5l3 3v9.4H4z" /><path d="M9 1.8v3h3" /></>,
   chevron: <path d="M4.5 6.5L8 10l3.5-3.5" />,
-  trash: <><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5" /></>
+  trash: <><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5" /></>,
+  down: <path d="M8 3v9.5M4 8.5l4 4 4-4" />
 }
 
 function useCopy() {
@@ -77,7 +98,11 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
   const [researchOn, setResearchOn] = useState(false)
   const { skills } = useSkills()
   const [skillPick, setSkillPick] = useState(null) // { skill, inputs } while filling a skill's details
-  const [skillMenu, setSkillMenu] = useState(false)
+  const [fill, setFill] = useState(null) // a starter chip's text, for the composer
+  const [newBelow, setNewBelow] = useState(false) // a reply arrived while you were scrolled up
+  const stick = useRef(true) // near the bottom: follow new messages
+  const seen = useRef(null) // ids on screen when the chat opened: these don't animate in
+  const sent = useRef(new Set()) // ids you sent here: these rise from the composer
   // Opened from the Skills page with "Use": start a new chat with that skill.
   useEffect(() => {
     if (!skillRequest || !skills || chats === null) return // after the chat list has opened its chat
@@ -138,12 +163,14 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
   useEffect(() => {
     let alive = true
     setMessages([]); setPending(null); setEditing(null); setError('')
+    seen.current = null; sent.current.clear(); firstScroll.current = true; stick.current = true; count.current = 0; setNewBelow(false)
     if (chats === null) { setLoading(true); return }
-    if (!chatId) { setLoading(false); return }
+    if (!chatId) { seen.current = new Set(); setLoading(false); return }
     setLoading(true)
     ;(async () => {
       const data = await reload(chatId)
       if (!alive) return
+      seen.current = new Set(data.map(m => m.id))
       setLoading(false)
       const { data: open } = await supabase.from('jobs').select('id').eq('deal_id', dealId).in('kind', ['chat', 'research']).eq('payload->>chat_id', chatId).in('status', ['queued', 'running']).order('created_at', { ascending: false }).limit(1)
       if (alive && open?.[0] && !data.some(m => m.job_id === open[0].id)) setPending(open[0].id)
@@ -195,12 +222,32 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
     }
   }, [messages]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Follow the conversation only if you are already at the bottom (or just
+  // sent something); otherwise a "New message" pill offers the jump.
   const firstScroll = useRef(true)
+  const follow = useRef(false) // set by send: always scroll to your own message
+  const count = useRef(0)
+  const toBottom = (smooth = true) => {
+    const el = list.current
+    if (!el) return
+    const calm = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    el.scrollTo({ top: el.scrollHeight, behavior: smooth && !calm ? 'smooth' : 'auto' })
+    stick.current = true; setNewBelow(false)
+  }
+  const onScroll = () => {
+    const el = list.current
+    if (!el) return
+    stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_BOTTOM
+    if (stick.current) setNewBelow(false)
+  }
   useEffect(() => {
     if (loading || !list.current) return
-    list.current.scrollTo({ top: list.current.scrollHeight, behavior: firstScroll.current ? 'auto' : 'smooth' })
-    firstScroll.current = false
-  }, [messages.length, pending, loading])
+    const grew = messages.length > count.current
+    count.current = messages.length
+    if (firstScroll.current || follow.current || stick.current) toBottom(!firstScroll.current)
+    else if (grew) setNewBelow(true)
+    firstScroll.current = false; follow.current = false
+  }, [messages.length, pending, loading, live.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function send({ text, attachments = [], model, effort, web, research = false, skill = null, skillInputs = {} }) {
     if (skill) { research = skill.mode === 'research'; text = skillMessage(skill, skillInputs); attachments = [] }
@@ -229,6 +276,7 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
     const { data: msg, error: e1 } = await supabase.from('chat_messages')
       .insert({ deal_id: dealId, owner_id: userId, chat_id: id, role: 'user', content: text || '(attached files)', meta }).select(SELECT).single()
     if (e1) { setError(/foreign key|not present|violates row-level/i.test(e1.message) ? 'This deal has not finished saving yet. Try again in a second.' : e1.message); return false }
+    sent.current.add(msg.id); follow.current = true
     setMessages(ms => ms.some(m => m.id === msg.id) ? ms : [...ms, msg])
     const roles = (project.stakeholders || []).map(s => { const r = resolveStakeholder(s); return r ? { key: s.key, role: r.role || '', tag: r.tag || '' } : null }).filter(Boolean)
     const files = attachments.map(a => ({ name: a.name, text: a.text }))
@@ -260,13 +308,26 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
   }
 
   const visible = messages.filter(m => m.role !== 'status' || m.meta?.scheduled)
+  const empty = !loading && visible.length === 0
+  const lastUser = visible.findLast?.(m => m.role === 'user')?.id ?? [...visible].reverse().find(m => m.role === 'user')?.id
+  const company = (project.fields || []).find(f => f.key === 'companyName')?.value || project.name || 'this project'
+  // Full page: the chat list is a rail once there are two chats; with fewer,
+  // it lives in the header menu, like split screen.
+  const rail = mode === 'full' && ((chats?.length || 0) >= 2 || moreChats)
+  const listProps = { chats, chatId, more: moreChats, onOlder: showOlder, onPick: setChatId, onNew: () => setChatId(null), onRename: renameChat, onDelete: deleteChat }
+  const enter = m => {
+    if (!seen.current || (seen.current.has(m.id) && !sent.current.has(m.id))) return { initial: false }
+    return m.role === 'user' && sent.current.has(m.id) ? SENT : ENTER
+  }
+  // An agent turn shows the mark unless the agent also spoke just before.
+  const markAt = i => i === 0 || visible[i - 1].role === 'user'
 
   const panel = (
-    <section className={`chat-panel chat-${mode}${!loading && visible.length === 0 ? ' is-empty' : ''}`} aria-label="Agent chat" data-deal={dealId}>
+    <section className={`chat-panel chat-${mode}${empty ? ' is-empty' : ''}`} aria-label="Agent chat" data-deal={dealId}>
       <header className="chat-head">
         <div className="chat-title"><span className="chat-dot" aria-hidden="true" /><h2>Agent</h2>
-          {mode === 'full' ? <span className="chat-deal">{chat?.title || project.name}</span>
-            : <ChatMenu chats={chats} chatId={chatId} more={moreChats} onOlder={showOlder} onPick={setChatId} onNew={() => setChatId(null)} onRename={renameChat} onDelete={deleteChat} label={chat?.title || 'New chat'} />}
+          {rail ? <span className="chat-deal">{chat?.title || project.name}</span>
+            : <ChatMenu {...listProps} pill={`chat-pill-menu-${mode}`} label={chat?.title || 'New chat'} count={chats?.length || 0} />}
         </div>
         <div className="chat-head-actions">
           <button type="button" className="icon-btn" onClick={() => setChatId(null)} disabled={!chatId} title="New chat" aria-label="New chat"><Icon d={icons.plus} /></button>
@@ -279,26 +340,18 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
         </div>
       </header>
 
-      <div className="chat-list" ref={list}>
+      <div className="chat-list" ref={list} onScroll={onScroll}>
         <div className="chat-inner">
-          {loading ? <p className="chat-empty">Loading…</p> : visible.length === 0 ? (mode === 'full' ? null : (
-            <div className="chat-empty">
-              <p>Ask a question about this deal, or tell the agent what to change. Changes apply straight away, and every one can be undone.</p>
-              <ul>
-                <li>“They have 1,200 engineers.”</li>
-                <li>“Use $120 an hour for engineer cost.”</li>
-                <li>“Which numbers are still unconfirmed?”</li>
-                <li>“Make the title page punchier.”</li>
-                <li>“Add a page on the rollout plan.”</li>
-              </ul>
-            </div>
-          )) : visible.map(m => m.role === 'status' ? (
-            <div key={m.id} className="chat-msg chat-scheduled-run">
-              <p className="mono-label">Scheduled run{m.meta?.schedule_title ? ` · ${m.meta.schedule_title}` : ''} · {new Date(m.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}</p>
-              <div className="chat-bubble">{m.content}</div>
-            </div>
+          {loading ? <p className="chat-empty">Loading…</p> : visible.map((m, i) => m.role === 'status' ? (
+            <motion.div key={m.id} className="chat-msg chat-assistant chat-scheduled-run" {...enter(m)}>
+              {markAt(i) ? <AgentMark /> : <span className="agent-mark-gap" />}
+              <div className="chat-turn">
+                <p className="mono-label">Scheduled run{m.meta?.schedule_title ? ` · ${m.meta.schedule_title}` : ''} · {stamp(m.created_at)}</p>
+                <div className="chat-bubble"><Reply text={m.content} /></div>
+              </div>
+            </motion.div>
           ) : m.role === 'user' ? (
-            <div key={m.id} className="chat-msg chat-user">
+            <motion.div key={m.id} className="chat-msg chat-user" {...enter(m)}>
               {editing?.id === m.id ? (
                 <EditBox initial={editing.text} onCancel={() => setEditing(null)}
                   onSave={async t => { if (await send({ text: t, model: m.meta?.model, effort: m.meta?.effort, web: m.meta?.web, research: !!m.meta?.research })) setEditing(null) }} disabled={!!pending} />
@@ -306,35 +359,58 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
                 {m.meta?.attachments?.length > 0 && <div className="chat-files">{m.meta.attachments.map((a, i) => <span key={i} className="chat-file"><Icon d={icons.file} size={13} />{a.name}</span>)}</div>}
                 <div className="chat-bubble">{m.meta?.skill ? <span className="chat-research-ask">Skill</span> : m.meta?.research && <span className="chat-research-ask">Deep research</span>}{m.content}</div>
                 <div className="msg-actions on-hover">
-                  <button type="button" className="icon-btn sm" onClick={() => copy(m.id, m.content)} title="Copy" aria-label="Copy message"><Icon d={copied === m.id ? icons.check : icons.copy} size={14} /></button>
-                  <button type="button" className="icon-btn sm" onClick={() => setEditing({ id: m.id, text: m.content })} disabled={!!pending} title="Edit and resend" aria-label="Edit message"><Icon d={icons.edit} size={14} /></button>
+                  <time className="msg-time" dateTime={m.created_at}>{stamp(m.created_at)}</time>
+                  <button type="button" className="icon-btn sm" onClick={() => copy(m.id, m.content)} title={copied === m.id ? 'Copied' : 'Copy'} aria-label="Copy message"><Icon d={copied === m.id ? icons.check : icons.copy} size={14} /></button>
+                  {m.id === lastUser && <button type="button" className="icon-btn sm" onClick={() => setEditing({ id: m.id, text: m.content })} disabled={!!pending} title="Edit and resend" aria-label="Edit message"><Icon d={icons.edit} size={14} /></button>}
                 </div>
               </>}
-            </div>
+            </motion.div>
           ) : (
-            <div key={m.id} className={`chat-msg chat-assistant${m.meta?.error ? ' is-error' : ''}`}>
-              <ToolTrace steps={m.meta?.trace} />
-              {m.meta?.research
-                ? <div className="chat-bubble chat-research"><p className="mono-label chat-research-tag">Deep research</p><Answer text={m.content} sources={m.meta.sources || []} /><Sources sources={m.meta.sources || []} dropped={m.meta.dropped_sources || 0} /></div>
-                : <div className="chat-bubble">{m.content}</div>}
-              <ChangeCard log={applied[m.id]} meta={m.meta} onUndo={opts => onUndo(m.id, opts)} onRedo={onRedo && (() => onRedo(m.id))} onView={onViewCase} />
-              {m.meta?.commands?.length > 0 && (runs[m.id]
-                ? <CommandCards run={runs[m.id]} commands={m.meta.commands} project={project} onPick={onPick} messageId={m.id} />
-                : <div className="cmd-cards"><div className="cmd-card"><p className="cmd-note">This research was not run. <button type="button" className="link-btn" onClick={() => onRun?.(m.id, m.meta.commands)}>Run it now</button></p></div></div>)}
-              <div className="msg-actions">
-                <button type="button" className="icon-btn sm" onClick={() => copy(m.id, m.content)} title="Copy" aria-label="Copy reply"><Icon d={copied === m.id ? icons.check : icons.copy} size={14} /></button>
-                {m.meta?.model && <span className="msg-meta">{AGENT_MODELS.find(x => x.id === m.meta.model)?.name || m.meta.model}{m.meta.seconds ? ` · ${Math.round(m.meta.seconds)}s` : ''}{m.meta.web === false ? ' · search off' : ''}{m.meta.research ? ` · ${(m.meta.sources || []).length} sources` : ''}</span>}
+            <motion.div key={m.id} className={`chat-msg chat-assistant${m.meta?.error ? ' is-error' : ''}`} {...enter(m)}>
+              {markAt(i) ? <AgentMark /> : <span className="agent-mark-gap" />}
+              <div className="chat-turn">
+                <ToolTrace steps={m.meta?.trace} />
+                {m.meta?.research
+                  ? <div className="chat-bubble chat-research"><p className="mono-label chat-research-tag">Deep research</p><Answer text={m.content} sources={m.meta.sources || []} /><Sources sources={m.meta.sources || []} dropped={m.meta.dropped_sources || 0} /></div>
+                  : m.meta?.error ? <div className="chat-bubble">{m.content}</div>
+                  : <div className="chat-bubble chat-md"><Reply text={m.content} /></div>}
+                <ChangeCard log={applied[m.id]} meta={m.meta} onUndo={opts => onUndo(m.id, opts)} onRedo={onRedo && (() => onRedo(m.id))} onView={onViewCase} />
+                {m.meta?.commands?.length > 0 && (runs[m.id]
+                  ? <CommandCards run={runs[m.id]} commands={m.meta.commands} project={project} onPick={onPick} messageId={m.id} />
+                  : <div className="cmd-cards"><div className="cmd-card"><p className="cmd-note">This research was not run. <button type="button" className="link-btn" onClick={() => onRun?.(m.id, m.meta.commands)}>Run it now</button></p></div></div>)}
+                <div className="msg-actions on-hover">
+                  <button type="button" className="icon-btn sm" onClick={() => copy(m.id, m.content)} title={copied === m.id ? 'Copied' : 'Copy'} aria-label="Copy reply"><Icon d={copied === m.id ? icons.check : icons.copy} size={14} /></button>
+                  <time className="msg-time" dateTime={m.created_at}>{stamp(m.created_at)}</time>
+                  {m.meta?.model && <span className="msg-meta">{AGENT_MODELS.find(x => x.id === m.meta.model)?.name || m.meta.model}{m.meta.seconds ? ` · ${Math.round(m.meta.seconds)}s` : ''}{m.meta.web === false ? ' · search off' : ''}{m.meta.research ? ` · ${(m.meta.sources || []).length} sources` : ''}</span>}
+                </div>
               </div>
-            </div>
+            </motion.div>
           ))}
-          {pending && <div className="chat-msg chat-assistant">{live.length > 0 && <ToolTrace steps={live} running defaultOpen />}<div className="chat-bubble chat-typing" role="status" aria-label="The agent is working"><span /><span /><span /></div></div>}
+          {pending && (
+            <motion.div className="chat-msg chat-assistant chat-working" {...ENTER}>
+              {visible.length && visible[visible.length - 1].role !== 'user' ? <span className="agent-mark-gap" /> : <AgentMark />}
+              <div className="chat-turn">
+                <ToolTrace steps={live} running defaultOpen>
+                  <span className="chat-bubble chat-typing" role="status" aria-label="The agent is working"><span /><span /><span /></span>
+                </ToolTrace>
+              </div>
+            </motion.div>
+          )}
         </div>
+        <AnimatePresence>
+          {newBelow && (
+            <motion.button key="new" type="button" className="chat-new-pill" onClick={() => toBottom()}
+              initial={{ opacity: 0, transform: 'translateY(8px)' }} animate={{ opacity: 1, transform: 'translateY(0px)' }} exit={{ opacity: 0, transform: 'translateY(8px)' }} transition={{ duration: 0.18, ease: EASE_OUT }}>
+              <Icon d={icons.down} size={13} />New message
+            </motion.button>
+          )}
+        </AnimatePresence>
       </div>
 
       <div className="chat-bottom">
         {noKey && <p className="chat-note">The agent needs an AI model key first (Anthropic, OpenAI, Gemini or OpenRouter). <button type="button" className="link-btn" onClick={onSettings}>Add it in Settings</button></p>}
         {error && <p className="auth-error chat-error" role="alert">{error}</p>}
-        {skillPick ? (
+        {skillPick && (
           <SkillRun pick={skillPick} onChange={setSkillPick} busy={!!pending} disabled={noKey}
             onCancel={() => setSkillPick(null)}
             onRun={async () => {
@@ -342,36 +418,40 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
               if (miss) { setError(`Fill in "${miss.label}" first.`); return }
               if (await send({ skill: skillPick.skill, skillInputs: skillPick.inputs, model: undefined })) setSkillPick(null)
             }} />
-        ) : (
-          <div className="chat-skillbar">
-            <div className="chat-menu">
-              <button type="button" className="link-btn chat-skill-btn" onClick={() => setSkillMenu(o => !o)} disabled={noKey || !skills} aria-haspopup="true" aria-expanded={skillMenu}>Use a skill</button>
-              {skillMenu && skills && (
-                <div className="chat-menu-pop chat-skill-pop" role="menu">
-                  {skills.filter(x => x.enabled).map(x => (
-                    <button key={x.key || x.id} type="button" role="menuitem" className="chat-skill-opt" onClick={() => { setSkillPick({ skill: x, inputs: {} }); setSkillMenu(false) }}>
-                      <strong>{x.name}</strong><small>{x.description || (x.instructions || '').slice(0, 90)}</small>
-                    </button>
-                  ))}
-                  {skills.every(x => !x.enabled) && <p className="chat-rail-empty">All skills are switched off for this project.</p>}
-                </div>
-              )}
-            </div>
-          </div>
         )}
-        <AgentComposer provider={provider} research={researchOn} onResearch={setResearchOn} disabled={noKey} busy={!!pending} onSend={send} showWelcome={!loading && visible.length === 0}
-          title={researchOn ? 'What should we research?' : `What should we work on${userName ? ', ' + userName.split(' ')[0] : ''}?`}
+        <AgentComposer provider={provider} research={researchOn} onResearch={setResearchOn} disabled={noKey} busy={!!pending} onSend={send} showWelcome={empty}
+          skills={skills ? skills.filter(x => x.enabled) : null} onSkill={x => setSkillPick({ skill: x, inputs: {} })} fill={fill}
+          title={researchOn ? 'What should we research?' : `What do you want to work on for ${company}?`}
           subtitle={researchOn ? `Deep research searches widely, reads pages in full and cites every source. It reads ${project.name || 'this project'}'s files and connectors, and you can ask follow-ups.` : `Ask about ${project.name || 'this deal'}, or tell the agent what to change. Every change can be undone.`} />
+        {empty && !researchOn && !skillPick && (
+          <ul className="chat-starters" aria-label="Suggestions">
+            {STARTERS.map((s, i) => (
+              <motion.li key={s} initial={{ opacity: 0, transform: 'translateY(4px)' }} animate={{ opacity: 1, transform: 'translateY(0px)' }} transition={{ duration: 0.18, ease: EASE_OUT, delay: 0.04 * i }}>
+                <button type="button" className="starter-chip" onClick={() => setFill({ text: s })}>{s}</button>
+              </motion.li>
+            ))}
+          </ul>
+        )}
       </div>
     </section>
   )
-  if (mode !== 'full') return panel
-  return (
-    <div className="chat-shell">
-      <ChatRail chats={chats} chatId={chatId} more={moreChats} onOlder={showOlder} onPick={setChatId} onNew={() => setChatId(null)} onRename={renameChat} onDelete={deleteChat} />
+  const body = mode !== 'full' ? panel : (
+    <div className={`chat-shell${rail ? '' : ' no-rail'}`}>
+      {rail && <ChatRail {...listProps} />}
       {panel}
     </div>
   )
+  return <MotionConfig reducedMotion="user">{body}</MotionConfig>
+}
+
+// An agent reply: the Markdown subset, with sources lifted out of the text into
+// numbered chips (inline) and a chip row (the list).
+function Reply({ text }) {
+  const { text: body, sources } = useMemo(() => extractSources(text), [text])
+  return <>
+    <Answer text={body} sources={sources} chips />
+    {sources.length > 0 && <Sources sources={sources} dropped={0} />}
+  </>
 }
 
 const ago = iso => {
@@ -383,8 +463,9 @@ const ago = iso => {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-// One row in the chat list: click to open, pencil to rename inline, bin to delete.
-function ChatRow({ c, on, onPick, onRename, onDelete }) {
+// One row in the chat list: title and when, the open chat on a sliding pill
+// (one layoutId per list), rename and delete in its "..." menu.
+function ChatRow({ c, on, pill, onPick, onRename, onDelete }) {
   const [edit, setEdit] = useState(false)
   const [t, setT] = useState(c.title)
   useEffect(() => { setT(c.title) }, [c.title])
@@ -397,60 +478,66 @@ function ChatRow({ c, on, onPick, onRename, onDelete }) {
   )
   return (
     <li className={`chat-row${on ? ' is-on' : ''}`}>
+      {on && <motion.span layoutId={pill} className="chat-row-pill" aria-hidden="true" transition={{ duration: 0.2, ease: EASE_IN_OUT }} />}
       <button type="button" className="chat-row-open" onClick={() => onPick(c.id)} aria-current={on ? 'true' : undefined}>
         <span className="chat-row-title">{c.title}</span>
         <span className="chat-row-when">{c.kind === 'research' ? 'Deep research · ' : ''}{ago(c.updated_at)}</span>
       </button>
       <span className="chat-row-actions">
-        <button type="button" className="icon-btn sm" onClick={() => setEdit(true)} title="Rename" aria-label={`Rename ${c.title}`}><Icon d={icons.edit} size={13} /></button>
-        <button type="button" className="icon-btn sm" onClick={() => onDelete(c.id)} title="Delete" aria-label={`Delete ${c.title}`}><Icon d={icons.trash} size={13} /></button>
+        <Menu label={`Options for ${c.title}`} title="Rename or delete" className="icon-btn sm chat-row-more"
+          items={[{ label: 'Rename', onSelect: () => setEdit(true) }, { label: 'Delete', danger: true, onSelect: () => onDelete(c.id) }]} />
       </span>
     </li>
   )
 }
 
-function ChatList({ chats, chatId, onPick, onRename, onDelete, more, onOlder }) {
+function ChatList({ chats, chatId, onPick, onRename, onDelete, more, onOlder, pill }) {
   if (chats === null) return <p className="chat-rail-empty">Loading…</p>
   if (!chats.length) return <p className="chat-rail-empty">No chats yet. Your first message starts one.</p>
   return <>
-    <ul className="chat-rows">{chats.map(c => <ChatRow key={c.id} c={c} on={c.id === chatId} onPick={onPick} onRename={onRename} onDelete={onDelete} />)}</ul>
+    <ul className="chat-rows">{chats.map(c => <ChatRow key={c.id} c={c} on={c.id === chatId} pill={pill} onPick={onPick} onRename={onRename} onDelete={onDelete} />)}</ul>
     {more && <button type="button" className="link-btn chat-older" onClick={onOlder}>Show older chats</button>}
   </>
 }
 
-// Full page: the list sits on the left, like Claude.
+// Full page with two or more chats: the list sits on the left, like Claude.
 function ChatRail(props) {
   return (
     <aside className="chat-rail" aria-label="Chats">
       <button type="button" className="ghost chat-rail-new" onClick={props.onNew}><Icon d={icons.plus} size={13} /> New chat</button>
-      <p className="mono-label chat-rail-head">Chats</p>
-      <ChatList {...props} />
+      <p className="mono-label chat-rail-head">Chats <span className="chat-rail-count">{props.chats?.length || 0}{props.more ? '+' : ''}</span></p>
+      <ChatList {...props} pill="chat-pill-rail" />
     </aside>
   )
 }
 
-// Split screen: the same list in a dropdown under the chat's name.
-function ChatMenu({ label, ...props }) {
+// Split screen, and the full page with one chat or none: the same list in a
+// dropdown under the chat's name.
+function ChatMenu({ label, count = 0, pill, ...props }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
   useEffect(() => {
     if (!open) return
-    const off = e => { if (!ref.current?.contains(e.target)) setOpen(false) }
-    const esc = e => { if (e.key === 'Escape') setOpen(false) }
+    // A row's "..." menu is portalled; pressing in it must not close this one.
+    const off = e => { if (!ref.current?.contains(e.target) && !e.target.closest?.('.sched-menu')) setOpen(false) }
+    const esc = e => { if (e.key === 'Escape' && !document.querySelector('.sched-menu')) setOpen(false) }
     document.addEventListener('mousedown', off); document.addEventListener('keydown', esc)
     return () => { document.removeEventListener('mousedown', off); document.removeEventListener('keydown', esc) }
   }, [open])
   return (
     <div className="chat-menu" ref={ref}>
       <button type="button" className="chat-menu-btn" onClick={() => setOpen(o => !o)} aria-haspopup="true" aria-expanded={open} title="Your chats on this project">
-        <span>{label}</span><Icon d={icons.chevron} size={12} />
+        <span>{label}</span>{count > 0 && <span className="chat-menu-count" aria-label={`${count} ${count === 1 ? 'chat' : 'chats'}`}>{count}</span>}<Icon d={icons.chevron} size={12} />
       </button>
-      {open && (
-        <div className="chat-menu-pop" role="menu">
-          <button type="button" className="ghost chat-rail-new" onClick={() => { props.onNew(); setOpen(false) }}><Icon d={icons.plus} size={13} /> New chat</button>
-          <ChatList {...props} onPick={id => { props.onPick(id); setOpen(false) }} />
-        </div>
-      )}
+      <AnimatePresence>
+        {open && (
+          <motion.div className="chat-menu-pop" role="menu" style={{ transformOrigin: 'top left' }}
+            initial={{ opacity: 0, transform: 'scale(0.97)' }} animate={{ opacity: 1, transform: 'scale(1)' }} exit={{ opacity: 0, transform: 'scale(0.97)' }} transition={{ duration: 0.14, ease: EASE_OUT }}>
+            <button type="button" className="ghost chat-rail-new" onClick={() => { props.onNew(); setOpen(false) }}><Icon d={icons.plus} size={13} /> New chat</button>
+            <ChatList {...props} pill={pill} onPick={id => { props.onPick(id); setOpen(false) }} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

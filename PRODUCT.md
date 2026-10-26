@@ -41,7 +41,9 @@ Every change in a project (deck, brand, inputs, stakeholders, the Agent's) can b
 undone and redone with Cmd/Ctrl+Z or the toolbar buttons, for the session; deletes
 show a toast with Undo instead of asking first. Edit slides has a page rail, one
 menu per page, block tools in a bar that never covers the content, and "+" or "/"
-to add blocks.
+to add blocks. The Agent chat renders replies as formatted text with numbered
+source chips instead of raw links, offers four starter prompts in an empty chat
+(they fill the box, never send), and keeps "Use a skill" in the composer.
 Amr owns agents/APIs, connector and file ingestion, account/backend changes.
 Coordinate shared navigation/data contracts rather than duplicating his work.
 
