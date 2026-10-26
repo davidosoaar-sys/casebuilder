@@ -181,7 +181,33 @@ export function compatClient(provider, apiKey, { env = process.env, fetchImpl = 
     return fromGemini(await res.json(), model)
   }
   const call = async (req, opts = {}) => {
-    if (provider === 'google') return callGemini(req, opts)
+    if (provider === 'google') return withFallback(callGemini, req, opts)
+    return withFallback(callCompat, req, opts)
+  }
+  // A model the key cannot use (free Gemini keys get no Gemini 3.1 Pro; a model is
+  // overloaded or not on the account): step down a tier instead of failing. A
+  // rejected key (401/403) is not retried, since no tier will work.
+  const withFallback = async (fn, req, opts) => {
+    const tiers = ['best', 'balanced', 'fast']
+    const asModel = { best: 'claude-opus-5-5', balanced: 'claude-sonnet-5-5', fast: 'claude-haiku-5-5' }
+    // A model that never answers (Gemini under load hangs instead of returning 503)
+    // gets a time limit per tier; the caller's own abort still ends everything.
+    const perTier = Number(env.PROVIDER_TIER_TIMEOUT_MS) || 60000
+    let last
+    for (const tier of tiers.slice(tiers.indexOf(tierOf(String(req.model || ''))))) {
+      const limit = AbortSignal.timeout(perTier)
+      const signal = opts.signal ? AbortSignal.any([opts.signal, limit]) : limit
+      try { return await fn({ ...req, model: asModel[tier] }, { ...opts, signal }) }
+      catch (e) {
+        if (opts.signal?.aborted) throw e
+        const timedOut = limit.aborted
+        last = timedOut ? new ProviderAPIError(504, `${PROVIDERS[provider].label} did not answer within ${Math.round(perTier / 1000)}s`, provider) : e
+        if (!timedOut && (!(e instanceof ProviderAPIError) || ![404, 429, 503, 529].includes(e.status))) throw e
+      }
+    }
+    throw last
+  }
+  const callCompat = async (req, opts = {}) => {
     const body = toOpenAI(req, provider, env)
     const res = await fetchImpl(`${PROVIDERS[provider].base}/chat/completions`, {
       method: 'POST',
