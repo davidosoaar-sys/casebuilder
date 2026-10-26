@@ -35,8 +35,13 @@ templates. Implemented locally: Live Room first, optional/automatically sourced 
 Local v0.16.0 work (2026-10-26): the Agent can revise the case artifacts from chat
 (page wording and text styles, adding, removing and reordering pages and blocks,
 brand colours and fonts). Changes apply straight away, show in a change card and
-can be undone; the user's later edits win. It cannot add images or logos, and
-figures still come only from the inputs.
+can always be undone; if the user changed the same thing since, the card asks
+first. It cannot add images or logos, and figures still come only from the inputs.
+Every change in a project (deck, brand, inputs, stakeholders, the Agent's) can be
+undone and redone with Cmd/Ctrl+Z or the toolbar buttons, for the session; deletes
+show a toast with Undo instead of asking first. Edit slides has a page rail, one
+menu per page, block tools in a bar that never covers the content, and "+" or "/"
+to add blocks.
 Amr owns agents/APIs, connector and file ingestion, account/backend changes.
 Coordinate shared navigation/data contracts rather than duplicating his work.
 

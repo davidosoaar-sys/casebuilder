@@ -183,6 +183,38 @@ export function Menu({ label, items, className = 'icon-btn sched-more', title = 
   )
 }
 
+// A small panel anchored to an element (a ref or the element itself),
+// portalled, scaling in from its corner. Escape or a press outside closes it;
+// Escape is handled first and marked handled (defaultPrevented) so nothing
+// under it reacts too.
+export function Popover({ open, anchor, onClose, label, className = '', align = 'left', height = 320, children }) {
+  const pop = useRef(null)
+  const [pos, setPos] = useState(null)
+  const el = () => anchor?.current ?? anchor ?? null
+  const anchorRef = useRef(null)
+  anchorRef.current = el()
+  useLayoutEffect(() => { if (open && el()) setPos(place(el(), height, align === 'right')) }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+  useDismiss(open, [anchorRef, pop], onClose)
+  const shut = useRef(onClose)
+  shut.current = onClose
+  useEffect(() => {
+    if (!open) return
+    const onKey = e => { if (e.key === 'Escape') { e.preventDefault(); shut.current(); anchorRef.current?.focus?.() } }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [open])
+  return portal(
+    <AnimatePresence>
+      {open && pos && (
+        <motion.div ref={pop} className={`popover ${className}`} role="dialog" aria-label={label}
+          style={{ left: pos.left, right: pos.right, top: pos.top, bottom: pos.bottom, transformOrigin: pos.origin }} {...POP_IN}>
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
+
 // tabs: [{ id, label, count? }]. Ids are `${idPrefix}-tab-<id>` and the panel
 // is `${idPrefix}-panel-<id>`. Arrow keys move between tabs.
 export function Tabs({ tabs, value, onChange, layoutId, idPrefix, label }) {
@@ -292,6 +324,83 @@ export function DialogPanel({ onClose, title, icon, className, titleId, children
         {children}
       </motion.div>
     </motion.div>
+  )
+}
+
+// Toasts: one short message at the bottom centre, with an optional action
+// ("Page deleted. Undo"). useToast() returns show({ message, action?:
+// { label, onClick }, duration? }); <Toaster /> renders them, once per app.
+// A new toast replaces the old one. Hover or focus pauses the timer; Escape
+// dismisses.
+const toastListeners = new Set()
+let toastNow = null
+function setToast(t) { toastNow = t; toastListeners.forEach(fn => fn(t)) }
+export function showToast({ message, action = null, duration = 5500 }) {
+  const t = { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, message, action, duration }
+  setToast(t)
+  return t.id
+}
+export function dismissToast(id) { if (!id || toastNow?.id === id) setToast(null) }
+export function useToast() { return showToast }
+
+export function Toaster() {
+  const [t, setT] = useState(toastNow)
+  const paused = useRef(false)
+  const left = useRef(0)
+  const started = useRef(0)
+  const timer = useRef(null)
+  const ctl = useRef({ pause() {}, resume() {} })
+  useEffect(() => { toastListeners.add(setT); return () => { toastListeners.delete(setT) } }, [])
+  useEffect(() => {
+    clearTimeout(timer.current)
+    if (!t) return
+    left.current = t.duration
+    paused.current = false
+    const run = () => { started.current = Date.now(); timer.current = setTimeout(() => dismissToast(t.id), left.current) }
+    run()
+    const onKey = e => { if (e.key === 'Escape') dismissToast(t.id) }
+    window.addEventListener('keydown', onKey)
+    ctl.current = {
+      pause() { if (paused.current) return; paused.current = true; clearTimeout(timer.current); left.current -= Date.now() - started.current },
+      resume() { if (!paused.current) return; paused.current = false; run() }
+    }
+    return () => { clearTimeout(timer.current); window.removeEventListener('keydown', onKey) }
+  }, [t])
+  if (typeof document === 'undefined') return null
+  return createPortal(
+    <MotionConfig reducedMotion="user">
+      <div className="toaster" role="status" aria-live="polite">
+        <AnimatePresence>
+          {t && (
+            <motion.div key={t.id} className="toast" onPointerEnter={() => ctl.current.pause()} onPointerLeave={() => ctl.current.resume()} onFocus={() => ctl.current.pause()} onBlur={() => ctl.current.resume()}
+              initial={{ opacity: 0, transform: 'translateY(12px)' }} animate={{ opacity: 1, transform: 'translateY(0px)' }} exit={{ opacity: 0, transform: 'translateY(8px)' }}
+              transition={{ duration: 0.2, ease: EASE_OUT }}>
+              <span className="toast-msg">{t.message}</span>
+              {t.action && <button type="button" className="toast-action" onClick={() => { dismissToast(t.id); t.action.onClick() }}>{t.action.label}</button>}
+              <button type="button" className="toast-x" aria-label="Dismiss" title="Dismiss" onClick={() => dismissToast(t.id)}>
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" strokeLinecap="round" /></svg>
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </MotionConfig>,
+    document.body
+  )
+}
+
+// Undo / redo arrows for a toolbar. history: what useHistory returns.
+export function UndoRedo({ history }) {
+  if (!history) return null
+  return (
+    <div className="undo-redo" role="group" aria-label="History">
+      <button type="button" className="icon-btn undo-btn" onClick={history.undo} disabled={!history.canUndo} aria-label={history.undoLabel} title={history.undoLabel} data-tip={history.undoLabel}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5.5 3.5L2.5 6.5l3 3" /><path d="M2.5 6.5h7a4 4 0 0 1 0 8H7" /></svg>
+      </button>
+      <button type="button" className="icon-btn undo-btn" onClick={history.redo} disabled={!history.canRedo} aria-label={history.redoLabel} title={history.redoLabel} data-tip={history.redoLabel}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10.5 3.5l3 3-3 3" /><path d="M13.5 6.5h-7a4 4 0 0 0 0 8H9" /></svg>
+      </button>
+    </div>
   )
 }
 

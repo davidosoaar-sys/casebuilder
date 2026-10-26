@@ -13,7 +13,7 @@ const browser = await puppeteer.launch({ headless: 'new' })
 const page = await browser.newPage(); await page.setViewport({ width: 1280, height: 800 })
 // read-only: block every write to the database
 await page.setRequestInterception(true)
-page.on('request', r => { const m = r.method(); if (/supabase\.co\/rest/.test(r.url()) && ['POST', 'PATCH', 'DELETE', 'PUT'].includes(m) && !/rpc\//.test(r.url())) { console.log('blocked write', m, new URL(r.url()).pathname); return r.abort() } r.continue() })
+page.on('request', r => { const m = r.method(); if (/supabase\.co\/rest/.test(r.url()) && ['POST', 'PATCH', 'DELETE', 'PUT'].includes(m)) { console.log('blocked write', m, new URL(r.url()).pathname); return r.abort() } r.continue() })
 await page.goto(base, { waitUntil: 'networkidle2' })
 await page.type('#auth-email', 'test@casebuilder.dev'); await page.type('#auth-password', T.TEST_PASSWORD)
 await page.click('button[type=submit]'); await page.waitForSelector('.dashboard', { timeout: 20000 })

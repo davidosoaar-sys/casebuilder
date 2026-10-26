@@ -8,7 +8,7 @@
 // here; keep the two in step.
 import { TEXT_STYLES, SLIDE_TEMPLATES, BLOCK_MENU, TOKENS, textBlock, fill } from './deck/model.js'
 import { COLOR_KEYS, BRAND_FONTS, cleanFont, normalizeBrand } from './brand.js'
-import { applyAgentEdits, undoAgentEdits } from './agentEdits.js'
+import { applyAgentEdits, undoAgentEdits, redoAgentEdits, editedSince } from './agentEdits.js'
 
 export const MAX_DECK_OPS = 25
 export const MAX_TEXT = 2000
@@ -143,7 +143,7 @@ export function applyDeckOps(deck, brand, ops, { now = new Date().toISOString() 
         }
         d.splice(at, 0, made)
         const after = op.after_slide_id != null ? ` after page ${at}` : ' at the end'
-        record(op, { op: 'add_slide', slide: clone(made), sentence: `Added a page "${slideName(made)}"${after}` })
+        record(op, { op: 'add_slide', slide: clone(made), index: at, sentence: `Added a page "${slideName(made)}"${after}` })
         break
       }
       case 'remove_slide': {
@@ -191,7 +191,7 @@ export function applyDeckOps(deck, brand, ops, { now = new Date().toISOString() 
           if (bad) { refused.push(`Page ${page}: ${bad}`); break }
         }
         slide.blocks.splice(at, 0, made)
-        record(op, { op: 'add_block', slideId: slide.id, block: clone(made), sentence: `Added ${/^[aeiou]/i.test(op.kind) ? 'an' : 'a'} ${op.kind.toLowerCase()} to page ${page}` })
+        record(op, { op: 'add_block', slideId: slide.id, block: clone(made), index: at, sentence: `Added ${/^[aeiou]/i.test(op.kind) ? 'an' : 'a'} ${op.kind.toLowerCase()} to page ${page}` })
         break
       }
       case 'remove_block': {
@@ -231,31 +231,40 @@ export function applyDeckOps(deck, brand, ops, { now = new Date().toISOString() 
 }
 
 // Undo a reply's changes, newest first. Each part is only put back while it
-// still holds what the agent wrote; otherwise it is skipped and reported.
-export function undoDeckOps(deck, brand, changes) {
+// still holds what the agent wrote; otherwise it is skipped and reported. With
+// { force: true } (the user chose "Undo anyway") it is put back regardless,
+// as long as the thing still exists. `conflicts` are the changes the user has
+// edited since (what force would overwrite).
+export function undoDeckOps(deck, brand, changes, { force = false } = {}) {
   let d = Array.isArray(deck) ? deck.map(s => ({ ...s, blocks: Array.isArray(s.blocks) ? [...s.blocks] : [] })) : []
   let br = brand && typeof brand === 'object' ? { ...brand } : {}
   const skipped = []
+  const conflicts = []
   let restored = 0
   for (const c of [...(changes || [])].reverse()) {
     const si = c.slideId ? findSlide(d, c.slideId) : -1
     const slide = si >= 0 ? d[si] : null
     let ok = false
+    let edited = false
     switch (c.op) {
       case 'set_text':
       case 'set_style': {
         const bi = slide ? slide.blocks.findIndex(b => b.id === c.blockId) : -1
-        if (bi >= 0 && slide.blocks[bi][c.field] === c.after) {
-          const b = { ...slide.blocks[bi] }
-          if (c.before === undefined) delete b[c.field]; else b[c.field] = c.before
-          slide.blocks[bi] = b
-          ok = true
-        }
+        if (bi < 0) break
+        edited = slide.blocks[bi][c.field] !== c.after
+        if (edited && !force) break
+        const b = { ...slide.blocks[bi] }
+        if (c.before === undefined) delete b[c.field]; else b[c.field] = c.before
+        slide.blocks[bi] = b
+        ok = true
         break
       }
       case 'add_slide': {
         const i = findSlide(d, c.slide?.id)
-        if (i >= 0 && same(d[i], c.slide)) { d.splice(i, 1); ok = true }
+        if (i < 0) break
+        edited = !same(d[i], c.slide)
+        if (edited && !force) break
+        d.splice(i, 1); ok = true
         break
       }
       case 'remove_slide': {
@@ -263,12 +272,18 @@ export function undoDeckOps(deck, brand, changes) {
         break
       }
       case 'move_slide': {
-        if (slide && si === c.to) { d.splice(si, 1); d.splice(Math.min(c.from, d.length), 0, slide); ok = true }
+        if (!slide) break
+        edited = si !== c.to
+        if (edited && !force) break
+        d.splice(si, 1); d.splice(Math.min(c.from, d.length), 0, slide); ok = true
         break
       }
       case 'add_block': {
         const bi = slide ? slide.blocks.findIndex(b => b.id === c.block?.id) : -1
-        if (bi >= 0 && same(slide.blocks[bi], c.block)) { slide.blocks.splice(bi, 1); ok = true }
+        if (bi < 0) break
+        edited = !same(slide.blocks[bi], c.block)
+        if (edited && !force) break
+        slide.blocks.splice(bi, 1); ok = true
         break
       }
       case 'remove_block': {
@@ -276,18 +291,73 @@ export function undoDeckOps(deck, brand, changes) {
         break
       }
       case 'brand': {
-        if (br[c.key] === c.after) {
-          br = { ...br }
-          if (c.before === undefined) delete br[c.key]; else br[c.key] = c.before
+        edited = br[c.key] !== c.after
+        if (edited && !force) break
+        br = { ...br }
+        if (c.before === undefined) delete br[c.key]; else br[c.key] = c.before
+        ok = true
+        break
+      }
+    }
+    if (edited) conflicts.push(c)
+    if (ok) restored++
+    else skipped.push(c.sentence)
+  }
+  return { deck: d, brand: br, restored, skipped: skipped.reverse(), conflicts: conflicts.reverse() }
+}
+
+// Redo a reply's changes after an undo, oldest first: write what the agent
+// wrote again. Parts that no longer exist are skipped and reported.
+export function redoDeckOps(deck, brand, changes) {
+  let d = Array.isArray(deck) ? deck.map(s => ({ ...s, blocks: Array.isArray(s.blocks) ? [...s.blocks] : [] })) : []
+  let br = brand && typeof brand === 'object' ? { ...brand } : {}
+  const skipped = []
+  for (const c of changes || []) {
+    const si = c.slideId ? findSlide(d, c.slideId) : -1
+    const slide = si >= 0 ? d[si] : null
+    let ok = false
+    switch (c.op) {
+      case 'set_text':
+      case 'set_style': {
+        const bi = slide ? slide.blocks.findIndex(b => b.id === c.blockId) : -1
+        if (bi >= 0) { slide.blocks[bi] = { ...slide.blocks[bi], [c.field]: c.after }; ok = true }
+        break
+      }
+      case 'add_slide': {
+        if (c.slide && findSlide(d, c.slide.id) < 0) d.splice(Math.min(c.index ?? d.length, d.length), 0, clone(c.slide))
+        ok = true
+        break
+      }
+      case 'remove_slide': {
+        const i = findSlide(d, c.slide?.id)
+        if (i < 0) ok = true
+        else if (d.length > 1) { d.splice(i, 1); ok = true }
+        break
+      }
+      case 'move_slide': {
+        if (slide) { d.splice(si, 1); d.splice(Math.min(c.to, d.length), 0, slide); ok = true }
+        break
+      }
+      case 'add_block': {
+        if (slide && c.block) {
+          if (!slide.blocks.some(b => b.id === c.block.id)) slide.blocks.splice(Math.min(c.index ?? slide.blocks.length, slide.blocks.length), 0, clone(c.block))
           ok = true
         }
         break
       }
+      case 'remove_block': {
+        if (slide) { slide.blocks = slide.blocks.filter(b => b.id !== c.block?.id); ok = true }
+        break
+      }
+      case 'brand': {
+        br = { ...br, [c.key]: c.after }
+        ok = true
+        break
+      }
     }
-    if (ok) restored++
-    else skipped.push(c.sentence)
+    if (!ok) skipped.push(c.sentence)
   }
-  return { deck: d, brand: br, restored, skipped: skipped.reverse() }
+  return { deck: d, brand: br, skipped }
 }
 
 // One reply can change inputs and the case. Both go into the same agentLog
@@ -313,21 +383,69 @@ export function applyAgentReply(p, messageId, { edits = [], deckOps = [] } = {},
   return { ...patch, agentLog: { ...(p.agentLog || {}), [messageId]: entry } }
 }
 
-export function undoAgentReply(p, messageId) {
+// Undo a reply. Without force, parts the user edited since are kept (and
+// listed in skipped); with { force: true } they are put back too.
+export function undoAgentReply(p, messageId, { force = false } = {}) {
   const entry = p.agentLog?.[messageId]
   if (!entry || entry.undone) return {}
   const patch = {}
-  const next = { ...entry, undone: true, skipped: [] }
+  const next = { ...entry, undone: true, skipped: [], deckSkipped: [] }
   if (entry.changes?.length) {
-    const r = undoAgentEdits(p.fields, entry.changes)
+    const r = undoAgentEdits(p.fields, entry.changes, { force })
     patch.fields = r.fields
     next.skipped = r.skipped
   }
   if (entry.deckChanges?.length) {
-    const r = undoDeckOps(p.deck, p.brand, entry.deckChanges)
+    const r = undoDeckOps(p.deck, p.brand, entry.deckChanges, { force })
     if (entry.deckChanges.some(c => c.op !== 'brand')) patch.deck = r.deck
     if (entry.deckChanges.some(c => c.op === 'brand')) patch.brand = r.brand
     next.deckSkipped = r.skipped
   }
   return { ...patch, agentLog: { ...p.agentLog, [messageId]: next } }
+}
+
+// What the user has changed since the agent did, as places to name in "You
+// edited page 2 since. Undo anyway?". Empty when a plain undo is clean.
+export function agentReplyConflicts(p, messageId) {
+  const entry = p.agentLog?.[messageId]
+  if (!entry || entry.undone) return []
+  const places = []
+  const fields = p.fields || []
+  for (const c of entry.changes || []) {
+    const f = fields.find(x => x.key === c.key)
+    if (f && editedSince(f, c)) places.push(c.label || c.key)
+  }
+  if (entry.deckChanges?.length) {
+    const { conflicts } = undoDeckOps(p.deck, p.brand, entry.deckChanges)
+    for (const c of conflicts) {
+      if (c.op === 'brand') { places.push('the deck design'); continue }
+      const i = findSlide(p.deck || [], c.slideId || c.slide?.id)
+      places.push(i >= 0 ? `page ${i + 1}` : 'a page')
+    }
+  }
+  return [...new Set(places)]
+}
+
+// Redo a reply that was undone: the agent's changes go back in.
+export function redoAgentReply(p, messageId) {
+  const entry = p.agentLog?.[messageId]
+  if (!entry || !entry.undone) return {}
+  const patch = {}
+  const next = { ...entry, undone: false, skipped: [], deckSkipped: [] }
+  if (entry.changes?.length) patch.fields = redoAgentEdits(p.fields, entry.changes)
+  if (entry.deckChanges?.length) {
+    const r = redoDeckOps(p.deck, p.brand, entry.deckChanges)
+    if (entry.deckChanges.some(c => c.op !== 'brand')) patch.deck = r.deck
+    if (entry.deckChanges.some(c => c.op === 'brand')) patch.brand = r.brand
+    next.deckSkipped = r.skipped
+  }
+  return { ...patch, agentLog: { ...p.agentLog, [messageId]: next } }
+}
+
+// "Agent: changed the title on page 1", for the undo history.
+export function agentStepLabel(entry) {
+  const all = [...(entry?.changes || []).map(c => `changed ${c.label || c.key}`), ...(entry?.deckChanges || []).map(c => c.sentence)]
+  if (!all.length) return 'Agent change'
+  const first = all[0].charAt(0).toLowerCase() + all[0].slice(1)
+  return all.length === 1 ? `Agent: ${first}` : `Agent: ${first} and ${all.length - 1} more`
 }

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { buildSiteHtml, hashText } from '../export/site.js'
 import { download } from '../export/download.js'
 import { SITE_CONFIG } from '../../server/publish.js'
-import { Menu, Select } from './ui.jsx'
+import { Menu, Select, UndoRedo } from './ui.jsx'
 import ExportMenu from '../export/ExportMenu.jsx'
 import { HiddenPagesNotice } from '../export/Preview.jsx'
 import { hiddenForClient } from '../export/prepare.js'
@@ -48,7 +48,7 @@ async function copyText(text) {
   }
 }
 
-export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, onScenario, audienceKey, onView, onFillInputs }) {
+export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, onScenario, audienceKey, onView, onFillInputs, history }) {
   const stakeholders = useMemo(() => project.stakeholders.map(resolveStakeholder).filter(Boolean), [project.stakeholders])
   const hidden = useMemo(() => hiddenForClient({ deck: project.deck, inputs, fields: project.fields, stakeholders, activeKey: audienceKey }), [project.deck, project.fields, inputs, stakeholders, audienceKey])
   const frame = useRef(null)
@@ -82,7 +82,8 @@ export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, o
       onDeck(list =>
         list.map(s =>
           s.id === slideId ? { ...s, blocks: s.blocks.map(b => (b.id === blockId ? { ...b, [field]: value } : b)) } : s
-        )
+        ),
+        { label: 'Edited text in the Live room', key: `text:${blockId}:${field}` }
       )
     }
     window.addEventListener('message', onMessage)
@@ -202,6 +203,7 @@ export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, o
           </span>
         </div>
         <div className="site-bar-actions">
+          <UndoRedo history={history} />
           <Select className="website-view-format" aria-label="View as format" value="website" options={FORMATS}
             onChange={format => onView?.(format, frame.current?.contentDocument?.querySelector('#audience select')?.value || audienceKey)} />
           <button className={`ghost ${editing ? 'ghost-on' : ''}`} onClick={() => {if(!editing)setShown(current);setEditing(e => !e)}}>

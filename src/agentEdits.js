@@ -61,18 +61,26 @@ export function applyAgentEdits(fields, edits, { now = new Date().toISOString() 
 
 // Undo a set of changes. A field is only put back if it still holds what the
 // agent wrote; if Chris has edited it since, his number wins and it is skipped.
-export function undoAgentEdits(fields, changes) {
+// With { force: true } (he chose "Undo anyway") it is put back regardless.
+export const editedSince = (f, c) => f.value !== c.after.value || (f.source?.state ?? '') !== c.after.source.state
+export function undoAgentEdits(fields, changes, { force = false } = {}) {
   const byKey = new Map(changes.map(c => [c.key, c]))
   const skipped = []
   let restored = 0
   const out = fields.map(f => {
     const c = byKey.get(f.key)
     if (!c) return f
-    if (f.value !== c.after.value || (f.source?.state ?? '') !== c.after.source.state) { skipped.push(c.label || c.key); return f }
+    if (!force && editedSince(f, c)) { skipped.push(c.label || c.key); return f }
     restored++
     return { ...f, value: c.before.value, source: c.before.source }
   })
   return { fields: out, restored, skipped }
+}
+
+// Redo: write the agent's values again (the user asked for it, so always).
+export function redoAgentEdits(fields, changes) {
+  const byKey = new Map(changes.map(c => [c.key, c]))
+  return fields.map(f => (byKey.has(f.key) ? { ...f, value: byKey.get(f.key).after.value, source: byKey.get(f.key).after.source } : f))
 }
 
 export function describeValue(v, unit) {

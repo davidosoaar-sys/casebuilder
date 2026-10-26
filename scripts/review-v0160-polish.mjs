@@ -143,10 +143,10 @@ if (await page.$('.project-card')) {
   const p3 = await pill()
   check('project menu: one pill, on Case inputs', p3.n === 1 && p3.on === 'Case inputs', JSON.stringify(p3))
   await page.screenshot({ path: `${out}/12-case-inputs-1280.png` })
-  // Case artifacts toolbar: format select, Edit content, Export, "..." menu, Copy link.
+  // Case artifacts toolbar: undo/redo (v0.16.0 history), format select, Edit content, Export, "..." menu, Copy link.
   await page.click('.sidebar-desktop .side-item[aria-label="Case artifacts"]'); await page.waitForSelector('.site-bar', { timeout: 15000 }); await sleep(800)
   const bar2 = await page.$$eval('.site-bar-actions > *', l => l.map(e => e.getAttribute('aria-label') || e.innerText.trim()))
-  check('artifacts toolbar: format select, Edit content, Export, menu, Copy link', bar2.join('|') === 'View as format|Edit content|Export|More ways to share|Copy link', bar2.join(' | '))
+  check('artifacts toolbar: undo/redo, format select, Edit content, Export, menu, Copy link', bar2.join('|') === 'History|View as format|Edit content|Export|More ways to share|Copy link', bar2.join(' | '))
   await page.screenshot({ path: `${out}/13-artifacts-1280.png` })
   await page.click('.site-more'); await sleep(300)
   const menu = await page.$$eval('.sched-menu [role=menuitem]', l => l.map(b => b.innerText.split('\n')[0]))

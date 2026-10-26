@@ -53,7 +53,7 @@ function useCopy() {
   }]
 }
 
-export default function ChatPanel({ project, userId, userName, mode = 'split', onApply, onUndo, onRun, onPick, onClose, onSplit, onFull, onSettings, onFlush, onViewCase, skillRequest, onSkillRequestDone }) {
+export default function ChatPanel({ project, userId, userName, mode = 'split', onApply, onUndo, onRedo, onRun, onPick, onClose, onSplit, onFull, onSettings, onFlush, onViewCase, skillRequest, onSkillRequestDone }) {
   const dealId = project.id
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
@@ -317,7 +317,7 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
               {m.meta?.research
                 ? <div className="chat-bubble chat-research"><p className="mono-label chat-research-tag">Deep research</p><Answer text={m.content} sources={m.meta.sources || []} /><Sources sources={m.meta.sources || []} dropped={m.meta.dropped_sources || 0} /></div>
                 : <div className="chat-bubble">{m.content}</div>}
-              <ChangeCard log={applied[m.id]} meta={m.meta} onUndo={() => onUndo(m.id)} onView={onViewCase} />
+              <ChangeCard log={applied[m.id]} meta={m.meta} onUndo={opts => onUndo(m.id, opts)} onRedo={onRedo && (() => onRedo(m.id))} onView={onViewCase} />
               {m.meta?.commands?.length > 0 && (runs[m.id]
                 ? <CommandCards run={runs[m.id]} commands={m.meta.commands} project={project} onPick={onPick} messageId={m.id} />
                 : <div className="cmd-cards"><div className="cmd-card"><p className="cmd-note">This research was not run. <button type="button" className="link-btn" onClick={() => onRun?.(m.id, m.meta.commands)}>Run it now</button></p></div></div>)}
@@ -490,14 +490,21 @@ function EditBox({ initial, onSave, onCancel, disabled }) {
   )
 }
 
+// "page 2", "page 2 and Engineers", "page 1, page 2 and 2 more"
+const namePlaces = list => list.length <= 2 ? list.join(' and ') : list.length === 3 ? `${list[0]}, ${list[1]} and ${list[2]}` : `${list[0]}, ${list[1]} and ${list.length - 2} more`
+
 // What a reply changed: inputs, then the case (deck and brand). One Undo for the
-// whole reply; "View" opens Case artifacts on the Live room.
-function ChangeCard({ log, meta, onUndo, onView }) {
+// whole reply, and it always undoes: if the user changed the same thing since,
+// the card asks first. An undone reply offers Redo. "View" opens Case artifacts.
+function ChangeCard({ log, meta, onUndo, onRedo, onView }) {
+  const [ask, setAsk] = useState(null) // places the user edited since, while asking
   const rejected = log?.refused?.length ? log.refused : meta?.rejected || []
   const deckRejected = [...new Set([...(meta?.deck_rejected || []), ...(log?.deckRefused || [])])]
   if (!log && !rejected.length && !deckRejected.length) return null
   const changes = log?.changes || []
   const deck = log?.deckChanges || []
+  const undo = () => { const r = onUndo() || {}; setAsk(r.conflicts?.length ? r.conflicts : null) }
+  const hasChanges = changes.length > 0 || deck.length > 0
   return (
     <div className={`chat-changes${log?.undone ? ' is-undone' : ''}`}>
       {changes.length > 0 && <>
@@ -511,20 +518,28 @@ function ChangeCard({ log, meta, onUndo, onView }) {
             </li>
           ))}
         </ul>
-        {log.undone
-          ? (log.skipped?.length ? <p className="chg-note">Kept your later edits to {log.skipped.join(', ')}.</p> : null)
-          : !deck.length && <button type="button" className="ghost chg-undo" onClick={onUndo}>Undo</button>}
+        {log.undone && log.skipped?.length > 0 && <p className="chg-note">Kept your later edits to {log.skipped.join(', ')}.</p>}
       </>}
       {rejected.length > 0 && <p className="chg-note">Not changed: {rejected.join(' ')}</p>}
       {deck.length > 0 && <div className={changes.length ? 'chg-case-sec' : undefined}>
         <p className="mono-label">{log.undone ? (changes.length ? 'Case changes undone' : 'Undone') : 'Changed the case'}</p>
         <ul className="chg-case">{deck.map((c, i) => <li key={i}>{c.sentence}</li>)}</ul>
-        {log.undone && log.deckSkipped?.length > 0 && <p className="chg-note">Kept your later edits: {log.deckSkipped.join('; ')}.</p>}
-        <div className="chg-actions">
-          {!log.undone && <button type="button" className="ghost chg-undo" onClick={onUndo}>Undo</button>}
-          {onView && <button type="button" className="ghost chg-undo" onClick={onView}>View</button>}
-        </div>
+        {log.undone && log.deckSkipped?.length > 0 && <p className="chg-note">Could not put back: {log.deckSkipped.join('; ')}.</p>}
       </div>}
+      {hasChanges && (ask
+        ? <div className="chg-ask" role="alert">
+            <p>You edited {namePlaces(ask)} since. Undo anyway?</p>
+            <div className="chg-actions">
+              <button type="button" className="ghost chg-undo chg-undo-anyway" onClick={() => { onUndo({ force: true }); setAsk(null) }}>Undo anyway</button>
+              <button type="button" className="ghost chg-undo" onClick={() => setAsk(null)}>Keep mine</button>
+            </div>
+          </div>
+        : <div className="chg-actions">
+            {log.undone
+              ? onRedo && <button type="button" className="ghost chg-undo" onClick={onRedo}>Redo</button>
+              : <button type="button" className="ghost chg-undo" onClick={undo}>Undo</button>}
+            {deck.length > 0 && onView && <button type="button" className="ghost chg-undo" onClick={onView}>View</button>}
+          </div>)}
       {deckRejected.length > 0 && <p className="chg-note">Not changed in the case: {deckRejected.join(' ')}</p>}
     </div>
   )
