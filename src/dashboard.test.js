@@ -180,7 +180,7 @@ test('ago and sinceLabel: relative times and a 12-hour clock', () => {
   assert.equal(ago(now - 3 * 3600e3, now), '3 h ago')
   assert.equal(ago(now - 26 * 3600e3, now), 'yesterday')
   assert.equal(ago(now - 4 * 86400e3, now), '4 days ago')
-  assert.equal(sinceLabel(new Date(2026, 9, 26, 9, 5).getTime(), now), '9:05 am today')
+  assert.equal(sinceLabel(new Date(2026, 9, 26, 9, 5).getTime(), now), '9:05 AM today')
   assert.equal(sinceLabel(new Date(2026, 9, 25, 21, 30).getTime(), now), 'yesterday at 9:30 PM')
   assert.equal(sinceLabel(new Date(2026, 9, 19, 12, 0).getTime(), now), 'Oct 19 at 12:00 PM')
 })
