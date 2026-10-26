@@ -32,8 +32,9 @@ await page.click('.side-item[aria-label="Projects"]')
 await page.waitForSelector('.project-card', { timeout: 15000 }); await (await page.$('.project-card')).click()
 await page.waitForSelector('.side-item[aria-label="Files"]')
 const nav = await page.$$eval('.sidebar-nav .side-item', bs => bs.map(b => b.getAttribute('aria-label')))
-check('project menu: Case inputs, Case artifacts, Agent, Research, Files (no Person lookup tab)',
-  JSON.stringify(nav) === JSON.stringify(['All projects', 'Case inputs', 'Case artifacts', 'Agent', 'Research', 'Files']), nav.join(', '))
+// v0.15.0: Research became Deep research in the Agent; its slot is Person lookup; Skills and Scheduled added.
+check('project menu: Case inputs, Case artifacts, Agent, Person lookup, Files, Skills, Scheduled',
+  JSON.stringify(nav) === JSON.stringify(['All projects', 'Case inputs', 'Case artifacts', 'Agent', 'Person lookup', 'Files', 'Skills', 'Scheduled']), nav.join(', '))
 check('no "Input sheet" or "Deck" label in the menu', !nav.includes('Input sheet') && !nav.includes('Deck'))
 
 await page.click('.side-item[aria-label="Case artifacts"]')
@@ -46,17 +47,10 @@ await page.click('.site-bar-left .link-btn')
 await page.waitForFunction(() => !document.querySelector('.site-view'), { timeout: 10000 })
 check('"Edit deck" goes to the deck, menu still on Case artifacts', await page.$eval('.side-item[aria-label="Case artifacts"]', b => b.classList.contains('side-on')))
 
-await page.click('.side-item[aria-label="Research"]')
-await page.waitForSelector('.research-page', { timeout: 10000 })
-const stillInProject = await page.$('.side-item[aria-label="Files"]')
-check('Research opens inside the project (project menu still shown)', !!stillInProject)
-check('Research has no project picker', !(await page.$('.research-page select[aria-label="Project context"]')))
-await page.click('.research-modes [role=tab]:nth-child(2)')
-check('Person toggle inside Research opens the person lookup', !!(await page.waitForSelector('.research-page .lookup-search', { timeout: 5000 }).catch(() => null)))
-await page.click('.research-modes [role=tab]:nth-child(1)')
-const sub = await page.$eval('.research-page .page-head p, .research-page header p', e => e.innerText).catch(() => '')
-check('Research names the project', sub.length > 0 && !/an account,/.test(sub), sub)
-await page.screenshot({ path: `${out}/2-research.png` })
+await page.click('.side-item[aria-label="Person lookup"]')
+const stillInProject = await page.waitForSelector('.lookup-search', { timeout: 10000 }).then(() => page.$('.side-item[aria-label="Files"]')).catch(() => null)
+check('Person lookup opens inside the project (project menu still shown)', !!stillInProject)
+await page.screenshot({ path: `${out}/2-person-lookup.png` })
 
 await page.click('.side-item[aria-label="Files"]')
 await page.waitForSelector('.pf-page')

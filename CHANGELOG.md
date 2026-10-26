@@ -27,6 +27,35 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
+## v0.15.0 (2026-10-26): any AI provider, chat history, Deep research in chat, scheduled tasks, skills
+
+- **Bring your own key, any provider.** Settings takes a key for Anthropic, OpenAI, Google
+  Gemini or OpenRouter. With more than one, you choose which the agent uses. Every AI
+  feature (find people, suggest values, person lookup, brand, chat, research) follows it,
+  and the chat's model picker names that provider's models (fast / balanced / best).
+  Migration 0009. Not yet tried with a real OpenAI, Gemini or OpenRouter key.
+- **Chat history.** A project has a list of chats, like Claude: new chat, rename, delete,
+  reopen. Full page shows the list on the left, split screen in a dropdown. Existing
+  messages became one "Earlier chat" per project. The agent sees the last 40 messages of
+  the current chat (was 8). The list pages 50 at a time ("Show older chats"). Migration 0010.
+- **Deep research is a chat mode.** A Deep research switch in the chat box: the agent
+  searches widely, reads pages in full and answers with numbered sources, and follow-ups
+  work because it sees the chat. The separate Research page is gone; its menu slot is now
+  Person lookup.
+- **Scheduled tasks.** A Scheduled page per project: an agent prompt, a Deep research
+  question or a skill on a repeat (1 hour to 31 days). Each task has its own chat where every
+  run lands, labelled "Scheduled run". Run now, pause, edit, delete. 20 per account.
+  Migration 0011.
+- **Skill library.** A Skills page per project with 4 built-in skills (Pre-meeting brief,
+  Account news digest, Stakeholder map, Objection prep), each switchable and configurable,
+  plus your own (name + instructions). Use one from the chat ("Use a skill") or schedule
+  it. Migration 0012.
+- Security: the worker only posts into a chat, or runs a custom skill, that belongs to the
+  job's owner and project. Research no longer reads deck instructions.
+- Every release is now also published on GitHub Releases.
+- Tests: app 380/380, database 34/34, worker 62/62. Browser reviews: keys 9/9, chats 13/13,
+  older chats 5/5, research 15/15, scheduled 17/17, skills 16/16, each with real agent runs.
+
 ## v0.14.3 (2026-10-26): approval emails, admin view switch, tidier sidebar and connectors
 
 - Approving someone on the Waitlist now emails them a confirmation from the CaseBuilder
