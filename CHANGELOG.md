@@ -27,6 +27,8 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
+- Skills page redesign: Discover and Yours tabs with a sliding pill, live search, a featured Pre-meeting brief panel, two-column cards with an add / added button and Try, a detail dialog (inputs, runs as, settings, edit and delete), and new skill, edit and project pick as dialogs. Trying a skill that is not added adds it first; with one project, Try opens it directly. Scheduling moves off this page. Motion respects reduced motion. Checked with `vite build` and `npm test` (381 pass, same as before); not yet checked in a browser.
+
 ## v0.15.1 (2026-10-26): Scheduled and Skills move to the main menu
 
 - Scheduled and Skills are in the main menu (Dashboard, Projects, Scheduled, Skills,
