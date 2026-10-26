@@ -1,0 +1,44 @@
+/* Dashboard hero concepts: CaseBuilder's real tokens (src/styles.css :root). */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap');
+:root {
+  --bg: #111111; --panel: #181818; --panel-2: #1e1e1e; --panel-3: #2b2b2b;
+  --line: #2e2f31; --line-2: #46484b;
+  --ink: #e3e3e3; --ink-strong: #ffffff; --ink-dim: #a9acb1; --ink-faint: #797c82;
+  --accent: #9bf0de; --pink: #e5399a; --warn: #ffba00;
+  --heading: Outfit, 'Avenir Next', system-ui, sans-serif;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --ease: cubic-bezier(.23, 1, .32, 1);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font-family: var(--font); -webkit-font-smoothing: antialiased; }
+.layout { display: grid; grid-template-columns: 236px 1fr; min-height: 100%; }
+.sidebar { background: var(--panel); border-right: 1px solid var(--line); padding: 22px 14px; display: flex; flex-direction: column; gap: 26px; }
+.logo { font: 800 20px var(--heading); color: var(--ink-strong); padding: 0 8px; } .logo span { color: var(--accent); }
+.nav { display: flex; flex-direction: column; gap: 2px; }
+.nav a { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 8px; color: var(--ink-dim); font-weight: 600; font-size: 14px; text-decoration: none; }
+.nav a.on { background: var(--panel-3); color: var(--ink-strong); } .nav a.on i { background: var(--accent); }
+.nav i { width: 14px; height: 14px; border-radius: 4px; background: var(--line-2); display: inline-block; }
+.main { position: relative; overflow: hidden; padding: 0 48px 64px; }
+.wrap { max-width: 1040px; margin: 0 auto; position: relative; }
+
+/* the rest of the dashboard, unchanged, for context */
+.section-h { display: flex; align-items: baseline; justify-content: space-between; margin: 34px 0 12px; }
+.section-h h2 { font: 600 16px var(--font); color: var(--ink-strong); margin: 0; } .section-h span { font-size: 12.5px; color: var(--ink-faint); }
+.rows { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); overflow: hidden; }
+.row { display: grid; grid-template-columns: 34px 1.1fr 1.4fr 1fr auto; gap: 18px; align-items: center; padding: 16px 18px; border-top: 1px solid var(--line); }
+.row:first-child { border-top: 0; }
+.mark { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; font: 700 13px var(--heading); color: #111; }
+.row b { color: var(--ink-strong); font-size: 14.5px; } .row small { display: block; color: var(--ink-faint); font-size: 12.5px; margin-top: 3px; }
+.bar { display: flex; height: 7px; border-radius: 99px; overflow: hidden; background: var(--panel-3); }
+.bar span { height: 100%; } .c { background: var(--accent); } .a { background: #6b8f88; } .s { background: var(--warn); } .e { background: transparent; }
+.btn { font: 600 13px var(--font); padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line-2); background: none; color: var(--ink); white-space: nowrap; }
+.btn.primary { background: var(--accent); color: #111; border-color: var(--accent); }
+.val { font-size: 13.5px; color: var(--ink); } .val.muted { color: var(--ink-faint); }
+
+/* shared motion: entrance */
+.in { opacity: 0; transform: translateY(8px); animation: rise .6s var(--ease) forwards; }
+.d1 { animation-delay: .05s } .d2 { animation-delay: .12s } .d3 { animation-delay: .19s } .d4 { animation-delay: .26s } .d5 { animation-delay: .33s }
+@keyframes rise { to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .in { animation: none; opacity: 1; transform: none; } * { animation-duration: .01ms !important; } }
+.replay { position: fixed; right: 16px; bottom: 16px; z-index: 9; font: 600 12px var(--font); padding: 8px 12px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--panel-2); color: var(--ink-dim); cursor: pointer; }
+.tag { position: fixed; left: 252px; bottom: 16px; z-index: 9; font: 600 11px var(--font); letter-spacing: .04em; color: var(--ink-faint); }

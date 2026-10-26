@@ -1,0 +1,45 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400&display=swap');
+/* Prototype: concept C's atmosphere applied app-wide. Injected into the real app for review only.
+   The system, not the band copied everywhere:
+   1. Canvas: near-black with a faint grain and one slow mint/blue/pink aurora pinned behind each page head.
+   2. Type: page titles in light Outfit, large, tight tracking.
+   3. Glass only on floating/raised chrome (sidebar, cards, menus, composer), with real depth.
+   4. Glow marks the ONE thing that matters (active nav, primary action, the hot item), never decoration. */
+:root { --glass: color-mix(in srgb, #161616 72%, transparent); --glass-line: color-mix(in srgb, #ffffff 9%, transparent);
+  --glow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), 0 0 28px -6px color-mix(in srgb, var(--accent) 55%, transparent); }
+
+/* 1. canvas */
+body { background: linear-gradient(180deg, #0b0f0e 0px, var(--bg) 520px) !important; }
+.content > *:first-child { position: relative; }
+body::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 1; opacity: .06; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+.content { position: relative; isolation: isolate; }
+.content::before { content: ''; position: absolute; left: -5%; right: -5%; top: -220px; height: 520px; z-index: -1; pointer-events: none; filter: blur(48px); opacity: .85;
+  background: radial-gradient(38% 50% at 18% 55%, color-mix(in srgb, var(--accent) 55%, transparent), transparent 70%),
+              radial-gradient(30% 45% at 58% 30%, color-mix(in srgb, #3b82f6 38%, transparent), transparent 70%),
+              radial-gradient(24% 40% at 86% 60%, color-mix(in srgb, #e5399a 26%, transparent), transparent 70%);
+  animation: atmo 22s ease-in-out infinite alternate; }
+@keyframes atmo { to { transform: translate(3%, 4%) scale(1.06); } }
+.content-agent::before { opacity: .28; }
+
+/* 2. type */
+.page-head { padding: 72px 0 30px !important; }
+.page-head h1, .details h1 { font-family: var(--heading) !important; font-weight: 300 !important; font-size: clamp(40px, 5vw, 60px) !important; letter-spacing: -.04em !important; line-height: 1 !important; }
+.page-head .page-sub { font-size: 15.5px; color: var(--ink-dim); max-width: 60ch; }
+
+/* 3. glass on raised chrome */
+.sidebar { background: color-mix(in srgb, #121212 80%, transparent) !important; backdrop-filter: blur(18px) saturate(1.2); border-right-color: var(--glass-line) !important; }
+.project-card, .skill-card, .sched-card, .skills-featured, .dash-rows, .rows, .connection-card, .pf-section, .chat-changes {
+  background: var(--glass) !important; backdrop-filter: blur(14px) saturate(1.15); border-color: var(--glass-line) !important;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 5%, transparent), 0 10px 30px -18px rgb(0 0 0 / .8); }
+.sched-menu, .popover, .select-pop, .menu, .export-menu, .searchpick-pop {
+  background: color-mix(in srgb, #181818 78%, transparent) !important; backdrop-filter: blur(20px) saturate(1.3); border-color: var(--glass-line) !important; }
+.mascot-card { background: color-mix(in srgb, #171717 75%, transparent) !important; backdrop-filter: blur(16px); border-color: var(--glass-line) !important; }
+
+/* 4. glow marks what matters */
+.side-pill { background: color-mix(in srgb, var(--accent) 10%, #1d1d1d) !important; box-shadow: var(--glow) !important; }
+.primary { box-shadow: 0 0 22px -6px color-mix(in srgb, var(--accent) 70%, transparent); border-radius: 999px !important; }
+.primary:hover { box-shadow: 0 0 30px -4px color-mix(in srgb, var(--accent) 80%, transparent); }
+[role=tab][aria-selected=true] { text-shadow: 0 0 18px color-mix(in srgb, var(--accent) 50%, transparent); }
+.chat-user .chat-bubble { background: color-mix(in srgb, var(--accent) 9%, #1c1c1c) !important; border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent); }
+@media (prefers-reduced-motion: reduce) { .content::before { animation: none; } }

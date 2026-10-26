@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B: Focus card</title><link rel="stylesheet" href="shared.css">
+<style>
+/* B: the hero IS the answer. One large panel: greeting on the left, "your next move" on the right. */
+.hero { margin: 40px 0 0; border: 1px solid var(--line); border-radius: 22px; overflow: hidden; position: relative;
+  background: radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--accent) 13%, var(--panel)) 0%, var(--panel) 55%); }
+.grid-lines { position: absolute; inset: 0; pointer-events: none; opacity: .35;
+  background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 44px 44px; mask-image: radial-gradient(70% 90% at 20% 30%, #000 10%, transparent 75%); }
+.inner { position: relative; display: grid; grid-template-columns: 1.15fr 1fr; gap: 28px; padding: 44px 44px 40px; align-items: end; }
+.date { font-size: 13px; color: var(--ink-faint); margin: 0 0 12px; }
+.hello { font: 600 54px/1.02 var(--heading); letter-spacing: -.03em; color: var(--ink-strong); margin: 0; }
+.sub { font-size: 15.5px; color: var(--ink-dim); margin: 14px 0 0; }
+.kpis { display: flex; gap: 26px; margin-top: 28px; }
+.kpis div span { display: block; font-size: 12px; color: var(--ink-faint); }
+.kpis div strong { font: 600 22px var(--heading); color: var(--ink-strong); }
+.next { background: color-mix(in srgb, var(--bg) 70%, transparent); border: 1px solid var(--line-2); border-radius: 16px; padding: 20px 22px; backdrop-filter: blur(6px); }
+.next .eb { font-size: 12.5px; color: var(--accent); font-weight: 600; }
+.next h3 { font: 600 21px var(--heading); color: var(--ink-strong); margin: 8px 0 6px; }
+.next p { margin: 0 0 16px; font-size: 14px; color: var(--ink-dim); line-height: 1.5; }
+.next .row2 { display: flex; gap: 8px; }
+.pulse { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-right: 7px; box-shadow: 0 0 0 0 var(--accent); animation: pulse 2.4s ease-out infinite; vertical-align: 1px; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); } 100% { box-shadow: 0 0 0 10px transparent; } }
+</style></head>
+<body><div class="layout"><aside class="sidebar"></aside>
+<main class="main"><div class="wrap">
+  <section class="hero in d1"><div class="grid-lines" aria-hidden="true"></div>
+    <div class="inner">
+      <div>
+        <p class="date in d2">Monday, October 26</p>
+        <h1 class="hello in d2">Good evening,<br>Amr.</h1>
+        <p class="sub in d3">3 deals open. Here is the one that needs you first.</p>
+        <div class="kpis in d4">
+          <div><span>Pipeline</span><strong>$1.4M to $8.3M</strong></div>
+          <div><span>Confirmed</span><strong>11%</strong></div>
+          <div><span>New since you looked</span><strong>4</strong></div>
+        </div>
+      </div>
+      <div class="next in d3">
+        <div class="eb"><span class="pulse"></span>Your next move</div>
+        <h3>Review 3 suggestions on Spotify</h3>
+        <p>The agent found values for engineers, hourly cost and search hours. Confirm them and the case can be valued.</p>
+        <div class="row2"><button class="btn primary">Review now</button><button class="btn">Open Spotify</button></div>
+      </div>
+    </div>
+  </section>
+  <div data-rows></div>
+</div></main></div>
+<span class="tag">B: Focus card</span><button class="replay">Replay motion</button>
+<script src="shared.js"></script></body></html>
