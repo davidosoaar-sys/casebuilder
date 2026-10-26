@@ -47,12 +47,25 @@ function Inline({ text, sources, chips }) {
 }
 
 export function Answer({ text, sources = [], chips = false }) {
+  const inl = t => <Inline text={t} sources={sources} chips={chips} />
   return (
     <div className="research-answer">
-      {parseMarkdown(text).map((b, i) => {
-        if (b.type === 'h') return React.createElement(b.level <= 2 ? 'h3' : 'h4', { key: i }, <Inline text={b.text} sources={sources} chips={chips} />)
-        if (b.type === 'ul' || b.type === 'ol') return React.createElement(b.type, { key: i }, b.items.map((it, j) => <li key={j}><Inline text={it} sources={sources} chips={chips} /></li>))
-        return <p key={i}><Inline text={b.text} sources={sources} chips={chips} /></p>
+      {parseMarkdown(text, { breaks: chips }).map((b, i) => {
+        // # and ## are section headings, ### and deeper are sub-headings.
+        if (b.type === 'h') return React.createElement(b.level <= 2 ? 'h3' : 'h4', { key: i, className: `md-h${Math.min(b.level, 3)}` }, inl(b.text))
+        if (b.type === 'ul' || b.type === 'ol') return React.createElement(b.type, { key: i }, b.items.map((it, j) => <li key={j}>{inl(it)}</li>))
+        if (b.type === 'hr') return <hr key={i} className="md-hr" />
+        if (b.type === 'quote') return <blockquote key={i} className="md-quote">{inl(b.text)}</blockquote>
+        if (b.type === 'pre') return <pre key={i} className="md-pre"><code>{b.text}</code></pre>
+        if (b.type === 'table') return (
+          <div key={i} className="md-table-wrap">
+            <table className="md-table">
+              <thead><tr>{b.head.map((h, j) => <th key={j}>{inl(h)}</th>)}</tr></thead>
+              <tbody>{b.rows.map((r, j) => <tr key={j}>{r.map((c, k) => <td key={k}>{inl(c)}</td>)}</tr>)}</tbody>
+            </table>
+          </div>
+        )
+        return <p key={i}>{inl(b.text)}</p>
       })}
     </div>
   )

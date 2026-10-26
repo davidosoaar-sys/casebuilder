@@ -62,3 +62,28 @@ test('a PNG that inflates past its declared size is refused, not decompressed', 
   assert.equal(pngInk(png), '')
   assert.ok(Date.now() - t < 1000, 'returned quickly')
 })
+
+test('chat replies keep single line breaks; research answers still join lines', async () => {
+  const { parseMarkdown } = await import('./research.js')
+  const haiku = 'Networks hum with trust,\nVisa moves the world\'s small change,\nTap, and value flows.'
+  assert.equal(parseMarkdown(haiku, { breaks: true })[0].text.split('\n').length, 3)
+  assert.equal(parseMarkdown(haiku)[0].text.includes('\n'), false)
+})
+
+test('chat formatting: headings, sub-headings, dividers, quotes, tables, code', async () => {
+  const { parseMarkdown } = await import('./research.js')
+  const md = [
+    '# Summary', 'Short answer here.', '', '---', '', '## Options', '### Option A', '- one', '- two', '',
+    '***', '> They said budget is fixed.', '', '| Plan | Cost |', '|---|---:|', '| A | 10 |', '| B | 20 |', '',
+    '```', '## not a heading', '- not a bullet', '```', 'Tail',
+  ].join('\n')
+  const b = parseMarkdown(md, { breaks: true })
+  assert.deepEqual(b.map(x => x.type), ['h', 'p', 'hr', 'h', 'h', 'ul', 'hr', 'quote', 'table', 'pre', 'p'])
+  assert.deepEqual(b.filter(x => x.type === 'h').map(x => x.level), [1, 2, 3])
+  const t = b.find(x => x.type === 'table')
+  assert.deepEqual(t.head, ['Plan', 'Cost'])
+  assert.deepEqual(t.rows, [['A', '10'], ['B', '20']])
+  assert.equal(b.find(x => x.type === 'pre').text, '## not a heading\n- not a bullet')
+  // A bare "-" line or a pipe in prose is not a divider or a table.
+  assert.deepEqual(parseMarkdown('A | B is fine\nnext line').map(x => x.type), ['p'])
+})

@@ -1,0 +1,15 @@
+/* Fix: agent reply formatting (headings, sub-headings, dividers, quotes, tables, code) */
+.research-answer h3.md-h1 { font-family: var(--font-display, 'Outfit'), sans-serif; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; color: var(--ink-strong); margin: 22px 0 8px; }
+.research-answer h3.md-h2 { font-size: 16px; font-weight: 600; color: var(--ink-strong); margin: 20px 0 6px; }
+.research-answer h4.md-h3 { font-size: 14.5px; font-weight: 600; color: var(--ink); margin: 16px 0 4px; }
+.research-answer > .md-h1:first-child, .research-answer > .md-h2:first-child, .research-answer > .md-h3:first-child { margin-top: 0; }
+.research-answer .md-hr { border: 0; height: 1px; background: var(--line-2, var(--line)); margin: 18px 0; }
+.research-answer .md-quote { margin: 0 0 12px; padding: 2px 0 2px 14px; border-left: 2px solid var(--accent); color: var(--ink-dim); white-space: pre-line; }
+.research-answer .md-pre { margin: 0 0 12px; padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; font-family: var(--mono); font-size: 12.5px; line-height: 1.5; white-space: pre; }
+.research-answer .md-pre code { background: none; padding: 0; font-size: inherit; }
+.research-answer .md-table-wrap { margin: 0 0 12px; overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+.research-answer .md-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.research-answer .md-table th, .research-answer .md-table td { padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+.research-answer .md-table th { color: var(--ink-strong); font-weight: 600; background: var(--panel-2); }
+.research-answer .md-table tr:last-child td { border-bottom: 0; }
+.research-answer li > p { margin: 0; }

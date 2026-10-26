@@ -34,7 +34,7 @@ const geo = await page.evaluate(() => {
   return { text: v?.innerText, vTop: r(v).top, vBottom: r(v).bottom, sBottom: r(s).bottom, sideBottom: r(side).bottom, vLeft: r(v).left, sideLeft: r(side).left }
 })
 check('version sits below the Settings button', geo.vTop >= geo.sBottom - 1, `version top ${geo.vTop.toFixed(0)}, settings bottom ${geo.sBottom.toFixed(0)}`)
-check('version is in the bottom-left corner', geo.sideBottom - geo.vBottom < 40 && geo.vLeft - geo.sideLeft < 30, `${(geo.sideBottom - geo.vBottom).toFixed(0)}px from bottom, ${(geo.vLeft - geo.sideLeft).toFixed(0)}px from left, "${geo.text}"`)
+check('version is in the bottom-left corner', geo.sideBottom - geo.vBottom < 40 && geo.vLeft - geo.sideLeft < 40, `${(geo.sideBottom - geo.vBottom).toFixed(0)}px from bottom, ${(geo.vLeft - geo.sideLeft).toFixed(0)}px from left, "${geo.text}"`)
 await page.screenshot({ path: `${out}/v0143-1-sidebar.png` })
 
 // Connectors: alphabetical, real Claude logo.

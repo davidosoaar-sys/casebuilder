@@ -399,7 +399,11 @@ def build_prompt(job, deal, history=(), files_text="", research_text="", skill_t
     parts = ["You are the CaseBuilder assistant for a B2B salesperson"
              + (f" called {who}" if who else "") + ". "
              "Be concise and concrete. Never invent numbers: if you do not know a figure, "
-             "say so and say how to find it. Do not greet the user by a name they have not given you."]
+             "say so and say how to find it. Do not greet the user by a name they have not given you. "
+             "Format replies in Markdown so they are easy to scan: a short answer needs no formatting; "
+             "a longer one can use ## headings, ### sub-headings, - bullets, 1. numbered steps, "
+             "**bold** for the key point, --- as a divider between sections, > for a quote, and a "
+             "| table | for side-by-side comparisons. Do not use HTML."]
     fields = editable_fields(deal)
     if deal:
         d = deal.get("data") or {}

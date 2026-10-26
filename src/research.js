@@ -65,23 +65,53 @@ export function parseInline(text) {
   return out
 }
 
-// Blocks: [{type:'h'|'p'|'ul'|'ol', level?, text?, items?}]
-export function parseMarkdown(md) {
+// Blocks: [{type:'h'|'p'|'ul'|'ol'|'hr'|'quote'|'table'|'pre', level?, text?, items?, head?, rows?}]
+// breaks=true keeps single line breaks inside a paragraph ("\n" stays in the
+// text, shown by white-space: pre-line). Chat replies need it: a haiku, an
+// address or a line-per-item answer must not collapse into one line.
+// Research answers keep the markdown default (breaks=false, lines joined).
+const HR = /^(?:-{3,}|\*{3,}|_{3,})$/
+const TABLE_SEP = /^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?$/
+const cells = line => line.replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim())
+export function parseMarkdown(md, { breaks = false } = {}) {
   const blocks = []
-  let para = [], list = null
-  const flushPara = () => { if (para.length) blocks.push({ type: 'p', text: para.join(' ') }); para = [] }
+  let para = [], list = null, quote = null
+  const flushPara = () => { if (para.length) blocks.push({ type: 'p', text: para.join(breaks ? '\n' : ' ') }); para = [] }
   const flushList = () => { if (list) blocks.push(list); list = null }
-  for (const raw of String(md || '').replace(/\r/g, '').split('\n')) {
-    const line = raw.trim()
+  const flushQuote = () => { if (quote) blocks.push({ type: 'quote', text: quote.join(breaks ? '\n' : ' ') }); quote = null }
+  const flushAll = () => { flushPara(); flushList(); flushQuote() }
+  const lines = String(md || '').replace(/\r/g, '').split('\n')
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i], line = raw.trim()
     let m
-    if (!line) { flushPara(); flushList(); continue }
-    if ((m = /^(#{1,4})\s+(.*)$/.exec(line))) { flushPara(); flushList(); blocks.push({ type: 'h', level: m[1].length, text: m[2] }); continue }
-    if ((m = /^[-*•]\s+(.*)$/.exec(line))) { flushPara(); if (list?.type !== 'ul') { flushList(); list = { type: 'ul', items: [] } } list.items.push(m[1]); continue }
+    // Fenced code: kept verbatim, never parsed.
+    if (/^```/.test(line)) {
+      flushAll()
+      const body = []
+      for (i++; i < lines.length && !/^```/.test(lines[i].trim()); i++) body.push(lines[i])
+      blocks.push({ type: 'pre', text: body.join('\n') })
+      continue
+    }
+    if (!line) { flushAll(); continue }
+    if (HR.test(line)) { flushAll(); blocks.push({ type: 'hr' }); continue }
+    if ((m = /^(#{1,6})\s+(.*)$/.exec(line))) { flushAll(); blocks.push({ type: 'h', level: Math.min(m[1].length, 4), text: m[2].replace(/\s+#+$/, '') }); continue }
+    if ((m = /^>\s?(.*)$/.exec(line))) { flushPara(); flushList(); (quote ||= []).push(m[1]); continue }
+    // A table: a header row, then a |---|---| row, then body rows.
+    if (line.includes('|') && i + 1 < lines.length && TABLE_SEP.test(lines[i + 1].trim())) {
+      flushAll()
+      const head = cells(line), rows = []
+      for (i += 2; i < lines.length && lines[i].trim().includes('|'); i++) rows.push(cells(lines[i].trim()))
+      i--
+      blocks.push({ type: 'table', head, rows: rows.map(r => head.map((_, j) => r[j] ?? '')) })
+      continue
+    }
+    flushQuote()
+    if ((m = /^[-*•+]\s+(.*)$/.exec(line))) { flushPara(); if (list?.type !== 'ul') { flushList(); list = { type: 'ul', items: [] } } list.items.push(m[1]); continue }
     if ((m = /^\d+[.)]\s+(.*)$/.exec(line))) { flushPara(); if (list?.type !== 'ol') { flushList(); list = { type: 'ol', items: [] } } list.items.push(m[1]); continue }
     if (list && /^\s{2,}\S/.test(raw)) { list.items[list.items.length - 1] += ' ' + line; continue }
     flushList(); para.push(line)
   }
-  flushPara(); flushList()
+  flushAll()
   return blocks
 }
 
