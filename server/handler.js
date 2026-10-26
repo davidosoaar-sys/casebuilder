@@ -5,6 +5,7 @@ import { publishSite, PublishError } from './publish.js'
 import { discoverBrand } from './brand.js'
 import { anthropicFor } from './accountKey.js'
 import { ProviderAPIError } from './compatClient.js'
+import { anthropicFailure } from './providerFailure.js'
 
 // Shared by the Vercel functions (api/*.js) and the Vite dev server. Each
 // handler returns { status, body }. RESEARCH_ACCESS_CODE gates both, so a
@@ -69,7 +70,7 @@ export async function handle({ body, headers }) {
       return { status: 429, body: { error: 'Rate limited. Try again in a minute.' } }
     }
     if (err instanceof Anthropic.APIError) {
-      return { status: 502, body: { error: `The AI service returned an error (${err.status}).` } }
+      return anthropicFailure(err)
     }
     return { status: 500, body: { error: 'Something went wrong running the agent.' } }
   }

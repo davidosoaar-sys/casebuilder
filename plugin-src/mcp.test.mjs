@@ -16,15 +16,18 @@ test('MCP case workflow generates artifacts, retains evidence and rejects unappr
  const call=(name,args={})=>request('tools/call',{name,arguments:args})
  try{
   assert.equal((await request('initialize',{protocolVersion:'2025-06-18'})).serverInfo.name,'casebuilder-local')
-  assert.equal((await request('tools/list')).tools.length,6)
+  assert.equal((await request('tools/list')).tools.length,7)
   const created=JSON.parse((await call('casebuilder_create',{company:'Northwind demo'})).content[0].text)
   const caseId=created.caseId
+  assert.equal((await call('casebuilder_apply_brand',{caseId,approved:false,brand:{primary:'#112233'},sources:['https://example.com/brand']})).isError,true)
+  assert.equal((await call('casebuilder_apply_brand',{caseId,approved:true,brand:{primary:'#112233',headingFont:'Arial'},sources:['https://example.com/brand']})).isError,undefined)
   const inputs=[{key:'engineers',value:500,state:'suggestion',origin:'Fictional Granola fixture',quote:'We have about 500 engineers.',link:'https://example.com/demo-note'}]
   assert.equal((await call('casebuilder_apply_inputs',{caseId,approved:false,inputs})).isError,true)
   assert.equal((await call('casebuilder_apply_inputs',{caseId,approved:true,inputs})).isError,undefined)
   const data=JSON.parse((await call('casebuilder_read',{caseId})).content[0].text)
   assert.equal(data.inputs.engineers.source.quote,inputs[0].quote)
   assert.equal(data.inputs.engineers.source.state,'suggestion')
+  assert.equal(data.brand.primary,'#112233')
   assert.equal((await call('casebuilder_read',{caseId:'../../outside'})).isError,true)
   assert.equal((await call('casebuilder_calculate',{caseId})).isError,undefined)
   const built=await call('casebuilder_build',{caseId,format:'all'})

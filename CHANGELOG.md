@@ -27,6 +27,18 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
+## v0.18.0 (2026-10-27): Plugin brand workflow and provider routing fixes
+
+- Release validation: 26 targeted tests pass; application and plugin builds pass. Local Tavily live search succeeded. Signed-in Gemini search, Claude host brand research and production deployment remain unverified. Secrets are excluded from Git.
+
+- Prevent signed-in research requests from falling back to the shared Anthropic key when server settings cannot read the selected account key. Local checks found missing Supabase service and Tavily configuration; Gemini adapter/account tests pass, but no live saved-Gemini-key request was performed.
+
+- Explain insufficient Anthropic API credits on stakeholder search instead of the generic 400 error, without exposing raw provider details. Local fallback-key diagnostic confirmed a low-credit rejection. Validation: provider error classification test; signed-in saved-key routing not verified.
+
+- Make the Claude connected workflow explicitly discover official branding before artifact generation, with an approved brand-write MCP tool. Add a decision-focused deck-design skill with storyboard, brand, editable-layout and visual QA rules. Uses host web/download tools; no invented automated provider connection. Validation: MCP brand/source round-trip integration test and plugin build.
+
+
+
 ## v0.17.1 (2026-10-27): Gemini keys work again, any provider's key falls back, setup shows its progress
 
 - Gemini: Google AI Studio now issues keys that start with `AQ.`; Settings only accepted the old `AIza` keys, so a new Gemini key could not be saved. Both are accepted now (migration 0014, applied live). The buttons (Find people, Suggest values, Person lookup, brand) reach Gemini through Google's own API instead of its OpenAI-compatible endpoint, which rejects the new keys.

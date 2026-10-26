@@ -5,6 +5,11 @@ description: Turn an existing CaseBuilder case into branded website, editable sl
 
 # Compose from the case
 
+For slide decks read the sibling `deck-design/SKILL.md` before composing. If brand
+assets are absent, run the sibling brand-discovery skill first with approved web
+tools; save verified findings to the case before building. Preserve authored
+branding, and disclose tool/download/font limits instead of guessing identity.
+
 Use `CB` at `${CLAUDE_PLUGIN_ROOT}/skills/business-case/scripts/casebuilder.mjs`.
 Read the case and run `validate` and `calc` first. Do not change equations or fill
 missing values for design purposes. The case's brand and authored overrides win.

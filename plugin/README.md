@@ -9,8 +9,9 @@ there is no custom checkbox screen in this ZIP. Output selection is not inferred
 as "all". See skills/connected-case/onboarding.md and pranav-framework.md for the
 flow, eight-part framework and acceptance scorecard.
 
-The plugin now includes a local stdio MCP server with six tools: inspect the input
+The plugin now includes a local stdio MCP server with seven tools: save reviewed official branding, inspect the input
 schema, create/read a case, apply reviewed sourced inputs, calculate and build.
+Brand discovery uses the host’s authorized web/download tools, saves reviewed assets with provenance, then deck-design guides composition and visual checks.
 The tools call the same bundled CaseBuilder model/exporters as the existing CLI.
 No Anthropic API key is needed by this local bridge: Claude supplies the reasoning.
 
