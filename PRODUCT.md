@@ -66,6 +66,12 @@ and one next action, plus what changed since his last visit. No CRM metrics.
 Amr owns agents/APIs, connector and file ingestion, account/backend changes.
 Coordinate shared navigation/data contracts rather than duplicating his work.
 
+2026-10-27 local implementation: the Claude card creates a revocable remote MCP
+URL for the account's saved projects. Claude can read deals, apply approved sourced
+inputs with version checks, add approved project context, calculate and open
+Live Room/deck links. Requires migration 0015 and deployment; live Claude host
+compatibility is not yet verified. No automatic publishing or third-party OAuth.
+
 ## Platform
 Web application: existing React/Vite frontend, Supabase persistence and server/
 worker integrations. Keep localhost:5173. Vercel configuration is currently owned

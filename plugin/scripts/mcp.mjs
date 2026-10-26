@@ -1,3 +1,4 @@
+import { reviewedInputs } from './reviewed-inputs.mjs'
 // Local MCP bridge: no network credentials, arbitrary shell commands or publishing.
 import fs from 'node:fs'
 import os from 'node:os'
@@ -52,18 +53,10 @@ function call(name,a){
   return run(['build',f,'--format',a.format,'--out',path.join(root,a.caseId+'-artifacts')])
  }
  if(name==='casebuilder_apply_inputs'){
-  if(a.approved!==true)throw Error('Review proposed inputs with the user before applying')
-  if(!Array.isArray(a.inputs)||!a.inputs.length||a.inputs.length>100)throw Error('Provide 1–100 reviewed inputs')
   const data=JSON.parse(fs.readFileSync(f,'utf8'))
-  const keys=new Set()
-  for(const i of a.inputs){
-   if(!i||!Object.hasOwn(data.inputs,i.key)||keys.has(i.key))throw Error('Unknown or duplicate input')
-   keys.add(i.key)
-   if(!['input','assumption','suggestion'].includes(i.state)||typeof i.origin!=='string'||!i.origin.trim())throw Error('State and origin required')
-   if(!['string','number'].includes(typeof i.value)||typeof i.value==='number'&&!Number.isFinite(i.value))throw Error('Invalid value')
-   if(i.link&&!/^https?:\/\//i.test(i.link))throw Error('Source link must be HTTP(S)')
-   data.inputs[i.key]={...data.inputs[i.key],value:i.value,confirmed:i.state==='input',source:{state:i.state,origin:i.origin,quote:i.quote||'',link:i.link||'',pinnedAt:''}}
-  }
+  const patch=reviewedInputs(data.inputs,a.approved,a.inputs)
+  const keys=new Set(Object.keys(patch))
+  Object.assign(data.inputs,patch)
   // Validate a temporary full case before touching the original.
   const tmp=f+'.review.case.json'
   try{fs.writeFileSync(tmp,JSON.stringify(data),{mode:0o600});run(['validate',tmp]);atomic(f,data)}finally{if(fs.existsSync(tmp))fs.unlinkSync(tmp)}

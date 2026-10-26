@@ -10,7 +10,7 @@
 
 export const CONNECTORS = [
   { key: 'gmail', label: 'Gmail', blurb: 'Customer email threads and follow-ups', allows: 'read uploaded or pasted Gmail email threads', accepts: 'a pasted email thread or a .txt / .pdf export', docLabel: 'Gmail thread' },
-  { key: 'claude', label: 'Claude', blurb: 'Conversation exports and research notes', allows: 'read Claude conversations and research notes', accepts: 'a pasted conversation or a .txt / .md export', docLabel: 'Claude conversation' },
+  { key: 'claude', label: 'Claude', blurb: 'Connect Claude to your saved CaseBuilder projects', allows: 'read Claude conversations and research notes', accepts: 'a pasted conversation or a .txt / .md export', docLabel: 'Claude conversation' },
   { key: 'gong', label: 'Gong', blurb: 'Call transcripts', allows: 'read call transcripts', accepts: 'a transcript (paste, or a .txt / .vtt file)', docLabel: 'Call transcript' },
   { key: 'hubspot', label: 'HubSpot', blurb: 'CRM deal and contact records', allows: 'read CRM deal and contact records', accepts: 'a CSV export of the deal', docLabel: 'HubSpot export' },
   { key: 'slack', label: 'Slack', blurb: 'Internal threads', allows: 'read internal threads', accepts: 'a pasted thread or export', docLabel: 'Slack thread' },

@@ -27,6 +27,18 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
+- Add a revocable Claude connector URL, six owner-scoped remote MCP tools,
+  reviewed input updates with stale-write protection, project context notes and
+  signed-in Live Room/deck links. Share input validation with the local bridge.
+  Migration 0015 is included but not applied; deployment/live Claude checks remain.
+- Keep the manual account-token utility out of Node's automatic test discovery
+  by renaming it to `scripts/account-token.mjs`; offline tests no longer require
+  live credentials or risk printing a session token.
+- Validation: 463 tests pass, including handler and token-migration/RLS coverage;
+  production build passes (existing chunk-size warning). Mocked browser connect/revoke
+  passes at desktop/light and mobile/dark sizes without overflow.
+
+
 ## v0.17.1 (2026-10-27): Gemini keys work again, any provider's key falls back, setup shows its progress
 
 - Gemini: Google AI Studio now issues keys that start with `AQ.`; Settings only accepted the old `AIza` keys, so a new Gemini key could not be saved. Both are accepted now (migration 0014, applied live). The buttons (Find people, Suggest values, Person lookup, brand) reach Gemini through Google's own API instead of its OpenAI-compatible endpoint, which rejects the new keys.

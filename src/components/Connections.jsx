@@ -1,3 +1,4 @@
+import ClaudeConnector from './ClaudeConnector.jsx'
 import PageHead from './PageHead.jsx'
 import React, { useState } from 'react'
 import { CONNECTORS } from '../connectors.js'
@@ -21,13 +22,14 @@ export default function Connections({ project, projects=[],selectedProjectId='',
         Everything is off until you allow it, and it can always search the public web on its own. {allowed ? `${allowed} allowed.` : 'None allowed yet.'}
       </p>
       <p className="help conn-build-note">
-        In this build each connection takes material you paste or upload; live connections will come later and look the same.
+        Connect Claude to your saved projects below. Other connections take material you paste or upload.
       </p>
       {onSelectProject && <div className="connection-project-target"><label htmlFor="connection-project">Settings and material for</label><Select id="connection-project" aria-label="Connection project" value={project?.id || selectedProjectId} onChange={onSelectProject}
         options={[{ value: '', label: 'Default settings for new projects' }, ...projects.map(p => ({ value: p.id, label: p.name }))]} /></div>}
 
       <div className="connector-list">
-        {[...CONNECTORS].sort((a, b) => a.label.localeCompare(b.label)).map((c, i) => (
+        <ClaudeConnector />
+        {CONNECTORS.filter(c => c.key !== 'claude').sort((a, b) => a.label.localeCompare(b.label)).map((c, i) => (
           <section key={c.key} className={`connector stagger-in ${connections[c.key] ? 'connector-on' : ''}`} style={{ '--stagger': `${Math.min(i * 30, 200)}ms` }} data-connector={c.key}>
             <div className="connector-head">
               <img className="connector-logo" src={LOGOS[c.key]} alt="" width="36" height="36" />
