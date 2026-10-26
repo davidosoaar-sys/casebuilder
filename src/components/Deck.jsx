@@ -197,8 +197,10 @@ export default function Deck({ inputs, model, fields, connectors, stakeholders, 
       return { ...x, blocks }
     }, `Moved a block on page ${pageIndex(slideId) + 1}`)
   }
+  // Rebuild from the dragged order, keeping any block the drag did not know
+  // about (one an agent reply added mid-drag) instead of dropping it.
   const reorderBlocks = (slideId, ids) =>
-    patchSlide(slideId, s => ({ ...s, blocks: ids.map(id => s.blocks.find(b => b.id === id)).filter(Boolean) }), `Moved a block on page ${pageIndex(slideId) + 1}`)
+    patchSlide(slideId, s => ({ ...s, blocks: [...ids.map(id => s.blocks.find(b => b.id === id)).filter(Boolean), ...s.blocks.filter(b => !ids.includes(b.id))] }), `Moved a block on page ${pageIndex(slideId) + 1}`)
   const removeBlock = (slideId, blockId) => {
     if (sel?.blockId === blockId) setSel(null)
     undoToast('Block deleted', `Deleted a block on page ${pageIndex(slideId) + 1}`, list =>

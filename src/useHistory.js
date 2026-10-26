@@ -105,14 +105,21 @@ export default function useHistory(project, apply) {
     return step
   }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // A toast's Undo: only while its step is still the latest one.
+  // A toast's Undo: only while its step is still the latest one, and only on
+  // the project the toast was made in. Switching projects makes it a no-op,
+  // so a stale toast can never write one project's history into another.
   const undoIf = useCallback(stepId => {
     const top = id ? get(id).past.at(-1) : null
     return top && top.id === stepId ? undo() : null
   }, [id, undo]) // eslint-disable-line react-hooks/exhaustive-deps
+  const undoIfRef = useRef(undoIf)
+  undoIfRef.current = undoIf
+  // For callbacks that outlive a render (toasts): checks the step against the
+  // project open at click time.
+  const latestUndoIf = useCallback(stepId => undoIfRef.current(stepId), [])
 
   const h = id ? get(id) : emptyHistory()
   const next = h.past[h.past.length - 1] || null
   const again = h.future[h.future.length - 1] || null
-  return { record, undo, redo, undoIf, canUndo: !!next, canRedo: !!again, undoStep: next, redoStep: again, undoLabel: actionLabel('Undo', next), redoLabel: actionLabel('Redo', again) }
+  return { record, undo, redo, undoIf: latestUndoIf, canUndo: !!next, canRedo: !!again, undoStep: next, redoStep: again, undoLabel: actionLabel('Undo', next), redoLabel: actionLabel('Redo', again) }
 }

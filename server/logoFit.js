@@ -204,7 +204,10 @@ export function pngInk(buffer) {
     }
     const channels = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[type]
     if (depth !== 8 || interlace || !channels || !w || !h || w * h > 4_000_000) return ''
-    const raw = zlib.inflateSync(Buffer.concat(idat)), stride = w * channels
+    // Never inflate past what the declared size needs: a small header over a
+    // huge compressed stream (a zip bomb) throws here and is caught below.
+    const need = (w * channels + 1) * h
+    const raw = zlib.inflateSync(Buffer.concat(idat), { maxOutputLength: need }), stride = w * channels
     if (raw.length < (stride + 1) * h) return ''
     const rows = Buffer.alloc(stride * h)
     for (let r = 0; r < h; r++) {

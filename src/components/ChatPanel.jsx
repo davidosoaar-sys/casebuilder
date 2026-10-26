@@ -380,7 +380,7 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
                   ? <div className="chat-bubble chat-research"><p className="mono-label chat-research-tag">Deep research</p><Answer text={m.content} sources={m.meta.sources || []} /><Sources sources={m.meta.sources || []} dropped={m.meta.dropped_sources || 0} /></div>
                   : m.meta?.error ? <div className="chat-bubble">{m.content}</div>
                   : <div className="chat-bubble chat-md"><Reply text={m.content} /></div>}
-                <ChangeCard log={applied[m.id]} meta={m.meta} onUndo={opts => onUndo(m.id, opts)} onRedo={onRedo && (() => onRedo(m.id))} onView={onViewCase} />
+                <ChangeCard log={applied[m.id]} meta={m.meta} onUndo={opts => onUndo(m.id, opts)} onRedo={onRedo && (opts => onRedo(m.id, opts))} onView={onViewCase} />
                 {m.meta?.commands?.length > 0 && (runs[m.id]
                   ? <CommandCards run={runs[m.id]} commands={m.meta.commands} project={project} onPick={onPick} messageId={m.id} />
                   : <div className="cmd-cards"><div className="cmd-card"><p className="cmd-note">This research was not run. <button type="button" className="link-btn" onClick={() => onRun?.(m.id, m.meta.commands)}>Run it now</button></p></div></div>)}
@@ -590,13 +590,14 @@ const namePlaces = list => list.length <= 2 ? list.join(' and ') : list.length =
 // whole reply, and it always undoes: if the user changed the same thing since,
 // the card asks first. An undone reply offers Redo. "View" opens Case artifacts.
 function ChangeCard({ log, meta, onUndo, onRedo, onView }) {
-  const [ask, setAsk] = useState(null) // places the user edited since, while asking
+  const [ask, setAsk] = useState(null) // { places, redo } the user edited since, while asking
   const rejected = log?.refused?.length ? log.refused : meta?.rejected || []
   const deckRejected = [...new Set([...(meta?.deck_rejected || []), ...(log?.deckRefused || [])])]
   if (!log && !rejected.length && !deckRejected.length) return null
   const changes = log?.changes || []
   const deck = log?.deckChanges || []
-  const undo = () => { const r = onUndo() || {}; setAsk(r.conflicts?.length ? r.conflicts : null) }
+  const undo = () => { const r = onUndo() || {}; setAsk(r.conflicts?.length ? { places: r.conflicts, redo: false } : null) }
+  const redo = () => { const r = onRedo() || {}; setAsk(r.conflicts?.length ? { places: r.conflicts, redo: true } : null) }
   const hasChanges = changes.length > 0 || deck.length > 0
   return (
     <div className={`chat-changes${log?.undone ? ' is-undone' : ''}`}>
@@ -621,15 +622,15 @@ function ChangeCard({ log, meta, onUndo, onRedo, onView }) {
       </div>}
       {hasChanges && (ask
         ? <div className="chg-ask" role="alert">
-            <p>You edited {namePlaces(ask)} since. Undo anyway?</p>
+            <p>You edited {namePlaces(ask.places)} since. {ask.redo ? 'Redo' : 'Undo'} anyway?</p>
             <div className="chg-actions">
-              <button type="button" className="ghost chg-undo chg-undo-anyway" onClick={() => { onUndo({ force: true }); setAsk(null) }}>Undo anyway</button>
+              <button type="button" className="ghost chg-undo chg-undo-anyway" onClick={() => { (ask.redo ? onRedo : onUndo)({ force: true }); setAsk(null) }}>{ask.redo ? 'Redo' : 'Undo'} anyway</button>
               <button type="button" className="ghost chg-undo" onClick={() => setAsk(null)}>Keep mine</button>
             </div>
           </div>
         : <div className="chg-actions">
             {log.undone
-              ? onRedo && <button type="button" className="ghost chg-undo" onClick={onRedo}>Redo</button>
+              ? onRedo && <button type="button" className="ghost chg-undo" onClick={redo}>Redo</button>
               : <button type="button" className="ghost chg-undo" onClick={undo}>Undo</button>}
             {deck.length > 0 && onView && <button type="button" className="ghost chg-undo" onClick={onView}>View</button>}
           </div>)}

@@ -633,6 +633,20 @@ class DeckOutline(unittest.TestCase):
 
 
 class ParseDeckOps(unittest.TestCase):
+    def test_typed_figures_are_refused(self):
+        for bad in ("Annual savings: $10 million", "Save 30% a year", "12,000 seats"):
+            _, out, rej = worker.parse_deck_ops(deck_reply([{"op": "set_text", "slide_id": "s1", "block_id": "b1", "value": bad}]), DECK_DEAL)
+            self.assertEqual(out, [], bad)
+            self.assertIn("cannot type figures", " ".join(rej))
+        _, out, rej = worker.parse_deck_ops(deck_reply([{"op": "set_text", "slide_id": "s1", "block_id": "b1", "value": "Q3 2026: {annual} back"}]), DECK_DEAL)
+        self.assertEqual(rej, [])
+        self.assertEqual(len(out), 1)
+
+    def test_edits_carry_what_the_agent_saw(self):
+        _, out, _ = worker.parse_deck_ops(deck_reply([{"op": "set_text", "slide_id": "s1", "block_id": "b1", "value": "New title"}]), DECK_DEAL)
+        seen = next(b for s in DECK_DEAL["data"]["deck"] if s["id"] == "s1" for b in s["blocks"] if b["id"] == "b1")
+        self.assertEqual(out[0]["expect"], seen.get("text") or "")
+
     def test_no_fence_no_ops(self):
         self.assertEqual(worker.parse_deck_ops("Just an answer.", DECK_DEAL), ("Just an answer.", [], []))
 

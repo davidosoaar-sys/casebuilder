@@ -11,7 +11,7 @@ import People from './components/People.jsx'
 import useCloudDeals from './useCloudDeals.js'
 import ChatPanel from './components/ChatPanel.jsx'
 import { apiHeaders } from './apiAuth.js'
-import { applyAgentReply, undoAgentReply, redoAgentReply, agentReplyConflicts, agentStepLabel } from './agentDeckEdits.js'
+import { applyAgentReply, undoAgentReply, redoAgentReply, agentReplyConflicts, agentRedoConflicts, agentStepLabel } from './agentDeckEdits.js'
 import useHistory from './useHistory.js'
 import { Toaster, showToast } from './components/ui.jsx'
 import { runCommand } from './agentRunner.js'
@@ -267,7 +267,13 @@ export default function App({ account }) {
     update(p => undoAgentReply(p, messageId, { force: true }), { label: 'Undid an agent change', agent: { id: messageId, undone: true } })
     return {}
   }
-  const redoFromChat = messageId => update(p => redoAgentReply(p, messageId), { label: agentStepLabel(project?.agentLog?.[messageId]), agent: { id: messageId, undone: false } })
+  const redoFromChat = (messageId, { force = false } = {}) => {
+    if (!project) return {}
+    const conflicts = force ? [] : agentRedoConflicts(project, messageId)
+    if (conflicts.length) return { conflicts }
+    update(p => redoAgentReply(p, messageId), { label: agentStepLabel(project?.agentLog?.[messageId]), agent: { id: messageId, undone: false } })
+    return {}
+  }
 
   // Agent commands (Find people, Suggest values, Person lookup, Find branding):
   // run once per reply through the same client code as the buttons, results

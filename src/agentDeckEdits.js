@@ -56,12 +56,20 @@ export function slideName(slide) {
   return head ? short(fill(head.text, TOKEN_NAMES)) : 'Untitled page'
 }
 
-// Plain text: no control characters except new lines and tabs.
+// Figures the agent must not type: money, percentages, scaled amounts
+// ("4.2M", "3 million") and grouped numbers ("12,000"). Numbers on slides come
+// from the live blocks and tokens, which are computed from the inputs. Plain
+// counts and years ("3 steps", "Q3 2026") are fine.
+export const FIGURE = /[$€£¥]\s?\d|\d\s?%|\d(?:\.\d+)?\s?(?:k|m|bn|b|million|billion|thousand)\b|\d{1,3}(?:,\d{3})+/i
+export const FIGURE_REFUSAL = 'The agent cannot type figures into the case. Numbers come from the inputs, through number blocks and tokens.'
+
+// Plain text: no control characters except new lines and tabs, no typed figures.
 function cleanText(v) {
   if (typeof v !== 'string') return { error: 'The new text was not text.' }
   const t = v.replace(/\r\n?/g, '\n').replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '').replace(/\s+$/, '')
   if (!t.trim()) return { error: 'The new text was empty. To take something out, remove the block.' }
   if (t.length > MAX_TEXT) return { error: `The new text is longer than ${MAX_TEXT} characters.` }
+  if (FIGURE.test(t.replace(/\{\w+\}/g, ''))) return { error: FIGURE_REFUSAL }
   return { value: t }
 }
 
@@ -97,6 +105,9 @@ export function applyDeckOps(deck, brand, ops, { now = new Date().toISOString() 
         const b = slide.blocks[bi]
         const field = op.field || (TEXT_FIELDS[b.type] || [])[0]
         if (!(TEXT_FIELDS[b.type] || []).includes(field)) { refused.push(`The ${blockName(b)} on page ${page} has no text the agent can change.`); break }
+        // The worker sends the text it saw ("expect"). If the user changed it
+        // while the agent was working, the user's edit wins.
+        if (op.expect !== undefined && (b[field] ?? '') !== op.expect) { refused.push(`You changed the ${partName(b, field)} on page ${page} while the agent was working, so yours was kept.`); break }
         const t = cleanText(op.value)
         if (t.error) { refused.push(`Page ${page}: ${t.error}`); break }
         if (b[field] === t.value) break
@@ -111,6 +122,7 @@ export function applyDeckOps(deck, brand, ops, { now = new Date().toISOString() 
         const b = slide.blocks[bi]
         if (b.type !== 'text') { refused.push(`Only text has a style; the ${blockName(b)} on page ${page} does not.`); break }
         if (!STYLE_KEYS.includes(op.style)) { refused.push(`"${String(op.style).slice(0, 40)}" is not a text style.`); break }
+        if (op.expect !== undefined && (b.style ?? '') !== op.expect) { refused.push(`You changed the ${styleName(b.style)} on page ${page} while the agent was working, so yours was kept.`); break }
         if (b.style === op.style) break
         slide.blocks[bi] = { ...b, style: op.style }
         record(op, { op: 'set_style', slideId: slide.id, blockId: b.id, field: 'style', before: b.style, after: op.style, sentence: `Made the ${styleName(b.style)} on page ${page} a ${styleName(op.style)}` })
@@ -421,6 +433,51 @@ export function agentReplyConflicts(p, messageId) {
       if (c.op === 'brand') { places.push('the deck design'); continue }
       const i = findSlide(p.deck || [], c.slideId || c.slide?.id)
       places.push(i >= 0 ? `page ${i + 1}` : 'a page')
+    }
+  }
+  return [...new Set(places)]
+}
+
+// What the user has changed since the reply was undone: the places a Redo
+// would overwrite, for "You edited page 2 since. Redo anyway?". Mirrors
+// agentReplyConflicts: a part conflicts when it no longer holds what the
+// undo put back.
+export function agentRedoConflicts(p, messageId) {
+  const entry = p.agentLog?.[messageId]
+  if (!entry || !entry.undone) return []
+  const places = []
+  for (const c of entry.changes || []) {
+    const f = (p.fields || []).find(x => x.key === c.key)
+    if (f && f.value !== c.before?.value) places.push(c.label || c.key)
+  }
+  const deck = p.deck || [], brand = p.brand || {}
+  const page = id => { const i = findSlide(deck, id); return i >= 0 ? `page ${i + 1}` : 'a page' }
+  for (const c of entry.deckChanges || []) {
+    const si = c.slideId ? findSlide(deck, c.slideId) : -1
+    const slide = si >= 0 ? deck[si] : null
+    switch (c.op) {
+      case 'set_text':
+      case 'set_style': {
+        const b = slide?.blocks?.find(x => x.id === c.blockId)
+        if (b && b[c.field] !== c.before) places.push(page(c.slideId))
+        break
+      }
+      case 'remove_slide': {
+        const i = findSlide(deck, c.slide?.id)
+        if (i >= 0 && !same(deck[i], c.slide)) places.push(`page ${i + 1}`)
+        break
+      }
+      case 'move_slide':
+        if (slide && si !== c.from) places.push(page(c.slideId))
+        break
+      case 'remove_block': {
+        const b = slide?.blocks?.find(x => x.id === c.block?.id)
+        if (b && !same(b, c.block)) places.push(page(c.slideId))
+        break
+      }
+      case 'brand':
+        if (brand[c.key] !== c.before) places.push('the deck design')
+        break
     }
   }
   return [...new Set(places)]

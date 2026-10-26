@@ -804,6 +804,10 @@ DEFAULT_BRAND = {"primary": "#9bf0de", "background": "#111111", "surface": "#1e1
                  "headingFont": "Outfit", "bodyFont": "Arial"}
 HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
 CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
+# Figures the agent must not type into the case (money, percentages, scaled or
+# grouped amounts). Same rule as FIGURE in src/agentDeckEdits.js.
+FIGURE = re.compile(r"[$\u20ac\u00a3\u00a5]\s?\d|\d\s?%|\d(?:\.\d+)?\s?(?:k|m|bn|b|million|billion|thousand)\b|\d{1,3}(?:,\d{3})+", re.I)
+TOKEN = re.compile(r"\{\w+\}")
 
 
 def deal_deck(deal):
@@ -919,6 +923,8 @@ def _deck_text(v):
         return None, "the new text was empty (remove the block instead)"
     if len(t) > MAX_DECK_TEXT:
         return None, f"the new text is longer than {MAX_DECK_TEXT} characters"
+    if FIGURE.search(TOKEN.sub("", t)):
+        return None, "the agent cannot type figures into the case; numbers come from the inputs through number blocks and tokens"
     return t, None
 
 
@@ -944,6 +950,9 @@ def parse_deck_ops(text, deal):
     deck = deal_deck(deal)
     order = [s["id"] for s in deck]
     blocks = {s["id"]: [(b.get("id"), b.get("type")) for b in s["blocks"] if isinstance(b, dict)] for s in deck}
+    # What each block looked like when the agent read it, sent with the edit so
+    # the app keeps the user's version if they changed it meanwhile.
+    seen = {(s["id"], b.get("id")): b for s in deck for b in s["blocks"] if isinstance(b, dict)}
     fonts = {f.lower(): f for f in agent_fonts(deal)}
     templates = {k for k, _ in SLIDE_TEMPLATES}
     ops, rejected = [], []
@@ -971,7 +980,8 @@ def parse_deck_ops(text, deal):
             if err:
                 rejected.append(f"set_text: {err}.")
                 continue
-            ops.append({"op": kind, "slide_id": sid, "block_id": o["block_id"], "field": field, "value": t, "reason": reason(o)})
+            ops.append({"op": kind, "slide_id": sid, "block_id": o["block_id"], "field": field, "value": t,
+                        "expect": seen[(sid, o["block_id"])].get(field) or "", "reason": reason(o)})
         elif kind == "set_style":
             if types[o["block_id"]] != "text":
                 rejected.append("set_style: only text blocks have a style.")
@@ -979,7 +989,8 @@ def parse_deck_ops(text, deal):
             if o.get("style") not in TEXT_STYLES:
                 rejected.append(f"set_style: {str(o.get('style'))[:20]!r} is not a text style.")
                 continue
-            ops.append({"op": kind, "slide_id": sid, "block_id": o["block_id"], "style": o["style"], "reason": reason(o)})
+            ops.append({"op": kind, "slide_id": sid, "block_id": o["block_id"], "style": o["style"],
+                        "expect": seen[(sid, o["block_id"])].get("style") or "", "reason": reason(o)})
         elif kind == "add_slide":
             tpl, after = o.get("template"), o.get("after_slide_id")
             if tpl not in templates:
