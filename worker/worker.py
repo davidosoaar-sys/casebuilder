@@ -52,6 +52,78 @@ def tier_of(model):
 
 def provider_model(provider, model):
     return PROVIDERS[provider]["models"][tier_of(model)]
+
+
+# When a provider refuses a model for this key (free Gemini keys get 0 requests on
+# Pro; a model is overloaded or not on the account), the job runs on the next tier
+# down instead of failing. A rejected key is not retried: no tier will work.
+TIER_ORDER = ("best", "balanced", "fast")
+TIER_MODEL = {"best": "claude-opus-5-5", "balanced": "claude-sonnet-5-5", "fast": "claude-haiku-5-5"}
+
+
+def model_error_kind(msg):
+    m = str(msg or "").lower()
+    if re.search(r"invalid x-api-key|api key not valid|incorrect api key|invalid auth key|user not found|"
+                 r"invalid_api_key|authentication_error|permission_denied|http 40[13]\b|\b40[13] (unauthori|forbidden)", m):
+        return "auth"
+    if re.search(r"quota|limit: \d|resource_exhausted|insufficient_quota|credit balance|free tier|rate.?limited|\b402\b|\b429\b|rate.?limit", m):
+        return "quota"
+    if re.search(r"overloaded|high demand|\b503\b|\b529\b|unavailable", m):
+        return "busy"
+    if re.search(r"model_not_found|no such model|model .{0,60}(not found|does not exist|not supported)|\b404\b", m):
+        return "model"
+    return None
+
+
+def provider_said(msg):
+    """The provider's own words from a Hermes failure, short, with no key in it."""
+    m = re.search(r"(?:Provider said:|Error code: \d+ - |message\"?:\s*\"?)(.{8,200})", str(msg or ""))
+    s = (m.group(1) if m else str(msg or "")[-200:]).strip()
+    s = re.sub(r"(sk-[A-Za-z0-9_\-*]{6,}|AIza[0-9A-Za-z_\-*]{10,}|AQ\.[0-9A-Za-z_\-*.]{10,})", "[key]", s)
+    return s.split("  Your request was not processed")[0][:200]
+
+
+def key_error_text(kind, provider, detail):
+    label = PROVIDERS[provider]["label"]
+    if kind == "auth":
+        return (f"Your {label} key was rejected ({detail}). Check it in Settings → API keys: "
+                f"paste it again, or switch to another key.")
+    return (f"Your {label} key has hit its usage limit on every model I can use ({detail}). "
+            f"Wait a minute and try again, or add billing to that {label} account. "
+            + ("Free Gemini keys can't use Gemini 3.1 Pro at all, but the faster models work." if provider == "google" else ""))
+
+
+class KeyError_(Exception):
+    """The account's key cannot run this job (rejected, or out of quota on every tier)."""
+    def __init__(self, kind, provider, detail):
+        self.kind, self.provider, self.detail = kind, provider, detail
+        super().__init__(key_error_text(kind, provider, detail))
+
+
+def run_with_fallback(profile, prompt, api_key, model, effort, web, provider):
+    """run_hermes, stepping down a tier when the provider refuses the model.
+    Returns (raw, usage, model_id_used, fell_back_from or None)."""
+    start = TIER_ORDER.index(tier_of(model))
+    first = provider_model(provider, model)
+    last_err = None
+    for tier in TIER_ORDER[start:]:
+        try:
+            raw, usage = run_hermes(profile, prompt, api_key, TIER_MODEL[tier], effort, web, provider)
+            used = PROVIDERS[provider]["models"][tier]
+            if used != first:
+                log("fell back", first, "->", used)
+            return raw, usage, used, (first if used != first else None)
+        except RuntimeError as e:
+            kind = model_error_kind(e)
+            last_err = e
+            if kind == "auth":
+                raise KeyError_("auth", provider, provider_said(e)) from None
+            if kind not in ("quota", "busy", "model"):
+                raise
+            log("model refused", PROVIDERS[provider]["models"][tier], kind, provider_said(e)[:120])
+    if model_error_kind(last_err) == "quota":
+        raise KeyError_("quota", provider, provider_said(last_err)) from None
+    raise last_err or RuntimeError("no model tier to run")
 EFFORTS = ("low", "medium", "high")
 TOOLSETS = os.environ.get("CB_TOOLSETS", "web,memory,todo")
 TIMEOUT = int(os.environ.get("CB_TIMEOUT", "480"))
@@ -1175,7 +1247,7 @@ def run_hermes(profile, prompt, api_key, model=MODEL, effort=None, web=True, pro
             usage = None
         out = r.stdout.strip()
         if r.returncode != 0 or not out:
-            raise RuntimeError(f"hermes exit {r.returncode}: {(r.stderr or r.stdout)[-400:]}")
+            raise RuntimeError(f"hermes exit {r.returncode}: {(r.stderr or r.stdout)[-3000:]}")  # long enough to hold the provider's own error
         return out, usage
     finally:
         subprocess.run(["shred", "-u", envfile], capture_output=True)
@@ -1357,8 +1429,18 @@ def handle(job):
         prompt = build_research_prompt(job, deal, files_text, history, sb) if research else build_prompt(job, deal, history, files_text, research_text, sb)
     conn_steps = connector_context(deal)[1] + file_steps + research_steps
     with Progress(jid, profile, t0, conn_steps):
-        raw, usage = run_hermes(profile, prompt, key, model, effort, False if brief else (True if research else web), provider)
-    model = provider_model(provider, model)
+        try:
+            raw, usage, model, fell_back = run_with_fallback(profile, prompt, key, model, effort,
+                                                             False if brief else (True if research else web), provider)
+        except KeyError_ as e:
+            # Retrying cannot help: tell the user what is wrong with their key, once.
+            if chat_id and deal and job["kind"] in ("chat", "research"):
+                api("POST", "/rest/v1/chat_messages", {"deal_id": job["deal_id"], "owner_id": owner, "chat_id": chat_id,
+                    "role": "assistant", "content": str(e), "job_id": jid,
+                    "meta": {"error": f"key_{e.kind}", "provider": provider}}, prefer="return=minimal")
+            rpc("complete_job", p_id=jid, p_worker=WORKER_ID, p_result={"error": str(e), "error_kind": f"key_{e.kind}"})
+            log("done", jid, f"key {e.kind}", provider, e.detail[:120])
+            return
     secs = round(time.time() - t0, 1)
     trace = conn_steps + session_trace(profile, t0)
     if brief:
@@ -1377,7 +1459,7 @@ def handle(job):
         if chat_id and deal:
             api("POST", "/rest/v1/chat_messages", {"deal_id": job["deal_id"], "owner_id": owner, "chat_id": chat_id,
                 "role": "assistant", "content": text, "job_id": jid,
-                "meta": {"research": True, "sources": sources, "dropped_sources": dropped, "model": model,
+                "meta": {"research": True, "sources": sources, "dropped_sources": dropped, "model": model, **({"fell_back_from": fell_back} if fell_back else {}),
                          "effort": effort, "seconds": secs, "trace": trace, **scheduled_meta(job), **({"skill": skill[0]} if skill else {})}}, prefer="return=minimal")
         rpc("complete_job", p_id=jid, p_worker=WORKER_ID, p_result=result)
         log("done", jid, f"{secs}s research", f"tools={len(trace)} sources={len(sources)} dropped={dropped}")
@@ -1391,7 +1473,7 @@ def handle(job):
     if job.get("deal_id") and deal:
         api("POST", "/rest/v1/chat_messages", {"deal_id": job["deal_id"], "owner_id": owner, "chat_id": chat_id,
             "role": "assistant", "content": text, "job_id": jid,
-            "meta": {"model": model, "effort": effort, "web": web, "seconds": secs, "edits": edits, "commands": commands, "rejected": rejected,
+            "meta": {"model": model, **({"fell_back_from": fell_back} if fell_back else {}), "effort": effort, "web": web, "seconds": secs, "edits": edits, "commands": commands, "rejected": rejected,
                      "deck_ops": deck_ops, "deck_rejected": deck_rejected, "trace": trace,
                      **scheduled_meta(job), **({"skill": skill[0]} if skill else {})}}, prefer="return=minimal")
     rpc("complete_job", p_id=jid, p_worker=WORKER_ID, p_result=result)

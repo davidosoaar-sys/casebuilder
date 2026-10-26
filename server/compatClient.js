@@ -90,9 +90,124 @@ export function fromOpenAI(data, model) {
     usage: { input_tokens: data.usage?.prompt_tokens || 0, output_tokens: data.usage?.completion_tokens || 0 } }
 }
 
+// ------------------------------------------------------------ Gemini, native
+// Gemini goes through Google's own generateContent API, not its OpenAI-compatible
+// endpoint: the new AI Studio keys (AQ.…) are rejected there ("Multiple
+// authentication credentials received" / 401), and the old AIza keys are being
+// retired. The key goes in the x-goog-api-key header, never the URL.
+const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta'
+// Gemini 3 wants each functionCall's thoughtSignature sent back with it. We keep
+// it on the tool_use block (callers pass assistant content back unchanged); a
+// call with none (e.g. history from another provider) uses Google's documented
+// skip value.
+const SKIP_SIGNATURE = 'skip_thought_signature_validator'
+
+export function toGemini(req, env = process.env) {
+  if ((req.tools || []).some(t => t.type && String(t.type).startsWith('web_search'))) {
+    throw new ProviderAPIError(400, 'Web search needs a search key on the server (TAVILY_API_KEY) when you use a non-Anthropic model.', 'google')
+  }
+  const names = {} // tool_use id -> tool name, for functionResponse
+  const contents = []
+  const push = (role, parts) => {
+    if (!parts.length) return
+    const last = contents.at(-1)
+    if (last && last.role === role) last.parts.push(...parts) // Gemini wants turns to alternate
+    else contents.push({ role, parts })
+  }
+  for (const m of req.messages || []) {
+    const role = m.role === 'assistant' ? 'model' : 'user'
+    if (typeof m.content === 'string') { push(role, m.content ? [{ text: m.content }] : []); continue }
+    const parts = []
+    for (const b of m.content || []) {
+      if (b.type === 'text' && b.text) parts.push({ text: b.text })
+      else if (b.type === 'tool_use') {
+        names[b.id] = b.name
+        parts.push({ functionCall: { name: b.name, args: b.input ?? {} }, thoughtSignature: b.thoughtSignature || SKIP_SIGNATURE })
+      } else if (b.type === 'tool_result') {
+        const out = (b.is_error ? 'Error: ' : '') + text(b.content)
+        parts.push({ functionResponse: { name: names[b.tool_use_id] || 'tool', response: { result: out } } })
+      }
+    }
+    push(role, parts)
+  }
+  const body = { contents, generationConfig: { maxOutputTokens: req.max_tokens } }
+  if (req.system) body.systemInstruction = { parts: [{ text: text(req.system) }] }
+  if (req.temperature !== undefined) body.generationConfig.temperature = req.temperature
+  const tools = (req.tools || []).filter(t => t.name && t.input_schema)
+  if (tools.length) body.tools = [{ functionDeclarations: tools.map(t => ({ name: t.name, description: t.description || '', parametersJsonSchema: t.input_schema })) }]
+  if (req.tool_choice?.type === 'tool') body.toolConfig = { functionCallingConfig: { mode: 'ANY', allowedFunctionNames: [req.tool_choice.name] } }
+  else if (req.tool_choice?.type === 'any') body.toolConfig = { functionCallingConfig: { mode: 'ANY' } }
+  return { model: modelFor('google', req.model, env), body }
+}
+
+export function fromGemini(data, model) {
+  const cand = data.candidates?.[0] || {}
+  const content = []
+  let n = 0
+  for (const p of cand.content?.parts || []) {
+    if (p.thought) continue // reasoning summary, not the answer
+    if (p.functionCall) {
+      content.push({ type: 'tool_use', id: `gem_${Date.now().toString(36)}_${n++}`, name: p.functionCall.name, input: p.functionCall.args || {},
+        ...(p.thoughtSignature ? { thoughtSignature: p.thoughtSignature } : {}) })
+    } else if (p.text) {
+      const last = content.at(-1)
+      if (last?.type === 'text') last.text += p.text
+      else content.push({ type: 'text', text: p.text, citations: [] })
+    }
+  }
+  const reason = cand.finishReason
+  const stop_reason = content.some(b => b.type === 'tool_use') ? 'tool_use'
+    : reason === 'MAX_TOKENS' ? 'max_tokens'
+      : /SAFETY|BLOCKLIST|PROHIBITED|SPII|RECITATION/.test(reason || '') || data.promptFeedback?.blockReason ? 'refusal' : 'end_turn'
+  return { id: data.responseId || `gem_${Date.now().toString(36)}`, type: 'message', role: 'assistant', model: data.modelVersion || model, content, stop_reason,
+    usage: { input_tokens: data.usageMetadata?.promptTokenCount || 0, output_tokens: data.usageMetadata?.candidatesTokenCount || 0 } }
+}
+
 export function compatClient(provider, apiKey, { env = process.env, fetchImpl = fetch } = {}) {
   if (!PROVIDERS[provider]) throw new Error(`unknown provider ${provider}`)
+  const callGemini = async (req, opts = {}) => {
+    const { model, body } = toGemini(req, env)
+    const res = await fetchImpl(`${GEMINI_BASE}/models/${encodeURIComponent(model)}:generateContent`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
+      body: JSON.stringify(body),
+      ...(opts.signal ? { signal: opts.signal } : {})
+    })
+    if (!res.ok) {
+      let detail = ''
+      try { const j = await res.json(); detail = j?.error?.message || '' } catch {}
+      throw new ProviderAPIError(res.status, `Google Gemini returned ${res.status}${detail ? `: ${String(detail).slice(0, 200)}` : ''}`, 'google')
+    }
+    return fromGemini(await res.json(), model)
+  }
   const call = async (req, opts = {}) => {
+    if (provider === 'google') return withFallback(callGemini, req, opts)
+    return withFallback(callCompat, req, opts)
+  }
+  // A model the key cannot use (free Gemini keys get no Gemini 3.1 Pro; a model is
+  // overloaded or not on the account): step down a tier instead of failing. A
+  // rejected key (401/403) is not retried, since no tier will work.
+  const withFallback = async (fn, req, opts) => {
+    const tiers = ['best', 'balanced', 'fast']
+    const asModel = { best: 'claude-opus-5-5', balanced: 'claude-sonnet-5-5', fast: 'claude-haiku-5-5' }
+    // A model that never answers (Gemini under load hangs instead of returning 503)
+    // gets a time limit per tier; the caller's own abort still ends everything.
+    const perTier = Number(env.PROVIDER_TIER_TIMEOUT_MS) || 60000
+    let last
+    for (const tier of tiers.slice(tiers.indexOf(tierOf(String(req.model || ''))))) {
+      const limit = AbortSignal.timeout(perTier)
+      const signal = opts.signal ? AbortSignal.any([opts.signal, limit]) : limit
+      try { return await fn({ ...req, model: asModel[tier] }, { ...opts, signal }) }
+      catch (e) {
+        if (opts.signal?.aborted) throw e
+        const timedOut = limit.aborted
+        last = timedOut ? new ProviderAPIError(504, `${PROVIDERS[provider].label} did not answer within ${Math.round(perTier / 1000)}s`, provider) : e
+        if (!timedOut && (!(e instanceof ProviderAPIError) || ![404, 429, 503, 529].includes(e.status))) throw e
+      }
+    }
+    throw last
+  }
+  const callCompat = async (req, opts = {}) => {
     const body = toOpenAI(req, provider, env)
     const res = await fetchImpl(`${PROVIDERS[provider].base}/chat/completions`, {
       method: 'POST',

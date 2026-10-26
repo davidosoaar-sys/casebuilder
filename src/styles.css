@@ -3027,4 +3027,36 @@ body::after { content: ''; position: fixed; inset: 0; z-index: 200; pointer-even
 /* Connectors inside Customize: intro at body size, list as wide as the Skills grid. */
 .connections-embedded .sub { margin: 0 0 6px; max-width: 70ch; font-size: 14.5px; line-height: 1.6; color: var(--ink-dim); }
 .connections-embedded .connector-list { max-width: none; }
+/* Agent progress: brand discovery and finding people during project setup */
+.agent-progress { display: grid; gap: 18px; padding: 22px 24px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); margin: 0 0 16px; }
+.agent-progress.is-compact { padding: 16px 18px; gap: 14px; }
+.agent-progress-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.agent-progress-steps li { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--ink-faint, var(--ink-dim)); transition: color .3s ease; }
+.agent-progress-steps li.is-done { color: var(--ink-dim); }
+.agent-progress-steps li.is-now { color: var(--ink-strong, var(--ink)); }
+.agent-progress-dot { position: relative; width: 16px; height: 16px; flex: none; border-radius: 50%; border: 1.5px solid var(--line-2, var(--line)); display: grid; place-items: center; color: var(--accent); transition: border-color .3s ease, background .3s ease; }
+.agent-progress-steps li.is-done .agent-progress-dot { border-color: var(--accent); }
+.agent-progress-steps li.is-now .agent-progress-dot { border-color: var(--accent); }
+.agent-progress-steps li.is-now .agent-progress-dot::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: agent-progress-pulse 1.4s ease-in-out infinite; }
+.agent-progress-time { margin: -6px 0 0; font-size: 12px; color: var(--ink-faint, var(--ink-dim)); font-variant-numeric: tabular-nums; }
+@keyframes agent-progress-pulse { 0%, 100% { transform: scale(.7); opacity: .55; } 50% { transform: scale(1.15); opacity: 1; } }
+
+.agent-ghost { position: relative; overflow: hidden; display: grid; gap: 12px; }
+.agent-ghost-row { display: flex; align-items: center; gap: 12px; }
+.agent-ghost-col { display: grid; gap: 8px; flex: 1; }
+.ghost-box { position: relative; overflow: hidden; display: block; border-radius: 6px; background: var(--panel-2, rgba(127, 127, 127, .12)); }
+.ghost-box::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .07), transparent); animation: skill-shimmer 1.6s ease-in-out infinite; }
+[data-theme="light"] .ghost-box::after { background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .6), transparent); }
+.ghost-icon { width: 44px; height: 44px; border-radius: 10px; }
+.ghost-logo { width: 140px; height: 26px; }
+.ghost-title { width: 46%; height: 22px; }
+.ghost-line { width: 72%; height: 12px; }
+.ghost-swatch { width: 24px; height: 24px; border-radius: 50%; }
+.agent-ghost-people { display: grid; gap: 10px; }
+.agent-ghost-person { grid-template-columns: auto 1fr; align-items: center; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; }
+.ghost-avatar { width: 36px; height: 36px; border-radius: 50%; }
+.ghost-name { width: 34%; height: 14px; }
+@media (prefers-reduced-motion: reduce) {
+  .ghost-box::after, .agent-progress-steps li.is-now .agent-progress-dot::after { animation: none; }
+}
 .undo-redo-labels .undo-btn { width: auto; padding: 8px 10px; gap: 6px; display: inline-flex; align-items: center; }

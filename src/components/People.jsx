@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import {ProfileAvatar,PublicProfileLinks} from './ProfileMedia.jsx'
 import {publicProfileUrl} from '../profileMedia.js'
 import { resolve } from './Deck.jsx'
+import { AgentProgress, PersonPlaceholder, PEOPLE_STEPS } from './AgentProgress.jsx'
 import AppLogo from './AppLogo.jsx'
 import { uid } from '../projects.js'
 import { AGENT_COMMANDS } from '../agentCommands.js'
@@ -166,7 +167,9 @@ export default function People({
             </div>
 
             {busy[role.key] && (
-              <p className="role-status">Searching the web for this role. This can take up to a minute.</p>
+              <AgentProgress compact steps={PEOPLE_STEPS} every={9000} label={`Finding people for ${role.role}`}>
+                <PersonPlaceholder count={list.length ? 1 : 2} />
+              </AgentProgress>
             )}
             {errors[role.key] && <p className="role-error">{errors[role.key]}</p>}
             {notes[role.key] && <p className="role-status">{notes[role.key]}</p>}
