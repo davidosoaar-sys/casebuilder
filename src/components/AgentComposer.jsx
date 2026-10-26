@@ -16,7 +16,36 @@ import { providerById } from '../modelProviders.js'
 import React, { useEffect, useRef, useState } from 'react'
 import { extractText, ACCEPT } from '../fileText.js'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu } from './ui.jsx'
+import { Menu, Popover } from './ui.jsx'
+
+// One control for how the agent looks things up: web search (a switch, on by
+// default) or Deep research (searches widely, reads pages, cites everything).
+// With web search off the agent answers from the project alone.
+function SearchPicker({ web, onWeb, research, onResearch, disabled }) {
+  const [open, setOpen] = useState(false)
+  const btn = useRef(null)
+  const label = research ? 'Deep research' : web ? 'Web search' : 'No web'
+  return (
+    <>
+      <button ref={btn} type="button" className={`mascot-search mascot-searchpick${research || web ? ' is-on' : ''}${research ? ' is-research' : ''}`}
+        onClick={() => setOpen(o => !o)} disabled={disabled} aria-haspopup="dialog" aria-expanded={open}
+        aria-label={`Search: ${label}`} title="How the agent looks things up">
+        <I d={research ? ic.research : ic.globe} size={15} /><span>{label}</span>
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M2.5 4l2.5 2.5L7.5 4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      </button>
+      <Popover open={open} anchor={btn} onClose={() => setOpen(false)} label="Search settings" className="searchpick-pop" height={190}>
+        <div className="searchpick-row">
+          <span className="searchpick-text"><strong>Web search</strong><small>{research ? 'Deep research always uses the web.' : web ? 'The agent can look things up when it needs to.' : 'The agent answers from this project only.'}</small></span>
+          <button type="button" role="switch" aria-checked={research || web} disabled={research} className="sched-switch" onClick={() => onWeb(w => !w)} aria-label="Web search"><span /></button>
+        </div>
+        {onResearch && <div className="searchpick-row">
+          <span className="searchpick-text"><strong>Deep research</strong><small>Searches widely, reads pages in full, cites every source. About a minute.</small></span>
+          <button type="button" role="switch" aria-checked={research} className="sched-switch" onClick={() => onResearch(!research)} aria-label="Deep research"><span /></button>
+        </div>}
+      </Popover>
+    </>
+  )
+}
 
 // Room above the card for the perched robot: its 72px box (4px padding, 16px
 // horns overlapping the 60px head by 8px) plus its rocking (about 3px either
@@ -262,10 +291,8 @@ export default function AgentComposer({ onSend, busy = false, disabled = false, 
                   : [{ label: 'All skills are switched off for this project.', disabled: true, onSelect: () => {} }]}>
                 <I d={ic.skill} size={15} /><span>Use a skill</span>
               </Menu>}
-              {!research && <button type="button" className={`mascot-search${web ? ' is-on' : ''}`} onClick={() => setWeb(w => !w)} disabled={disabled} aria-pressed={web} aria-label="Web search"
-                title={web ? 'The agent may search the web' : 'Let the agent search the web'}><I d={ic.globe} size={15} /><span>{web ? 'Search on' : 'Search'}</span></button>}
-              {onResearch && <button type="button" className={`mascot-search mascot-research${research ? ' is-on' : ''}`} onClick={() => onResearch(!research)} disabled={disabled} aria-pressed={research} aria-label="Deep research"
-                title={research ? 'Deep research is on: the next message is researched in depth, with numbered sources' : 'Deep research: search widely, read pages in full, cite every source. Usually 30 to 90 seconds.'}><I d={ic.research} size={15} /><span>Deep research</span></button>}
+              <SearchPicker web={web} onWeb={setWeb} research={research} onResearch={onResearch} disabled={disabled} />
+
             </div>
 
             <div className="mascot-right">

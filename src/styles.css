@@ -2758,3 +2758,14 @@ a.research-cite:hover { background: var(--accent); color: var(--accent-ink) !imp
   .chat-typing span { animation: none; opacity: .6; }
   .starter-chip:active, .chat-msg .icon-btn:active:not(:disabled) { transform: none; }
 }
+
+/* v0.16.0 Search picker: one control for web search and Deep research */
+.mascot-searchpick svg:last-child { opacity: .7; margin-left: -1px; }
+.mascot-searchpick.is-research { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); border-color: color-mix(in srgb, var(--accent) 38%, transparent); }
+.searchpick-pop { width: 300px; padding: 6px; display: flex; flex-direction: column; gap: 2px; }
+.searchpick-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 10px; border-radius: 10px; }
+.searchpick-row:hover { background: color-mix(in srgb, var(--ink-strong) 5%, transparent); }
+.searchpick-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.searchpick-text strong { font-size: 13.5px; font-weight: 600; color: var(--ink-strong); }
+.searchpick-text small { font-size: 12px; line-height: 1.4; color: var(--ink-faint); }
+.searchpick-row .sched-switch:disabled { opacity: .55; cursor: not-allowed; }
