@@ -1258,6 +1258,9 @@ def scheduled_meta(job):
     return {"scheduled": True, "schedule_id": job["schedule_id"], "schedule_title": str((job.get("payload") or {}).get("title") or "")[:120]}
 
 
+GONE = "gone"  # chat_for: the job's chat was deleted mid-run
+
+
 def chat_for(job):
     """The chat a job's reply belongs to: the payload's chat_id, else the chat of
     the user message that started it (jobs queued before migration 0010)."""
@@ -1270,6 +1273,11 @@ def chat_for(job):
         if ok:
             return cid
         log("ignored chat_id not owned by the job owner", job.get("id"))
+        if not job.get("schedule_id"):
+            # The user deleted this chat while the agent was working. Drop the reply:
+            # falling through would post it into an unrelated or chat-less thread
+            # (it showed up as a stray "Earlier chat") and apply its edits anyway.
+            return GONE
     if job.get("schedule_id"):
         # A scheduled task whose chat was deleted: start a fresh chat for it and
         # point the schedule at it, so later runs land together.
@@ -1291,6 +1299,10 @@ def handle(job):
     jid, owner = job["id"], job["owner_id"]
     log("claimed", jid, job["kind"], "attempt", job["attempts"])
     chat_id = chat_for(job)
+    if chat_id == GONE:
+        rpc("complete_job", p_id=jid, p_worker=WORKER_ID, p_result={"error": "chat_deleted"})
+        log("done", jid, "chat deleted before the reply")
+        return
     # Research only posts into a chat it was asked from (payload chat_id). A research
     # job from the old Research page has none and must not land in some chat.
     if job["kind"] == "research" and chat_id and chat_id != (job.get("payload") or {}).get("chat_id"):
@@ -1471,9 +1483,11 @@ def main():
             if job.get("kind") in ("chat", "research") and job.get("deal_id") and job.get("attempts", 0) >= job.get("max_attempts", 3) \
                     and (job.get("kind") == "chat" or (job.get("payload") or {}).get("chat_id")):
                 try:
-                    api("POST", "/rest/v1/chat_messages", {"deal_id": job["deal_id"], "owner_id": job["owner_id"],
-                        "chat_id": chat_for(job), "role": "assistant", "job_id": job["id"], "meta": {"error": "failed"},
-                        "content": "Sorry, I couldn't finish that request. Please try again."}, prefer="return=minimal")
+                    cid = chat_for(job)
+                    if cid != GONE:
+                        api("POST", "/rest/v1/chat_messages", {"deal_id": job["deal_id"], "owner_id": job["owner_id"],
+                            "chat_id": cid, "role": "assistant", "job_id": job["id"], "meta": {"error": "failed"},
+                            "content": "Sorry, I couldn't finish that request. Please try again."}, prefer="return=minimal")
                 except Exception as e3:
                     log("could not post failure:", e3)
         if ONCE:

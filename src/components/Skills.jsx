@@ -28,7 +28,7 @@ const FEATURED = 'pre_meeting_brief'
 const sid = s => s.key || s.id
 
 // onSchedule is still passed by App.jsx; scheduling now lives on the Scheduled page.
-export default function Skills({ userId, projects = [], onUse, onSchedule }) { // eslint-disable-line no-unused-vars
+export default function Skills({ userId, projects = [], onUse, onSchedule, embedded = false }) { // eslint-disable-line no-unused-vars
   const { skills, error: loadError, reload } = useSkills()
   const [tab, setTab] = useState('discover')
   const [query, setQuery] = useState('')
@@ -94,18 +94,24 @@ export default function Skills({ userId, projects = [], onUse, onSchedule }) { /
   const detail = detailId ? all.find(s => sid(s) === detailId) : null
   const card = s => <SkillCard key={sid(s)} skill={s} added={isAdded(s)} onOpen={() => setDetailId(sid(s))} onTry={() => tryIt(s)} onToggle={() => setAdded(s, !isAdded(s))} />
 
+  const tools = <>
+    <label className="skill-search">
+      <SearchIcon />
+      <input type="search" name="skill-search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search skills…" aria-label="Search skills" autoComplete="off" spellCheck={false} />
+    </label>
+    <button type="button" className="primary skill-new" onClick={() => setEditing('new')}><PlusIcon size={16} />New skill</button>
+  </>
+  const tabs = <Tabs tabs={[{ id: 'discover', label: 'Discover' }, { id: 'yours', label: 'Yours', count: skills ? yours.length : null }]}
+    value={tab} onChange={setTab} layoutId="skills-tab-pill" idPrefix="skills" label="Skills" />
+
   return (
     <MotionConfig reducedMotion="user">
-      <section className="page skills-page">
-        <PageHead title="Skills" sub="How the agent does a job. Try one in any project, or add your own.">
-          <label className="skill-search">
-            <SearchIcon />
-            <input type="search" name="skill-search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search skills…" aria-label="Search skills" autoComplete="off" spellCheck={false} />
-          </label>
-          <button type="button" className="primary skill-new" onClick={() => setEditing('new')}><PlusIcon size={16} />New skill</button>
-        </PageHead>
-        <Tabs tabs={[{ id: 'discover', label: 'Discover' }, { id: 'yours', label: 'Yours', count: skills ? yours.length : null }]}
-          value={tab} onChange={setTab} layoutId="skills-tab-pill" idPrefix="skills" label="Skills" />
+      <section className={embedded ? 'skills-page skills-embedded' : 'page skills-page'}>
+        {embedded
+          // Inside Customize: the page title is Customize's; Discover / Yours on
+          // the left, search and New skill on the right, in one row.
+          ? <div className="customize-toolbar">{tabs}<div className="page-head-actions">{tools}</div></div>
+          : <><PageHead title="Skills" sub="How the agent does a job. Try one in any project, or add your own.">{tools}</PageHead>{tabs}</>}
         {(error || loadError) && <p className="auth-error" role="alert">{error || loadError}</p>}
 
         <div id={`skills-panel-${tab}`} role="tabpanel" aria-labelledby={`skills-tab-${tab}`} className="skill-panel">

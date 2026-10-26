@@ -481,8 +481,17 @@ class ChatHistory(unittest.TestCase):
                 return [{"chat_id": "latest"}]
             worker.api = fake
             self.assertEqual(worker.chat_for({"payload": {"chat_id": cid}, "deal_id": "d", "owner_id": "o"}), cid)
-            # Someone else's chat id in the payload: ignored, falls back to the owner's latest chat.
-            self.assertEqual(worker.chat_for({"payload": {"chat_id": cid}, "deal_id": "d", "owner_id": "intruder"}), "latest")
+            # Someone else's chat id, or a chat deleted mid-run: the reply is dropped, never
+            # posted into the owner's latest (unrelated) chat.
+            self.assertEqual(worker.chat_for({"payload": {"chat_id": cid}, "deal_id": "d", "owner_id": "intruder"}), worker.GONE)
+            # A scheduled task whose chat was deleted still gets a fresh chat (not GONE).
+            made = []
+            def fake2(m, p, b=None, prefer=None):
+                if m == "POST" and p == "/rest/v1/chats":
+                    made.append(b); return [{"id": "new-chat"}]
+                return [] if p.startswith("/rest/v1/chats?") else None
+            worker.api = fake2
+            self.assertEqual(worker.chat_for({"payload": {"chat_id": cid}, "deal_id": "d", "owner_id": "o", "schedule_id": "s"}), "new-chat")
         finally:
             worker.api = old
 

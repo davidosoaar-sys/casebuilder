@@ -11,11 +11,11 @@ import { Select } from './ui.jsx'
 // named as an origin. The agent can always search the public web on its own, so that
 // is not a permission.
 
-export default function Connections({ project, projects=[],selectedProjectId='',onSelectProject,connections, documents, onConnections, onDocuments }) {
+export default function Connections({ project, projects=[],selectedProjectId='',onSelectProject,connections, documents, onConnections, onDocuments, embedded = false }) {
   const allowed = CONNECTORS.filter(c => connections[c.key]).length
   return (
-    <div className="connections-page" data-testid="connections">
-      <PageHead title="Connectors" />
+    <div className={embedded ? 'connections-page connections-embedded' : 'connections-page'} data-testid="connections">
+      {!embedded && <PageHead title="Connectors" />}
       <p className="sub">
         These are permissions for the agent. When you ask it to suggest values, it can only read the connections you switch on here.
         Everything is off until you allow it, and it can always search the public web on its own. {allowed ? `${allowed} allowed.` : 'None allowed yet.'}

@@ -77,7 +77,7 @@ check('buttons: :active press transform is defined', css.press > 0, `${css.press
 check('buttons: no "transition: all" in computed styles', css.all.length === 0, css.all.join(' | '))
 
 // Custom select on Connectors (choosing a project here is view state only).
-await page.click('.sidebar-desktop .side-item[aria-label="Connectors"]'); await page.waitForSelector('[data-testid=connections]'); await sleep(500)
+await page.click('.sidebar-desktop .side-item[aria-label="Customize"]'); await page.waitForSelector('#customize-tab-connections'); await page.click('#customize-tab-connections'); await page.waitForSelector('[data-testid=connections]'); await sleep(500)
 const trig = '[role=combobox][aria-label="Connection project"]'
 const before = await page.$eval(trig, b => ({ v: b.dataset.value, exp: b.getAttribute('aria-expanded'), controls: b.getAttribute('aria-controls') }))
 await page.focus(trig); await page.keyboard.press('ArrowDown'); await sleep(250)
@@ -107,7 +107,7 @@ const bar = await page.evaluate(() => ({
   title: document.querySelector('.mobile-bar-title')?.innerText,
   side: getComputedStyle(document.querySelector('.sidebar-desktop')).display
 }))
-check('375: top bar with the page title, desktop sidebar hidden', bar.bar && bar.title === 'Connectors' && bar.side === 'none', JSON.stringify(bar))
+check('375: top bar with the page title, desktop sidebar hidden', bar.bar && bar.title === 'Customize' && bar.side === 'none', JSON.stringify(bar))
 await page.click('.mobile-menu-btn'); await sleep(400)
 const drawer = await page.evaluate(() => {
   const d = document.querySelector('.sidebar-drawer')
@@ -124,10 +124,13 @@ check('375: backdrop click closes the drawer', !(await page.$('.sidebar-drawer')
 // No horizontal overflow at 375 on the main pages and a project's Case inputs.
 async function go(label, sel) {
   await page.click('.mobile-menu-btn'); await page.waitForSelector('.sidebar-drawer'); await sleep(300)
-  await page.click(`.sidebar-drawer .side-item[aria-label="${label}"]`); await page.waitForSelector(sel, { timeout: 15000 }); await sleep(700)
+  // Connectors lives under Customize: open Customize, then its Connectors tab.
+  await page.click(`.sidebar-drawer .side-item[aria-label="${label === 'Connectors' ? 'Customize' : label}"]`)
+  if (label === 'Connectors') { await page.waitForSelector('#customize-tab-connections', { timeout: 15000 }); await sleep(500); await page.evaluate(() => document.querySelector('#customize-tab-connections').click()) }
+  await page.waitForSelector(sel, { timeout: 15000 }); await sleep(700)
 }
 const overflow = () => page.evaluate(() => document.documentElement.scrollWidth > innerWidth)
-for (const [label, sel, file] of [['Dashboard', '.dashboard', '06-dashboard'], ['Projects', '.projects-page', '07-projects'], ['Scheduled', '.scheduled-page', '08-scheduled'], ['Skills', '.skills-page', '09-skills'], ['Connectors', '[data-testid=connections]', '10-connectors']]) {
+for (const [label, sel, file] of [['Dashboard', '.dashboard', '06-dashboard'], ['Projects', '.projects-page', '07-projects'], ['Scheduled', '.scheduled-page', '08-scheduled'], ['Customize', '.skills-page', '09-skills'], ['Connectors', '[data-testid=connections]', '10-connectors']]) {
   await go(label, sel)
   check(`375: no horizontal overflow on ${label}`, !(await overflow()))
   await page.screenshot({ path: `${out}/${file}-375.png`, fullPage: true })

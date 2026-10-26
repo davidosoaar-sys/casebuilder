@@ -36,6 +36,7 @@ import { AGENT_COMMANDS } from './agentCommands.js'
 import PersonLookup from './components/PersonLookup.jsx'
 import Scheduled from './components/Scheduled.jsx'
 import Skills from './components/Skills.jsx'
+import Customize from './components/Customize.jsx'
 import ProjectFiles from './components/ProjectFiles.jsx'
 import WaitlistAdmin, { isAdmin } from './components/WaitlistAdmin.jsx'
 import usePersonLookup from './usePersonLookup.js'
@@ -173,6 +174,7 @@ export default function App({ account }) {
     onInput={suggestion => setPendingPersonInput({ dealId: project.id, suggestion })} />
   function navigate(next) {
     if(next==='deck')next='website' // Case Artifacts opens the Live Room; editor remains available.
+    if (next === 'customize') next = 'skills' // Customize opens on its Skills tab
     setStage(null)
     if (next === 'settings') { setSettingsOpen(true); return } // overlay: never leaves the current page
     if (['projects', 'dashboard', 'waitlist'].includes(next)) { saving.flush(); setCurrentId(null) }
@@ -406,7 +408,8 @@ export default function App({ account }) {
             }}
           />
         ) : page === 'connections' ? (
-          <Connections
+          <Customize tab="connections" onTab={navigate}>
+          <Connections embedded
             project={connectionProject}
             projects={projects}
             selectedProjectId={connectionProjectId}
@@ -416,12 +419,15 @@ export default function App({ account }) {
             onConnections={fn => connectionProject ? updateConnectionProject(p => ({ connectors: fn(p.connectors || connections) })) : setConnections(fn)}
             onDocuments={fn => updateConnectionProject(p => ({ documents: fn(p.documents || []) }))}
           />
+          </Customize>
         ) : page === 'waitlist' && admin ? (
           <WaitlistAdmin />
         ) : page === 'skills' ? (
-          <Skills userId={account.session.user.id} projects={projects}
+          <Customize tab="skills" onTab={navigate}>
+          <Skills embedded userId={account.session.user.id} projects={projects}
             onUse={(sk, dealId) => { saving.flush(); setSkillRequest({ dealId, key: sk.key, id: sk.id }); setCurrentId(dealId); setView('agent') }}
             onSchedule={(sk, dealId) => { setScheduleSkill({ dealId, skill: sk }); navigate('scheduled') }} />
+          </Customize>
         ) : page === 'scheduled' ? (
           <Scheduled userId={account.session.user.id} projects={projects}
             skillToSchedule={scheduleSkill} onSkillScheduled={() => setScheduleSkill(null)}

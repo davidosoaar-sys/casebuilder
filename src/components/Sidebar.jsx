@@ -15,6 +15,7 @@ const icon = {
   lookup: <><circle cx="6.5" cy="5" r="2.5" /><path d="M2 13c0-3 9-3 9 0M11 8l3 3M12 7l2 2" /></>,
   waitlist: <><circle cx="6" cy="5.5" r="2.3" /><path d="M1.8 13c.4-2.8 8-2.8 8.4 0" /><path d="M11 5h3.5M11 8h3.5M12 11h2.5" strokeLinecap="round" /></>,
   skills: <><path d="M8 1.8l1.8 3.7 4 .6-2.9 2.8.7 4L8 11l-3.6 1.9.7-4-2.9-2.8 4-.6z" strokeLinejoin="round" /></>,
+  customize: <><path d="M2.5 4.5h6M11.5 4.5h2M2.5 11.5h2M7.5 11.5h6" strokeLinecap="round" /><circle cx="10" cy="4.5" r="1.6" /><circle cx="6" cy="11.5" r="1.6" /></>,
   scheduled: <><circle cx="8" cy="8.5" r="5.5" /><path d="M8 5.5v3.2l2 1.3M6 1.8h4" strokeLinecap="round" strokeLinejoin="round" /></>,
   files: <><path d="M3 2.5h6l4 4v7H3z" strokeLinejoin="round" /><path d="M9 2.5v4h4M5.5 9h5M5.5 11.5h3.5" strokeLinecap="round" /></>,
   research: <><circle cx="7" cy="7" r="4.5" /><path d="M10.4 10.4l3.6 3.6M5 7h4M7 5v4" strokeLinecap="round" /></>,
@@ -84,12 +85,15 @@ const MAIN_ITEMS = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'projects', label: 'Projects' },
   { id: 'scheduled', label: 'Scheduled', title: 'Tasks the agent runs on a repeat, across your projects' },
-  { id: 'skills', label: 'Skills', title: 'Ready-made ways of working for the agent, and your own' },
-  { id: 'connections', label: 'Connectors', title: 'What the agent is allowed to read' },
+  // Skills and Connectors live together under Customize (like Claude): one place
+  // for how the agent works and what it can read. The page has a tab for each.
+  { id: 'customize', label: 'Customize', title: 'Skills and connectors: how the agent works and what it can read' },
   { id: 'waitlist', label: 'Waitlist', title: 'Who asked for access', admin: true }
 ]
 
 const COLLAPSE_KEY = 'casebuilder.sidebar'
+// The views shown under Customize; its sidebar item is lit on any of them.
+export const CUSTOMIZE_TABS = ['skills', 'connections']
 function initialCollapsed() {
   try { return localStorage.getItem(COLLAPSE_KEY) === 'collapsed' } catch { return false }
 }
@@ -111,7 +115,7 @@ export default function Sidebar({ view, project, projectMode = false, onNav, onS
   }, [])
 
   const items = (projectMode ? PROJECT_ITEMS : MAIN_ITEMS).filter(it => !it.admin || admin)
-  const current = view === 'deck' ? 'website' : view
+  const current = view === 'deck' ? 'website' : CUSTOMIZE_TABS.includes(view) ? 'customize' : view
   const title = items.find(it => it.id === current)?.label || (projectMode ? project?.name : '') || 'CaseBuilder'
 
   // Menu contents, shared by the desktop sidebar and the mobile drawer.

@@ -95,7 +95,7 @@ try {
   try {
     const items = await page.$$eval('.sidebar-nav .side-item', l => l.map(e => e.innerText.trim()))
     check('inside a project, the menu has no Skills or Scheduled', !items.some(t => t.toLowerCase() === 'skills') && !items.some(t => t.toLowerCase() === 'scheduled'), items.join(' | '))
-    await mainMenu('Skills'); await page.waitForSelector('.skills-page .skill-card', { timeout: 15000 })
+    await mainMenu('Customize'); await page.waitForSelector('.skills-page .skill-card', { timeout: 15000 })
     const main = await page.$$eval('.sidebar-nav .side-item', l => l.map(e => e.innerText.trim()))
     check('the main menu has Scheduled and Skills', main.some(t => t.toLowerCase() === 'skills') && main.some(t => t.toLowerCase() === 'scheduled'), main.join(' | '))
     const names = await page.$$eval('.skill-card strong', l => l.map(e => e.innerText))

@@ -38,7 +38,7 @@ check('version is in the bottom-left corner', geo.sideBottom - geo.vBottom < 40 
 await page.screenshot({ path: `${out}/v0143-1-sidebar.png` })
 
 // Connectors: alphabetical, real Claude logo.
-await page.click('.side-item[aria-label="Connectors"]')
+await page.click('.side-item[aria-label="Customize"]'); await page.waitForSelector('#customize-tab-connections'); await page.click('#customize-tab-connections')
 await page.waitForSelector('[data-testid=connections]')
 await page.waitForFunction(() => [...document.querySelectorAll('.connector img')].every(i => i.complete && i.naturalWidth > 0), { timeout: 10000 }).catch(() => {})
 const cards = await page.$$eval('.connector', l => l.map(c => ({ name: c.querySelector('strong').innerText, src: c.querySelector('img').getAttribute('src'), ok: c.querySelector('img').naturalWidth > 0 })))

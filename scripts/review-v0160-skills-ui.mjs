@@ -24,7 +24,7 @@ page.on('response', async r => { if (r.status() >= 400) errors.push(`${r.status(
 await page.goto(base, { waitUntil: 'networkidle2' })
 await page.type('#auth-email', 'test@casebuilder.dev'); await page.type('#auth-password', T.TEST_PASSWORD)
 await page.click('button[type=submit]'); await page.waitForSelector('.dashboard', { timeout: 20000 })
-const [b] = await page.$$('xpath/.//button[contains(@class,"side-item") and contains(., "Skills")]'); await b.click()
+const [b] = await page.$$('xpath/.//button[contains(@class,"side-item") and contains(., "Customize")]'); await b.click()
 await page.waitForSelector('.skills-page .skill-card', { timeout: 15000 }); await sleep(900)
 await page.screenshot({ path: `${out}/01-discover.png` })
 await page.screenshot({ path: `${out}/01b-discover-full.png`, fullPage: true })
@@ -37,7 +37,7 @@ const geo = await page.evaluate(() => {
 console.log(JSON.stringify(geo))
 check('Discover shows the 4 built-ins', geo.n === 4, geo.names.join(', '))
 check('2-column grid at 1280', geo.lefts.length === 2, geo.lefts.join(','))
-check('exactly one tab selected', geo.tabs.filter(t => t.sel === 'true').length === 1, JSON.stringify(geo.tabs))
+check('exactly one tab selected', geo.tabs.filter(t => t.sel === 'true' && ['Discover', 'Yours'].some(n => t.t.startsWith(n))).length === 1, JSON.stringify(geo.tabs))
 check('no horizontal overflow', !geo.overflow)
 check('no Schedule button on the page', !(await page.evaluate(() => [...document.querySelectorAll('.skills-page button')].some(b => /schedule/i.test(b.innerText)))))
 
@@ -85,7 +85,7 @@ if (pick) { await page.screenshot({ path: `${out}/05-try-picker.png` }); await p
 else { await page.screenshot({ path: `${out}/05-after-try.png` }) }
 
 // Yours tab
-if (!(await page.$('.skills-page'))) { const [s] = await page.$$('xpath/.//button[contains(@class,"side-item") and contains(., "Skills")]'); await s.click(); await page.waitForSelector('.skills-page', { timeout: 10000 }) }
+if (!(await page.$('.skills-page'))) { const [s] = await page.$$('xpath/.//button[contains(@class,"side-item") and contains(., "Customize")]'); await s.click(); await page.waitForSelector('.skills-page', { timeout: 10000 }) }
 const [yours] = await page.$$('xpath/.//*[@role="tab" and contains(., "Yours")]')
 await yours.click(); await sleep(800)
 await page.screenshot({ path: `${out}/06-yours.png` })

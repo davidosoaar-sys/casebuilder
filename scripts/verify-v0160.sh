@@ -4,7 +4,7 @@
 # selector) prints CRASHED with its last error line, so silence never passes.
 cd ~/Projects/casebuilder
 env -i PATH=$PATH HOME=$HOME npm test > /tmp/cb-npmtest.log 2>&1
-if grep -qE "^ℹ tests" /tmp/cb-npmtest.log; then grep -E "^ℹ (tests|pass|fail)" /tmp/cb-npmtest.log; grep -E "^not ok" /tmp/cb-npmtest.log | head -5
+if grep -qE "^(ℹ|#) tests" /tmp/cb-npmtest.log; then grep -E "^(ℹ|#) (tests|pass|fail)" /tmp/cb-npmtest.log; grep -E "^not ok" /tmp/cb-npmtest.log | head -5
 else echo "UNIT TESTS DID NOT RUN:"; tail -3 /tmp/cb-npmtest.log; fi
 npx vite build 2>&1 | grep -E "built in|rror"
 if [ $# -gt 0 ] && ! curl -s -o /dev/null http://localhost:5173/; then echo "DEV SERVER DOWN on :5173, UI reviews not run"; exit 1; fi

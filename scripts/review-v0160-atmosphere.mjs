@@ -31,7 +31,7 @@ check('dashboard hero: big light greeting', hero.hello && parseFloat(hero.size) 
 check('dashboard: numbers in their own row, not a sentence under Hello', !!hero.figures && !hero.oldSub, hero.figures)
 check('dashboard: next-action pills', hero.pills > 0, String(hero.pills))
 let ov = await shot('01-dashboard-dark'); check('dashboard: no sideways scroll at 1280', ov <= 0, String(ov))
-for (const p of ['Projects', 'Scheduled', 'Skills', 'Connectors']) { await nav(p); ov = await shot(`02-${p.toLowerCase()}-dark`); check(`${p}: no sideways scroll`, ov <= 0, String(ov)) }
+for (const p of ['Projects', 'Scheduled', 'Customize', 'Connectors']) { if (p === 'Connectors') { await page.click('#customize-tab-connections'); await sleep(1000) } else await nav(p); ov = await shot(`02-${p.toLowerCase()}-dark`); check(`${p}: no sideways scroll`, ov <= 0, String(ov)) }
 const pills = await page.evaluate(() => [...document.querySelectorAll('.side-pill')].filter(e => e.getBoundingClientRect().height > 0).length)
 check('exactly one glowing nav pill', pills === 1, String(pills))
 const title = await page.evaluate(() => { const h = document.querySelector('.page-head h1'); return h && { w: getComputedStyle(h).fontWeight, s: getComputedStyle(h).fontSize } })

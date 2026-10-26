@@ -3004,3 +3004,26 @@ body::after { content: ''; position: fixed; inset: 0; z-index: 200; pointer-even
 .research-answer .md-table th { color: var(--ink-strong); font-weight: 600; background: var(--panel-2); }
 .research-answer .md-table tr:last-child td { border-bottom: 0; }
 .research-answer li > p { margin: 0; }
+/* Customize: Skills and Connectors under one page and one title */
+.customize-page .skill-tabs { margin-bottom: 24px; }
+.customize-panel { min-width: 0; }
+/* The embedded pages drop their own page frame: Customize provides it. */
+.skills-embedded, .connections-embedded { max-width: none; margin: 0; padding: 0; }
+/* Skills inside Customize: Discover / Yours left, search + New skill right, one row. */
+.customize-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 0 0 24px; }
+.customize-toolbar .skill-tabs { margin: 0; }
+.connections-embedded > .sub:first-child { margin-top: 0; }
+@media (max-width: 860px) {
+  .customize-toolbar .page-head-actions { width: 100%; }
+  .customize-toolbar .skill-search { flex: 1; }
+}
+/* Customize v2: section nav (underline) above the Skills pills; Connectors fits the page */
+.customize-page .customize-nav { display: flex; gap: 28px; margin: 4px 0 28px; border-bottom: 1px solid var(--line); }
+.customize-nav-item { position: relative; background: none; border: 0; padding: 0 0 12px; margin: 0; font: inherit; font-size: 15px; font-weight: 500; color: var(--ink-dim); cursor: pointer; transition: color .15s ease; }
+.customize-nav-item:hover { color: var(--ink); }
+.customize-nav-item.is-on { color: var(--ink-strong); }
+.customize-nav-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
+.customize-nav-line { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; border-radius: 2px; background: var(--accent); }
+/* Connectors inside Customize: intro at body size, list as wide as the Skills grid. */
+.connections-embedded .sub { margin: 0 0 6px; max-width: 70ch; font-size: 14.5px; line-height: 1.6; color: var(--ink-dim); }
+.connections-embedded .connector-list { max-width: none; }

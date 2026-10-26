@@ -138,7 +138,7 @@ if (daily) {
 
 // Pass 2: fixture tasks (read only).
 fixtures = true
-const [sk] = await page.$$('xpath/.//button[contains(@class,"side-item") and contains(., "Skills")]'); await sk.click()
+const [sk] = await page.$$('xpath/.//button[contains(@class,"side-item") and contains(., "Customize")]'); await sk.click()
 await page.waitForSelector('.skills-page', { timeout: 10000 })
 await openScheduled()
 const [yt2] = await page.$$('xpath/.//*[@role="tab" and contains(., "Yours")]'); await yt2.click(); await sleep(600)

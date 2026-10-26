@@ -21,7 +21,7 @@ await page.goto(base, { waitUntil: 'networkidle2' })
 await page.type('#auth-email', 'test@casebuilder.dev'); await page.type('#auth-password', T.TEST_PASSWORD)
 await page.click('button[type=submit]')
 await page.waitForSelector('.dashboard', { timeout: 20000 })
-await page.click('.side-item[aria-label="Connectors"]')
+await page.click('.side-item[aria-label="Customize"]'); await page.waitForSelector('#customize-tab-connections'); await page.click('#customize-tab-connections')
 await page.waitForSelector('[data-testid=connections]')
 
 await page.waitForFunction(() => [...document.querySelectorAll('.connector img')].every(i => i.complete && i.naturalWidth > 0), { timeout: 10000 }).catch(() => {})
