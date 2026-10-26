@@ -33,8 +33,8 @@ await page.waitForSelector('.project-card', { timeout: 15000 }); await (await pa
 await page.waitForSelector('.side-item[aria-label="Files"]')
 const nav = await page.$$eval('.sidebar-nav .side-item', bs => bs.map(b => b.getAttribute('aria-label')))
 // v0.15.0: Research became Deep research in the Agent; its slot is Person lookup; Skills and Scheduled added.
-check('project menu: Case inputs, Case artifacts, Agent, Person lookup, Files, Skills, Scheduled',
-  JSON.stringify(nav) === JSON.stringify(['All projects', 'Case inputs', 'Case artifacts', 'Agent', 'Person lookup', 'Files', 'Skills', 'Scheduled']), nav.join(', '))
+check('project menu: Case inputs, Case artifacts, Agent, Person lookup, Files (Skills and Scheduled are in the main menu)',
+  JSON.stringify(nav) === JSON.stringify(['All projects', 'Case inputs', 'Case artifacts', 'Agent', 'Person lookup', 'Files']), nav.join(', '))
 check('no "Input sheet" or "Deck" label in the menu', !nav.includes('Input sheet') && !nav.includes('Deck'))
 
 await page.click('.side-item[aria-label="Case artifacts"]')
