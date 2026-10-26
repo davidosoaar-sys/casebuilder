@@ -64,9 +64,9 @@ TIER_MODEL = {"best": "claude-opus-5-5", "balanced": "claude-sonnet-5-5", "fast"
 def model_error_kind(msg):
     m = str(msg or "").lower()
     if re.search(r"invalid x-api-key|api key not valid|incorrect api key|invalid auth key|user not found|"
-                 r"invalid_api_key|authentication_error|permission_denied|\b401\b|\b403\b", m):
+                 r"invalid_api_key|authentication_error|permission_denied|http 40[13]\b|\b40[13] (unauthori|forbidden)", m):
         return "auth"
-    if re.search(r"quota|limit: 0|resource_exhausted|insufficient_quota|credit balance|\b402\b|\b429\b|rate.?limit", m):
+    if re.search(r"quota|limit: \d|resource_exhausted|insufficient_quota|credit balance|free tier|rate.?limited|\b402\b|\b429\b|rate.?limit", m):
         return "quota"
     if re.search(r"overloaded|high demand|\b503\b|\b529\b|unavailable", m):
         return "busy"
@@ -1247,7 +1247,7 @@ def run_hermes(profile, prompt, api_key, model=MODEL, effort=None, web=True, pro
             usage = None
         out = r.stdout.strip()
         if r.returncode != 0 or not out:
-            raise RuntimeError(f"hermes exit {r.returncode}: {(r.stderr or r.stdout)[-400:]}")
+            raise RuntimeError(f"hermes exit {r.returncode}: {(r.stderr or r.stdout)[-3000:]}")  # long enough to hold the provider's own error
         return out, usage
     finally:
         subprocess.run(["shred", "-u", envfile], capture_output=True)

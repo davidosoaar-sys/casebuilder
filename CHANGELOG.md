@@ -27,6 +27,13 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
+## v0.16.1 (2026-10-27): Gemini keys work again, any provider's key falls back, setup shows its progress
+
+- Gemini: Google AI Studio now issues keys that start with `AQ.`; Settings only accepted the old `AIza` keys, so a new Gemini key could not be saved. Both are accepted now (migration 0014, applied live). The buttons (Find people, Suggest values, Person lookup, brand) reach Gemini through Google's own API instead of its OpenAI-compatible endpoint, which rejects the new keys.
+- Every provider (Anthropic, OpenAI, Gemini, OpenRouter): when a model refuses the key (out of quota, overloaded, not on the account), the request runs on the next model down instead of failing. Free Gemini keys get no Gemini 3.1 Pro and 20 Flash requests a day, so a free key now still answers on Flash Lite. A model that hangs is cut off after 60 seconds (buttons). A rejected key is not retried: the chat says the key was rejected and to check Settings, instead of "couldn't finish that request". The key never appears in the message.
+- Project setup: brand discovery and Find people show what the agent is doing while it works (the steps, a placeholder in the shape of the result, the time taken), instead of a button that only said "Searching…".
+- Tests: app 452/452, worker 87/87. Through the app on the VPS test copy: a real Gemini key saves and the agent answers on Gemini, a wrong key gets the clear message (8/8); Anthropic agent chat 16/16; brand discovery for Apple and Visa 4/4.
+
 ## v0.16.0 (2026-10-26): The redesign: Dashboard, Skills, Scheduled, Customize, agent deck editing, undo
 
 - Skills page redesign: Discover and Yours tabs with a sliding pill, live search, a featured Pre-meeting brief panel, two-column cards with an add / added button and Try, a detail dialog (inputs, runs as, settings, edit and delete), and new skill, edit and project pick as dialogs. Trying a skill that is not added adds it first; with one project, Try opens it directly. Scheduling moves off this page. Motion respects reduced motion. Checked with `vite build` and `npm test` (381 pass, same as before); not yet checked in a browser.

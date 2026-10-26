@@ -29,7 +29,7 @@ for (const company of companies) {
   await page.click('.side-item[aria-label="Projects"]').catch(async () => { await page.click('.side-item[aria-label="All projects"]') })
   await page.waitForSelector('.projects-page', { timeout: 15000 }); await page.waitForNetworkIdle({ idleTime: 800 })
   await page.click('.projects-page .page-head .primary, .projects-page button.primary')
-  await page.waitForSelector('#company-name')
+  await page.waitForSelector('#company-name'); await sleep(700) // the dialog clears its field as it opens
   await page.type('#company-name', name)
   await page.click('.modal .primary')
   // Walk to the brand step: it is either first, or after the map/people steps.
@@ -40,7 +40,8 @@ for (const company of companies) {
     if (!onBrand) { const next = await page.$('.map-page .primary, .people-page .primary'); if (next) await next.click() }
   }
   check(`${company}: reached the branding step`, onBrand)
-  await page.waitForFunction(() => !/Finding/.test(document.querySelector('.brand-setup-preview')?.innerText || ''), { timeout: 90000 }).catch(() => {})
+  // Discovery runs while the agent-progress panel shows; the preview returns when it finishes.
+  await page.waitForFunction(() => !document.querySelector('.brand-setup .agent-progress') && document.querySelector('.brand-setup-preview'), { timeout: 120000 }).catch(() => {})
   await sleep(500)
   const state = await page.evaluate(() => ({
     logo: !!document.querySelector('.brand-setup-logo, .brand-setup-icon'),

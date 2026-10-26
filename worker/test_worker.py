@@ -823,3 +823,37 @@ class ModelFallback(unittest.TestCase):
     def test_key_never_in_message(self):
         s = worker.provider_said("Provider said: bad key AQ.Ab8RN6abcdefghijklmnop and sk-ant-api03-abcdefgh")
         self.assertNotIn("AQ.Ab8", s); self.assertNotIn("sk-ant-api03", s)
+
+
+class HermesErrorShapes(unittest.TestCase):
+    """Real Hermes failure texts (v0.22.5), classified correctly."""
+    GEMINI_DAILY = ("hermes exit 2: Google AI Studio rate-limited every one of 3 attempts. Provider said: Gemini HTTP 429 (RESOURCE_EXHAUSTED): "
+                    "You exceeded your current quota. * Quota exceeded for metric: generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash. "
+                    "Please retry in 8h45m59.823764218s. Your Google API key is on the free tier. Enable billing and regenerate the key. "
+                    "Your request was not processed. Send it again if you still want me to carry it out.")
+
+    def test_gemini_daily_free_quota_is_quota_not_auth(self):
+        self.assertEqual(worker.model_error_kind(self.GEMINI_DAILY), "quota")
+        self.assertEqual(worker.model_error_kind("...Your Google API key is on the free tier ... regenerate the key ... not processed."), "quota")
+
+    def test_auth_shapes(self):
+        for m in ["Provider said: HTTP 401: invalid x-api-key", "Provider said: HTTP 401: User not found.",
+                  "Incorrect API key provided: sk-proj-***0000", "INVALID_ARGUMENT): API key not valid. Please pass a valid API key."]:
+            self.assertEqual(worker.model_error_kind(m), "auth", m)
+
+    def test_numbers_in_text_are_not_status_codes(self):
+        self.assertIsNone(worker.model_error_kind("hermes exit 1: Traceback ... line 403, in run ... took 401ms"))
+
+    def test_daily_quota_steps_down(self):
+        calls = []
+        def fake(profile, prompt, key, m, effort, web, prov):
+            calls.append(worker.provider_model(prov, m))
+            if len(calls) == 1:
+                raise RuntimeError(self.GEMINI_DAILY)
+            return "Spotify.", None
+        orig = worker.run_hermes; worker.run_hermes = fake
+        try:
+            raw, _, used, fell = worker.run_with_fallback("p", "q", "k", "claude-sonnet-5-5", None, True, "google")
+        finally:
+            worker.run_hermes = orig
+        self.assertEqual((calls, used, fell), (["gemini-3.8-flash", "gemini-3.5-flash-lite"], "gemini-3.5-flash-lite", "gemini-3.8-flash"))
