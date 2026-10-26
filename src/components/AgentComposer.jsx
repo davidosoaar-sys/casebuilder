@@ -142,7 +142,7 @@ export default function AgentComposer({ onSend, busy = false, disabled = false, 
   const [text, setText] = useState('')
   const [files, setFiles] = useState([])
   const [fileError, setFileError] = useState('')
-  const [web, setWeb] = useState(() => read('casebuilder.agent-web', '1') === '1')
+  const [web, setWeb] = useState(true)
   const [modelId, setModelId] = useState(() => read('casebuilder.agent-model', AGENT_MODELS[0].id))
   const [levels, setLevels] = useState(() => { try { return JSON.parse(localStorage.getItem('casebuilder.agent-levels') || '{}') } catch { return {} } })
   const [menu, setMenu] = useState(false)
@@ -154,7 +154,6 @@ export default function AgentComposer({ onSend, busy = false, disabled = false, 
   const level = LEVELS.find(l => l.id === levelId) || LEVELS[1]
 
   useEffect(() => { write('casebuilder.agent-model', model.id) }, [model.id])
-  useEffect(() => { write('casebuilder.agent-web', web ? '1' : '0') }, [web])
   useEffect(() => { write('casebuilder.agent-levels', JSON.stringify(levels)) }, [levels])
   useEffect(() => { const el = area.current; if (!el) return; el.style.height = 'auto'; el.style.height = Math.max(54, Math.min(el.scrollHeight, 260)) + 'px' }, [text])
   useEffect(() => () => rec.current?.abort?.(), [])

@@ -13,6 +13,7 @@ const cli=fileURLToPath(new URL('../skills/business-case/scripts/casebuilder.mjs
 const schema=properties=>({type:'object',properties,additionalProperties:false})
 const str={type:'string'}
 const tools=[
+ {name:'casebuilder_apply_brand',description:'Save reviewed official brand findings and embedded assets to a local case. Host research tools discover/download assets; this tool does not fetch URLs.',inputSchema:{...schema({caseId:str,approved:{type:'boolean'},brand:{type:'object'},sources:{type:'array',items:str}}),required:['caseId','approved','brand','sources']}},
  {name:'casebuilder_info',description:'List canonical inputs, roles and archetypes. No network access.',inputSchema:schema({})},
  {name:'casebuilder_create',description:'Create an empty local case. Does not connect accounts or sync to the app.',inputSchema:{...schema({company:str}),required:['company']}},
  {name:'casebuilder_read',description:'Read a local case and its evidence.',inputSchema:{...schema({caseId:str}),required:['caseId']}},
@@ -30,6 +31,20 @@ function call(name,a){
   const id=randomUUID();run(['init',a.company,'--out',file(id)]);return JSON.stringify({caseId:id,case:JSON.parse(fs.readFileSync(file(id),'utf8'))})
  }
  const f=file(a.caseId)
+ if(name==='casebuilder_apply_brand'){
+  if(a.approved!==true)throw Error('Brand replacement must be authorized')
+  if(!a.brand||typeof a.brand!=='object'||Array.isArray(a.brand)||!Array.isArray(a.sources)||!a.sources.length||a.sources.some(s=>typeof s!=='string'||!/^https:\/\//i.test(s)))throw Error('Official HTTPS source URLs and brand findings required')
+  if(JSON.stringify(a.brand).length>4500000)throw Error('Brand assets exceed the local size limit')
+  const data=JSON.parse(fs.readFileSync(f,'utf8'))
+  const allowed=['logo','logoBackground','headingFont','bodyFont','fontFaces','primary','background','surface','text','muted','heroImage','heroSource','heroAlt','website']
+  const patch=Object.fromEntries(allowed.filter(k=>Object.hasOwn(a.brand,k)).map(k=>[k,a.brand[k]]))
+  if(patch.logo&&!/^data:image\/(png|jpeg|svg\+xml);base64,[a-zA-Z0-9+/=]+$/.test(patch.logo))throw Error('Embed a validated image, not a remote logo URL')
+  if(patch.heroImage&&!/^data:image\/(png|jpeg|webp);base64,[a-zA-Z0-9+/=]+$/.test(patch.heroImage))throw Error('Embed a validated raster hero image')
+  data.brand={...data.brand,...patch,sources:a.sources,status:'ready'}
+  const tmp=f+'.brand.case.json'
+  try{fs.writeFileSync(tmp,JSON.stringify(data),{mode:0o600});run(['validate',tmp]);atomic(f,data)}finally{if(fs.existsSync(tmp))fs.unlinkSync(tmp)}
+  return JSON.stringify({saved:true,fields:Object.keys(patch),sources:a.sources,note:'Discovery provenance and font availability still require visual verification.'})
+ }
  if(name==='casebuilder_read')return fs.readFileSync(f,'utf8')
  if(name==='casebuilder_calculate')return run(['calc',f])
  if(name==='casebuilder_build'){

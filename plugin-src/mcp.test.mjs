@@ -16,7 +16,7 @@ test('MCP case workflow generates artifacts, retains evidence and rejects unappr
  const call=(name,args={})=>request('tools/call',{name,arguments:args})
  try{
   assert.equal((await request('initialize',{protocolVersion:'2025-06-18'})).serverInfo.name,'casebuilder-local')
-  assert.equal((await request('tools/list')).tools.length,6)
+  assert.equal((await request('tools/list')).tools.length,7)
   const created=JSON.parse((await call('casebuilder_create',{company:'Northwind demo'})).content[0].text)
   const caseId=created.caseId
   const inputs=[{key:'engineers',value:500,state:'suggestion',origin:'Fictional Granola fixture',quote:'We have about 500 engineers.',link:'https://example.com/demo-note'}]
