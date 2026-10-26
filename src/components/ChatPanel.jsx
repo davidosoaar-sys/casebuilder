@@ -53,7 +53,7 @@ function useCopy() {
   }]
 }
 
-export default function ChatPanel({ project, userId, userName, mode = 'split', onApply, onUndo, onRun, onPick, onClose, onSplit, onFull, onSettings, skillRequest, onSkillRequestDone }) {
+export default function ChatPanel({ project, userId, userName, mode = 'split', onApply, onUndo, onRun, onPick, onClose, onSplit, onFull, onSettings, onFlush, onViewCase, skillRequest, onSkillRequestDone }) {
   const dealId = project.id
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
@@ -185,8 +185,9 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
   useEffect(() => {
     for (const m of messages) {
       if (m.role !== 'assistant') continue
-      const edits = m.meta?.edits
-      if (Array.isArray(edits) && edits.length && !applied[m.id]) onApply(m.id, edits)
+      const edits = Array.isArray(m.meta?.edits) ? m.meta.edits : []
+      const deckOps = Array.isArray(m.meta?.deck_ops) ? m.meta.deck_ops : []
+      if ((edits.length || deckOps.length) && !applied[m.id]) onApply(m.id, edits, deckOps)
       const cmds = m.meta?.commands
       // Only fresh replies run by themselves; an old one never re-runs on reload.
       const fresh = Date.now() - new Date(m.created_at).getTime() < 10 * 60 * 1000
@@ -206,6 +207,9 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
     if (noKey) { setError('Add an AI model key in Settings first.'); return false }
     if (pending) return false
     setError('')
+    // The worker reads the deal from the database: save a pending edit first, so
+    // the agent works from the deck and inputs on screen. Never wait forever.
+    await Promise.race([onFlush?.(), new Promise(r => setTimeout(r, 5000))])
     // First message of a new chat: create the chat, titled from the message.
     let id = chatId
     if (!id) {
@@ -284,6 +288,8 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
                 <li>“They have 1,200 engineers.”</li>
                 <li>“Use $120 an hour for engineer cost.”</li>
                 <li>“Which numbers are still unconfirmed?”</li>
+                <li>“Make the title page punchier.”</li>
+                <li>“Add a page on the rollout plan.”</li>
               </ul>
             </div>
           )) : visible.map(m => m.role === 'status' ? (
@@ -311,7 +317,7 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
               {m.meta?.research
                 ? <div className="chat-bubble chat-research"><p className="mono-label chat-research-tag">Deep research</p><Answer text={m.content} sources={m.meta.sources || []} /><Sources sources={m.meta.sources || []} dropped={m.meta.dropped_sources || 0} /></div>
                 : <div className="chat-bubble">{m.content}</div>}
-              <ChangeCard log={applied[m.id]} meta={m.meta} onUndo={() => onUndo(m.id)} />
+              <ChangeCard log={applied[m.id]} meta={m.meta} onUndo={() => onUndo(m.id)} onView={onViewCase} />
               {m.meta?.commands?.length > 0 && (runs[m.id]
                 ? <CommandCards run={runs[m.id]} commands={m.meta.commands} project={project} onPick={onPick} messageId={m.id} />
                 : <div className="cmd-cards"><div className="cmd-card"><p className="cmd-note">This research was not run. <button type="button" className="link-btn" onClick={() => onRun?.(m.id, m.meta.commands)}>Run it now</button></p></div></div>)}
@@ -484,10 +490,14 @@ function EditBox({ initial, onSave, onCancel, disabled }) {
   )
 }
 
-function ChangeCard({ log, meta, onUndo }) {
+// What a reply changed: inputs, then the case (deck and brand). One Undo for the
+// whole reply; "View" opens Case artifacts on the Live room.
+function ChangeCard({ log, meta, onUndo, onView }) {
   const rejected = log?.refused?.length ? log.refused : meta?.rejected || []
-  if (!log && !rejected.length) return null
+  const deckRejected = [...new Set([...(meta?.deck_rejected || []), ...(log?.deckRefused || [])])]
+  if (!log && !rejected.length && !deckRejected.length) return null
   const changes = log?.changes || []
+  const deck = log?.deckChanges || []
   return (
     <div className={`chat-changes${log?.undone ? ' is-undone' : ''}`}>
       {changes.length > 0 && <>
@@ -503,9 +513,19 @@ function ChangeCard({ log, meta, onUndo }) {
         </ul>
         {log.undone
           ? (log.skipped?.length ? <p className="chg-note">Kept your later edits to {log.skipped.join(', ')}.</p> : null)
-          : <button type="button" className="ghost chg-undo" onClick={onUndo}>Undo</button>}
+          : !deck.length && <button type="button" className="ghost chg-undo" onClick={onUndo}>Undo</button>}
       </>}
       {rejected.length > 0 && <p className="chg-note">Not changed: {rejected.join(' ')}</p>}
+      {deck.length > 0 && <div className={changes.length ? 'chg-case-sec' : undefined}>
+        <p className="mono-label">{log.undone ? (changes.length ? 'Case changes undone' : 'Undone') : 'Changed the case'}</p>
+        <ul className="chg-case">{deck.map((c, i) => <li key={i}>{c.sentence}</li>)}</ul>
+        {log.undone && log.deckSkipped?.length > 0 && <p className="chg-note">Kept your later edits: {log.deckSkipped.join('; ')}.</p>}
+        <div className="chg-actions">
+          {!log.undone && <button type="button" className="ghost chg-undo" onClick={onUndo}>Undo</button>}
+          {onView && <button type="button" className="ghost chg-undo" onClick={onView}>View</button>}
+        </div>
+      </div>}
+      {deckRejected.length > 0 && <p className="chg-note">Not changed in the case: {deckRejected.join(' ')}</p>}
     </div>
   )
 }

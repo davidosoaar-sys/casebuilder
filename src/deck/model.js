@@ -59,6 +59,7 @@ export const TOKENS = [
 
 const block = (type, props = {}) => ({ id: uid(), type, ...props })
 const text = (style, t) => block('text', { style, text: t })
+export const textBlock = text
 const slide = (variant, blocks) => ({ id: uid(), variant, blocks })
 
 // ---------------------------------------------------------------- tokens

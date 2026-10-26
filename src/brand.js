@@ -7,6 +7,9 @@ export const DEFAULT_BRAND = {
   fontData: '', fontName: '', website: '', sources: [], status: 'idle', message: '', hideLogo: false
 }
 export const COLOR_KEYS = ['primary', 'background', 'surface', 'text', 'muted']
+// Fonts offered in the brand panel (installed everywhere, or loaded by the app).
+// worker/worker.py BRAND_FONTS holds the same list for the agent.
+export const BRAND_FONTS = ['Arial', 'Outfit', 'Georgia', 'Verdana', 'Times New Roman', 'Trebuchet MS', 'Segoe UI', 'Courier New']
 export const cleanFont = value => String(value || '').replace(/[^a-zA-Z0-9 ,_-]/g, '').slice(0, 100)
 export const fontStack = value => {
   const names = cleanFont(value).split(',').map(n=>n.trim()).filter(Boolean)

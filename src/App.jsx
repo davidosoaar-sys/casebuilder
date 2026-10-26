@@ -11,7 +11,7 @@ import People from './components/People.jsx'
 import useCloudDeals from './useCloudDeals.js'
 import ChatPanel from './components/ChatPanel.jsx'
 import { apiHeaders } from './apiAuth.js'
-import { applyAgentEdits, undoAgentEdits } from './agentEdits.js'
+import { applyAgentReply, undoAgentReply } from './agentDeckEdits.js'
 import { runCommand } from './agentRunner.js'
 import { withSuggestion } from './source.js'
 import { supabase } from './supabase.js'
@@ -212,22 +212,11 @@ export default function App({ account }) {
         : { name, fields: next }
     })
 
-  // Agent edits: applied straight away, once per reply (agentLog is keyed by
-  // the chat message id and saved with the deal), and undoable.
-  const applyFromChat = (messageId, edits) =>
-    update(p => {
-      if (p.agentLog?.[messageId]) return {}
-      const r = applyAgentEdits(p.fields, edits)
-      const entry = { changes: r.changes, refused: r.refused, at: Date.now() }
-      return { fields: r.fields, agentLog: { ...(p.agentLog || {}), [messageId]: entry } }
-    })
-  const undoFromChat = messageId =>
-    update(p => {
-      const entry = p.agentLog?.[messageId]
-      if (!entry || entry.undone) return {}
-      const r = undoAgentEdits(p.fields, entry.changes)
-      return { fields: r.fields, agentLog: { ...p.agentLog, [messageId]: { ...entry, undone: true, skipped: r.skipped } } }
-    })
+  // Agent edits (inputs, and the deck and brand behind every artifact): applied
+  // straight away, once per reply (agentLog is keyed by the chat message id and
+  // saved with the deal), and undoable with one Undo per reply.
+  const applyFromChat = (messageId, edits, deckOps) => update(p => applyAgentReply(p, messageId, { edits, deckOps }))
+  const undoFromChat = messageId => update(p => undoAgentReply(p, messageId))
 
   // Agent commands (Find people, Suggest values, Person lookup, Find branding):
   // run once per reply through the same client code as the buttons, results
@@ -318,6 +307,7 @@ export default function App({ account }) {
   const agentSplit = insideProject && split && !agentFull
   const userName = (user || '').trim() || account.session.user.email.split('@')[0]
   const chatProps = insideProject && { project, userId: account.session.user.id, userName, onApply: applyFromChat, onUndo: undoFromChat, onRun: runFromChat, onPick: pickFromChat, onSettings: openSettings,
+    onFlush: saving.flush, onViewCase: () => { if (page === 'agent') setSplit(true); setView('website') },
     skillRequest: skillRequest?.dealId === project?.id ? skillRequest : null, onSkillRequestDone: () => setSkillRequest(null) }
 
   return (

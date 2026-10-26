@@ -32,6 +32,11 @@ without a working integration. No fake customer evidence or testimonials.
 ## Current work — 2026-10-25
 Local meeting work: evidence review, optional case context and impact-first new
 templates. Implemented locally: Live Room first, optional/automatically sourced brand imagery, refined one-pager, client-safe stakeholder requirements/statuses, sourced portrait support, and product/demo storytelling. Private notes remain internal.
+Local v0.16.0 work (2026-10-26): the Agent can revise the case artifacts from chat
+(page wording and text styles, adding, removing and reordering pages and blocks,
+brand colours and fonts). Changes apply straight away, show in a change card and
+can be undone; the user's later edits win. It cannot add images or logos, and
+figures still come only from the inputs.
 Amr owns agents/APIs, connector and file ingestion, account/backend changes.
 Coordinate shared navigation/data contracts rather than duplicating his work.
 
