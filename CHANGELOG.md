@@ -27,6 +27,12 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
+## v0.15.2 (2026-10-26): Forgot password works again
+
+- "Forgot password?" no longer crashes to a blank page. The reset screen referred to a value
+  that only exists on the sign-up screen (broken since the waitlist change in v0.11.0).
+- Tests: app 381/381. Checked in the browser: the reset screen opens with no errors.
+
 ## v0.15.1 (2026-10-26): Scheduled and Skills move to the main menu
 
 - Scheduled and Skills are in the main menu (Dashboard, Projects, Scheduled, Skills,

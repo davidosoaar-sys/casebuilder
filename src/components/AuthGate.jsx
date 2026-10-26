@@ -146,7 +146,7 @@ function AuthScreens({ onReset = () => {} }) {
           <h1>Reset your password</h1>
           <p className="auth-note auth-note-top">Enter your account email. We will send you a 6-digit code.</p>
           <label htmlFor="auth-email">Email</label>
-          <input id="auth-email" type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} autoFocus={!signup || !email} required />
+          <input id="auth-email" type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} autoFocus required />
           {error && <p className="auth-error" role="alert">{error}</p>}
           <button className="primary" type="submit" disabled={busy || !email.trim()}>{busy ? 'Sending…' : 'Send reset code'}</button>
           <p className="auth-switch">Remembered it? <button type="button" className="link-btn" onClick={() => go('signin')}>Sign in</button></p>
