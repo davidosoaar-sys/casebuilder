@@ -1,5 +1,5 @@
 import {verifyBrandForDisplay} from './verifyBrand.js'
-import React, { useState, useMemo, useEffect, useRef } from 'react'
+import React, { useState, useMemo, useEffect, useLayoutEffect, useRef } from 'react'
 import Sidebar from './components/Sidebar.jsx'
 import Deck from './components/Deck.jsx'
 import WebsiteView from './components/WebsiteView.jsx'
@@ -130,6 +130,20 @@ export default function App({ account }) {
   }
 
   useEffect(() => { window.scrollTo(0, 0) }, [view, currentId, stage])
+  // A new page fades in with a 4px rise. Keyed on the page, not the project,
+  // with no exit and no remount; the full-screen Agent is left alone.
+  const mainRef = useRef(null)
+  const shownView = useRef(view)
+  useLayoutEffect(() => {
+    if (shownView.current === view) return
+    shownView.current = view
+    const main = mainRef.current
+    const el = main?.firstElementChild
+    if (!el || main.classList.contains('content-agent') || !el.animate) return
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    el.animate(still ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 0, transform: 'translateY(4px)' }, { opacity: 1, transform: 'none' }],
+      { duration: 180, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' })
+  }, [view])
 
   useEffect(() => saveConnections(connections), [connections])
   useEffect(() => {
@@ -311,7 +325,7 @@ export default function App({ account }) {
       <Sidebar view={page} project={project} projectMode={insideProject} onNav={navigate} onSettings={openSettings} settingsOpen={settingsOpen} saveStatus={saving.status} account={account} admin={admin} />
 
       <div className={`lookup-content-wrap${agentSplit ? ' with-chat' : ''}`} style={agentSplit ? { '--chat-w': `${chatWidth}px` } : undefined}>
-      <main className={`content${agentFull ? ' content-agent' : ''}`}>
+      <main ref={mainRef} className={`content${agentFull ? ' content-agent' : ''}`}>
         {agentFull ? (
           <ChatPanel key={project.id} {...chatProps} mode="full" onSplit={() => { setSplit(true); setView(backFromAgent.current === 'agent' ? 'details' : backFromAgent.current) }} />
         ) : page === 'dashboard' ? (

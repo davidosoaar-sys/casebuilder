@@ -4,6 +4,7 @@
 import puppeteer from 'puppeteer'
 import fs from 'node:fs'
 import os from 'node:os'
+import { pick } from './lib/pick.mjs'
 
 const base = process.argv[2] || 'http://localhost:5173'
 const envFile = p => Object.fromEntries(fs.readFileSync(p, 'utf8').split('\n').filter(l => /^[A-Z_]+=/.test(l)).map(l => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1).trim()]))
@@ -31,11 +32,11 @@ for (const k of ['granola', 'sheets', 'excel', 'figma', 'canva']) {
 }
 check('all connector logos load', cards.every(c => c.logo), `${cards.length} cards`)
 
-await page.waitForFunction(() => document.querySelectorAll('select[aria-label="Connection project"] option').length > 1, { timeout: 15000 })
-const sel = await page.$('select[aria-label="Connection project"]')
-const firstProject = await page.$eval('select[aria-label="Connection project"]', s => [...s.options].map(o => o.value).find(Boolean) || "")
+const sel = '[role=combobox][aria-label="Connection project"]'
+await page.waitForFunction(s => { if (!document.querySelector('.cselect-list')) document.querySelector(s)?.click(); return document.querySelectorAll('.cselect-list [role=option]').length > 1 }, { timeout: 15000 }, sel)
+const firstProject = await page.$$eval('.cselect-list [role=option]', l => l.map(o => o.dataset.value).find(Boolean) || "")
 console.log("project option:", firstProject)
-await sel.select(firstProject); await sleep(500)
+await page.$eval(sel, b => b.click()); await pick(page, sel, firstProject); await sleep(500)
 const wasOn = await page.$eval('[data-connector=excel] input[type=checkbox]', i => i.checked)
 if (!wasOn) await page.click('[data-connector=excel] .switch')
 await page.waitForSelector('[data-connector=excel] input[type=file]')

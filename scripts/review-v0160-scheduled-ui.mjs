@@ -107,9 +107,9 @@ if (mondays.off) {
       name: m.querySelector('input:not([type])')?.value,
       first: m.querySelector('input[type=datetime-local]')?.value,
       runs: m.querySelector('[aria-label="Task type"] .seg-on')?.innerText,
-      skill: m.querySelector('select[aria-label="Skill"]')?.selectedOptions[0]?.innerText,
-      every: [m.querySelector('.sched-every input')?.value, m.querySelector('.sched-every select')?.value].join(' '),
-      project: !!m.querySelector('select[aria-label="Project"]'),
+      skill: m.querySelector('[role=combobox][aria-label="Skill"] .cselect-value')?.innerText,
+      every: [m.querySelector('.sched-every input')?.value, m.querySelector('.sched-every [role=combobox]')?.dataset.value].join(' '),
+      project: !!m.querySelector('[role=combobox][aria-label="Project"]'),
       submit: !!m.querySelector('button[type=submit]'),
       active: document.activeElement?.getAttribute('role') + ':' + document.activeElement?.innerText
     }
@@ -168,7 +168,7 @@ check('outside click closes the menu', !(await page.$('.sched-menu')))
 
 // Card body opens Edit (no save).
 await page.click('.sched-card .sched-open'); await sleep(500)
-const edit = await page.evaluate(() => ({ title: document.querySelector('.sched-form-modal h2')?.innerText, project: document.querySelector('.sched-form-modal select[aria-label="Project"]')?.disabled }))
+const edit = await page.evaluate(() => ({ title: document.querySelector('.sched-form-modal h2')?.innerText, project: document.querySelector('.sched-form-modal [role=combobox][aria-label="Project"]')?.disabled }))
 check('card body opens Edit', edit.title === 'Edit task' && edit.project === true, JSON.stringify(edit))
 await page.screenshot({ path: `${out}/07-edit.png` })
 await page.keyboard.press('Escape'); await sleep(450)

@@ -9,6 +9,7 @@ import { confidence, unconfirmed } from '../valueModel.js'
 import { fmtMoney } from '../format.js'
 import { useModelKeys } from './Settings.jsx'
 import PageHead from './PageHead.jsx'
+import { Skeleton, SkeletonText } from './ui.jsx'
 
 function dealStats(deal) {
   const inputs = Object.fromEntries(deal.fields.map(f => [f.key, f.value]))
@@ -61,15 +62,15 @@ export default function Dashboard({ account, name, deals, loading, onOpen, onNav
       )}
 
       <section className="dash-stats" aria-label="Pipeline">
-        <Stat label="Open deals" value={loading ? '…' : String(stats.length)} />
-        <Stat label="Pipeline value" value={loading ? '…' : valued.length ? fmtMoney(pipeline) : '—'} note={!loading && valued.length < stats.length ? `${valued.length} of ${stats.length} deals have enough inputs to value` : 'yearly value across your deals'} />
-        <Stat label="Avg. confirmed" value={loading ? '…' : `${avgConf}%`} note="inputs backed by a customer source" />
+        <Stat label="Open deals" value={loading ? <SkeletonText width="2ch" /> : String(stats.length)} />
+        <Stat label="Pipeline value" value={loading ? <SkeletonText width="5ch" /> : valued.length ? fmtMoney(pipeline) : '—'} note={!loading && valued.length < stats.length ? `${valued.length} of ${stats.length} deals have enough inputs to value` : 'yearly value across your deals'} />
+        <Stat label="Avg. confirmed" value={loading ? <SkeletonText width="3ch" /> : `${avgConf}%`} note="inputs backed by a customer source" />
       </section>
 
       <div className="dash-grid">
         <section className="dash-card">
           <h2>Needs attention</h2>
-          {loading ? <p className="empty">Loading…</p> : attention.length === 0 ? <p className="empty">Nothing waiting on you.</p> : (
+          {loading ? <Skeleton label="Loading deals" rows={3} height={50} listClass="dash-list dash-skeleton" /> : attention.length === 0 ? <p className="empty">Nothing waiting on you.</p> : (
             <ul className="dash-list">
               {attention.map(s => (
                 <li key={s.deal.id}>
@@ -85,7 +86,7 @@ export default function Dashboard({ account, name, deals, loading, onOpen, onNav
 
         <section className="dash-card">
           <h2>Recent deals</h2>
-          {loading ? <p className="empty">Loading…</p> : recent.length === 0 ? <p className="empty">No deals yet.</p> : (
+          {loading ? <Skeleton label="Loading deals" rows={3} height={50} listClass="dash-list dash-skeleton" /> : recent.length === 0 ? <p className="empty">No deals yet.</p> : (
             <ul className="dash-list">
               {recent.map(s => (
                 <li key={s.deal.id}>
@@ -106,7 +107,7 @@ export default function Dashboard({ account, name, deals, loading, onOpen, onNav
             <span className={`dot ${hasKey ? 'dot-ok' : 'dot-off'}`} aria-hidden="true" />
             {keys === null ? 'Checking…' : hasKey ? `Ready · key ends in …${keys[0].last4}` : 'Not set up'}
           </p>
-          {jobs === null ? <p className="empty">Loading…</p> : jobs.length === 0 ? <p className="empty">No agent activity yet.</p> : (
+          {jobs === null ? <Skeleton label="Loading agent activity" rows={3} height={50} listClass="dash-list dash-skeleton" /> : jobs.length === 0 ? <p className="empty">No agent activity yet.</p> : (
             <ul className="dash-list">
               {jobs.map(j => (
                 <li key={j.id} className="dash-job">

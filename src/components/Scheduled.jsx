@@ -3,14 +3,13 @@
 // posts into the task's own chat in that project's Agent. Yours lists your
 // tasks; Templates are a skill or prompt plus a schedule to start from.
 // Backed by public.schedules + the per-minute runner.
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import React, { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, MotionConfig, motion } from 'framer-motion'
 import PageHead from './PageHead.jsx'
 import { supabase } from '../supabase.js'
 import { useModelKeys } from './Settings.jsx'
 import { useSkills } from './Skills.jsx'
-import { Dialog, EASE_OUT, PlusIcon, Skeleton, SkillIcon, Tabs } from './ui.jsx'
+import { Dialog, EASE_OUT, Menu, PlusIcon, Select, Skeleton, SkillIcon, Tabs } from './ui.jsx'
 import { prebuiltByKey, skillMessage, skillRef } from '../skills.js'
 import { SCHEDULE_LIMIT, MAX_PROMPT, parseEvery, everyInterval, everyError, describeEvery, toLocalInput, defaultFirstRun, fmtWhen, fmtClock, nextAt, scheduleError } from '../schedules.js'
 
@@ -248,68 +247,6 @@ function TaskCard({ task: s, on, last, starting, noKey, skills, project, onEdit,
   )
 }
 
-// "..." menu, portalled so list clipping never cuts it. Escape or a click
-// outside closes it; arrow keys move between items.
-function Menu({ label, items }) {
-  const [open, setOpen] = useState(false)
-  const [pos, setPos] = useState(null)
-  const btn = useRef(null)
-  const pop = useRef(null)
-  useLayoutEffect(() => {
-    if (!open) return
-    const r = btn.current.getBoundingClientRect()
-    const up = r.bottom + 190 > window.innerHeight && r.top > 190
-    setPos({ right: window.innerWidth - r.right, ...(up ? { bottom: window.innerHeight - r.top + 6 } : { top: r.bottom + 6 }), origin: up ? 'bottom right' : 'top right' })
-  }, [open])
-  useEffect(() => {
-    if (!open) return
-    pop.current?.querySelector('[role=menuitem]:not(:disabled)')?.focus()
-    const shut = () => setOpen(false)
-    const onDown = e => { if (!pop.current?.contains(e.target) && !btn.current?.contains(e.target)) shut() }
-    const onKey = e => { if (e.key === 'Escape') { e.stopPropagation(); shut(); btn.current?.focus() } }
-    document.addEventListener('pointerdown', onDown)
-    window.addEventListener('keydown', onKey)
-    window.addEventListener('resize', shut)
-    window.addEventListener('scroll', shut, true)
-    return () => {
-      document.removeEventListener('pointerdown', onDown)
-      window.removeEventListener('keydown', onKey)
-      window.removeEventListener('resize', shut)
-      window.removeEventListener('scroll', shut, true)
-    }
-  }, [open, pos])
-  function onKey(e) {
-    const all = [...pop.current.querySelectorAll('[role=menuitem]:not(:disabled)')]
-    const i = all.indexOf(document.activeElement)
-    const to = e.key === 'ArrowDown' ? i + 1 : e.key === 'ArrowUp' ? i - 1 : e.key === 'Home' ? 0 : e.key === 'End' ? all.length - 1 : null
-    if (to == null) return
-    e.preventDefault(); all[(to + all.length) % all.length]?.focus()
-  }
-  return (
-    <>
-      <button ref={btn} type="button" className="icon-btn sched-more" aria-label={label} title="More" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(o => !o)}>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="3.5" cy="8" r="1.3" /><circle cx="8" cy="8" r="1.3" /><circle cx="12.5" cy="8" r="1.3" /></svg>
-      </button>
-      {createPortal(
-        <AnimatePresence>
-          {open && pos && (
-            <motion.div ref={pop} className="sched-menu" role="menu" aria-label={label} onKeyDown={onKey}
-              style={{ right: pos.right, top: pos.top, bottom: pos.bottom, transformOrigin: pos.origin }}
-              initial={{ opacity: 0, transform: 'scale(0.97)' }} animate={{ opacity: 1, transform: 'scale(1)' }} exit={{ opacity: 0, transform: 'scale(0.97)' }}
-              transition={{ duration: 0.14, ease: EASE_OUT }}>
-              {items.map(it => (
-                <button key={it.label} type="button" role="menuitem" tabIndex={-1} disabled={it.disabled} className={it.danger ? 'is-danger' : ''}
-                  onClick={() => { setOpen(false); btn.current?.focus(); it.onSelect() }}>{it.label}</button>
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
-    </>
-  )
-}
-
 function TaskForm({ projects, userId, skills, initial, onClose, onSaved }) {
   const editing = initial && !initial.example
   // The project a task runs on. Fixed once saved: its chat lives in that project.
@@ -397,10 +334,8 @@ function TaskForm({ projects, userId, skills, initial, onClose, onSaved }) {
       </div>
       {runs === 'skill' ? <>
         <label className="sched-field"><span>Skill</span>
-          <select name="skill" value={skill ? skillVal : ''} onChange={e => setSkillVal(e.target.value)} aria-label="Skill">
-            {!skill && <option value="">{added.length ? 'Pick a skill' : 'No skills added yet'}</option>}
-            {added.map(x => <option key={x.key || x.id} value={optionValue(x)}>{x.name}</option>)}
-          </select>
+          <Select name="skill" value={skill ? skillVal : ''} onChange={setSkillVal} aria-label="Skill"
+            options={[...(skill ? [] : [{ value: '', label: added.length ? 'Pick a skill' : 'No skills added yet' }]), ...added.map(x => ({ value: optionValue(x), label: x.name }))]} />
           {skill ? <small>{skill.description}</small> : !added.length && skills && <small>Add a skill on the Skills page first.</small>}
         </label>
         {skill && (skill.inputs || []).map(i => (
@@ -412,9 +347,8 @@ function TaskForm({ projects, userId, skills, initial, onClose, onSaved }) {
           <textarea name="prompt" rows={4} value={text} maxLength={MAX_PROMPT} onChange={e => setText(e.target.value)} placeholder={kind === 'research' ? 'e.g. What changed at this company in the last 7 days?' : 'e.g. List the inputs still unconfirmed, most important first.'} /></label>
       )}
       <label className="sched-field"><span>Project</span>
-        <select name="project" value={dealId} onChange={e => setDealId(e.target.value)} disabled={!!editing} aria-label="Project">
-          {projects.map(p => <option key={p.id} value={p.id}>{p.name || 'Untitled project'}</option>)}
-        </select>
+        <Select name="project" value={dealId} onChange={setDealId} disabled={!!editing} aria-label="Project"
+          options={projects.map(p => ({ value: p.id, label: p.name || 'Untitled project' }))} />
         {editing && <small>A task stays on its project; its results are in that project's chat.</small>}
       </label>
       <label className="sched-field"><span>Name</span>
@@ -423,9 +357,8 @@ function TaskForm({ projects, userId, skills, initial, onClose, onSaved }) {
         <label className="sched-field"><span>Repeat every</span>
           <span className="sched-every">
             <input type="number" name="every" inputMode="numeric" min={1} max={744} value={every.n} onChange={e => setEvery(v => ({ ...v, n: e.target.value }))} aria-label="How many" />
-            <select name="unit" value={every.unit} onChange={e => setEvery(v => ({ ...v, unit: e.target.value }))} aria-label="Unit">
-              <option value="hours">hours</option><option value="days">days</option><option value="weeks">weeks</option>
-            </select>
+            <Select name="unit" value={every.unit} onChange={unit => setEvery(v => ({ ...v, unit }))} aria-label="Unit"
+              options={[{ value: 'hours', label: 'hours' }, { value: 'days', label: 'days' }, { value: 'weeks', label: 'weeks' }]} />
           </span>
           {eErr && <small className="auth-error">{eErr}</small>}
         </label>

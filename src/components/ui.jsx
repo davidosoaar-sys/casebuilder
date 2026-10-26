@@ -1,12 +1,187 @@
-// Shared UI pieces for the library pages (Skills, Scheduled): tabs with a
-// sliding pill, the portal dialog shell, skeleton rows, motion curves, icons.
-// Class names are the Skills ones (v0.16.0); both pages use the same look.
-import React, { useEffect, useId, useRef } from 'react'
+// Shared UI pieces: tabs with a sliding pill, the portal dialog shell, the
+// custom select, the "..." menu, skeleton rows, motion curves, icons.
+// Class names are the Skills ones (v0.16.0); the app uses the same look.
+import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, MotionConfig, motion } from 'framer-motion'
 
 export const EASE_OUT = [0.23, 1, 0.32, 1]
 export const EASE_IN_OUT = [0.77, 0, 0.175, 1]
+export const EASE_DRAWER = [0.32, 0.72, 0, 1]
+
+// Popovers render into body; skipped on the server (unit tests render markup).
+const portal = node => (typeof document === 'undefined' ? null : createPortal(<MotionConfig reducedMotion="user">{node}</MotionConfig>, document.body))
+const POP_IN = { initial: { opacity: 0, transform: 'scale(0.97)' }, animate: { opacity: 1, transform: 'scale(1)' }, exit: { opacity: 0, transform: 'scale(0.97)' }, transition: { duration: 0.14, ease: EASE_OUT } }
+
+// Close a popover on a press outside it, on resize, and on scroll outside it.
+function useDismiss(open, refs, close) {
+  const shut = useRef(close)
+  shut.current = close
+  useEffect(() => {
+    if (!open) return
+    const inside = t => refs.some(r => r.current?.contains(t))
+    const onDown = e => { if (!inside(e.target)) shut.current() }
+    const onScroll = e => { if (!inside(e.target)) shut.current() }
+    const onResize = () => shut.current()
+    document.addEventListener('pointerdown', onDown)
+    window.addEventListener('resize', onResize)
+    window.addEventListener('scroll', onScroll, true)
+    return () => {
+      document.removeEventListener('pointerdown', onDown)
+      window.removeEventListener('resize', onResize)
+      window.removeEventListener('scroll', onScroll, true)
+    }
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+// Where a popover goes: under its trigger, or above when there is no room.
+function place(el, height, alignRight = false) {
+  const r = el.getBoundingClientRect()
+  const up = r.bottom + height + 8 > window.innerHeight && r.top > height + 8
+  const y = up ? { bottom: window.innerHeight - r.top + 6 } : { top: r.bottom + 6 }
+  const x = alignRight ? { right: Math.max(8, window.innerWidth - r.right) } : { left: Math.max(8, Math.min(r.left, window.innerWidth - Math.max(r.width, 180) - 8)) }
+  return { ...x, ...y, width: r.width, origin: `${up ? 'bottom' : 'top'} ${alignRight ? 'right' : 'left'}` }
+}
+
+// A select that looks like the app: a button that opens a listbox.
+// options: [{ value, label, disabled? }]. onChange gets the value as a string,
+// like a native select. The trigger keeps focus; arrows, Home, End, Enter,
+// Escape and type-ahead work while it is open.
+export function Select({ value, onChange, options, placeholder = '', disabled = false, id, name, className = '', title, 'aria-label': ariaLabel }) {
+  const [open, setOpen] = useState(false)
+  const [active, setActive] = useState(-1)
+  const [pos, setPos] = useState(null)
+  const btn = useRef(null)
+  const list = useRef(null)
+  const typed = useRef({ text: '', at: 0 })
+  const listId = useId()
+  const selected = options.findIndex(o => String(o.value) === String(value))
+  const usable = i => i >= 0 && i < options.length && !options[i].disabled
+  const first = () => options.findIndex((_, i) => usable(i))
+  const last = () => { for (let i = options.length - 1; i >= 0; i--) if (usable(i)) return i; return -1 }
+  const step = (from, dir) => { for (let i = from + dir; i >= 0 && i < options.length; i += dir) if (usable(i)) return i; return from }
+
+  function show() {
+    if (disabled || !options.length) return
+    setActive(usable(selected) ? selected : first())
+    setPos(place(btn.current, Math.min(options.length * 36 + 10, 290)))
+    setOpen(true)
+  }
+  function hide() { setOpen(false) }
+  function choose(i) {
+    if (!usable(i)) return
+    hide()
+    if (i !== selected) onChange?.(String(options[i].value))
+  }
+  useDismiss(open, [btn, list], hide)
+  useEffect(() => {
+    if (open && active >= 0) list.current?.querySelector(`[data-index="${active}"]`)?.scrollIntoView({ block: 'nearest' })
+  }, [open, active])
+
+  function seek(ch) {
+    const now = Date.now()
+    const t = typed.current
+    t.text = now - t.at > 600 ? ch : t.text + ch
+    t.at = now
+    const from = active < 0 ? 0 : active + (t.text.length === 1 ? 1 : 0)
+    for (let k = 0; k < options.length; k++) {
+      const i = (from + k) % options.length
+      if (usable(i) && String(options[i].label).toLowerCase().startsWith(t.text.toLowerCase())) return i
+    }
+    return -1
+  }
+  function onKey(e) {
+    const k = e.key
+    if (!open) {
+      if (['ArrowDown', 'ArrowUp', 'Enter', ' ', 'Home', 'End'].includes(k)) { e.preventDefault(); show() }
+      return
+    }
+    if (k === 'Escape') { e.preventDefault(); e.stopPropagation(); hide(); return }
+    if (k === 'Tab') { hide(); return }
+    const typing = k.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey
+    if ((k === 'Enter' || (k === ' ' && Date.now() - typed.current.at > 600))) { e.preventDefault(); choose(active); return }
+    const to = k === 'ArrowDown' ? step(active, 1) : k === 'ArrowUp' ? step(active, -1) : k === 'Home' ? first() : k === 'End' ? last() : typing ? seek(k) : null
+    if (to == null) return
+    e.preventDefault()
+    if (to >= 0) setActive(to)
+  }
+
+  const shown = selected >= 0 ? options[selected].label : placeholder
+  return (
+    <>
+      <button ref={btn} type="button" id={id} name={name} title={title} className={`cselect ${className}`} role="combobox" aria-label={ariaLabel}
+        aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? listId : undefined} aria-activedescendant={open && active >= 0 ? `${listId}-${active}` : undefined}
+        data-value={value ?? ''} disabled={disabled} onClick={() => (open ? hide() : show())} onKeyDown={onKey}>
+        <span className={`cselect-value${selected < 0 ? ' is-placeholder' : ''}`}>{shown}</span>
+        <svg className="cselect-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 4.5L6 7.5l3-3" /></svg>
+      </button>
+      {portal(
+        <AnimatePresence>
+          {open && pos && (
+            <motion.div ref={list} id={listId} className="cselect-list" role="listbox" aria-label={ariaLabel}
+              style={{ left: pos.left, top: pos.top, bottom: pos.bottom, minWidth: pos.width, transformOrigin: pos.origin }} {...POP_IN}>
+              {options.map((o, i) => (
+                <div key={String(o.value)} id={`${listId}-${i}`} data-index={i} data-value={String(o.value)} role="option" aria-selected={i === selected} aria-disabled={o.disabled || undefined}
+                  className={`cselect-option${i === active ? ' is-active' : ''}`} onMouseDown={e => e.preventDefault()} onMouseMove={() => { if (usable(i) && i !== active) setActive(i) }} onClick={() => choose(i)}>
+                  <span>{o.label}</span>
+                  {i === selected && <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 7.5l2.6 2.5L11 4.5" /></svg>}
+                </div>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
+    </>
+  )
+}
+
+// "..." menu, portalled so list clipping never cuts it. Escape or a click
+// outside closes it; arrow keys move between items. Items: [{ label,
+// description?, onSelect, disabled?, danger? }].
+export function Menu({ label, items, className = 'icon-btn sched-more', title = 'More' }) {
+  const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState(null)
+  const btn = useRef(null)
+  const pop = useRef(null)
+  useLayoutEffect(() => { if (open) setPos(place(btn.current, items.length * 44 + 12, true)) }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+  useDismiss(open, [btn, pop], () => setOpen(false))
+  useEffect(() => {
+    if (!open) return
+    pop.current?.querySelector('[role=menuitem]:not(:disabled)')?.focus()
+    const onKey = e => { if (e.key === 'Escape') { e.stopPropagation(); setOpen(false); btn.current?.focus() } }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, pos])
+  function onKey(e) {
+    const all = [...pop.current.querySelectorAll('[role=menuitem]:not(:disabled)')]
+    const i = all.indexOf(document.activeElement)
+    const to = e.key === 'ArrowDown' ? i + 1 : e.key === 'ArrowUp' ? i - 1 : e.key === 'Home' ? 0 : e.key === 'End' ? all.length - 1 : null
+    if (to == null) return
+    e.preventDefault(); all[(to + all.length) % all.length]?.focus()
+  }
+  return (
+    <>
+      <button ref={btn} type="button" className={className} aria-label={label} title={title} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(o => !o)}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="3.5" cy="8" r="1.3" /><circle cx="8" cy="8" r="1.3" /><circle cx="12.5" cy="8" r="1.3" /></svg>
+      </button>
+      {portal(
+        <AnimatePresence>
+          {open && pos && (
+            <motion.div ref={pop} className="sched-menu" role="menu" aria-label={label} onKeyDown={onKey}
+              style={{ right: pos.right, top: pos.top, bottom: pos.bottom, transformOrigin: pos.origin }} {...POP_IN}>
+              {items.map(it => (
+                <button key={it.label} type="button" role="menuitem" tabIndex={-1} disabled={it.disabled} className={`${it.danger ? 'is-danger' : ''}${it.description ? ' has-desc' : ''}`}
+                  onClick={() => { setOpen(false); btn.current?.focus(); it.onSelect() }}>
+                  {it.description ? <><span>{it.label}</span><small>{it.description}</small></> : it.label}
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
+    </>
+  )
+}
 
 // tabs: [{ id, label, count? }]. Ids are `${idPrefix}-tab-<id>` and the panel
 // is `${idPrefix}-panel-<id>`. Arrow keys move between tabs.
@@ -48,6 +223,11 @@ export function Skeleton({ label = 'Loading', rows = 4, height = 78, featured = 
       </ul>
     </div>
   )
+}
+
+// One shimmering bar in place of a value that is still loading.
+export function SkeletonText({ label = 'Loading', width = '4ch' }) {
+  return <span className="skeleton-text" style={{ width }} aria-busy="true"><span className="visually-hidden">{label}</span></span>
 }
 
 // Portal dialog shell: backdrop fade, scale-in panel, Escape and backdrop

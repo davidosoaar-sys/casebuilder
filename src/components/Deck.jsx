@@ -2,6 +2,7 @@ import React, { useState, useRef, useLayoutEffect, useEffect } from 'react'
 import { uid } from '../uid.js'
 import BrandPanel from './BrandPanel.jsx'
 import DeckLogo from './DeckLogo.jsx'
+import { Select } from './ui.jsx'
 import { brandVars, fontFaceCss, blockDesign, normalizeBrand } from '../brand.js'
 import ExportMenu from '../export/ExportMenu.jsx'
 import { NO_ONE, resolveStakeholder } from '../deck/stakeholders.js'
@@ -101,10 +102,8 @@ export default function Deck({ inputs, model, fields, connectors, stakeholders, 
         <div className="who">
           <label className="who-label" htmlFor="deck-stakeholder">Stakeholder</label>
           <div className="stakeholder-select-row">
-            <select id="deck-stakeholder" aria-label="Stakeholder framing" value={active.key} disabled={!available.length} onChange={e => setActiveKey(e.target.value)}>
-              {!available.length && <option value="none">No stakeholder selected</option>}
-              {available.map(s => <option key={s.key} value={s.key}>{s.role}{stakeholders.find(x => x.key === s.key)?.namedPeople?.length ? ` · ${stakeholders.find(x => x.key === s.key).namedPeople.map(p => p.name).join(', ')}` : ''}</option>)}
-            </select>
+            <Select id="deck-stakeholder" aria-label="Stakeholder framing" value={active.key} disabled={!available.length} onChange={setActiveKey}
+              options={available.length ? available.map(s => ({ value: s.key, label: `${s.role}${stakeholders.find(x => x.key === s.key)?.namedPeople?.length ? ` · ${stakeholders.find(x => x.key === s.key).namedPeople.map(p => p.name).join(', ')}` : ''}` })) : [{ value: 'none', label: 'No stakeholder selected' }]} />
             <AddStakeholder
               existing={stakeholders}
               onAdd={s => {
@@ -232,19 +231,14 @@ function BlockEditor({ block: b, first, last, env, canEditStakeholder, onPatch, 
       <button className="tool tool-text" aria-expanded={formatting} onClick={() => setFormatting(v => !v)}>Text & style</button>
       {!['logo', 'image'].includes(b.type) && <label className="block-quick-color" title="Change text color">Text color<input type="color" aria-label="Text color" value={b.design?.color || normalizeBrand(brand).text} onChange={e => onPatch(x => ({ ...x, design: { ...x.design, color: e.target.value } }))} /></label>}
       {b.type === 'text' && (
-        <select
+        <Select
           className="block-style"
           value={b.style}
-          onChange={e => onPatch(x => ({ ...x, style: e.target.value }))}
+          onChange={style => onPatch(x => ({ ...x, style }))}
           title="Text style"
           aria-label="Text style"
-        >
-          {TEXT_STYLES.map(([k, label]) => (
-            <option key={k} value={k}>
-              {label}
-            </option>
-          ))}
-        </select>
+          options={TEXT_STYLES.map(([k, label]) => ({ value: k, label }))}
+        />
       )}
       {hasSettings && (
         <button className={`tool tool-text ${settings ? 'tool-on' : ''}`} onClick={() => setSettings(s => !s)}>

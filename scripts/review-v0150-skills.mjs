@@ -10,6 +10,7 @@
 import puppeteer from 'puppeteer'
 import fs from 'node:fs'
 import os from 'node:os'
+import { pick as choose } from './lib/pick.mjs'
 import { execFileSync } from 'node:child_process'
 
 const base = process.argv[2] || 'http://localhost:5173'
@@ -58,7 +59,7 @@ const mainMenu = async label => {
   await nav(label)
 }
 // "Use" / "Schedule" ask which project: pick the one the test opened.
-const pickProject = async () => { await page.waitForSelector('.skill-pick select', { timeout: 8000 }); await page.select('.skill-pick select', dealId); await page.click('.skill-pick button[type=submit]') }
+const pickProject = async () => { await choose(page, '.skill-pick [role=combobox]', dealId); await page.click('.skill-pick button[type=submit]') }
 const card = name => page.evaluateHandle(n => [...document.querySelectorAll('.skill-card')].find(c => c.querySelector('strong')?.innerText === n), name)
 const clickIn = async (h, text) => h.evaluate((c, t) => [...c.querySelectorAll('button')].find(b => b.innerText === t).click(), text)
 const dealId = await (async () => { await nav('Agent'); await page.waitForSelector('.chat-panel[data-deal]', { timeout: 15000 }); return page.$eval('.chat-panel[data-deal]', e => e.dataset.deal) })()
@@ -75,7 +76,7 @@ try {
 
   // Configure Objection prep: 3 objections.
   let c = await card('Objection prep'); await clickIn(c, 'Configure')
-  await page.waitForSelector('.skill-config select'); await page.select('.skill-config select', '3'); await sleep(1200)
+  await choose(page, '.skill-config [role=combobox]', '3'); await sleep(1200)
   const cfg = (await (await rest(`skills?owner_id=eq.${owner}&deal_id=is.null&prebuilt_key=eq.objection_prep&select=settings`)).json())[0]
   check('configure saves the setting for this project', cfg?.settings?.count === '3', JSON.stringify(cfg?.settings))
   // Switch Stakeholder map off.
@@ -133,9 +134,9 @@ try {
   c = await card('Account news digest'); await clickIn(c, 'Schedule')
   await pickProject()
   await page.waitForSelector('.scheduled-page .sched-form', { timeout: 10000 })
-  await page.waitForFunction(() => document.querySelector('.sched-form select[aria-label="Skill"]')?.value === 'k:account_news', { timeout: 10000 }).catch(() => {})
-  const pick = await page.$eval('.sched-form select[aria-label="Skill"]', s => s.value).catch(() => '')
-  const proj = await page.$eval('.sched-form select[aria-label="Project"]', s => s.value).catch(() => '')
+  await page.waitForFunction(() => document.querySelector('.sched-form [role=combobox][aria-label="Skill"]')?.dataset.value === 'k:account_news', { timeout: 10000 }).catch(() => {})
+  const pick = await page.$eval('.sched-form [role=combobox][aria-label="Skill"]', s => s.dataset.value).catch(() => '')
+  const proj = await page.$eval('.sched-form [role=combobox][aria-label="Project"]', s => s.dataset.value).catch(() => '')
   check('"Schedule" opens the Scheduled form with the skill and project picked', pick === 'k:account_news' && proj === dealId, `${pick} ${proj === dealId}`)
   await page.click('.sched-form .ghost')
 } finally {

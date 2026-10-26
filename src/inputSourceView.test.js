@@ -1,11 +1,16 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
+import {createRequire} from 'node:module'
 import React from 'react'
 import {renderToStaticMarkup} from 'react-dom/server'
 import {transformSync} from 'esbuild'
 const modules={react:{default:React,...React}}
 for(const name of ['valueModel','source','suggest','connectors','inputEditing']) modules['../'+name+'.js']=await import('./'+name+'.js')
+const nodeRequire=createRequire(import.meta.url)
+const ui={exports:{}}
+new Function('require','module','exports',transformSync(fs.readFileSync(new URL('components/ui.jsx',import.meta.url),'utf8'),{loader:'jsx',format:'cjs',tsconfigRaw:{}}).code)(nodeRequire,ui,ui.exports)
+modules['./ui.jsx']=ui.exports
 const compiled=transformSync(fs.readFileSync(new URL('components/InputSheet.jsx',import.meta.url),'utf8'),{loader:'jsx',format:'cjs',tsconfigRaw:{}}).code
 const module={exports:{}}
 new Function('require','module','exports',compiled)(id=>modules[id],module,module.exports)

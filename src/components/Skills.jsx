@@ -5,7 +5,7 @@
 import React, { useEffect, useState } from 'react'
 import { AnimatePresence, MotionConfig, motion } from 'framer-motion'
 import PageHead from './PageHead.jsx'
-import { Dialog, EASE_OUT, PlusIcon, SearchIcon, Skeleton, SkillIcon, Tabs } from './ui.jsx'
+import { Dialog, EASE_OUT, PlusIcon, SearchIcon, Select, Skeleton, SkillIcon, Tabs } from './ui.jsx'
 import { supabase } from '../supabase.js'
 import { librarySkills, MAX_SKILL_INSTRUCTIONS, PREBUILT } from '../skills.js'
 
@@ -240,9 +240,8 @@ function SkillDetail({ skill, added, error, onSetting, onEdit, onDelete, onTry, 
           <div className="skill-config">
             {settings.map(st => (
               <label key={st.key} className="sched-field"><span>{st.label}</span>
-                <select value={skill.settings[st.key]} onChange={e => onSetting(st.key, e.target.value)}>
-                  {st.options.map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
+                <Select value={skill.settings[st.key]} onChange={v => onSetting(st.key, v)} aria-label={st.label}
+                  options={st.options.map(o => ({ value: o, label: String(o) }))} />
               </label>
             ))}
           </div>
@@ -311,9 +310,8 @@ export function ProjectPick({ projects, skill, action, onPick, onCancel }) {
   return (
     <form className="sched-form skill-pick skill-modal-body" onSubmit={e => { e.preventDefault(); if (id) onPick(id) }} aria-label={`Pick a project for ${skill.name}`}>
       <label className="sched-field"><span>Project</span>
-        <select name="project" value={id} onChange={e => setId(e.target.value)} aria-label="Project">
-          {projects.map(p => <option key={p.id} value={p.id}>{p.name || 'Untitled project'}</option>)}
-        </select></label>
+        <Select name="project" value={id} onChange={setId} aria-label="Project"
+          options={projects.map(p => ({ value: p.id, label: p.name || 'Untitled project' }))} /></label>
       <div className="sched-form-actions">
         <button type="button" className="ghost" onClick={onCancel}>Cancel</button>
         <button type="submit" className="primary">{action === 'use' ? 'Open the Agent' : 'Continue'}</button>

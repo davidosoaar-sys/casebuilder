@@ -13,6 +13,7 @@ import { stateOf, isBlank, withValue, withState, withOrigin } from '../source.js
 import { suggestValues, applySuggestions, emptyKeys, fetchAgent } from '../suggest.js'
 import { enabledLabels } from '../connectors.js'
 import { editInput, restoreInput } from '../inputEditing.js'
+import { Select } from './ui.jsx'
 
 // The inputs: CHRIS'S VIEW. Every number shows where it came from, on the face of the
 // field. None of this (states, origins, confidence, gaps) appears on the client deck.
@@ -325,13 +326,7 @@ function Field({ field, onChange, onRemove, onEdit, ...rest }) {
 
       {number && <SourceLine field={field} {...rest} />}
       {field.type === 'select' ? (
-        <select id={field.key} value={field.value} onChange={e => onChange(field.key, e.target.value)}>
-          {field.options.map(o => (
-            <option key={o} value={o}>
-              {o}
-            </option>
-          ))}
-        </select>
+        <Select id={field.key} aria-label={field.label} value={field.value} onChange={v => onChange(field.key, v)} options={field.options.map(o => ({ value: o, label: o }))} />
       ) : field.type === 'text' ? (
         <input id={field.key} type="text" value={field.value} onChange={e => onChange(field.key, e.target.value)} />
       ) : field.type === 'percent' ? (
@@ -409,11 +404,7 @@ function AddInput({ onAdd }) {
   return (
     <form className="add-form" onSubmit={submit}>
       <input type="text" placeholder="Input name" value={label} onChange={e => setLabel(e.target.value)} autoFocus />
-      <select value={type} onChange={e => setType(e.target.value)}>
-        <option value="number">Number</option>
-        <option value="percent">Percent</option>
-        <option value="text">Text</option>
-      </select>
+      <Select aria-label="Input type" value={type} onChange={setType} options={[{ value: 'number', label: 'Number' }, { value: 'percent', label: 'Percent' }, { value: 'text', label: 'Text' }]} />
       {type === 'number' && <input type="text" placeholder="Unit (optional)" value={unit} onChange={e => setUnit(e.target.value)} />}
       <div className="add-actions">
         <button className="primary" type="submit" disabled={!label.trim()}>

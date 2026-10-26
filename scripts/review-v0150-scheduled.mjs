@@ -10,6 +10,7 @@
 import puppeteer from 'puppeteer'
 import fs from 'node:fs'
 import os from 'node:os'
+import { pick } from './lib/pick.mjs'
 import { execFileSync } from 'node:child_process'
 
 const base = process.argv[2] || 'http://localhost:5173'
@@ -58,7 +59,7 @@ try {
   // Create from the research example, with our own name.
   await page.click('.sched-example')
   await page.waitForSelector('.sched-form')
-  await page.select('.sched-form select[aria-label="Project"]', dealId)
+  await pick(page, '.sched-form [role=combobox][aria-label="Project"]', dealId)
   const name = await page.$('.sched-form input:not([type])')
   await name.evaluate(i => i.select()); await page.keyboard.type(`News ${STAMP}`)
   const pre = await page.$eval('.sched-form textarea', t => t.value)
@@ -79,7 +80,7 @@ try {
   await page.evaluate(() => [...document.querySelectorAll('.sched-card button')].find(b => b.innerText === 'Edit').click())
   await page.waitForSelector('.sched-form')
   await page.$eval('.sched-every input', i => i.select()); await page.keyboard.type('2')
-  await page.select('.sched-every select', 'days')
+  await pick(page, '.sched-every [role=combobox]', 'days')
   await page.click('.sched-form button[type=submit]'); await sleep(1200)
   check('edit: "Every 2 days" saved', /Every 2 days/.test(await page.$eval('.sched-card', e => e.innerText)))
 

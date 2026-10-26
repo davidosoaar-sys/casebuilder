@@ -2,6 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { buildSiteHtml, hashText } from '../export/site.js'
 import { download } from '../export/download.js'
 import { SITE_CONFIG } from '../../server/publish.js'
+import { Menu, Select } from './ui.jsx'
+
+const FORMATS = [{ value: 'pdf', label: 'PDF' }, { value: 'slides', label: 'Slides' }, { value: 'onepager', label: 'One-pager' }, { value: 'website', label: 'Live Room' }, { value: 'editor', label: 'Slide editor' }]
 
 // "View as website": the project's interactive website, exactly as visitors see
 // it. Click any text on the page to edit it (the change is saved into the deck),
@@ -193,19 +196,16 @@ export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, o
           </span>
         </div>
         <div className="site-bar-actions">
-          <select className="website-view-format" aria-label="View as format" value="website" onChange={e => onView?.(e.target.value, frame.current?.contentDocument?.querySelector('#audience select')?.value || audienceKey)}><option value="pdf">PDF</option><option value="slides">Slides</option><option value="onepager">One-pager</option><option value="website">Live Room</option><option value="editor">Slide editor</option></select>
+          <Select className="website-view-format" aria-label="View as format" value="website" options={FORMATS}
+            onChange={format => onView?.(format, frame.current?.contentDocument?.querySelector('#audience select')?.value || audienceKey)} />
           <button className={`ghost ${editing ? 'ghost-on' : ''}`} onClick={() => {if(!editing)setShown(current);setEditing(e => !e)}}>
             {editing ? 'Finish editing' : 'Edit content'}
           </button>
-          <button className="ghost" onClick={openTab} disabled={busy}>
-            Open in new tab
-          </button>
-          <button className="ghost" onClick={saveHtml} disabled={busy}>
-            Download .html
-          </button>
-          <button className="ghost" onClick={saveProject} disabled={busy} title="A folder you can deploy yourself with `vercel deploy --prod`">
-            Vercel project
-          </button>
+          <Menu label="More ways to share" title="More" className="icon-btn site-more" items={[
+            { label: 'Open in new tab', onSelect: openTab, disabled: busy },
+            { label: 'Download .html', onSelect: saveHtml, disabled: busy },
+            { label: 'Vercel project', description: 'A folder you can deploy yourself with `vercel deploy --prod`', onSelect: saveProject, disabled: busy }
+          ]} />
           <button className="primary" onClick={copyLink} disabled={busy}>
             {working === 'publish' ? 'Publishing…' : copied ? 'Link copied' : 'Copy link'}
           </button>

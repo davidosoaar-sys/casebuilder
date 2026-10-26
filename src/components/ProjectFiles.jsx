@@ -4,6 +4,7 @@
 // each chat and deck run for this project.
 import React, { useEffect, useRef, useState } from 'react'
 import PageHead from './PageHead.jsx'
+import { Skeleton } from './ui.jsx'
 import { supabase } from '../supabase.js'
 import { ACCEPT } from '../fileText.js'
 import { listFiles, uploadFile, setEnabled, removeFile, saveInstructions, fmtSize, extOf } from '../projectFiles.js'
@@ -74,7 +75,7 @@ export default function ProjectFiles({ project, userId }) {
 
       <section className="pf-section">
         <div className="pf-section-head"><h2>Instructions</h2><p>How to work on this account. Tone, must-have slides, who to avoid naming. Like a CLAUDE.md for this deal.</p></div>
-        {files === null ? <p className="pf-empty">Loading…</p> : instrSaved && !editing ? <>
+        {files === null ? <Skeleton label="Loading instructions" rows={1} height={96} listClass="pf-skeleton" /> : instrSaved && !editing ? <>
           <div className="pf-instr-view">{instrSaved}</div>
           <div className="pf-instr-bar">
             <span className="pf-saved"><span aria-hidden="true">✓</span> Saved. The agent follows these on every run.</span>
@@ -105,7 +106,7 @@ export default function ProjectFiles({ project, userId }) {
         </div>
         {busy.length > 0 && <p className="pf-busy" role="status"><span className="cmd-spin" aria-hidden="true" />Reading {busy.join(', ')}…</p>}
         {error && <p className="auth-error" role="alert">{error}</p>}
-        {files === null ? <p className="pf-empty">Loading…</p> : visible.length > 0 && <ul className="pf-grid pf-list">{visible.map(f => (
+        {files === null ? <Skeleton label="Loading files" rows={2} height={64} listClass="pf-skeleton" /> : visible.length > 0 && <ul className="pf-grid pf-list">{visible.map(f => (
           <FileCard key={f.id} f={f} onOpen={setPreview}
             onToggle={(f, on) => act(() => setEnabled(supabase, f.id, on), () => setFiles(fs => fs.map(x => x.id === f.id ? { ...x, enabled: on } : x)))}
             onRemove={f => act(() => removeFile(supabase, f.id), () => setFiles(fs => fs.filter(x => x.id !== f.id)))} />

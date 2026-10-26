@@ -2,9 +2,12 @@ import React, { useEffect, useState } from 'react'
 import { confidence } from '../valueModel.js'
 import { safeAsset } from '../brand.js'
 import PageHead from './PageHead.jsx'
+import { Select, Skeleton } from './ui.jsx'
 
 // Projects: a quiet, Claude-style index. Each deal is a compact row-card with
 // its logo and name; Cards (two columns) or List (one column, more detail).
+
+const SAMPLES = [{ value: 'nike', label: 'Nike · sample' }, { value: 'lovable', label: 'Lovable · sample' }, { value: 'fortnite', label: 'Fortnite · sample' }]
 
 const fmtDate = ms => {
   const d = new Date(ms)
@@ -56,16 +59,12 @@ export default function ProjectList({ projects, loading = false, createRequest =
           </button>
         </div>
         <button className="primary" onClick={() => setCreating(true)}>New project</button>
-        {onCreateSample && <select aria-label="Add a sample project" defaultValue="" disabled={loading} onChange={e => { const key=e.target.value; e.target.value=''; if(key)onCreateSample(key) }}>
-          <option value="" disabled>Add sample project</option>
-          <option value="nike">Nike · sample</option>
-          <option value="lovable">Lovable · sample</option>
-          <option value="fortnite">Fortnite · sample</option>
-        </select>}
+        {onCreateSample && <Select aria-label="Add a sample project" className="sample-select" value="" placeholder="Add sample project" disabled={loading}
+          onChange={key => { if (key) onCreateSample(key) }} options={SAMPLES} />}
       </PageHead>
 
       {loading ? (
-        <p className="empty" aria-busy="true">Loading your projects…</p>
+        <Skeleton label="Loading your projects" rows={4} height={70} listClass={`project-grid ${display === 'list' ? 'project-list-view' : 'project-cards-view'}`} />
       ) : sorted.length === 0 ? (
         <div className="empty-state">
           <p>No projects yet.</p>
@@ -73,10 +72,10 @@ export default function ProjectList({ projects, loading = false, createRequest =
         </div>
       ) : (
         <ul className={`project-grid ${display === 'list' ? 'project-list-view' : 'project-cards-view'}`} aria-label={display === 'list' ? 'Projects list' : 'Project cards'}>
-          {sorted.map(p => {
+          {sorted.map((p, i) => {
             const logo = p.brand?.hideLogo ? '' : safeAsset(p.brand?.icon) || safeAsset(p.brand?.logo) || safeAsset(p.projectLogo)
             return (
-              <li key={p.id}>
+              <li key={p.id} className="stagger-in" style={{ '--stagger': `${Math.min(i * 30, 200)}ms` }}>
                 <div
                   className={`project-card ${p.id === activeId ? 'project-card-active' : ''}`}
                   role="button"

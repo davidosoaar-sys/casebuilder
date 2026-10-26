@@ -1,5 +1,8 @@
 import React from 'react'
+import { createPortal } from 'react-dom'
+import { AnimatePresence, MotionConfig, motion } from 'framer-motion'
 import AppLogo from './AppLogo.jsx'
+import { EASE_DRAWER, EASE_IN_OUT, EASE_OUT } from './ui.jsx'
 import SaveIndicator from './SaveIndicator.jsx'
 import { version } from '../../package.json'
 
@@ -48,16 +51,20 @@ const icon = {
   )
 }
 
-function Item({ id, icon: iconId, label, view, onNav, disabled, title }) {
+// The active item carries one background pill that slides between items
+// (framer-motion layoutId, one id per menu instance).
+function Item({ id, icon: iconId, label, view, onNav, disabled, title, pill }) {
+  const on = view === id
   return (
     <button
-      className={`side-item ${view === id ? 'side-on' : ''}`}
+      className={`side-item ${on ? 'side-on' : ''}`}
       onClick={() => onNav(id)}
       disabled={disabled}
       title={title || label}
       aria-label={label}
-      aria-current={view === id ? 'page' : undefined}
+      aria-current={on ? 'page' : undefined}
     >
+      {on && <motion.span layoutId={pill} className="side-pill" aria-hidden="true" transition={{ duration: 0.2, ease: EASE_IN_OUT }} />}
       <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
         {icon[iconId || id]}
       </svg>
@@ -66,6 +73,22 @@ function Item({ id, icon: iconId, label, view, onNav, disabled, title }) {
   )
 }
 
+const PROJECT_ITEMS = [
+  { id: 'details', label: 'Case inputs' },
+  { id: 'website', icon: 'deck', label: 'Case artifacts', title: 'Live room, deck, PDF and one-pager' },
+  { id: 'agent', label: 'Agent' },
+  { id: 'people-lookup', icon: 'research', label: 'Person lookup', title: 'Who is this? Look up one person before a call' },
+  { id: 'files', label: 'Files', title: 'Context the agent reads for this project' }
+]
+const MAIN_ITEMS = [
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'projects', label: 'Projects' },
+  { id: 'scheduled', label: 'Scheduled', title: 'Tasks the agent runs on a repeat, across your projects' },
+  { id: 'skills', label: 'Skills', title: 'Ready-made ways of working for the agent, and your own' },
+  { id: 'connections', label: 'Connectors', title: 'What the agent is allowed to read' },
+  { id: 'waitlist', label: 'Waitlist', title: 'Who asked for access', admin: true }
+]
+
 const COLLAPSE_KEY = 'casebuilder.sidebar'
 function initialCollapsed() {
   try { return localStorage.getItem(COLLAPSE_KEY) === 'collapsed' } catch { return false }
@@ -73,49 +96,131 @@ function initialCollapsed() {
 
 export default function Sidebar({ view, project, projectMode = false, onNav, onSettings, settingsOpen = false, saveStatus, account, admin = false, children }) {
   const [collapsed, setCollapsed] = React.useState(initialCollapsed)
+  const [drawer, setDrawer] = React.useState(false)
+  const menuBtn = React.useRef(null)
   React.useEffect(() => {
     document.documentElement.dataset.sidebar = collapsed ? 'collapsed' : 'open'
     try { localStorage.setItem(COLLAPSE_KEY, collapsed ? 'collapsed' : 'open') } catch {}
   }, [collapsed])
-  return (
-    <aside className="sidebar no-print">
-      <div className="sidebar-logo">
-        <button type="button" className="sidebar-home" onClick={() => onNav('dashboard')} title="Dashboard" aria-label="CaseBuilder, go to the dashboard">
-          <AppLogo height={26} compact={collapsed} />
-        </button>
-        <button type="button" className="sidebar-collapse" onClick={() => setCollapsed(c => !c)} aria-label={collapsed ? 'Expand menu' : 'Collapse menu'} title={collapsed ? 'Expand menu' : 'Collapse menu'} aria-expanded={!collapsed}>
-          <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="1.5" /><path d="M6 2.5v11" />{collapsed ? <path d="M8.6 6.2l1.8 1.8-1.8 1.8" strokeLinecap="round" strokeLinejoin="round" /> : <path d="M10.6 6.2L8.8 8l1.8 1.8" strokeLinecap="round" strokeLinejoin="round" />}</svg>
-        </button>
-      </div>
+  // The drawer only exists on small screens: close it when the window grows.
+  React.useEffect(() => {
+    const wide = window.matchMedia('(min-width: 861px)')
+    const onChange = () => { if (wide.matches) setDrawer(false) }
+    wide.addEventListener('change', onChange)
+    return () => wide.removeEventListener('change', onChange)
+  }, [])
 
-      <nav className="sidebar-nav" aria-label="Main">
-        {projectMode ? <>
-          <button className="side-item project-sidebar-back" onClick={() => onNav('projects')} title="All projects" aria-label="All projects"><span aria-hidden="true">←</span><span className="side-label">All projects</span></button>
-          <Item id="details" label="Case inputs" view={view} onNav={onNav} />
-          <Item id="website" icon="deck" label="Case artifacts" view={view === 'deck' ? 'website' : view} onNav={onNav} title="Live room, deck, PDF and one-pager" />
-          <Item id="agent" label="Agent" view={view} onNav={onNav} />
-          <Item id="people-lookup" icon="research" label="Person lookup" view={view} onNav={onNav} title="Who is this? Look up one person before a call" />
-          <Item id="files" label="Files" view={view} onNav={onNav} title="Context the agent reads for this project" />
-        </> : <>
-          <Item id="dashboard" label="Dashboard" view={view} onNav={onNav} />
-          <Item id="projects" label="Projects" view={view} onNav={onNav} />
-          <Item id="scheduled" label="Scheduled" view={view} onNav={onNav} title="Tasks the agent runs on a repeat, across your projects" />
-          <Item id="skills" label="Skills" view={view} onNav={onNav} title="Ready-made ways of working for the agent, and your own" />
-        </>}
-        {!projectMode && <Item id="connections" label="Connectors" view={view} onNav={onNav} title="What the agent is allowed to read" />}
-        {!projectMode && admin && <Item id="waitlist" label="Waitlist" view={view} onNav={onNav} title="Who asked for access" />}
-      </nav>
-      {children}
-      <div className="sidebar-footer">
-        <SaveIndicator status={saveStatus} />
-        <button type="button" className={`side-item side-settings ${settingsOpen ? 'side-on' : ''}`} onClick={onSettings} title="Settings" aria-label="Settings" aria-haspopup="dialog">
-          <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">{icon.settings}</svg>
-          <span className="side-label side-settings-text"><span>Settings</span>{account && <small>{account.session.user.email}</small>}</span>
-        </button>
+  const items = (projectMode ? PROJECT_ITEMS : MAIN_ITEMS).filter(it => !it.admin || admin)
+  const current = view === 'deck' ? 'website' : view
+  const title = items.find(it => it.id === current)?.label || (projectMode ? project?.name : '') || 'CaseBuilder'
+
+  // Menu contents, shared by the desktop sidebar and the mobile drawer.
+  const body = (where, go, settings) => <>
+    <nav className="sidebar-nav" aria-label="Main">
+      {projectMode && <button className="side-item project-sidebar-back" onClick={() => go('projects')} title="All projects" aria-label="All projects"><span aria-hidden="true">←</span><span className="side-label">All projects</span></button>}
+      {items.map(it => <Item key={it.id} {...it} view={current} onNav={go} pill={`side-pill-${where}`} />)}
+    </nav>
+    {children}
+    <div className="sidebar-footer">
+      <button type="button" className={`side-item side-settings ${settingsOpen ? 'side-on' : ''}`} onClick={settings} title="Settings" aria-label="Settings" aria-haspopup="dialog">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">{icon.settings}</svg>
+        <span className="side-label side-settings-text"><span>Settings</span>{account && <small>{account.session.user.email}</small>}</span>
+      </button>
+      <div className="sidebar-meta">
         <small className="platform-version" title={`CaseBuilder v${version}${import.meta.env.DEV ? ' · Local development, unreleased changes may be present' : ' · Installed release'}`}>
           v{version}<span className="side-label">{import.meta.env.DEV ? ' · Local' : ''}</span>
         </small>
+        <SaveIndicator status={saveStatus} />
       </div>
-    </aside>
+    </div>
+  </>
+
+  const closeAnd = fn => (...args) => { setDrawer(false); fn(...args) }
+  return (
+    <MotionConfig reducedMotion="user">
+      <aside className={`sidebar sidebar-desktop no-print${collapsed ? ' is-collapsed' : ''}`}>
+        <div className="sidebar-logo">
+          <button type="button" className="sidebar-home" onClick={() => onNav('dashboard')} title="Dashboard" aria-label="CaseBuilder, go to the dashboard">
+            <AppLogo height={26} compact={collapsed} />
+          </button>
+          <button type="button" className="sidebar-collapse" onClick={() => setCollapsed(c => !c)} aria-label={collapsed ? 'Expand menu' : 'Collapse menu'} title={collapsed ? 'Expand menu' : 'Collapse menu'} aria-expanded={!collapsed}>
+            <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="1.5" /><path d="M6 2.5v11" />{collapsed ? <path d="M8.6 6.2l1.8 1.8-1.8 1.8" strokeLinecap="round" strokeLinejoin="round" /> : <path d="M10.6 6.2L8.8 8l1.8 1.8" strokeLinecap="round" strokeLinejoin="round" />}</svg>
+          </button>
+        </div>
+        {body('desktop', onNav, onSettings)}
+      </aside>
+
+      <header className="mobile-bar no-print">
+        <button type="button" className="sidebar-home" onClick={() => onNav('dashboard')} title="Dashboard" aria-label="CaseBuilder, go to the dashboard">
+          <AppLogo height={22} compact />
+        </button>
+        <span className="mobile-bar-title">{title}</span>
+        <button ref={menuBtn} type="button" className="mobile-menu-btn" onClick={() => setDrawer(true)} aria-label="Open menu" aria-haspopup="dialog" aria-expanded={drawer}>
+          <svg viewBox="0 0 16 16" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" /></svg>
+        </button>
+      </header>
+
+      {typeof document !== 'undefined' && createPortal(
+        <MotionConfig reducedMotion="user">
+          <AnimatePresence>
+            {drawer && (
+              <Drawer key="drawer" onClose={() => setDrawer(false)} returnTo={menuBtn}>
+                <div className="sidebar-logo">
+                  <button type="button" className="sidebar-home" onClick={() => closeAnd(onNav)('dashboard')} title="Dashboard" aria-label="CaseBuilder, go to the dashboard">
+                    <AppLogo height={26} />
+                  </button>
+                  <button type="button" className="sidebar-collapse drawer-close" onClick={() => setDrawer(false)} aria-label="Close menu" title="Close menu">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" strokeLinecap="round" /></svg>
+                  </button>
+                </div>
+                {body('drawer', closeAnd(onNav), closeAnd(onSettings))}
+              </Drawer>
+            )}
+          </AnimatePresence>
+        </MotionConfig>,
+        document.body
+      )}
+    </MotionConfig>
+  )
+}
+
+// Slide-in menu for small screens: backdrop, Escape and backdrop close, focus
+// moves to the first item and back to the menu button, body scroll locked.
+function Drawer({ onClose, returnTo, children }) {
+  const panel = React.useRef(null)
+  const close = React.useRef(onClose)
+  close.current = onClose
+  React.useEffect(() => {
+    const target = returnTo.current
+    panel.current?.querySelector('.sidebar-nav .side-item')?.focus()
+    const onKey = e => {
+      if (e.key === 'Escape') { e.stopPropagation(); close.current() }
+      if (e.key === 'Tab' && panel.current) {
+        const f = [...panel.current.querySelectorAll('button:not(:disabled), [href], input, select, textarea')]
+        if (!f.length) return
+        if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus() }
+        else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus() }
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prev
+      // Back to the menu button, unless something else (Settings) took focus.
+      const now = document.activeElement
+      if (!now || now === document.body || panel.current?.contains(now)) target?.focus()
+    }
+  }, [returnTo])
+  return (
+    <motion.div className="drawer-backdrop no-print" onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2, ease: EASE_OUT }}>
+      <motion.aside ref={panel} className="sidebar sidebar-drawer" role="dialog" aria-modal="true" aria-label="Menu"
+        initial={{ transform: 'translateX(-100%)' }} animate={{ transform: 'translateX(0%)' }} exit={{ transform: 'translateX(-100%)' }}
+        transition={{ duration: 0.26, ease: EASE_DRAWER }}>
+        {children}
+      </motion.aside>
+    </motion.div>
   )
 }
