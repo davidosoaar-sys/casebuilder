@@ -59,6 +59,7 @@ export const TOKENS = [
 
 const block = (type, props = {}) => ({ id: uid(), type, ...props })
 const text = (style, t) => block('text', { style, text: t })
+export const textBlock = text
 const slide = (variant, blocks) => ({ id: uid(), variant, blocks })
 
 // ---------------------------------------------------------------- tokens
@@ -416,6 +417,20 @@ export function resolveSlides(deck, env) {
     })
     .filter(s => !s.dropped)
     .map(({ dropped, ...s }) => s)
+}
+
+// The pages resolveSlides leaves out because none of their figures can be
+// computed yet, and the inputs (by label) that would bring them back.
+export function hiddenPages(deck, env) {
+  const missing = new Set()
+  let count = 0
+  for (const s of deck) {
+    const live = s.blocks.map(b => resolveBlock(b, env)).filter(r => LIVE.has(r.kind))
+    if (!live.length || !live.every(isEmptyLive)) continue
+    count++
+    for (const r of live) for (const label of r.waiting || []) missing.add(label)
+  }
+  return { count, missing: [...missing] }
 }
 
 // True when a slide has figures in it but none can be computed yet, so the client

@@ -1,0 +1,13 @@
+/* Customize: Skills and Connectors under one page and one title */
+.customize-page .skill-tabs { margin-bottom: 24px; }
+.customize-panel { min-width: 0; }
+/* The embedded pages drop their own page frame: Customize provides it. */
+.skills-embedded, .connections-embedded { max-width: none; margin: 0; padding: 0; }
+/* Skills inside Customize: Discover / Yours left, search + New skill right, one row. */
+.customize-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 0 0 24px; }
+.customize-toolbar .skill-tabs { margin: 0; }
+.connections-embedded > .sub:first-child { margin-top: 0; }
+@media (max-width: 860px) {
+  .customize-toolbar .page-head-actions { width: 100%; }
+  .customize-toolbar .skill-search { flex: 1; }
+}

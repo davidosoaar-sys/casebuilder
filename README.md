@@ -74,7 +74,7 @@ priorities, suggested inputs, ambiguity candidates, and sources used/skipped.
   self-hosting comparison, assumptions, stakeholder brief). Click any text to edit
   it. Text can use tokens like `{company}` and `{headline}` that fill in per
   stakeholder.
-- **View as.** PDF opens a paginated A4 landscape layout; Slides opens a presenter
+- **Export** (deck toolbar and Case artifacts). PDF opens a paginated A4 landscape layout; Slides opens a presenter
   with keyboard navigation and fullscreen; One-pager opens an A4 executive brief;
   Website opens an interactive scrolling page. Switching views never downloads a
   file or opens a print dialog. Each view has a separate download action. PDF

@@ -2,6 +2,13 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { buildSiteHtml, hashText } from '../export/site.js'
 import { download } from '../export/download.js'
 import { SITE_CONFIG } from '../../server/publish.js'
+import { Menu, Select, UndoRedo } from './ui.jsx'
+import ExportMenu from '../export/ExportMenu.jsx'
+import { HiddenPagesNotice } from '../export/Preview.jsx'
+import { hiddenForClient } from '../export/prepare.js'
+import { resolveStakeholder } from '../deck/stakeholders.js'
+
+const FORMATS = [{ value: 'pdf', label: 'PDF' }, { value: 'slides', label: 'Slides' }, { value: 'onepager', label: 'One-pager' }, { value: 'website', label: 'Live Room' }, { value: 'editor', label: 'Slide editor' }]
 
 // "View as website": the project's interactive website, exactly as visitors see
 // it. Click any text on the page to edit it (the change is saved into the deck),
@@ -41,7 +48,9 @@ async function copyText(text) {
   }
 }
 
-export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, onScenario, audienceKey, onView }) {
+export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, onScenario, audienceKey, onView, onFillInputs, history }) {
+  const stakeholders = useMemo(() => project.stakeholders.map(resolveStakeholder).filter(Boolean), [project.stakeholders])
+  const hidden = useMemo(() => hiddenForClient({ deck: project.deck, inputs, fields: project.fields, stakeholders, activeKey: audienceKey }), [project.deck, project.fields, inputs, stakeholders, audienceKey])
   const frame = useRef(null)
   const scenarioRef = useRef(null)
   scenarioRef.current = { saved: project.scenario, onScenario }
@@ -73,7 +82,8 @@ export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, o
       onDeck(list =>
         list.map(s =>
           s.id === slideId ? { ...s, blocks: s.blocks.map(b => (b.id === blockId ? { ...b, [field]: value } : b)) } : s
-        )
+        ),
+        { label: 'Edited text in the Live room', key: `text:${blockId}:${field}` }
       )
     }
     window.addEventListener('message', onMessage)
@@ -193,24 +203,26 @@ export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, o
           </span>
         </div>
         <div className="site-bar-actions">
-          <select className="website-view-format" aria-label="View as format" value="website" onChange={e => onView?.(e.target.value, frame.current?.contentDocument?.querySelector('#audience select')?.value || audienceKey)}><option value="pdf">PDF</option><option value="slides">Slides</option><option value="onepager">One-pager</option><option value="website">Live Room</option><option value="editor">Slide editor</option></select>
+          <UndoRedo history={history} />
+          <Select className="website-view-format" aria-label="View as format" value="website" options={FORMATS}
+            onChange={format => onView?.(format, frame.current?.contentDocument?.querySelector('#audience select')?.value || audienceKey)} />
           <button className={`ghost ${editing ? 'ghost-on' : ''}`} onClick={() => {if(!editing)setShown(current);setEditing(e => !e)}}>
             {editing ? 'Finish editing' : 'Edit content'}
           </button>
-          <button className="ghost" onClick={openTab} disabled={busy}>
-            Open in new tab
-          </button>
-          <button className="ghost" onClick={saveHtml} disabled={busy}>
-            Download .html
-          </button>
-          <button className="ghost" onClick={saveProject} disabled={busy} title="A folder you can deploy yourself with `vercel deploy --prod`">
-            Vercel project
-          </button>
+          <ExportMenu triggerClass="ghost" company={project.name} deck={project.deck} inputs={inputs} fields={project.fields} stakeholders={stakeholders}
+            activeKey={audienceKey} brand={project.brand} onWebsite={() => {}} onFillInputs={onFillInputs} />
+          <Menu label="More ways to share" title="More" className="icon-btn site-more" items={[
+            { label: 'Open in new tab', onSelect: openTab, disabled: busy },
+            { label: 'Download .html', onSelect: saveHtml, disabled: busy },
+            { label: 'Vercel project', description: 'A folder you can deploy yourself with `vercel deploy --prod`', onSelect: saveProject, disabled: busy }
+          ]} />
           <button className="primary" onClick={copyLink} disabled={busy}>
             {working === 'publish' ? 'Publishing…' : copied ? 'Link copied' : 'Copy link'}
           </button>
         </div>
       </div>
+
+      <HiddenPagesNotice hidden={hidden} onFill={onFillInputs} />
 
       {site?.url && !problem && !needCode && (
         <div className="preview-note preview-ok no-print" role="status">

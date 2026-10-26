@@ -1,13 +1,33 @@
 import React, { useEffect, useRef } from 'react'
 import { download } from './download.js'
+import { Select } from '../components/ui.jsx'
 
 // A full-screen preview of the one-pager, with print / save as PDF.
 
-export default function Preview({ preview, onClose, audience, onView, onDownloadSlides, busy }) {
+const FORMATS = [{ value: 'pdf', label: 'PDF' }, { value: 'slides', label: 'Slides' }, { value: 'onepager', label: 'One-pager' }, { value: 'website', label: 'Live room' }]
+
+// Pages without numbers are left out of client output. Say so, name what is
+// missing, and offer the way back to the inputs.
+export function HiddenPagesNotice({ hidden, onFill }) {
+  if (!hidden?.count) return null
+  const names = hidden.missing.slice(0, 4)
+  const more = hidden.missing.length - names.length
+  const list = names.join(', ') + (more > 0 ? ` and ${more} more` : '')
+  const lead = hidden.count === 1 ? '1 page is hidden until its numbers are filled in' : `${hidden.count} pages are hidden until their numbers are filled in`
+  return (
+    <div className="hidden-pages no-print" role="status">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.25" /><path d="M8 7.25v4M8 4.9v.1" /></svg>
+      <p>{lead}{list ? <>: <span className="hidden-pages-list">{list}</span>.</> : '.'}</p>
+      {onFill && <button type="button" className="ghost hidden-pages-fill" onClick={onFill}>Fill them in</button>}
+    </div>
+  )
+}
+
+export default function Preview({ preview, onClose, audience, onView, onDownloadSlides, busy, hidden, onFillInputs }) {
   const frame = useRef(null)
 
   useEffect(() => {
-    const onKey = e => e.key === 'Escape' && onClose()
+    const onKey = e => e.key === 'Escape' && !e.defaultPrevented && onClose()
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
@@ -21,7 +41,7 @@ export default function Preview({ preview, onClose, audience, onView, onDownload
             <span>For {preview.for || audience}</span>
           </div>
           <div className="preview-actions">
-            {onView && <select aria-label="Preview format" value={preview.kind} onChange={e => onView(e.target.value)}><option value="pdf">PDF</option><option value="slides">Slides</option><option value="onepager">One-pager</option><option value="website">Live room</option></select>}
+            {onView && <Select className="preview-format" aria-label="Preview format" value={preview.kind} options={FORMATS} onChange={onView} />}
             {preview.kind === 'slides' ? <>
               <button className="ghost" onClick={() => frame.current?.requestFullscreen?.()}>Present fullscreen</button>
               <button className="primary" disabled={busy} onClick={onDownloadSlides}>{busy ? 'Preparing…' : 'Download PPTX'}</button>
@@ -32,6 +52,7 @@ export default function Preview({ preview, onClose, audience, onView, onDownload
             </button>
           </div>
         </header>
+        <HiddenPagesNotice hidden={hidden} onFill={onFillInputs && (() => { onClose(); onFillInputs() })} />
         <iframe
           ref={frame}
           title={preview.title}

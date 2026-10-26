@@ -1,7 +1,9 @@
 import {clientStakeholder} from '../stakeholderRequirements.js'
 import React, { useState, useRef, useEffect } from 'react'
 import faviconSvg from '../../public/favicon.svg?raw'
-import { prepareOnePager, pickAudience } from './prepare.js'
+import { AnimatePresence, MotionConfig, motion } from 'framer-motion'
+import { EASE_OUT } from '../components/ui.jsx'
+import { prepareOnePager, pickAudience, hiddenForClient } from './prepare.js'
 import { buildEnv, resolveSlides } from '../deck/model.js'
 import { buildOnePager } from './html.js'
 import { buildSiteHtml } from './site.js'
@@ -42,7 +44,7 @@ function imageSize(src) {
   })
 }
 
-export default function ExportMenu({ company: projectName, deck, inputs, fields, connectors, stakeholders, activeKey, onWebsite, brand, requestedView, onViewOpened }) {
+export default function ExportMenu({ company: projectName, deck, inputs, fields, connectors, stakeholders, activeKey, onWebsite, brand, requestedView, onViewOpened, onFillInputs, triggerClass = 'primary' }) {
   // The deck itself says {company} from the Company input, so use that name everywhere.
   const company = inputs.companyName || projectName
   const [open, setOpen] = useState(false)
@@ -50,6 +52,8 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
   const [error, setError] = useState('')
   const [preview, setPreview] = useState(null) // { kind, html, title }
   const ref = useRef(null)
+  const menu = useRef(null)
+  const trigger = useRef(null)
 
   useEffect(() => {
     if (!open) return
@@ -101,29 +105,53 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
     setPreview({ kind: 'onepager', title: 'One-pager', file: `${slug(company)} - one-pager.html`, html: brandDocument(buildOnePager({ facts, brand, logoSvg: brandLogoHtml(brand, ''), faviconSvg }), brand) })
   }
 
+  // Each format: what it is, how you get it, and the file you end up with.
   const items = [
-    { name: 'PDF', note: 'Preview the paginated document', run: () => show('pdf') },
-    { name: 'Slides', note: 'Present one slide at a time', run: () => show('slides') },
-    { name: 'One-pager', note: 'A concise executive brief', run: () => show('onepager') },
-    { name: 'Live Room', note: 'Explore the case and scenarios', run: () => show('website') }
+    { name: 'PDF', note: 'Preview, then save as PDF', gets: 'PDF', run: () => show('pdf') },
+    { name: 'Slides', note: 'Present, or download PowerPoint (.pptx)', gets: 'PPTX', run: () => show('slides') },
+    { name: 'One-pager', note: 'Preview, then PDF or HTML', gets: 'PDF, HTML', run: () => show('onepager') },
+    { name: 'Live room', note: 'Interactive page you can share', gets: 'Link', run: () => show('website') }
   ]
+
+  // Focus the first item on open; arrows move, Escape closes back to the button.
+  useEffect(() => {
+    if (!open) return
+    menu.current?.querySelector('[role=menuitem]')?.focus()
+    const onKey = e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setOpen(false); trigger.current?.focus() } }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
+  function onMenuKey(e) {
+    const all = [...menu.current.querySelectorAll('[role=menuitem]')]
+    const i = all.indexOf(document.activeElement)
+    const to = e.key === 'ArrowDown' ? i + 1 : e.key === 'ArrowUp' ? i - 1 : e.key === 'Home' ? 0 : e.key === 'End' ? all.length - 1 : null
+    if (to == null) return
+    e.preventDefault(); all[(to + all.length) % all.length]?.focus()
+  }
 
   return (
     <div className="export" ref={ref}>
-      <button className="primary" onClick={() => setOpen(o => !o)} aria-haspopup="menu" aria-expanded={open} disabled={!!busy}>
-        {busy ? 'Working…' : 'View as'} <span aria-hidden="true">▾</span>
+      <button ref={trigger} className={`${triggerClass} export-trigger`} onClick={() => setOpen(o => !o)} aria-haspopup="menu" aria-expanded={open} disabled={!!busy}>
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 2.5v7.5M4.75 6.75 8 10l3.25-3.25M3 12.5h10" /></svg>
+        {busy ? 'Working…' : 'Export'}
+        <svg className="export-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 4.5L6 7.5l3-3" /></svg>
       </button>
 
-      {open && (
-        <div className="menu export-menu" role="menu">
-          {items.map(i => (
-            <button key={i.name} role="menuitem" className="menu-item export-item" onClick={i.run}>
-              <strong>{i.name}</strong>
-              <span>{i.note}</span>
-            </button>
-          ))}
-        </div>
-      )}
+      <MotionConfig reducedMotion="user">
+        <AnimatePresence>
+          {open && (
+            <motion.div key="export-menu" ref={menu} className="export-menu" role="menu" aria-label="Export" onKeyDown={onMenuKey}
+              initial={{ opacity: 0, transform: 'scale(0.97)' }} animate={{ opacity: 1, transform: 'scale(1)' }} exit={{ opacity: 0, transform: 'scale(0.97)' }} transition={{ duration: 0.14, ease: EASE_OUT }}>
+              {items.map(i => (
+                <button key={i.name} type="button" role="menuitem" tabIndex={-1} className="export-item" onClick={i.run}>
+                  <span className="export-item-text"><strong>{i.name}</strong><span>{i.note}</span></span>
+                  <small className="export-item-gets">{i.gets}</small>
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </MotionConfig>
 
       {busy && <div className="export-toast">{busy}</div>}
       {error && (
@@ -140,6 +168,8 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
           onView={show}
           onDownloadSlides={pptx}
           busy={!!busy}
+          hidden={hiddenForClient({ deck, inputs, fields, stakeholders, activeKey })}
+          onFillInputs={onFillInputs}
         />
       )}
     </div>

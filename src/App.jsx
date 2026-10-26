@@ -1,5 +1,5 @@
 import {verifyBrandForDisplay} from './verifyBrand.js'
-import React, { useState, useMemo, useEffect, useRef } from 'react'
+import React, { useState, useMemo, useEffect, useLayoutEffect, useRef } from 'react'
 import Sidebar from './components/Sidebar.jsx'
 import Deck from './components/Deck.jsx'
 import WebsiteView from './components/WebsiteView.jsx'
@@ -11,7 +11,9 @@ import People from './components/People.jsx'
 import useCloudDeals from './useCloudDeals.js'
 import ChatPanel from './components/ChatPanel.jsx'
 import { apiHeaders } from './apiAuth.js'
-import { applyAgentEdits, undoAgentEdits } from './agentEdits.js'
+import { applyAgentReply, undoAgentReply, redoAgentReply, agentReplyConflicts, agentRedoConflicts, agentStepLabel } from './agentDeckEdits.js'
+import useHistory from './useHistory.js'
+import { Toaster, showToast } from './components/ui.jsx'
 import { runCommand } from './agentRunner.js'
 import { withSuggestion } from './source.js'
 import { supabase } from './supabase.js'
@@ -34,6 +36,7 @@ import { AGENT_COMMANDS } from './agentCommands.js'
 import PersonLookup from './components/PersonLookup.jsx'
 import Scheduled from './components/Scheduled.jsx'
 import Skills from './components/Skills.jsx'
+import Customize from './components/Customize.jsx'
 import ProjectFiles from './components/ProjectFiles.jsx'
 import WaitlistAdmin, { isAdmin } from './components/WaitlistAdmin.jsx'
 import usePersonLookup from './usePersonLookup.js'
@@ -130,6 +133,20 @@ export default function App({ account }) {
   }
 
   useEffect(() => { window.scrollTo(0, 0) }, [view, currentId, stage])
+  // A new page fades in with a 4px rise. Keyed on the page, not the project,
+  // with no exit and no remount; the full-screen Agent is left alone.
+  const mainRef = useRef(null)
+  const shownView = useRef(view)
+  useLayoutEffect(() => {
+    if (shownView.current === view) return
+    shownView.current = view
+    const main = mainRef.current
+    const el = main?.firstElementChild
+    if (!el || main.classList.contains('content-agent') || !el.animate) return
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    el.animate(still ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 0, transform: 'translateY(4px)' }, { opacity: 1, transform: 'none' }],
+      { duration: 180, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' })
+  }, [view])
 
   useEffect(() => saveConnections(connections), [connections])
   useEffect(() => {
@@ -150,12 +167,14 @@ export default function App({ account }) {
   const lookup = usePersonLookup({ project, connections: dealConnections })
   const [pendingPersonInput, setPendingPersonInput] = useState(null)
   const [skillRequest, setSkillRequest] = useState(null) // Skills page "Use" -> the Agent
+  const [fillRequest, setFillRequest] = useState(null) // Dashboard "Find the CTO" -> the Agent's composer, not sent
   const [scheduleSkill, setScheduleSkill] = useState(null) // Skills page "Schedule" -> Scheduled
   const lookupPage = <PersonLookup lookup={lookup} project={project}
     onAdd={person => update(p => addPersonToDeal(p, person))}
     onInput={suggestion => setPendingPersonInput({ dealId: project.id, suggestion })} />
   function navigate(next) {
     if(next==='deck')next='website' // Case Artifacts opens the Live Room; editor remains available.
+    if (next === 'customize') next = 'skills' // Customize opens on its Skills tab
     setStage(null)
     if (next === 'settings') { setSettingsOpen(true); return } // overlay: never leaves the current page
     if (['projects', 'dashboard', 'waitlist'].includes(next)) { saving.flush(); setCurrentId(null) }
@@ -164,7 +183,11 @@ export default function App({ account }) {
   }
   const projectSidebar = <Sidebar view={view} project={project} projectMode onNav={navigate} onSettings={openSettings} settingsOpen={settingsOpen} saveStatus={saving.status} account={account} />
 
-  function update(patch) {
+  // Every change to the open project goes through here. `opts` labels it for
+  // the undo history ({ label, key?, id?, agent? }); { skip: true } is undo/redo
+  // itself. Changes to parts the history does not track are not steps.
+  function update(patch, opts) {
+    history.record(opts || { label: 'Edit' })
     setProjects(prev =>
       prev.map(p =>
         p.id === currentId
@@ -173,6 +196,38 @@ export default function App({ account }) {
       )
     )
   }
+
+  // Undo / redo for the open project: through update(), so saving works as
+  // normal. Undoing an agent step also marks its chat change card.
+  const history = useHistory(project, (parts, step, direction) => update(p => {
+    const a = step.agent
+    const entry = a && p.agentLog?.[a.id]
+    if (!entry) return parts
+    const undone = direction === 'undo' ? !a.undone : a.undone
+    return { ...parts, agentLog: { ...p.agentLog, [a.id]: { ...entry, undone, skipped: [], deckSkipped: [] } } }
+  }, { skip: true }))
+  const historyRef = useRef(history)
+  historyRef.current = history
+  const onProjectPage = !!project && !stage && !['projects', 'skills', 'scheduled', 'dashboard', 'connections', 'lookup', 'waitlist'].includes(view)
+  useEffect(() => {
+    if (!onProjectPage) return
+    const onKey = e => {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey) return
+      const k = e.key.toLowerCase()
+      const undo = k === 'z' && !e.shiftKey
+      const redo = (k === 'z' && e.shiftKey) || (k === 'y' && e.ctrlKey && !e.metaKey)
+      if (!undo && !redo) return
+      // Text fields keep their own undo.
+      const t = e.target
+      if (t?.isContentEditable || t?.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return
+      e.preventDefault()
+      const h = historyRef.current
+      const step = undo ? h.undo() : h.redo()
+      if (step) showToast({ message: `${undo ? 'Undone' : 'Redone'}: ${step.label.charAt(0).toLowerCase()}${step.label.slice(1)}`, duration: 3000 })
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onProjectPage])
 
   const fields = project?.fields
   const inputs = useMemo(
@@ -184,7 +239,7 @@ export default function App({ account }) {
   // keeps a copy of a figure.
   const model = useMemo(() => computeModel(inputs), [inputs])
 
-  const onStakeholders = fn => update(p => ({ stakeholders: fn(p.stakeholders) }))
+  const onStakeholders = (fn, opts) => update(p => ({ stakeholders: fn(p.stakeholders) }), opts || { label: 'Changed the stakeholders', key: 'stakeholders' })
   const onPeople = fn => update(p => ({ people: fn(p.people) }))
   // Changing the archetype changes who is in the room, immediately.
   const onFields = fn =>
@@ -196,24 +251,31 @@ export default function App({ account }) {
       return arch(next) !== arch(p.fields)
         ? { name, fields: next, stakeholders: stakeholdersForArchetype(p.stakeholders, arch(next)) }
         : { name, fields: next }
-    })
+    }, { label: 'Edited the inputs', key: 'fields' })
 
-  // Agent edits: applied straight away, once per reply (agentLog is keyed by
-  // the chat message id and saved with the deal), and undoable.
-  const applyFromChat = (messageId, edits) =>
-    update(p => {
-      if (p.agentLog?.[messageId]) return {}
-      const r = applyAgentEdits(p.fields, edits)
-      const entry = { changes: r.changes, refused: r.refused, at: Date.now() }
-      return { fields: r.fields, agentLog: { ...(p.agentLog || {}), [messageId]: entry } }
-    })
-  const undoFromChat = messageId =>
-    update(p => {
-      const entry = p.agentLog?.[messageId]
-      if (!entry || entry.undone) return {}
-      const r = undoAgentEdits(p.fields, entry.changes)
-      return { fields: r.fields, agentLog: { ...p.agentLog, [messageId]: { ...entry, undone: true, skipped: r.skipped } } }
-    })
+  // Agent edits (inputs, and the deck and brand behind every artifact): applied
+  // straight away, once per reply (agentLog is keyed by the chat message id and
+  // saved with the deal), and undoable with one Undo per reply. Each is also a
+  // step in the undo history. Undo always undoes: when the user has changed the
+  // same thing since, it returns the places so the card can ask first.
+  const applyFromChat = (messageId, edits, deckOps) => {
+    const entry = project && applyAgentReply(project, messageId, { edits, deckOps }).agentLog?.[messageId]
+    update(p => applyAgentReply(p, messageId, { edits, deckOps }), { label: agentStepLabel(entry), agent: { id: messageId, undone: false } })
+  }
+  const undoFromChat = (messageId, { force = false } = {}) => {
+    if (!project) return {}
+    const conflicts = force ? [] : agentReplyConflicts(project, messageId)
+    if (conflicts.length) return { conflicts }
+    update(p => undoAgentReply(p, messageId, { force: true }), { label: 'Undid an agent change', agent: { id: messageId, undone: true } })
+    return {}
+  }
+  const redoFromChat = (messageId, { force = false } = {}) => {
+    if (!project) return {}
+    const conflicts = force ? [] : agentRedoConflicts(project, messageId)
+    if (conflicts.length) return { conflicts }
+    update(p => redoAgentReply(p, messageId), { label: agentStepLabel(project?.agentLog?.[messageId]), agent: { id: messageId, undone: false } })
+    return {}
+  }
 
   // Agent commands (Find people, Suggest values, Person lookup, Find branding):
   // run once per reply through the same client code as the buttons, results
@@ -303,15 +365,17 @@ export default function App({ account }) {
   const agentFull = insideProject && page === 'agent'
   const agentSplit = insideProject && split && !agentFull
   const userName = (user || '').trim() || account.session.user.email.split('@')[0]
-  const chatProps = insideProject && { project, userId: account.session.user.id, userName, onApply: applyFromChat, onUndo: undoFromChat, onRun: runFromChat, onPick: pickFromChat, onSettings: openSettings,
-    skillRequest: skillRequest?.dealId === project?.id ? skillRequest : null, onSkillRequestDone: () => setSkillRequest(null) }
+  const chatProps = insideProject && { project, userId: account.session.user.id, userName, onApply: applyFromChat, onUndo: undoFromChat, onRedo: redoFromChat, onRun: runFromChat, onPick: pickFromChat, onSettings: openSettings,
+    onFlush: saving.flush, onViewCase: () => { if (page === 'agent') setSplit(true); setView('website') },
+    skillRequest: skillRequest?.dealId === project?.id ? skillRequest : null, onSkillRequestDone: () => setSkillRequest(null),
+    fillRequest: fillRequest?.dealId === project?.id ? fillRequest : null, onFillRequestDone: () => setFillRequest(null) }
 
   return (
     <div className="layout">
       <Sidebar view={page} project={project} projectMode={insideProject} onNav={navigate} onSettings={openSettings} settingsOpen={settingsOpen} saveStatus={saving.status} account={account} admin={admin} />
 
       <div className={`lookup-content-wrap${agentSplit ? ' with-chat' : ''}`} style={agentSplit ? { '--chat-w': `${chatWidth}px` } : undefined}>
-      <main className={`content${agentFull ? ' content-agent' : ''}`}>
+      <main ref={mainRef} className={`content${agentFull ? ' content-agent' : ''}`}>
         {agentFull ? (
           <ChatPanel key={project.id} {...chatProps} mode="full" onSplit={() => { setSplit(true); setView(backFromAgent.current === 'agent' ? 'details' : backFromAgent.current) }} />
         ) : page === 'dashboard' ? (
@@ -320,9 +384,11 @@ export default function App({ account }) {
             name={user}
             deals={projects}
             loading={dealsLoading}
-            onNav={navigate}
             onSettings={openSettings}
             onOpen={id => { saving.flush(); setCurrentId(id); setView('details') }}
+            onReview={id => { saving.flush(); setCurrentId(id); setView('details') }}
+            onFind={(id, text) => { saving.flush(); setFillRequest({ dealId: id, text }); setCurrentId(id); backFromAgent.current = 'details'; setSplit(false); setView('agent') }}
+            onRescan={id => { const d = projects.find(p => p.id === id); if (d) scanBrand(id, d.name, d.brand?.website || '') }}
             onCreate={() => { setView('projects'); setCreateRequest(n => n + 1) }}
           />
         ) : page === 'details' ? (
@@ -337,12 +403,13 @@ export default function App({ account }) {
             onFiles={() => navigate('files')}
             onReset={() => {
               if (window.confirm('Reset this project’s inputs, stakeholders and deck to the defaults?')) {
-                update({ fields: defaultFields(), stakeholders: defaultStakeholders(), deck: defaultDeck(), documents: [] })
+                update({ fields: defaultFields(), stakeholders: defaultStakeholders(), deck: defaultDeck(), documents: [] }, { label: 'Reset the project to the defaults' })
               }
             }}
           />
         ) : page === 'connections' ? (
-          <Connections
+          <Customize tab="connections" onTab={navigate}>
+          <Connections embedded
             project={connectionProject}
             projects={projects}
             selectedProjectId={connectionProjectId}
@@ -352,12 +419,15 @@ export default function App({ account }) {
             onConnections={fn => connectionProject ? updateConnectionProject(p => ({ connectors: fn(p.connectors || connections) })) : setConnections(fn)}
             onDocuments={fn => updateConnectionProject(p => ({ documents: fn(p.documents || []) }))}
           />
+          </Customize>
         ) : page === 'waitlist' && admin ? (
           <WaitlistAdmin />
         ) : page === 'skills' ? (
-          <Skills userId={account.session.user.id} projects={projects}
+          <Customize tab="skills" onTab={navigate}>
+          <Skills embedded userId={account.session.user.id} projects={projects}
             onUse={(sk, dealId) => { saving.flush(); setSkillRequest({ dealId, key: sk.key, id: sk.id }); setCurrentId(dealId); setView('agent') }}
             onSchedule={(sk, dealId) => { setScheduleSkill({ dealId, skill: sk }); navigate('scheduled') }} />
+          </Customize>
         ) : page === 'scheduled' ? (
           <Scheduled userId={account.session.user.id} projects={projects}
             skillToSchedule={scheduleSkill} onSkillScheduled={() => setScheduleSkill(null)}
@@ -378,7 +448,8 @@ export default function App({ account }) {
             onPreviewOpened={() => setPreviewRequest(null)}
             key={project.id}
             brand={project.brand}
-            onBrand={brand => { brandScans.current.delete(project.id); update({ brand: { ...brand, status: 'ready', message: 'Your custom deck design is saved.' } }) }}
+            onBrand={brand => { brandScans.current.delete(project.id); update({ brand: { ...brand, status: 'ready', message: 'Your custom deck design is saved.' } }, { label: 'Changed the deck design', key: 'brand-panel' }) }}
+            history={history}
             onScanBrand={website => scanBrand(project.id, project.name, website)}
             inputs={inputs}
             model={model}
@@ -388,8 +459,9 @@ export default function App({ account }) {
             onStakeholders={onStakeholders}
             deck={project.deck}
             company={project.name}
-            onDeck={fn => update(p => ({ deck: fn(p.deck) }))}
+            onDeck={(fn, opts) => update(p => ({ deck: fn(p.deck) }), opts || { label: 'Edited the slides' })}
             onWebsite={key => { setWebsiteAudience(key); setView('website') }}
+            onFillInputs={() => navigate('details')}
           />
         ) : page === 'website' ? (
           <WebsiteView
@@ -398,10 +470,12 @@ export default function App({ account }) {
             audienceKey={websiteAudience}
             onView={(format, audience) => { setWebsiteAudience(audience); setPreviewRequest(format==='editor'?null:format); setView('deck') }}
             inputs={inputs}
-            onDeck={fn => update(p => ({ deck: fn(p.deck) }))}
+            onDeck={(fn, opts) => update(p => ({ deck: fn(p.deck) }), opts || { label: 'Edited the Live room' })}
+            history={history}
             onSite={site => update({ site })}
             onScenario={fn => update(p => ({ scenario: fn(p.scenario || {}) }))}
             onBack={() => setView('deck')}
+            onFillInputs={() => navigate('details')}
           />
         ) : (
           <ProjectList
@@ -461,6 +535,7 @@ export default function App({ account }) {
         </section>
       </div>}
       {settingsOverlay}
+      <Toaster />
     </div>
   )
 }

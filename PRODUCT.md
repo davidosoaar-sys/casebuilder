@@ -32,6 +32,22 @@ without a working integration. No fake customer evidence or testimonials.
 ## Current work — 2026-10-25
 Local meeting work: evidence review, optional case context and impact-first new
 templates. Implemented locally: Live Room first, optional/automatically sourced brand imagery, refined one-pager, client-safe stakeholder requirements/statuses, sourced portrait support, and product/demo storytelling. Private notes remain internal.
+Local v0.16.0 work (2026-10-26): the Agent can revise the case artifacts from chat
+(page wording and text styles, adding, removing and reordering pages and blocks,
+brand colours and fonts). Changes apply straight away, show in a change card and
+can always be undone; if the user changed the same thing since, the card asks
+first. It cannot add images or logos, and figures still come only from the inputs.
+Every change in a project (deck, brand, inputs, stakeholders, the Agent's) can be
+undone and redone with Cmd/Ctrl+Z or the toolbar buttons, for the session; deletes
+show a toast with Undo instead of asking first. Edit slides has a page rail, one
+menu per page, block tools in a bar that never covers the content, and "+" or "/"
+to add blocks. The Agent chat renders replies as formatted text with numbered
+source chips instead of raw links, offers four starter prompts in an empty chat
+(they fill the box, never send), and keeps "Use a skill" in the composer.
+The Dashboard answers which deal needs Chris before his next meeting: deals
+least confirmed first (there are no meeting dates without a calendar
+connector), each with a readiness bar, value as a range, stakeholders covered
+and one next action, plus what changed since his last visit. No CRM metrics.
 Amr owns agents/APIs, connector and file ingestion, account/backend changes.
 Coordinate shared navigation/data contracts rather than duplicating his work.
 

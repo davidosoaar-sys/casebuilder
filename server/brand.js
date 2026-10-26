@@ -4,6 +4,7 @@ import { fetchPublic } from './publicWeb.js'
 import {publicProfileUrl} from '../src/profileMedia.js'
 export { fetchPublic, publicAddress } from './publicWeb.js'
 import {curateBrand} from './brandSelection.js'
+import {tightenSvg} from './logoFit.js'
 import { normalizeBrand } from '../src/brand.js'
 import { agentPrompt } from './agent-commands/index.js'
 import { AGENT_COMMANDS } from '../src/agentCommands.js'
@@ -130,12 +131,43 @@ export function parseBrand(html, css, website, company = '') {
     }
     return ''
   }
-  const bodyRule = [...css.matchAll(/(?:^|})\s*(?:html\s*,\s*)?body\s*\{([^}]+)}/gi)].map(m=>m[1]).join(';')
-  const background = color(themeVariables['marketing-background'] || variables['color-background'] || themeVariables['background-base'] || variables['background-color'] || variables['ifm-background-color'] || variables.background || bodyRule.match(/(?:^|;)\s*background(?:-color)?\s*:\s*([^;}]+)/i)?.[1] || '')
-  const textColor = color(themeVariables['marketing-foreground'] || variables['color-text'] || themeVariables['text-base'] || variables['text-color'] || variables['ifm-font-color-base'] || bodyRule.match(/(?:^|;)\s*color\s*:\s*([^;}]+)/i)?.[1] || '')
-  const light = background && parseInt(background.slice(1,3),16)*.299+parseInt(background.slice(3,5),16)*.587+parseInt(background.slice(5,7),16)*.114 > 150
+  // A colour inside a declaration value: `#000`, `background: url(x) #fff`, rgb().
+  // Transparent, inherit and fully clear rgba() are no colour at all.
+  const paint = value => {
+    const v = expand(value || '').trim().replace(/(#[0-9a-f]{6})[0-9a-f]{2}\b/gi, '$1')
+    if (!v || /^(transparent|inherit|initial|unset|none|currentcolor)\b/i.test(v) || /rgba?\((?:[^,)]+,){3}\s*0(?:\.0*)?\s*\)|rgba?\([^)]*\/\s*0(?:\.0*)?\s*\)/i.test(v)) return ''
+    return color(v) || color(v.match(/#[0-9a-f]{3,8}\b|rgba?\([^)]*\)|\b(?:white|black)\b/i)?.[0] || '')
+  }
+  // The page as the browser paints it, cascade order (last rule wins), from
+  // html / :root / body / main rules in inline and linked CSS and inline
+  // style attributes. Dark-scheme media blocks are not the default page.
+  const pageCss = css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/@media[^{]*prefers-color-scheme\s*:\s*dark[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/gi, '')
+  const pageRules = [...pageCss.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(m => [m[1].split(',').map(s => s.trim().toLowerCase()), m[2]])
+  const inlineStyle = name => attr(html.match(new RegExp(`<${name}\\b[^>]*>`, 'i'))?.[0] || '', 'style')
+  const declared = (selectors, property) => {
+    const blocks = [...pageRules.filter(([list]) => list.some(s => selectors.includes(s))).map(r => r[1]), ...selectors.filter(s => /^[a-z]+$/.test(s)).map(inlineStyle)]
+    return blocks.map(b => [...b.matchAll(new RegExp(`(?:^|;)\\s*${property}\\s*:\\s*([^;]+)`, 'gi'))].map(m => paint(m[1])).filter(Boolean).at(-1)).filter(Boolean).at(-1) || ''
+  }
+  const pageBackground = el => declared(el, 'background(?:-color)?')
+  const themeMeta = [...html.matchAll(/<meta\b[^>]*>/gi)].map(m => m[0]).filter(t => /^theme-color$/i.test(attr(t, 'name')) && !/dark/i.test(attr(t, 'media'))).map(t => paint(attr(t, 'content'))).find(Boolean) || ''
+  const saturation = hex => { const rgb = hex.slice(1).match(/../g).map(h => parseInt(h, 16)); return Math.max(...rgb) - Math.min(...rgb) }
+  const tokenBackground = color(themeVariables['marketing-background'] || variables['color-background'] || themeVariables['background-base'] || variables['background-color'] || variables['ifm-background-color'] || variables.background || '')
+  // A site that never sets a page colour shows the browser default: white.
+  // Never the app's own theme. A neutral theme-color is the page colour too.
+  const siteBackground = tokenBackground || pageBackground(['body']) || pageBackground(['html', ':root']) || pageBackground(['main']) || (themeMeta && saturation(themeMeta) <= 40 ? themeMeta : '')
+  const background = siteBackground || '#ffffff'
+  const textColor = color(themeVariables['marketing-foreground'] || variables['color-text'] || themeVariables['text-base'] || variables['text-color'] || variables['ifm-font-color-base'] || '') || declared(['body'], 'color') || declared(['html', ':root'], 'color')
+  const light = parseInt(background.slice(1,3),16)*.299+parseInt(background.slice(3,5),16)*.587+parseInt(background.slice(5,7),16)*.114 > 150
+  const text = textColor || (light ? '#161616' : '#ffffff')
+  // No accent token: the site's link colour, its button colour, a coloured
+  // theme-color, and only then its text colour.
+  const distinct = c => c && c !== background && c !== text ? c : ''
+  const linkColor = distinct(declared(['a', 'a:link'], 'color'))
+  const buttonColor = [declared(['button', '.button', '.btn', '.btn-primary', '.button-primary', '.cta'], 'background(?:-color)?')].map(distinct).find(c => c && saturation(c) > 40) || ''
   const colorEvidence=Object.entries(themeVariables).filter(([key])=>/brand|accent|primary|background|foreground|surface|^bg-|^fg-|text-color|color-text/i.test(key)).flatMap(([token,raw])=>{const value=color(raw);if(!value)return [];const role=/background|^bg-base|^bg-primary/.test(token)?'background':/surface/.test(token)?'surface':/foreground|^fg-primary|text-color|color-text/.test(token)?'text':/accent|primary|brand/.test(token)?'primary':'';return [{token,label:'--'+token,value,role,origin:'observed'}]}).slice(0,40)
-  return { ...(background ? {background, surface: shade(background, light ? -0.035 : 0.06), text: textColor || (light ? '#161616' : '#ffffff'), muted: light ? '#555555' : '#b8b8b8'} : {}), candidates, colorEvidence, faces, derivedColors:['surface','muted',...(!textColor?['text']:[])], primary: color(themeVariables['marketing-primary'] || themeVariables['ds-theme-background-accent-strong-normal'] || '') || named || color(themeVariables['essential-bright-accent'] || themeVariables['brand-color'] || '') || textColor || (background?(light?'#111111':'#ffffff'):undefined), headingFont: !/var\(/.test(heading) ? heading : '', bodyFont: !/var\(/.test(body) ? body : '', logoUrl, face, colors: ranked.slice(0, 8) }
+  const accent = color(themeVariables['marketing-primary'] || themeVariables['ds-theme-background-accent-strong-normal'] || '') || named || color(themeVariables['essential-bright-accent'] || themeVariables['brand-color'] || '') || linkColor || buttonColor || (themeMeta && saturation(themeMeta) > 40 ? themeMeta : '')
+  const primary = accent || text
+  return { background, surface: shade(background, light ? -0.035 : 0.06), text, muted: light ? '#555555' : '#b8b8b8', candidates, colorEvidence, faces, derivedColors:['surface','muted',...(!siteBackground?['background']:[]),...(!textColor?['text']:[]),...(!accent&&!textColor?['primary']:[])], primary, headingFont: !/var\(/.test(heading) ? heading : '', bodyFont: !/var\(/.test(body) ? body : '', logoUrl, face, colors: ranked.slice(0, 8) }
 }
 
 
@@ -274,12 +306,14 @@ export async function discoverBrand({ company, website }, fetcher = fetchPublic,
       if(!safeSvg(candidate.svg))throw Error('Unsupported SVG')
       svg=candidate.svg.replace(/currentColor/g,parsed.text||'#161616')
       if(!/xmlns=/.test(svg))svg=svg.replace('<svg','<svg xmlns="http://www.w3.org/2000/svg"')
+      svg=tightenSvg(svg)
       dataUrl='data:image/svg+xml;base64,'+Buffer.from(svg).toString('base64')
     }else{
       const asset=await fetcher(candidate.url,{limit:600000}),mime=asset.type.split(';')[0]
       if(!/^image\/(png|jpeg|webp|svg\+xml)$/.test(mime))throw Error('Unsupported logo type')
-      if(mime.includes('svg')){svg=asset.buffer.toString();if(!safeSvg(svg))throw Error('Unsupported SVG')}
-      dataUrl='data:'+mime+';base64,'+asset.buffer.toString('base64');sourceUrl=asset.url
+      if(mime.includes('svg')){svg=asset.buffer.toString();if(!safeSvg(svg))throw Error('Unsupported SVG');svg=tightenSvg(svg)}
+      // A tall or wide icon frame around a small glyph is cropped to the glyph.
+      dataUrl='data:'+mime+';base64,'+(svg?Buffer.from(svg).toString('base64'):asset.buffer.toString('base64'));sourceUrl=asset.url
     }
     const bytes=Buffer.from(dataUrl.split(',')[1],'base64'),mime=dataUrl.slice(5,dataUrl.indexOf(';'))
     const dimensions=inspectBrandImage(bytes,mime)

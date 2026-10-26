@@ -30,8 +30,18 @@ test('stakeholder narrative escapes user text and handles missing briefing field
   const html=stakeholderJourneyHtml('<Acme>','',[{key:'a',role:'<Finance>',namedPeople:[{name:'A & B'}]}])
   assert.equal(html.includes('<Finance>'),false)
   assert.ok(html.includes('A &amp; B'))
-  assert.ok(html.includes('No requirements recorded yet.'))
+  // The client page has no empty placeholder: no requirements, no block.
+  assert.equal(html.includes('No requirements recorded yet.'),false)
+  assert.equal(html.includes('client-requirements'),false)
+  assert.equal(html.includes('<h4>Requirements</h4>'),false)
   assert.equal(stakeholderJourneyHtml('Empty','',[]).includes('data-journey-node='),false)
+})
+
+test('the requirements block renders for the client when requirements exist',()=>{
+  const html=stakeholderJourneyHtml('Acme','',[{key:'a',role:'Finance',requirements:[{id:'r1',text:'SOC 2 report',status:'Actioned'}]}])
+  assert.ok(html.includes('<h4>Requirements</h4><ul class="client-requirements">'))
+  assert.ok(html.includes('SOC 2 report'))
+  assert.ok(html.includes('requirement-box is-done'))
 })
 
 test('flat website background follows the authored company cover without changing its fonts or palette',()=>{

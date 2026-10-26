@@ -1,0 +1,10 @@
+/* Customize v2: section nav (underline) above the Skills pills; Connectors fits the page */
+.customize-page .customize-nav { display: flex; gap: 28px; margin: 4px 0 28px; border-bottom: 1px solid var(--line); }
+.customize-nav-item { position: relative; background: none; border: 0; padding: 0 0 12px; margin: 0; font: inherit; font-size: 15px; font-weight: 500; color: var(--ink-dim); cursor: pointer; transition: color .15s ease; }
+.customize-nav-item:hover { color: var(--ink); }
+.customize-nav-item.is-on { color: var(--ink-strong); }
+.customize-nav-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
+.customize-nav-line { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; border-radius: 2px; background: var(--accent); }
+/* Connectors inside Customize: intro at body size, list as wide as the Skills grid. */
+.connections-embedded .sub { margin: 0 0 6px; max-width: 70ch; font-size: 14.5px; line-height: 1.6; color: var(--ink-dim); }
+.connections-embedded .connector-list { max-width: none; }

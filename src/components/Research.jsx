@@ -11,6 +11,8 @@ import { listResearch, getResearch, startResearch, isRunning, researchTitle, par
 
 const POLL_MS = 2500
 const host = u => { try { return new URL(u).hostname.replace(/^www\./, '') } catch { return '' } }
+// The page part of a URL, for a source with no title ("/wiki/Spotify").
+const path = u => { try { const x = new URL(u); return decodeURIComponent(x.pathname + x.search).replace(/\/$/, '') } catch { return '' } }
 const when = iso => {
   const d = new Date(iso), mins = Math.round((Date.now() - d.getTime()) / 60000)
   if (mins < 1) return 'just now'
@@ -19,7 +21,10 @@ const when = iso => {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-function Inline({ text, sources }) {
+// chips: chat replies show each citation as "[1] host.com" (the full title or
+// URL in a tooltip on hover and focus), and keep a "[7]" that has no source as
+// plain text. Research answers show the number alone and drop unverified ones.
+function Inline({ text, sources, chips }) {
   return parseInline(text).map((x, i) => {
     if (x.t === 'b') return <strong key={i}>{x.v}</strong>
     if (x.t === 'i') return <em key={i}>{x.v}</em>
@@ -27,7 +32,12 @@ function Inline({ text, sources }) {
     if (x.t === 'link') return <a key={i} href={x.href} target="_blank" rel="noreferrer noopener">{x.v}</a>
     if (x.t === 'cite') {
       const s = sources.find(s => s.n === x.n)
-      if (!s) return null // a citation with no verified source is not shown
+      if (!s) return chips ? <React.Fragment key={i}>[{x.n}]</React.Fragment> : null // a citation with no verified source is not shown
+      if (chips && s.url) return (
+        <a key={i} className="src-chip" href={s.url} target="_blank" rel="noreferrer noopener" data-tip={s.title || s.url} aria-label={`Source ${x.n}: ${s.title || s.url}`}>
+          <span className="src-chip-n">{x.n}</span><span className="src-chip-host">{host(s.url)}</span>
+        </a>
+      )
       return s.url
         ? <a key={i} className="research-cite" href={s.url} target="_blank" rel="noreferrer noopener" title={s.title || s.url}>{x.n}</a>
         : <span key={i} className="research-cite" title={s.title}>{x.n}</span>
@@ -36,30 +46,45 @@ function Inline({ text, sources }) {
   })
 }
 
-export function Answer({ text, sources = [] }) {
+export function Answer({ text, sources = [], chips = false }) {
+  const inl = t => <Inline text={t} sources={sources} chips={chips} />
   return (
     <div className="research-answer">
-      {parseMarkdown(text).map((b, i) => {
-        if (b.type === 'h') return React.createElement(b.level <= 2 ? 'h3' : 'h4', { key: i }, <Inline text={b.text} sources={sources} />)
-        if (b.type === 'ul' || b.type === 'ol') return React.createElement(b.type, { key: i }, b.items.map((it, j) => <li key={j}><Inline text={it} sources={sources} /></li>))
-        return <p key={i}><Inline text={b.text} sources={sources} /></p>
+      {parseMarkdown(text, { breaks: chips }).map((b, i) => {
+        // # and ## are section headings, ### and deeper are sub-headings.
+        if (b.type === 'h') return React.createElement(b.level <= 2 ? 'h3' : 'h4', { key: i, className: `md-h${Math.min(b.level, 3)}` }, inl(b.text))
+        if (b.type === 'ul' || b.type === 'ol') return React.createElement(b.type, { key: i }, b.items.map((it, j) => <li key={j}>{inl(it)}</li>))
+        if (b.type === 'hr') return <hr key={i} className="md-hr" />
+        if (b.type === 'quote') return <blockquote key={i} className="md-quote">{inl(b.text)}</blockquote>
+        if (b.type === 'pre') return <pre key={i} className="md-pre"><code>{b.text}</code></pre>
+        if (b.type === 'table') return (
+          <div key={i} className="md-table-wrap">
+            <table className="md-table">
+              <thead><tr>{b.head.map((h, j) => <th key={j}>{inl(h)}</th>)}</tr></thead>
+              <tbody>{b.rows.map((r, j) => <tr key={j}>{r.map((c, k) => <td key={k}>{inl(c)}</td>)}</tr>)}</tbody>
+            </table>
+          </div>
+        )
+        return <p key={i}>{inl(b.text)}</p>
       })}
     </div>
   )
 }
 
+// Numbered two-line chips (title, then host) in a wrapping row.
 export function Sources({ sources, dropped }) {
   if (!sources.length && !dropped) return null
   return (
     <section className="research-sources" aria-label="Sources">
       <h3>Sources</h3>
-      <ol>
+      <ol className="src-row">
         {sources.map(s => (
           <li key={s.n}>
-            <span className="research-source-n">{s.n}</span>
             {s.url
-              ? <a href={s.url} target="_blank" rel="noreferrer noopener" title={s.url}><span>{s.title || host(s.url)}</span><small>{host(s.url)}</small></a>
-              : <span className="research-source-conn"><span>{s.title}</span><small>Connector</small></span>}
+              ? <a className="src-card" href={s.url} target="_blank" rel="noreferrer noopener" data-tip={s.url}>
+                  <span className="src-chip-n">{s.n}</span><span className="src-card-text"><span>{s.title || host(s.url)}</span><small>{s.title ? host(s.url) : path(s.url) || host(s.url)}</small></span>
+                </a>
+              : <span className="src-card is-conn"><span className="src-chip-n">{s.n}</span><span className="src-card-text"><span>{s.title}</span><small>Connector</small></span></span>}
           </li>
         ))}
       </ol>

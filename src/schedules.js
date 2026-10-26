@@ -54,6 +54,22 @@ export function defaultFirstRun(now = new Date()) {
   return d
 }
 
+// The next local time at hour:minute after `now`, on `weekday` (0 = Sunday)
+// if given. Templates use it for their first run.
+export function nextAt({ weekday, hour, minute = 0 }, now = new Date()) {
+  const d = new Date(now); d.setHours(hour, minute, 0, 0)
+  if (weekday == null) { if (d <= now) d.setDate(d.getDate() + 1); return d }
+  let ahead = (weekday - d.getDay() + 7) % 7
+  if (ahead === 0 && d <= now) ahead = 7
+  d.setDate(d.getDate() + ahead)
+  return d
+}
+
+// "9:00 AM" for an hour and minute, without a date.
+export function fmtClock(hour, minute = 0) {
+  return `${hour % 12 || 12}:${String(minute).padStart(2, '0')} ${hour < 12 ? 'AM' : 'PM'}`
+}
+
 export function fmtWhen(iso, now = new Date()) {
   if (!iso) return ''
   const d = new Date(iso)

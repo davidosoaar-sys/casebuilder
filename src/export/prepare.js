@@ -1,6 +1,6 @@
 import {clientStakeholder} from '../stakeholderRequirements.js'
 import {contextStatement} from '../caseContext.js'
-import { buildEnv, resolveBlock } from '../deck/model.js'
+import { buildEnv, resolveBlock, hiddenPages } from '../deck/model.js'
 import { STAKEHOLDERS, INPUT_GROUPS, confidence, unconfirmed, completeness, fmtDec, fmtMoneyFull } from '../valueModel.js'
 import { computeModel } from '../model.js'
 import { stateOf, isBlank } from '../source.js'
@@ -12,6 +12,10 @@ import { NO_ONE } from '../deck/stakeholders.js'
 // exactly the same files.
 
 export const pickAudience = (stakeholders, key) => stakeholders.find(s => s.key === key) || stakeholders[0] || NO_ONE
+
+// Pages the client output leaves out for this audience, and what would bring them back.
+export const hiddenForClient = ({ deck, inputs, fields, stakeholders, activeKey }) =>
+  hiddenPages(deck, buildEnv(inputs, fields, clientStakeholder(pickAudience(stakeholders, activeKey))))
 
 export function prepareOnePager({ inputs, fields, who, date }) {
   who=clientStakeholder(who)

@@ -1,0 +1,2 @@
+/* Fix: chat replies keep their line breaks (haiku, addresses, one-per-line) */
+.chat-md .research-answer p { white-space: pre-line; }

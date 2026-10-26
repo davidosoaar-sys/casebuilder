@@ -72,7 +72,9 @@ export default function useCloudDeals(userId, connections) {
     deals, setDeals, loading, loadError,
     saving: {
       status: loadError ? { state: 'error', message: loadError } : status,
-      flush: () => { saver.current.flush() },
+      // Resolves once the latest copy is in the database. An edit made while a
+      // save was in flight goes in a second save, so wait for that one too.
+      flush: async () => { await saver.current.flush(); if (saver.current.hasPending()) await saver.current.flush() },
       async remove(id) { saver.current.forget(id); seen.current.delete(id); await store.remove(id) },
       reportError: message => setStatus({ state: 'error', message })
     }

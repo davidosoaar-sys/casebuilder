@@ -1,5 +1,5 @@
 """Tests for the worker's edit parser. Run from worker/: python3 -m unittest test_worker.py"""
-import os, sys, unittest
+import json, os, sys, unittest
 
 os.environ.setdefault("SUPABASE_URL", "https://example.supabase.co")
 os.environ.setdefault("SUPABASE_SECRET_KEY", "test")
@@ -481,8 +481,17 @@ class ChatHistory(unittest.TestCase):
                 return [{"chat_id": "latest"}]
             worker.api = fake
             self.assertEqual(worker.chat_for({"payload": {"chat_id": cid}, "deal_id": "d", "owner_id": "o"}), cid)
-            # Someone else's chat id in the payload: ignored, falls back to the owner's latest chat.
-            self.assertEqual(worker.chat_for({"payload": {"chat_id": cid}, "deal_id": "d", "owner_id": "intruder"}), "latest")
+            # Someone else's chat id, or a chat deleted mid-run: the reply is dropped, never
+            # posted into the owner's latest (unrelated) chat.
+            self.assertEqual(worker.chat_for({"payload": {"chat_id": cid}, "deal_id": "d", "owner_id": "intruder"}), worker.GONE)
+            # A scheduled task whose chat was deleted still gets a fresh chat (not GONE).
+            made = []
+            def fake2(m, p, b=None, prefer=None):
+                if m == "POST" and p == "/rest/v1/chats":
+                    made.append(b); return [{"id": "new-chat"}]
+                return [] if p.startswith("/rest/v1/chats?") else None
+            worker.api = fake2
+            self.assertEqual(worker.chat_for({"payload": {"chat_id": cid}, "deal_id": "d", "owner_id": "o", "schedule_id": "s"}), "new-chat")
         finally:
             worker.api = old
 
@@ -583,3 +592,176 @@ class Skills(unittest.TestCase):
     def test_skill_sits_before_the_request(self):
         p = worker.build_research_prompt({"payload": {"question": "go"}}, None, "", (), worker.skill_block(("News", "Do X", "research")))
         self.assertLess(p.index("<skill>"), p.index("Question:"))
+
+
+DECK_DEAL = {"id": "d", "name": "Acme", "data": {"name": "Acme", "fields": DEAL["data"]["fields"],
+    "brand": {"primary": "#9bf0de", "background": "#111111", "headingFont": "Circular", "logo": "data:image/png;base64,AA"},
+    "deck": [
+        {"id": "s1", "variant": "hero", "blocks": [{"id": "b0", "type": "logo"}, {"id": "b1", "type": "text", "style": "hero", "text": "{company}"},
+                                                  {"id": "b2", "type": "text", "style": "body", "text": "Line one\nLine two"}]},
+        {"id": "s2", "variant": "plain", "blocks": [{"id": "b3", "type": "text", "style": "title", "text": "Recover time"}, {"id": "b4", "type": "drivers"},
+                                                   {"id": "b5", "type": "columns", "left": "L", "right": "R"}, {"id": "b6", "type": "image", "src": "x", "caption": ""}]},
+        {"id": "s3", "variant": "plain", "blocks": [{"id": "b7", "type": "text", "style": "label", "text": "This room"}, {"id": "b8", "type": "room"}]},
+    ]}}
+
+
+def deck_reply(ops):
+    return "Changed the title.\n```casebuilder-deck\n" + json.dumps(ops) + "\n```"
+
+
+class DeckOutline(unittest.TestCase):
+    def test_outline_lists_pages_blocks_and_brand(self):
+        o = worker.deck_outline(DECK_DEAL)
+        self.assertIn("Brand: primary #9bf0de, background #111111, surface #1e1e1e", o)
+        self.assertIn("headingFont Circular, bodyFont Arial", o)
+        self.assertIn("Page 1 | slide_id=s1 | hero", o)
+        self.assertIn("  - b1 | text | hero | {company}", o)
+        self.assertIn("  - b2 | text | body | Line one\\nLine two", o)
+        self.assertIn("  - b4 | drivers | - | [live: drivers chart]", o)
+        self.assertIn("  - b6 | image | - | [image]", o)
+        self.assertIn("left: L || right: R", o)
+        self.assertNotIn("data:image", o)
+
+    def test_outline_is_capped(self):
+        big = {"data": {"deck": [{"id": f"s{i}", "blocks": [{"id": f"b{i}", "type": "text", "style": "body", "text": "x" * 400}]} for i in range(60)]}}
+        o = worker.deck_outline(big)
+        self.assertLess(len(o), worker.DECK_OUTLINE_CHARS + 200)
+        self.assertRegex(o, r"\(\d+ more pages not shown\)$")
+
+    def test_no_deck_no_outline_and_no_prompt_section(self):
+        self.assertEqual(worker.deck_outline(DEAL), "")
+        self.assertNotIn("casebuilder-deck", worker.build_prompt({"kind": "chat", "payload": {"message": "hi"}}, DEAL))
+
+    def test_prompt_section_with_deck(self):
+        p = worker.build_prompt({"kind": "chat", "payload": {"message": "punchier title"}}, DECK_DEAL)
+        self.assertIn("```casebuilder-deck", p)
+        self.assertIn("slide_id=s1", p)
+        self.assertIn("{annual}", p)
+        self.assertIn("Circular", p)  # the brand's own font is allowed
+        self.assertLess(p.index("casebuilder-deck"), p.index("Request:"))
+
+
+class ParseDeckOps(unittest.TestCase):
+    def test_typed_figures_are_refused(self):
+        for bad in ("Annual savings: $10 million", "Save 30% a year", "12,000 seats"):
+            _, out, rej = worker.parse_deck_ops(deck_reply([{"op": "set_text", "slide_id": "s1", "block_id": "b1", "value": bad}]), DECK_DEAL)
+            self.assertEqual(out, [], bad)
+            self.assertIn("cannot type figures", " ".join(rej))
+        _, out, rej = worker.parse_deck_ops(deck_reply([{"op": "set_text", "slide_id": "s1", "block_id": "b1", "value": "Q3 2026: {annual} back"}]), DECK_DEAL)
+        self.assertEqual(rej, [])
+        self.assertEqual(len(out), 1)
+
+    def test_edits_carry_what_the_agent_saw(self):
+        _, out, _ = worker.parse_deck_ops(deck_reply([{"op": "set_text", "slide_id": "s1", "block_id": "b1", "value": "New title"}]), DECK_DEAL)
+        seen = next(b for s in DECK_DEAL["data"]["deck"] if s["id"] == "s1" for b in s["blocks"] if b["id"] == "b1")
+        self.assertEqual(out[0]["expect"], seen.get("text") or "")
+
+    def test_no_fence_no_ops(self):
+        self.assertEqual(worker.parse_deck_ops("Just an answer.", DECK_DEAL), ("Just an answer.", [], []))
+
+    def test_good_ops_and_fence_removed(self):
+        ops = [
+            {"op": "set_text", "slide_id": "s1", "block_id": "b1", "value": "{company} platform case", "reason": "asked"},
+            {"op": "set_style", "slide_id": "s2", "block_id": "b3", "style": "headline"},
+            {"op": "add_slide", "template": "bullets", "after_slide_id": "s1", "texts": [{"style": "title", "text": "Rollout plan"}, {"style": "body", "text": "- A\n- B\n- C"}]},
+            {"op": "move_slide", "slide_id": "s3", "to_index": 0},
+            {"op": "add_block", "slide_id": "s2", "after_block_id": "b3", "kind": "Quote", "text": "Ship it."},
+            {"op": "set_text", "slide_id": "s2", "block_id": "b5", "field": "right", "value": "Right side"},
+            {"op": "remove_block", "slide_id": "s1", "block_id": "b0"},
+            {"op": "set_brand", "background": "#FFFFFF", "headingFont": "georgia"},
+            {"op": "remove_slide", "slide_id": "s2"},
+        ]
+        text, out, rej = worker.parse_deck_ops(deck_reply(ops), DECK_DEAL)
+        self.assertEqual(text, "Changed the title.")
+        self.assertEqual(rej, [])
+        self.assertEqual([o["op"] for o in out], [o["op"] for o in ops])
+        self.assertEqual(out[0]["field"], "text")
+        self.assertEqual(out[7], {"op": "set_brand", "reason": "", "background": "#ffffff", "headingFont": "Georgia"})
+        self.assertEqual(out[2]["texts"][1], {"style": "body", "text": "- A\n- B\n- C"})
+
+    def test_unknown_ids_are_rejected(self):
+        ops = [{"op": "set_text", "slide_id": "nope", "block_id": "b1", "value": "x"},
+               {"op": "set_text", "slide_id": "s1", "block_id": "nope", "value": "x"},
+               {"op": "add_slide", "template": "text", "after_slide_id": "nope"},
+               {"op": "add_block", "slide_id": "s1", "after_block_id": "nope", "kind": "Text"},
+               {"op": "remove_slide", "slide_id": "s3"},
+               {"op": "set_text", "slide_id": "s3", "block_id": "b7", "value": "gone"}]
+        _, out, rej = worker.parse_deck_ops(deck_reply(ops), DECK_DEAL)
+        self.assertEqual([o["op"] for o in out], ["remove_slide"])
+        self.assertEqual(len(rej), 5)  # the last one names a page removed earlier in the list
+
+    def test_bad_enums_and_values_are_rejected(self):
+        ops = [{"op": "set_style", "slide_id": "s1", "block_id": "b1", "style": "giant"},
+               {"op": "set_style", "slide_id": "s2", "block_id": "b4", "style": "title"},
+               {"op": "set_text", "slide_id": "s2", "block_id": "b4", "value": "x"},
+               {"op": "set_text", "slide_id": "s2", "block_id": "b6", "field": "src", "value": "https://evil"},
+               {"op": "set_text", "slide_id": "s1", "block_id": "b1", "value": " "},
+               {"op": "set_text", "slide_id": "s1", "block_id": "b1", "value": "x" * 2001},
+               {"op": "add_slide", "template": "poster"},
+               {"op": "add_slide", "template": "drivers", "texts": [{"style": "title", "text": "x"}]},
+               {"op": "add_block", "slide_id": "s1", "kind": "Image"},
+               {"op": "add_block", "slide_id": "s1", "kind": "Logo"},
+               {"op": "add_block", "slide_id": "s1", "kind": "Divider", "text": "x"},
+               {"op": "move_slide", "slide_id": "s1", "to_index": -1},
+               {"op": "set_brand", "background": "white", "bodyFont": "Comic Sans", "logo": "data:x"},
+               {"op": "explode"}, "nonsense"]
+        _, out, rej = worker.parse_deck_ops(deck_reply(ops), DECK_DEAL)
+        self.assertEqual(out, [])
+        self.assertEqual(len(rej), 17)  # set_brand reports each of its three keys
+
+    def test_too_many_ops(self):
+        ops = [{"op": "set_text", "slide_id": "s1", "block_id": "b1", "value": f"T{i}"} for i in range(30)]
+        _, out, rej = worker.parse_deck_ops(deck_reply(ops), DECK_DEAL)
+        self.assertEqual(len(out), worker.MAX_DECK_OPS)
+        self.assertEqual(rej, [f"Only the first {worker.MAX_DECK_OPS} case changes were kept."])
+
+    def test_bad_json(self):
+        text, out, rej = worker.parse_deck_ops("Ok.\n```casebuilder-deck\n[{nope\n```", DECK_DEAL)
+        self.assertEqual((text, out), ("Ok.", []))
+        self.assertEqual(len(rej), 1)
+
+    def test_both_fences_in_one_reply(self):
+        raw = ("Set it.\n```casebuilder-edits\n[{\"key\":\"engineers\",\"value\":900,\"from_user\":true}]\n```\n"
+               "```casebuilder-deck\n[{\"op\":\"set_brand\",\"background\":\"#ffffff\"}]\n```")
+        text, ops, drej = worker.parse_deck_ops(raw, DECK_DEAL)
+        text, edits, rej = worker.parse_edits(text, worker.editable_fields(DECK_DEAL))
+        self.assertEqual(text, "Set it.")
+        self.assertEqual([e["value"] for e in edits], [900])
+        self.assertEqual(ops[0]["background"], "#ffffff")
+
+
+class DeckOpsInReplyMeta(unittest.TestCase):
+    def test_handle_puts_deck_ops_next_to_edits(self):
+        posted = []
+        raw = deck_reply([{"op": "set_text", "slide_id": "s1", "block_id": "b1", "value": "New title"}, {"op": "remove_slide", "slide_id": "zz"}])
+
+        class NoProgress:
+            def __init__(self, *a): pass
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+
+        def fake_api(m, p, b=None, prefer=None):
+            if m == "POST": posted.append((p, b))
+            if p.startswith("/rest/v1/deals?"): return [DECK_DEAL]
+            return []
+        names = ("api", "rpc", "profile_for", "run_hermes", "session_trace", "Progress", "project_files_context", "project_research_context", "skill_for")
+        saved = {k: getattr(worker, k) for k in names}
+        worker.api = fake_api
+        worker.rpc = lambda name, **kw: [{"provider": "anthropic", "key": "k"}] if name == "get_active_model_key" else None
+        worker.profile_for = lambda o: "p"
+        worker.run_hermes = lambda *a, **k: (raw, {})
+        worker.session_trace = lambda *a: []
+        worker.Progress = NoProgress
+        worker.project_files_context = lambda *a, **k: ("", [])
+        worker.project_research_context = lambda *a, **k: ("", [])
+        worker.skill_for = lambda job: None
+        try:
+            worker.handle({"id": "j", "owner_id": "o", "deal_id": "d", "kind": "chat", "attempts": 1, "payload": {"chat_id": "c", "message": "new title"}})
+        finally:
+            for k, v in saved.items():
+                setattr(worker, k, v)
+        msg = [b for p, b in posted if p == "/rest/v1/chat_messages" and b.get("role") == "assistant"][0]
+        self.assertEqual(msg["content"], "Changed the title.")
+        self.assertEqual(msg["meta"]["edits"], [])
+        self.assertEqual([o["value"] for o in msg["meta"]["deck_ops"]], ["New title"])
+        self.assertEqual(len(msg["meta"]["deck_rejected"]), 1)

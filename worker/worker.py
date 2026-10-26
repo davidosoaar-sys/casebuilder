@@ -399,7 +399,11 @@ def build_prompt(job, deal, history=(), files_text="", research_text="", skill_t
     parts = ["You are the CaseBuilder assistant for a B2B salesperson"
              + (f" called {who}" if who else "") + ". "
              "Be concise and concrete. Never invent numbers: if you do not know a figure, "
-             "say so and say how to find it. Do not greet the user by a name they have not given you."]
+             "say so and say how to find it. Do not greet the user by a name they have not given you. "
+             "Format replies in Markdown so they are easy to scan: a short answer needs no formatting; "
+             "a longer one can use ## headings, ### sub-headings, - bullets, 1. numbered steps, "
+             "**bold** for the key point, --- as a divider between sections, > for a quote, and a "
+             "| table | for side-by-side comparisons. Do not use HTML."]
     fields = editable_fields(deal)
     if deal:
         d = deal.get("data") or {}
@@ -425,6 +429,9 @@ def build_prompt(job, deal, history=(), files_text="", research_text="", skill_t
                 "you set earlier, they changed it on purpose: never say an earlier update failed or "
                 "did not save, just work from the current values. "
                 "The deck, one-pager and summary recalculate from these inputs by themselves.")
+    deck_text = deck_prompt(deal) if deal else ""
+    if deck_text:
+        parts.append(deck_text)
     if deal:
         d = deal.get("data") or {}
         # Role names come from the app with the message (the deal only stores keys
@@ -773,6 +780,319 @@ def parse_edits(text, fields):
     return clean or "Done.", edits, rejected
 
 
+# ------------------------------------------------------------- deck edits
+# The agent may also change the case artifacts: the deck (pages of blocks) and
+# the brand colours and fonts. These mirror src/deck/model.js, src/brand.js and
+# src/agentDeckEdits.js; the app checks every operation again before applying.
+DECK_FENCE = "casebuilder-deck"
+MAX_DECK_OPS = 25
+MAX_DECK_TEXT = 2000
+MAX_SLIDE_TEXTS = 8
+DECK_OUTLINE_CHARS = 6000
+TEXT_STYLES = ("hero", "headline", "title", "sub", "lede", "body", "note", "label", "eyebrow", "tag", "forwhom", "caption")
+SLIDE_TEMPLATES = (("blank", "Blank page"), ("text", "Text page"), ("bullets", "Bullet page"), ("columns", "Two columns"),
+                   ("image", "Image page"), ("title", "Title"), ("headline", "The number"), ("drivers", "Value drivers"),
+                   ("pairs", "Today vs with Portal"), ("versus", "Against self-hosting"), ("stakeholder", "This room"))
+TEXTS_TEMPLATES = ("blank", "text", "bullets")
+AGENT_BLOCK_KINDS = ("Text", "Heading", "Bullet list", "Quote", "Two columns", "Key numbers", "Value drivers chart",
+                     "Today vs with Portal", "Portal vs self-hosting", "Stakeholder brief", "Divider", "Spacer")
+TEXT_KINDS = ("Text", "Heading", "Bullet list", "Quote")
+BLOCK_TEXT_FIELDS = {"text": ("text",), "quote": ("text",), "columns": ("left", "right"), "image": ("caption",)}
+LIVE_NAMES = {"stats": "key numbers", "drivers": "drivers chart", "pairs": "today vs with Portal", "versus": "Portal vs self-hosting",
+              "room": "stakeholder brief"}
+DECK_TOKENS = ("company", "caseContext", "decisionHeadline", "valueHeadline", "role", "headline", "cares", "archetype",
+               "annual", "net", "payback", "roi", "five")
+BRAND_COLORS = ("primary", "background", "surface", "text", "muted")
+BRAND_FONTS = ("Arial", "Outfit", "Georgia", "Verdana", "Times New Roman", "Trebuchet MS", "Segoe UI", "Courier New")
+DEFAULT_BRAND = {"primary": "#9bf0de", "background": "#111111", "surface": "#1e1e1e", "text": "#e3e3e3", "muted": "#a9acb1",
+                 "headingFont": "Outfit", "bodyFont": "Arial"}
+HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
+CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
+# Figures the agent must not type into the case (money, percentages, scaled or
+# grouped amounts). Same rule as FIGURE in src/agentDeckEdits.js.
+FIGURE = re.compile(r"[$\u20ac\u00a3\u00a5]\s?\d|\d\s?%|\d(?:\.\d+)?\s?(?:k|m|bn|b|million|billion|thousand)\b|\d{1,3}(?:,\d{3})+", re.I)
+TOKEN = re.compile(r"\{\w+\}")
+
+
+def deal_deck(deal):
+    deck = ((deal or {}).get("data") or {}).get("deck")
+    return [s for s in deck if isinstance(s, dict) and isinstance(s.get("blocks"), list) and s.get("id")] if isinstance(deck, list) else []
+
+
+def _clean_font(v):
+    return re.sub(r"[^a-zA-Z0-9 ,_-]", "", str(v or ""))[:100].strip()
+
+
+def deal_brand(deal):
+    b = ((deal or {}).get("data") or {}).get("brand")
+    b = b if isinstance(b, dict) else {}
+    out = {k: (b.get(k) if isinstance(b.get(k), str) and HEX.match(b.get(k)) else DEFAULT_BRAND[k]) for k in BRAND_COLORS}
+    for k in ("headingFont", "bodyFont"):
+        out[k] = _clean_font(b.get(k)) or DEFAULT_BRAND[k]
+    return out
+
+
+def agent_fonts(deal):
+    b = ((deal or {}).get("data") or {}).get("brand")
+    b = b if isinstance(b, dict) else {}
+    own = [b.get("headingFont"), b.get("bodyFont"), b.get("fontName")] + [f.get("family") for f in (b.get("fontFaces") or []) if isinstance(f, dict)]
+    out = list(BRAND_FONTS)
+    for f in map(_clean_font, own):
+        if f and f not in out:
+            out.append(f)
+    return out
+
+
+def _snip(v, n=160):
+    t = str(v or "").replace("\r", "").replace("\n", "\\n").strip()
+    return t[:n] + ("..." if len(t) > n else "")
+
+
+def deck_outline(deal):
+    """The deck as the agent reads it every turn: pages, ids and text."""
+    deck = deal_deck(deal)
+    if not deck:
+        return ""
+    b = deal_brand(deal)
+    head = ("Brand: " + ", ".join(f"{k} {b[k]}" for k in BRAND_COLORS)
+            + f"; headingFont {b['headingFont']}, bodyFont {b['bodyFont']}.")
+    pages, total = [], len(head)
+    for i, s in enumerate(deck):
+        lines = [f"Page {i + 1} | slide_id={s['id']} | {s.get('variant') or 'plain'}"]
+        for blk in s["blocks"]:
+            if not isinstance(blk, dict):
+                continue
+            t, bid = blk.get("type"), blk.get("id")
+            if t == "text":
+                lines.append(f"  - {bid} | text | {blk.get('style')} | {_snip(blk.get('text'))}")
+            elif t == "quote":
+                lines.append(f"  - {bid} | quote | - | {_snip(blk.get('text'))}")
+            elif t == "columns":
+                lines.append(f"  - {bid} | columns | - | left: {_snip(blk.get('left'), 80)} || right: {_snip(blk.get('right'), 80)}")
+            elif t == "image":
+                lines.append(f"  - {bid} | image | - | [image]" + (f" caption: {_snip(blk.get('caption'), 80)}" if blk.get("caption") else ""))
+            elif t in LIVE_NAMES:
+                lines.append(f"  - {bid} | {t} | - | [live: {LIVE_NAMES[t]}]")
+            else:
+                lines.append(f"  - {bid} | {t} | - |")
+        page = "\n".join(lines)
+        if total + len(page) > DECK_OUTLINE_CHARS:
+            pages.append(f"({len(deck) - i} more pages not shown)")
+            break
+        pages.append(page); total += len(page)
+    return head + "\n" + "\n".join(pages)
+
+
+def deck_prompt(deal):
+    outline = deck_outline(deal)
+    if not outline:
+        return ""
+    return (
+        "The case artifacts (Live room, slides, PDF, one-pager, PowerPoint) are all built from this deck and brand. "
+        "This is the deck as it is now; the user may have changed it since your last reply, so always work from this outline. "
+        "Each page lists its blocks as: block_id | type | style | text (\\n is a new line).\n" + outline + "\n\n"
+        "You can CHANGE the deck and the brand. When the user asks for a change to the pages, wording, order or look, "
+        "make it by ending your reply with exactly one block:\n"
+        f"```{DECK_FENCE}\n"
+        '[{"op": "set_text", "slide_id": "abc1234", "block_id": "def5678", "field": "text", "value": "{company} platform case", "reason": "You asked for a new title."}]\n'
+        "```\n"
+        "Operations (at most 25; each may have a short \"reason\"):\n"
+        "- set_text {slide_id, block_id, field, value}: field is text for text and quote blocks, left or right for columns, caption for images. "
+        "Plain text, at most 2000 characters. In body text a list is lines starting with \"- \".\n"
+        f"- set_style {{slide_id, block_id, style}}: text blocks only; style is one of {', '.join(TEXT_STYLES)}.\n"
+        f"- add_slide {{template, after_slide_id, texts?}}: template is one of {', '.join(k for k, _ in SLIDE_TEMPLATES)}. "
+        "after_slide_id null adds it at the end. texts (blank, text and bullets only) is a list of {style, text} that replaces the template's text, "
+        "e.g. [{\"style\": \"label\", \"text\": \"Rollout\"}, {\"style\": \"title\", \"text\": \"Rollout plan\"}, {\"style\": \"body\", \"text\": \"- Pilot with one team\\n- ...\"}].\n"
+        "- remove_slide {slide_id}. move_slide {slide_id, to_index}: to_index counts from 0, so 1 makes it page 2.\n"
+        f"- add_block {{slide_id, after_block_id, kind, text?}}: kind is one of {', '.join(AGENT_BLOCK_KINDS)}; after_block_id null adds it at the bottom; "
+        "text only for Text, Heading, Bullet list and Quote; Two columns takes left and right.\n"
+        "- remove_block {slide_id, block_id}.\n"
+        f"- set_brand {{primary?, background?, surface?, text?, muted?, headingFont?, bodyFont?}}: colours as #rrggbb; fonts one of {', '.join(agent_fonts(deal))}. "
+        "Never logos or images.\n"
+        "Rules: use only slide and block ids from the outline (pages you add in this reply have no id yet). "
+        "Keep the user's wording unless they ask you to change it. Never type figures into text: numbers come from the live blocks "
+        "and from tokens, which fill in from the inputs. Tokens: " + ", ".join("{" + t + "}" for t in DECK_TOKENS) + ". "
+        "In the text of your reply, say in one or two plain sentences what you changed in the case. Never show JSON, ids or "
+        "operation names to the user. The user can undo your changes, so if the deck is not what you left it, they changed it "
+        "on purpose: work from the outline. If nothing in the case should change, do not include the block. "
+        "You may use this block together with the edits and commands blocks."
+    )
+
+
+def _deck_text(v):
+    if not isinstance(v, str):
+        return None, "the new text was not text"
+    t = CONTROL.sub("", v.replace("\r\n", "\n").replace("\r", "\n")).rstrip()
+    if not t.strip():
+        return None, "the new text was empty (remove the block instead)"
+    if len(t) > MAX_DECK_TEXT:
+        return None, f"the new text is longer than {MAX_DECK_TEXT} characters"
+    if FIGURE.search(TOKEN.sub("", t)):
+        return None, "the agent cannot type figures into the case; numbers come from the inputs through number blocks and tokens"
+    return t, None
+
+
+def parse_deck_ops(text, deal):
+    """Split out the deck block. Returns (text, ops, rejected).
+
+    Every operation is checked against the deal's current deck, in order (a page
+    removed earlier in the list cannot be edited later). Anything invalid is
+    dropped and reported, never guessed at. The app checks again.
+    """
+    m = re.search(r"```" + re.escape(DECK_FENCE) + r"\s*(.*?)```", text or "", re.S)
+    if not m:
+        return text, [], []
+    clean = (text[:m.start()] + text[m.end():]).strip() or "Done."
+    try:
+        raw = json.loads(m.group(1).strip() or "[]")
+    except ValueError:
+        return clean, [], ["The agent's list of case changes was not valid JSON, so the case was not changed."]
+    if isinstance(raw, dict):
+        raw = raw.get("ops", [raw])
+    if not isinstance(raw, list):
+        return clean, [], ["The agent's list of case changes was not a list, so the case was not changed."]
+    deck = deal_deck(deal)
+    order = [s["id"] for s in deck]
+    blocks = {s["id"]: [(b.get("id"), b.get("type")) for b in s["blocks"] if isinstance(b, dict)] for s in deck}
+    # What each block looked like when the agent read it, sent with the edit so
+    # the app keeps the user's version if they changed it meanwhile.
+    seen = {(s["id"], b.get("id")): b for s in deck for b in s["blocks"] if isinstance(b, dict)}
+    fonts = {f.lower(): f for f in agent_fonts(deal)}
+    templates = {k for k, _ in SLIDE_TEMPLATES}
+    ops, rejected = [], []
+    reason = lambda o: str(o.get("reason") or "")[:300]
+    for n, o in enumerate(raw[:MAX_DECK_OPS]):
+        if not isinstance(o, dict):
+            rejected.append("One case change was not readable.")
+            continue
+        kind, sid = o.get("op"), o.get("slide_id")
+        if kind in ("set_text", "set_style", "remove_slide", "move_slide", "add_block", "remove_block") and sid not in blocks:
+            rejected.append(f"{kind}: there is no page {str(sid)[:20]!r} in the deck.")
+            continue
+        types = dict(blocks.get(sid) or [])
+        if kind in ("set_text", "set_style", "remove_block") and o.get("block_id") not in types:
+            rejected.append(f"{kind}: there is no block {str(o.get('block_id'))[:20]!r} on that page.")
+            continue
+        if kind == "set_text":
+            btype = types[o["block_id"]]
+            fields = BLOCK_TEXT_FIELDS.get(btype, ())
+            field = o.get("field") or (fields[0] if fields else None)
+            if field not in fields:
+                rejected.append(f"set_text: a {btype} block has no {str(field)[:20]!r} text.")
+                continue
+            t, err = _deck_text(o.get("value"))
+            if err:
+                rejected.append(f"set_text: {err}.")
+                continue
+            ops.append({"op": kind, "slide_id": sid, "block_id": o["block_id"], "field": field, "value": t,
+                        "expect": seen[(sid, o["block_id"])].get(field) or "", "reason": reason(o)})
+        elif kind == "set_style":
+            if types[o["block_id"]] != "text":
+                rejected.append("set_style: only text blocks have a style.")
+                continue
+            if o.get("style") not in TEXT_STYLES:
+                rejected.append(f"set_style: {str(o.get('style'))[:20]!r} is not a text style.")
+                continue
+            ops.append({"op": kind, "slide_id": sid, "block_id": o["block_id"], "style": o["style"],
+                        "expect": seen[(sid, o["block_id"])].get("style") or "", "reason": reason(o)})
+        elif kind == "add_slide":
+            tpl, after = o.get("template"), o.get("after_slide_id")
+            if tpl not in templates:
+                rejected.append(f"add_slide: {str(tpl)[:20]!r} is not a page template.")
+                continue
+            if after is not None and after not in blocks:
+                rejected.append(f"add_slide: there is no page {str(after)[:20]!r} to add it after.")
+                continue
+            op = {"op": kind, "template": tpl, "after_slide_id": after, "reason": reason(o)}
+            if o.get("texts") is not None:
+                texts, bad = o.get("texts"), ""
+                if tpl not in TEXTS_TEMPLATES:
+                    bad = "only blank, text and bullets pages take texts"
+                elif not isinstance(texts, list) or not 0 < len(texts) <= MAX_SLIDE_TEXTS:
+                    bad = f"texts must be a list of 1 to {MAX_SLIDE_TEXTS} items"
+                else:
+                    op["texts"] = []
+                    for x in texts:
+                        if not isinstance(x, dict) or x.get("style") not in TEXT_STYLES:
+                            bad = "every text needs a known style"; break
+                        t, err = _deck_text(x.get("text"))
+                        if err:
+                            bad = err; break
+                        op["texts"].append({"style": x["style"], "text": t})
+                if bad:
+                    rejected.append(f"add_slide: {bad}.")
+                    continue
+            new_id = f"new-{n}"  # not addressable by later ops
+            order.insert(order.index(after) + 1 if after is not None else len(order), new_id)
+            ops.append(op)
+        elif kind == "remove_slide":
+            if len(order) <= 1:
+                rejected.append("remove_slide: the deck needs at least one page.")
+                continue
+            order.remove(sid); blocks.pop(sid, None)
+            ops.append({"op": kind, "slide_id": sid, "reason": reason(o)})
+        elif kind == "move_slide":
+            to = o.get("to_index")
+            if not isinstance(to, int) or isinstance(to, bool) or to < 0:
+                rejected.append("move_slide: to_index must be a whole number from 0.")
+                continue
+            order.remove(sid); order.insert(min(to, len(order)), sid)
+            ops.append({"op": kind, "slide_id": sid, "to_index": to, "reason": reason(o)})
+        elif kind == "add_block":
+            k, after = o.get("kind"), o.get("after_block_id")
+            if k not in AGENT_BLOCK_KINDS:
+                rejected.append(f"add_block: {str(k)[:30]!r} cannot be added by the agent.")
+                continue
+            if after is not None and after not in types:
+                rejected.append(f"add_block: there is no block {str(after)[:20]!r} to add it after.")
+                continue
+            op, bad = {"op": kind, "slide_id": sid, "after_block_id": after, "kind": k, "reason": reason(o)}, ""
+            if o.get("text") is not None:
+                if k not in TEXT_KINDS:
+                    bad = f"a {k} block has no text of its own"
+                else:
+                    op["text"], bad = _deck_text(o.get("text"))
+            if k == "Two columns" and not bad:
+                for side in ("left", "right"):
+                    if o.get(side) is not None:
+                        op[side], bad = _deck_text(o.get(side))
+                        if bad:
+                            break
+            if bad:
+                rejected.append(f"add_block: {bad}.")
+                continue
+            blocks[sid].append((f"new-{n}", None))
+            ops.append(op)
+        elif kind == "remove_block":
+            blocks[sid] = [x for x in blocks[sid] if x[0] != o["block_id"]]
+            ops.append({"op": kind, "slide_id": sid, "block_id": o["block_id"], "reason": reason(o)})
+        elif kind == "set_brand":
+            op = {"op": kind, "reason": reason(o)}
+            for key, v in o.items():
+                if key in ("op", "reason"):
+                    continue
+                if key in BRAND_COLORS:
+                    if isinstance(v, str) and HEX.match(v):
+                        op[key] = v.lower()
+                    else:
+                        rejected.append(f"set_brand: {str(v)[:20]!r} is not a #rrggbb colour for {key}.")
+                elif key in ("headingFont", "bodyFont"):
+                    f = fonts.get(str(v).strip().lower())
+                    if f:
+                        op[key] = f
+                    else:
+                        rejected.append(f"set_brand: {str(v)[:40]!r} is not one of the fonts the case can use.")
+                else:
+                    rejected.append(f"set_brand: the agent cannot change the brand's {str(key)[:30]}.")
+            if len(op) > 2:
+                ops.append(op)
+        else:
+            rejected.append(f"{str(kind)[:30]!r} is not a case change the agent can make.")
+    if len(raw) > MAX_DECK_OPS:
+        rejected.append(f"Only the first {MAX_DECK_OPS} case changes were kept.")
+    return clean, ops, rejected
+
+
 PROGRESS_EVERY = 3
 
 
@@ -938,6 +1258,9 @@ def scheduled_meta(job):
     return {"scheduled": True, "schedule_id": job["schedule_id"], "schedule_title": str((job.get("payload") or {}).get("title") or "")[:120]}
 
 
+GONE = "gone"  # chat_for: the job's chat was deleted mid-run
+
+
 def chat_for(job):
     """The chat a job's reply belongs to: the payload's chat_id, else the chat of
     the user message that started it (jobs queued before migration 0010)."""
@@ -950,6 +1273,11 @@ def chat_for(job):
         if ok:
             return cid
         log("ignored chat_id not owned by the job owner", job.get("id"))
+        if not job.get("schedule_id"):
+            # The user deleted this chat while the agent was working. Drop the reply:
+            # falling through would post it into an unrelated or chat-less thread
+            # (it showed up as a stray "Earlier chat") and apply its edits anyway.
+            return GONE
     if job.get("schedule_id"):
         # A scheduled task whose chat was deleted: start a fresh chat for it and
         # point the schedule at it, so later runs land together.
@@ -971,6 +1299,10 @@ def handle(job):
     jid, owner = job["id"], job["owner_id"]
     log("claimed", jid, job["kind"], "attempt", job["attempts"])
     chat_id = chat_for(job)
+    if chat_id == GONE:
+        rpc("complete_job", p_id=jid, p_worker=WORKER_ID, p_result={"error": "chat_deleted"})
+        log("done", jid, "chat deleted before the reply")
+        return
     # Research only posts into a chat it was asked from (payload chat_id). A research
     # job from the old Research page has none and must not land in some chat.
     if job["kind"] == "research" and chat_id and chat_id != (job.get("payload") or {}).get("chat_id"):
@@ -1051,17 +1383,20 @@ def handle(job):
         log("done", jid, f"{secs}s research", f"tools={len(trace)} sources={len(sources)} dropped={dropped}")
         return
     text, commands, cmd_rejected = parse_commands(raw, deal) if deal else (raw, [], [])
+    text, deck_ops, deck_rejected = parse_deck_ops(text, deal) if deal else (text, [], [])
     text, edits, rejected = parse_edits(text, editable_fields(deal)) if deal else (text, [], [])
     rejected += cmd_rejected
-    result = {"text": text, "edits": edits, "commands": commands, "rejected": rejected, "trace": trace, "model": model, "seconds": secs, "usage": usage}
+    result = {"text": text, "edits": edits, "commands": commands, "rejected": rejected, "deck_ops": deck_ops, "deck_rejected": deck_rejected,
+              "trace": trace, "model": model, "seconds": secs, "usage": usage}
     if job.get("deal_id") and deal:
         api("POST", "/rest/v1/chat_messages", {"deal_id": job["deal_id"], "owner_id": owner, "chat_id": chat_id,
             "role": "assistant", "content": text, "job_id": jid,
-            "meta": {"model": model, "effort": effort, "web": web, "seconds": secs, "edits": edits, "commands": commands, "rejected": rejected, "trace": trace,
+            "meta": {"model": model, "effort": effort, "web": web, "seconds": secs, "edits": edits, "commands": commands, "rejected": rejected,
+                     "deck_ops": deck_ops, "deck_rejected": deck_rejected, "trace": trace,
                      **scheduled_meta(job), **({"skill": skill[0]} if skill else {})}}, prefer="return=minimal")
     rpc("complete_job", p_id=jid, p_worker=WORKER_ID, p_result=result)
     u = usage or {}
-    log("done", jid, f"{secs}s", f"edits={len(edits)} commands={len(commands)} rejected={len(rejected)}", f"tokens in={u.get('input_tokens')} out={u.get('output_tokens')} calls={u.get('api_calls')}")
+    log("done", jid, f"{secs}s", f"edits={len(edits)} deck_ops={len(deck_ops)} commands={len(commands)} rejected={len(rejected) + len(deck_rejected)}", f"tokens in={u.get('input_tokens')} out={u.get('output_tokens')} calls={u.get('api_calls')}")
 
 
 # ---------------------------------------------------------------- approval emails
@@ -1148,9 +1483,11 @@ def main():
             if job.get("kind") in ("chat", "research") and job.get("deal_id") and job.get("attempts", 0) >= job.get("max_attempts", 3) \
                     and (job.get("kind") == "chat" or (job.get("payload") or {}).get("chat_id")):
                 try:
-                    api("POST", "/rest/v1/chat_messages", {"deal_id": job["deal_id"], "owner_id": job["owner_id"],
-                        "chat_id": chat_for(job), "role": "assistant", "job_id": job["id"], "meta": {"error": "failed"},
-                        "content": "Sorry, I couldn't finish that request. Please try again."}, prefer="return=minimal")
+                    cid = chat_for(job)
+                    if cid != GONE:
+                        api("POST", "/rest/v1/chat_messages", {"deal_id": job["deal_id"], "owner_id": job["owner_id"],
+                            "chat_id": cid, "role": "assistant", "job_id": job["id"], "meta": {"error": "failed"},
+                            "content": "Sorry, I couldn't finish that request. Please try again."}, prefer="return=minimal")
                 except Exception as e3:
                     log("could not post failure:", e3)
         if ONCE:

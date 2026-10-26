@@ -1,0 +1,48 @@
+// v0.16.0 search picker in the Agent composer (TEST account, read-only: all DB writes blocked).
+import puppeteer from 'puppeteer'
+import fs from 'node:fs'
+import os from 'node:os'
+const base = process.argv[2] || 'http://localhost:5173'
+const out = '/tmp/cb-v0160-searchpick'; fs.mkdirSync(out, { recursive: true })
+const envFile = p => Object.fromEntries(fs.readFileSync(p, 'utf8').split('\n').filter(l => /^[A-Z_]+=/.test(l)).map(l => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1).trim()]))
+const T = envFile(`${os.homedir()}/.config/casebuilder/test-account.env`)
+const sleep = ms => new Promise(r => setTimeout(r, ms))
+const results = []; const check = (n, ok, x = '') => { results.push(!!ok); console.log(`${ok ? 'PASS' : 'FAIL'}  ${n}${x ? '  (' + x + ')' : ''}`) }
+const browser = await puppeteer.launch({ headless: 'new' })
+const page = await browser.newPage(); await page.setViewport({ width: 1280, height: 860 })
+const errors = []; page.on('pageerror', e => errors.push(e.message))
+await page.setRequestInterception(true)
+let blocked = 0
+page.on('request', r => { if (/\/rest\/v1\//.test(r.url()) && ['POST', 'PATCH', 'DELETE', 'PUT'].includes(r.method()) && !/\/rest\/v1\/rpc\/(get_|list_)/.test(r.url())) { blocked++; return r.abort() } r.continue() })
+await page.evaluateOnNewDocument(() => { try { localStorage.removeItem('casebuilder.agent-web') } catch {} })
+await page.goto(base, { waitUntil: 'networkidle2' })
+await page.type('#auth-email', 'test@casebuilder.dev'); await page.type('#auth-password', T.TEST_PASSWORD)
+await page.click('button[type=submit]'); await page.waitForSelector('.dashboard', { timeout: 20000 })
+const nav = async l => { const [b] = await page.$$(`xpath/.//button[contains(@class,"side-item") and normalize-space(.)="${l}"]`); await b.click(); await sleep(1200) }
+await nav('Projects'); await page.waitForSelector('.project-card'); await (await page.$('.project-card')).click(); await sleep(1500)
+await nav('Agent'); await page.waitForSelector('.mascot-searchpick', { timeout: 15000 }); await sleep(600)
+const toolRow = await page.$$eval('.mascot-search', l => l.map(b => b.getAttribute('aria-label') || b.innerText.trim()))
+check('one search control (no separate Search + Deep research buttons)', toolRow.filter(t => /search|research/i.test(t)).length === 1, toolRow.join(' | '))
+check('web search is on by default', /Web search/.test(await page.$eval('.mascot-searchpick', b => b.innerText)))
+await page.click('.mascot-searchpick'); await sleep(350)
+const sw = await page.$$eval('.searchpick-pop [role=switch]', l => l.map(s => `${s.getAttribute('aria-label')}=${s.getAttribute('aria-checked')}`))
+check('picker has a web search switch and a Deep research switch', sw.length === 2, sw.join(', '))
+await page.screenshot({ path: `${out}/01-open-default.png` })
+await page.click('.searchpick-pop [aria-label="Web search"]'); await sleep(250)
+check('turning web search off', /No web/.test(await page.$eval('.mascot-searchpick', b => b.innerText)))
+await page.click('.searchpick-pop [aria-label="Deep research"]'); await sleep(300)
+const st = await page.evaluate(() => ({ label: document.querySelector('.mascot-searchpick').innerText, web: document.querySelector('.searchpick-pop [aria-label="Web search"]')?.getAttribute('aria-checked'), webDisabled: document.querySelector('.searchpick-pop [aria-label="Web search"]')?.disabled, ph: document.querySelector('.mascot-card textarea')?.placeholder }))
+check('Deep research on: label, web shown on and locked', /Deep research/.test(st.label) && st.web === 'true' && st.webDisabled, JSON.stringify(st))
+await page.screenshot({ path: `${out}/02-research.png` })
+await page.click('.searchpick-pop [aria-label="Deep research"]'); await sleep(250)
+check('Deep research off returns to the web choice (off)', /No web/.test(await page.$eval('.mascot-searchpick', b => b.innerText)))
+await page.click('.searchpick-pop [aria-label="Web search"]'); await sleep(250)
+await page.keyboard.press('Escape'); await sleep(300)
+check('Escape closes the picker', !(await page.$('.searchpick-pop')))
+check('back to Web search', /Web search/.test(await page.$eval('.mascot-searchpick', b => b.innerText)))
+await page.setViewport({ width: 375, height: 800 }); await sleep(600)
+check('no sideways scroll at 375', !(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)))
+await page.screenshot({ path: `${out}/03-375.png` })
+check('no page errors', errors.length === 0, errors.join(' | ').slice(0, 200))
+console.log(`${results.filter(Boolean).length}/${results.length} passed; blocked writes ${blocked}`)
+await browser.close()

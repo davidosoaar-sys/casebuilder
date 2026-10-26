@@ -10,8 +10,10 @@ export function clientStakeholder(s={}){
   namedPeople:(s.namedPeople||[]).map(p=>({name:p.name,title:p.title,photo:p.photo&&profilePhotoData(p.photo.dataUrl)&&publicProfileUrl(p.photo.sourceUrl)?{dataUrl:profilePhotoData(p.photo.dataUrl),sourceUrl:publicProfileUrl(p.photo.sourceUrl)}:null})),
   builtin:!!s.builtin,lead:s.lead||[],headline:s.headline,needsToSee:clientRequirements(s).map(r=>r.text),cares:'',tag:'',objection:'',counter:'',clientFacing:true}
 }
-export function requirementListHtml(s){
+// Client output: the heading and list, or nothing when there are none (an
+// empty placeholder is for the editor, never for the client).
+export function requirementListHtml(s,heading=''){
  const esc=value=>String(value||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
  const rows=clientRequirements(s)
- return rows.length?'<ul class="client-requirements">'+rows.map(r=>'<li><span class="requirement-box '+(r.status==='Actioned'?'is-done':'')+'" aria-hidden="true"></span><span>'+esc(r.text)+'</span><small>'+esc(r.status)+'</small></li>').join('')+'</ul>':'<p>No requirements recorded yet.</p>'
+ return rows.length?heading+'<ul class="client-requirements">'+rows.map(r=>'<li><span class="requirement-box '+(r.status==='Actioned'?'is-done':'')+'" aria-hidden="true"></span><span>'+esc(r.text)+'</span><small>'+esc(r.status)+'</small></li>').join('')+'</ul>':''
 }

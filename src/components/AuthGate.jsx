@@ -7,6 +7,18 @@
 import React, { useEffect, useState } from 'react'
 import { supabase, supabaseConfigured } from '../supabase.js'
 import AppLogo from './AppLogo.jsx'
+import { Select } from './ui.jsx'
+
+// Every signed-out screen shares one stage: the app's atmosphere (aurora,
+// grain, glass card) so the first thing people see matches the product.
+function AuthStage({ children, busy }) {
+  return (
+    <main className="auth-screen" aria-busy={busy || undefined}>
+      <div className="auth-aurora" aria-hidden="true"><i /><i /><i /></div>
+      {children}
+    </main>
+  )
+}
 
 export default function AuthGate({ children }) {
   const [session, setSession] = useState(undefined) // undefined = still checking
@@ -23,9 +35,9 @@ export default function AuthGate({ children }) {
   }, [])
 
   if (!supabaseConfigured) {
-    return <main className="auth-screen"><div className="auth-card"><AppLogo /><p className="auth-error" role="alert">This build has no Supabase settings, so sign-in is unavailable.</p></div></main>
+    return <AuthStage><div className="auth-card"><AppLogo /><p className="auth-error" role="alert">This build has no Supabase settings, so sign-in is unavailable.</p></div></AuthStage>
   }
-  if (session === undefined) return <main className="auth-screen" aria-busy="true" />
+  if (session === undefined) return <AuthStage busy />
   if (!session || resetting) return <AuthScreens onReset={setResetting} />
   return children({ session, signOut: () => supabase.auth.signOut() })
 }
@@ -140,7 +152,7 @@ function AuthScreens({ onReset = () => {} }) {
 
   if (mode === 'forgot') {
     return (
-      <main className="auth-screen">
+      <AuthStage>
         <form className="auth-card" onSubmit={sendReset}>
           <AppLogo />
           <h1>Reset your password</h1>
@@ -151,13 +163,13 @@ function AuthScreens({ onReset = () => {} }) {
           <button className="primary" type="submit" disabled={busy || !email.trim()}>{busy ? 'Sending…' : 'Send reset code'}</button>
           <p className="auth-switch">Remembered it? <button type="button" className="link-btn" onClick={() => go('signin')}>Sign in</button></p>
         </form>
-      </main>
+      </AuthStage>
     )
   }
 
   if (mode === 'reset') {
     return (
-      <main className="auth-screen">
+      <AuthStage>
         <form className="auth-card" onSubmit={resetPassword}>
           <AppLogo />
           <h1>Choose a new password</h1>
@@ -173,13 +185,13 @@ function AuthScreens({ onReset = () => {} }) {
           <button className="primary" type="submit" disabled={busy || code.trim().length < 6 || newPw.length < 10 || newPw !== newPwAgain}>{busy ? 'Saving…' : 'Set new password'}</button>
           <p className="auth-switch">No email? <button type="button" className="link-btn" onClick={() => sendReset()}>Send a new code</button> · <button type="button" className="link-btn" onClick={() => go('signin')}>Back to sign in</button></p>
         </form>
-      </main>
+      </AuthStage>
     )
   }
 
   if (mode === 'code') {
     return (
-      <main className="auth-screen">
+      <AuthStage>
         <form className="auth-card" onSubmit={verify}>
           <AppLogo />
           <h1>Check your email</h1>
@@ -190,7 +202,7 @@ function AuthScreens({ onReset = () => {} }) {
           <button className="primary" type="submit" disabled={busy || code.trim().length < 6}>{busy ? 'Checking…' : 'Confirm and continue'}</button>
           <p className="auth-switch">No email? <button type="button" className="link-btn" onClick={resend}>Send a new code</button> · <button type="button" className="link-btn" onClick={() => go('waitlist')}>Use a different email</button></p>
         </form>
-      </main>
+      </AuthStage>
     )
   }
 
@@ -200,7 +212,7 @@ function AuthScreens({ onReset = () => {} }) {
 
   const signup = mode === 'signup'
   return (
-    <main className="auth-screen">
+    <AuthStage>
       <form className="auth-card" onSubmit={signup ? signUp : signIn}>
         <AppLogo />
         <h1>{signup ? 'Create your account' : 'Sign in'}</h1>
@@ -222,7 +234,7 @@ function AuthScreens({ onReset = () => {} }) {
             : <>New to CaseBuilder? <button type="button" className="link-btn" onClick={() => go('waitlist')}>Join the waitlist</button></>}
         </p>
       </form>
-    </main>
+    </AuthStage>
   )
 }
 
@@ -254,17 +266,17 @@ function Waitlist({ email, setEmail, joined, onJoined, onSignIn, onApproved }) {
   }
 
   if (joined) return (
-    <main className="auth-screen">
+    <AuthStage>
       <div className="auth-card waitlist-card">
         <AppLogo />
         <h1>You're on the list</h1>
         <p className="waitlist-lede">Thanks{name.trim() ? `, ${name.trim().split(' ')[0]}` : ''}. We're letting people in a few at a time while we test it. We'll let you know at {email.trim()} when you're in. Then come back here, enter the same email, and you'll go straight through.</p>
       </div>
-    </main>
+    </AuthStage>
   )
 
   return (
-    <main className="auth-screen">
+    <AuthStage>
       <form className="auth-card waitlist-card" onSubmit={join}>
         <AppLogo />
         <h1>Join the waitlist</h1>
@@ -273,16 +285,14 @@ function Waitlist({ email, setEmail, joined, onJoined, onSignIn, onApproved }) {
         <input id="wl-name" autoComplete="name" value={name} onChange={e => setName(e.target.value)} maxLength={120} required autoFocus />
         <label htmlFor="wl-email">Email</label>
         <input id="wl-email" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} required />
-        <label htmlFor="wl-role">Role</label>
-        <select id="wl-role" className="waitlist-select" value={role} onChange={e => setRole(e.target.value)} required>
-          <option value="" disabled>Choose one</option>
-          {WAITLIST_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-        </select>
+        <label htmlFor="wl-role" id="wl-role-label">Role</label>
+        <Select id="wl-role" className="waitlist-select" aria-label="Role" value={role} onChange={setRole} placeholder="Choose one"
+          options={WAITLIST_ROLES.map(r => ({ value: r, label: r }))} />
         {error && <p className="auth-error" role="alert">{error}</p>}
         <button className="primary" type="submit" disabled={busy || !email.trim() || !name.trim() || !role}>{busy ? 'Joining…' : 'Join the waitlist'}</button>
         <p className="auth-switch">Already have an account? <button type="button" className="link-btn" onClick={() => onSignIn()}>Sign in</button></p>
       </form>
-    </main>
+    </AuthStage>
   )
 }
 

@@ -4,17 +4,18 @@ import { CONNECTORS } from '../connectors.js'
 import { LOGOS } from '../connectionLogos.js'
 import { uid } from '../uid.js'
 import { extractText, ACCEPT } from '../fileText.js'
+import { Select } from './ui.jsx'
 
 // Connections: what the agent is ALLOWED to read. Each switch is a permission for the
 // agent. Everything starts off, and a connection that is off is never read and never
 // named as an origin. The agent can always search the public web on its own, so that
 // is not a permission.
 
-export default function Connections({ project, projects=[],selectedProjectId='',onSelectProject,connections, documents, onConnections, onDocuments }) {
+export default function Connections({ project, projects=[],selectedProjectId='',onSelectProject,connections, documents, onConnections, onDocuments, embedded = false }) {
   const allowed = CONNECTORS.filter(c => connections[c.key]).length
   return (
-    <div className="connections-page" data-testid="connections">
-      <PageHead title="Connectors" />
+    <div className={embedded ? 'connections-page connections-embedded' : 'connections-page'} data-testid="connections">
+      {!embedded && <PageHead title="Connectors" />}
       <p className="sub">
         These are permissions for the agent. When you ask it to suggest values, it can only read the connections you switch on here.
         Everything is off until you allow it, and it can always search the public web on its own. {allowed ? `${allowed} allowed.` : 'None allowed yet.'}
@@ -22,11 +23,12 @@ export default function Connections({ project, projects=[],selectedProjectId='',
       <p className="help conn-build-note">
         In this build each connection takes material you paste or upload; live connections will come later and look the same.
       </p>
-      {onSelectProject && <label className="connection-project-target">Settings and material for <select aria-label="Connection project" value={project?.id || selectedProjectId} onChange={e=>onSelectProject(e.target.value)}><option value="">Default settings for new projects</option>{projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>}
+      {onSelectProject && <div className="connection-project-target"><label htmlFor="connection-project">Settings and material for</label><Select id="connection-project" aria-label="Connection project" value={project?.id || selectedProjectId} onChange={onSelectProject}
+        options={[{ value: '', label: 'Default settings for new projects' }, ...projects.map(p => ({ value: p.id, label: p.name }))]} /></div>}
 
       <div className="connector-list">
-        {[...CONNECTORS].sort((a, b) => a.label.localeCompare(b.label)).map(c => (
-          <section key={c.key} className={`connector ${connections[c.key] ? 'connector-on' : ''}`} data-connector={c.key}>
+        {[...CONNECTORS].sort((a, b) => a.label.localeCompare(b.label)).map((c, i) => (
+          <section key={c.key} className={`connector stagger-in ${connections[c.key] ? 'connector-on' : ''}`} style={{ '--stagger': `${Math.min(i * 30, 200)}ms` }} data-connector={c.key}>
             <div className="connector-head">
               <img className="connector-logo" src={LOGOS[c.key]} alt="" width="36" height="36" />
               <div className="connector-title">
