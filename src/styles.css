@@ -2060,22 +2060,6 @@ a.research-cite:hover { background: var(--accent); color: var(--accent-ink) !imp
 .mascot-research.is-on { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
 
 /* Scheduled tasks (v0.15.0) */
-.sched-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
-.sched-card { display: flex; gap: 16px; justify-content: space-between; align-items: flex-start; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); padding: 16px 18px; }
-.sched-card.is-off { opacity: .62; }
-.sched-main { min-width: 0; flex: 1; }
-.sched-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.sched-title strong { color: var(--ink-strong); font-size: 15px; }
-.sched-kind { font-size: 11.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--panel-3); color: var(--ink-dim); }
-.sched-prompt { margin: 6px 0 8px; color: var(--ink); font-size: 13.5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.sched-meta { margin: 0; display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--ink-faint); }
-.sched-actions { display: flex; align-items: center; gap: 6px; flex: none; flex-wrap: wrap; justify-content: flex-end; }
-.sched-empty p { color: var(--ink-faint); }
-.sched-examples { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
-.sched-example { text-align: left; display: flex; flex-direction: column; gap: 4px; border: 1px dashed var(--line); border-radius: 14px; background: var(--panel); padding: 14px 16px; color: var(--ink); cursor: pointer; }
-.sched-example:hover:not(:disabled) { border-color: var(--accent); }
-.sched-example span { font-size: 12.5px; color: var(--accent); }
-.sched-example small { color: var(--ink-faint); font-size: 12.5px; }
 .sched-form { display: flex; flex-direction: column; gap: 14px; }
 .sched-field { display: flex; flex-direction: column; gap: 6px; }
 .sched-field > span { font-size: 12.5px; font-weight: 600; color: var(--ink-dim); }
@@ -2088,10 +2072,10 @@ a.research-cite:hover { background: var(--accent); color: var(--accent-ink) !imp
 .sched-foot { color: var(--ink-faint); font-size: 12.5px; margin-top: 18px; }
 .chat-scheduled-run .mono-label { margin: 0 0 4px; color: var(--accent); }
 .chat-scheduled-run .chat-bubble { background: color-mix(in srgb, var(--accent) 8%, transparent); border: 1px dashed color-mix(in srgb, var(--accent) 40%, transparent); }
-@media (max-width: 760px) { .sched-card { flex-direction: column; } .sched-row { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .sched-row { grid-template-columns: 1fr; } }
 
 /* Skills chat bits (v0.15.0) */
-.sched-actions .link-btn, .chat-skillbar .link-btn, .chat-older { margin-bottom: 0; align-self: center; line-height: 1; padding: 8px 6px; }
+.chat-skillbar .link-btn, .chat-older { margin-bottom: 0; align-self: center; line-height: 1; padding: 8px 6px; }
 .chat-skillbar { display: flex; justify-content: flex-start; padding: 0 2px 6px; }
 .chat-skill-btn { font-size: 13px; }
 .chat-skill-pop { bottom: calc(100% + 6px); top: auto; width: 320px; }
@@ -2102,8 +2086,6 @@ a.research-cite:hover { background: var(--accent); color: var(--accent-ink) !imp
 .chat-skillrun-head { display: flex; align-items: center; gap: 8px; }
 .chat-skillrun-head .mono-label { margin: 0; color: var(--accent); }
 .chat-skillrun-desc { margin: 0; color: var(--ink-faint); font-size: 13px; }
-.sched-project { font-size: 12px; color: var(--ink-faint); }
-.sched-project::before { content: '· '; }
 
 /* v0.16.0 Skills: Discover / Yours library, featured skill, detail dialog.
    Motion is transform and opacity only, on two shared curves. */
@@ -2233,4 +2215,116 @@ a.research-cite:hover { background: var(--accent); color: var(--accent-ink) !imp
 @media (prefers-reduced-motion: reduce) {
   .skill-skeleton-featured::after, .skill-skeleton-card::after { animation: none; display: none; }
   .skill-card, .skill-card:hover, .skill-card:has(.skill-open:active), .skill-card:hover:has(.skill-open:active), :is(.skill-try, .skill-add, .skill-new):active { transform: none; }
+}
+
+/* v0.16.0 Scheduled: Yours / Templates, task rows, switch, overflow menu.
+   Sibling of the Skills block above: same tabs, tiles, cards and dialog. */
+.sched-kind { font-size: 11.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--panel-3); color: var(--ink-dim); }
+.scheduled-page .page-head { padding-bottom: 20px; }
+.sched-empty-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.sched-empty-actions :is(.primary, .ghost) { transition: background-color .15s ease, border-color .15s ease, transform .16s var(--ease-out); }
+.sched-empty-actions :is(.primary, .ghost):active:not(:disabled) { transform: scale(.96); }
+.sched-empty-actions .ghost:disabled { opacity: .4; cursor: not-allowed; }
+
+/* Task rows. Removal collapses the row, so spacing is padding, not gap. */
+.sched-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.skill-skeleton .sched-list { gap: 12px; }
+.sched-item { padding-bottom: 12px; }
+.sched-card { position: relative; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto; grid-template-areas: "icon main when ctrl"; align-items: center; gap: 18px; padding: 16px 14px 16px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; transition: transform .18s var(--ease-out), border-color .18s ease; }
+.sched-card::before { content: ''; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none; opacity: 0; box-shadow: 0 1px 2px rgb(0 0 0 / .16), 0 10px 28px -14px color-mix(in srgb, var(--accent) 30%, rgb(0 0 0 / .5)); transition: opacity .18s var(--ease-out); }
+.sched-card:has(.sched-open:active) { transform: scale(.99); transition-duration: .12s; }
+.sched-card:has(.sched-open:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .sched-card:hover { border-color: var(--line-2); }
+  .sched-card:hover::before { opacity: 1; }
+}
+.sched-card > .skill-icon { grid-area: icon; }
+.sched-open { grid-area: main; display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.sched-open::after { content: ''; position: absolute; inset: 0; border-radius: 12px; }
+.sched-open:focus-visible { outline: none; }
+.sched-open strong { font-size: 15px; font-weight: 600; line-height: 1.3; color: var(--ink-strong); overflow-wrap: anywhere; }
+.sched-sub { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; font-size: 12.5px; color: var(--ink-faint); }
+.sched-sub .sched-project { color: var(--ink-dim); font-weight: 600; }
+.sched-sub > span + span { display: inline-flex; align-items: center; gap: 10px; }
+.sched-sub > span + span::before { content: ''; width: 1px; height: 11px; background: var(--line-2); }
+.sched-prompt { margin-top: 2px; color: var(--ink-dim); font-size: 13px; line-height: 1.45; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sched-prompt:empty { display: none; }
+
+/* When it runs: the schedule, the next slot, the last result. */
+.sched-when { grid-area: when; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; min-width: 168px; text-align: right; font-size: 12.5px; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+.sched-when strong { font-size: 13.5px; font-weight: 600; color: var(--ink-strong); }
+.sched-last { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-faint); }
+.sched-last i { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-faint); flex: none; }
+.sched-last.is-ok i { background: var(--accent); }
+.sched-last.is-running { color: var(--warn); }
+.sched-last.is-running i { background: var(--warn); }
+.sched-last.is-failed { color: var(--bad); }
+.sched-last.is-failed i { background: var(--bad); }
+.sched-spin { animation: sched-spin .8s linear infinite; }
+@keyframes sched-spin { to { transform: rotate(360deg); } }
+
+/* Paused: quieter text, the card itself stays solid. */
+.sched-card.is-off :is(.sched-open strong, .sched-when strong) { color: var(--ink-dim); }
+.sched-card.is-off :is(.sched-sub, .sched-sub .sched-project, .sched-prompt, .sched-when) { color: var(--ink-faint); }
+.sched-card.is-off > .skill-icon { color: var(--ink-faint); }
+
+.sched-controls { grid-area: ctrl; position: relative; z-index: 1; display: flex; align-items: center; gap: 4px; }
+.sched-switch { position: relative; width: 38px; height: 22px; flex: none; padding: 0; border: 1px solid var(--line-2); border-radius: 999px; background: var(--panel-3); cursor: pointer; transition: background-color .16s ease, border-color .16s ease; }
+.sched-switch::before { content: ''; position: absolute; inset: -11px -4px; }
+.sched-switch > span { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--ink-dim); box-shadow: 0 1px 2px rgb(0 0 0 / .3); transition: transform .16s var(--ease-out), background-color .16s ease; }
+.sched-switch[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
+.sched-switch[aria-checked="true"] > span { transform: translateX(16px); background: var(--accent-ink); }
+.sched-switch:hover { border-color: var(--ink-faint); }
+.sched-switch[aria-checked="true"]:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.sched-switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sched-switch:active > span { transform: scale(.9); }
+.sched-switch[aria-checked="true"]:active > span { transform: translateX(16px) scale(.9); }
+.icon-btn.sched-more { width: 32px; height: 32px; border-radius: 8px; transition: background-color .15s ease, color .15s ease, transform .16s var(--ease-out); }
+.icon-btn.sched-more[aria-expanded="true"] { color: var(--ink-strong); background: var(--panel-3); }
+.icon-btn.sched-more:active { transform: scale(.94); }
+.icon-btn.sched-more:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Overflow menu, portalled and fixed beside its trigger. */
+.sched-menu { position: fixed; z-index: 95; min-width: 168px; display: flex; flex-direction: column; padding: 5px; background: var(--panel); border: 1px solid var(--line-2); border-radius: 10px; box-shadow: 0 2px 6px rgb(0 0 0 / .2), 0 16px 40px -12px color-mix(in srgb, var(--accent) 14%, rgb(0 0 0 / .55)); }
+.sched-menu button { display: block; width: 100%; padding: 8px 10px; border: 0; border-radius: 7px; background: none; color: var(--ink); font: inherit; font-size: 13.5px; text-align: left; cursor: pointer; transition: background-color .12s ease, color .12s ease; }
+.sched-menu button:hover:not(:disabled), .sched-menu button:focus-visible { outline: none; background: color-mix(in srgb, var(--ink-strong) 8%, transparent); color: var(--ink-strong); }
+.sched-menu button:active:not(:disabled) { background: color-mix(in srgb, var(--ink-strong) 12%, transparent); }
+.sched-menu button:disabled { opacity: .45; cursor: not-allowed; }
+.sched-menu button.is-danger { color: var(--bad); }
+.sched-menu button.is-danger:is(:hover, :focus-visible) { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); }
+
+/* Template cards: a skill card with a schedule chip. */
+.sched-example .skill-meta { flex-wrap: wrap; row-gap: 4px; }
+.sched-example .skill-meta > span { white-space: nowrap; color: var(--ink); border-color: color-mix(in srgb, var(--accent) 35%, var(--line-2)); font-variant-numeric: tabular-nums; }
+.sched-example .skill-try:disabled { opacity: .5; cursor: not-allowed; }
+.sched-example.is-off .skill-open { cursor: not-allowed; }
+.sched-example.is-off :is(.skill-open strong, .skill-icon) { color: var(--ink-dim); }
+@media (hover: hover) and (pointer: fine) {
+  .sched-example.is-off:hover { transform: none; border-color: var(--line); }
+  .sched-example.is-off:hover::before { opacity: 0; }
+}
+.sched-example.is-off:has(.skill-open:active) { transform: none; }
+
+/* Task form in the dialog */
+.sched-runs { align-self: flex-start; max-width: 100%; }
+.sched-runs button { transition: background-color .15s ease, color .15s ease; }
+.sched-runs button:hover:not(.seg-on) { color: var(--ink-strong); }
+.sched-runs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.sched-runs button:active { background: var(--panel-3); }
+.sched-every { font-size: 14px; font-weight: 400; color: var(--ink); }
+.skill-dialog .sched-every input { width: 90px; flex: none; }
+.skill-dialog .sched-every select { min-width: 0; flex: 1; }
+.sched-form-modal .sched-form > .sched-field > select { width: 100%; }
+.skill-dialog .sched-row { align-items: start; }
+
+@media (max-width: 760px) {
+  .sched-card { grid-template-columns: 40px minmax(0, 1fr) auto; grid-template-areas: "icon main main" ". when ctrl"; gap: 12px 14px; align-items: start; }
+  .sched-when { align-items: flex-start; text-align: left; min-width: 0; }
+  .sched-controls { align-self: end; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sched-card, .sched-switch > span { transition: none; }
+  .sched-card:has(.sched-open:active), .sched-switch:active > span { transform: none; }
+  .sched-switch[aria-checked="true"]:active > span { transform: translateX(16px); }
+  .sched-spin { animation: none; }
 }

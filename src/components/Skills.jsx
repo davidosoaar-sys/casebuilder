@@ -2,10 +2,10 @@
 // Yours lists the ones you added plus your own. "Added" is the row's enabled
 // flag (built-ins default to added). Try opens a skill in a project's Agent.
 // Backed by public.skills (migrations 0012, 0013) + prebuiltSkills.json.
-import React, { useEffect, useId, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import React, { useEffect, useState } from 'react'
 import { AnimatePresence, MotionConfig, motion } from 'framer-motion'
 import PageHead from './PageHead.jsx'
+import { Dialog, EASE_OUT, PlusIcon, SearchIcon, Skeleton, SkillIcon, Tabs } from './ui.jsx'
 import { supabase } from '../supabase.js'
 import { librarySkills, MAX_SKILL_INSTRUCTIONS, PREBUILT } from '../skills.js'
 
@@ -24,8 +24,6 @@ export function useSkills() {
   return { skills: rows ? librarySkills(rows) : null, rows, error, reload }
 }
 
-const EASE_OUT = [0.23, 1, 0.32, 1]
-const EASE_IN_OUT = [0.77, 0, 0.175, 1]
 const FEATURED = 'pre_meeting_brief'
 const sid = s => s.key || s.id
 
@@ -106,11 +104,12 @@ export default function Skills({ userId, projects = [], onUse, onSchedule }) { /
           </label>
           <button type="button" className="primary skill-new" onClick={() => setEditing('new')}><PlusIcon size={16} />New skill</button>
         </PageHead>
-        <Tabs tab={tab} onTab={setTab} yoursCount={skills ? yours.length : null} />
+        <Tabs tabs={[{ id: 'discover', label: 'Discover' }, { id: 'yours', label: 'Yours', count: skills ? yours.length : null }]}
+          value={tab} onChange={setTab} layoutId="skills-tab-pill" idPrefix="skills" label="Skills" />
         {(error || loadError) && <p className="auth-error" role="alert">{error || loadError}</p>}
 
         <div id={`skills-panel-${tab}`} role="tabpanel" aria-labelledby={`skills-tab-${tab}`} className="skill-panel">
-          {skills === null ? <Skeleton /> : <>
+          {skills === null ? <Skeleton label="Loading skills" featured /> : <>
             {tab === 'discover' && !q && featured && (
               <Featured skill={featured} added={isAdded(featured)} onTry={() => tryIt(featured)} onToggle={() => setAdded(featured, !isAdded(featured))} onOpen={() => setDetailId(sid(featured))} />
             )}
@@ -152,30 +151,6 @@ export default function Skills({ userId, projects = [], onUse, onSchedule }) { /
 }
 
 const settingsList = s => (s.prebuilt ? PREBUILT.find(p => p.key === s.key)?.settings : []) || []
-
-function Tabs({ tab, onTab, yoursCount }) {
-  const tabs = [['discover', 'Discover'], ['yours', 'Yours']]
-  const refs = useRef({})
-  function onKey(e) {
-    const i = tabs.findIndex(([k]) => k === tab)
-    const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0
-    if (!step) return
-    e.preventDefault()
-    const next = tabs[(i + step + tabs.length) % tabs.length][0]
-    onTab(next); refs.current[next]?.focus()
-  }
-  return (
-    <div className="skill-tabs" role="tablist" aria-label="Skills" onKeyDown={onKey}>
-      {tabs.map(([k, label]) => (
-        <button key={k} ref={el => { refs.current[k] = el }} type="button" role="tab" id={`skills-tab-${k}`} aria-controls={`skills-panel-${k}`}
-          aria-selected={tab === k} tabIndex={tab === k ? 0 : -1} className="skill-tab" onClick={() => onTab(k)}>
-          {tab === k && <motion.span layoutId="skills-tab-pill" className="skill-tab-pill" transition={{ duration: 0.25, ease: EASE_IN_OUT }} />}
-          <span className="skill-tab-label">{label}{k === 'yours' && yoursCount !== null && <span className="skill-tab-count">{yoursCount}</span>}</span>
-        </button>
-      ))}
-    </div>
-  )
-}
 
 function SkillCard({ skill, added, onOpen, onTry, onToggle }) {
   return (
@@ -289,83 +264,6 @@ function SkillDetail({ skill, added, error, onSetting, onEdit, onDelete, onTry, 
   )
 }
 
-function Skeleton() {
-  return (
-    <div className="skill-skeleton" aria-busy="true">
-      <span className="visually-hidden">Loading skills</span>
-      <div className="skill-skeleton-featured" />
-      <ul className="skill-grid" aria-hidden="true">
-        {[0, 1, 2, 3].map(i => <li key={i} className="skill-skeleton-card"><span /><span><i /><i /></span></li>)}
-      </ul>
-    </div>
-  )
-}
-
-// Portal dialog shell: backdrop fade, scale-in panel, Escape and backdrop
-// click close, focus moves inside and returns, body scroll locked.
-const openDialogs = []
-function Dialog({ open, onClose, title, icon, className = '', children }) {
-  const titleId = useId()
-  return createPortal(
-    <AnimatePresence>
-      {open && <DialogPanel key="d" onClose={onClose} title={title} icon={icon} className={className} titleId={titleId}>{children}</DialogPanel>}
-    </AnimatePresence>,
-    document.body
-  )
-}
-
-function DialogPanel({ onClose, title, icon, className, titleId, children }) {
-  const panel = useRef(null)
-  const closeBtn = useRef(null)
-  const close = useRef(onClose)
-  close.current = onClose
-  useEffect(() => {
-    const me = {}
-    openDialogs.push(me)
-    const before = document.activeElement
-    if (!panel.current?.contains(document.activeElement)) closeBtn.current?.focus()
-    const onKey = e => {
-      if (openDialogs[openDialogs.length - 1] !== me) return
-      if (e.key === 'Escape') { e.stopPropagation(); close.current() }
-      if (e.key === 'Tab' && panel.current) {
-        const f = [...panel.current.querySelectorAll('button:not(:disabled), input, select, textarea, [href]')]
-        if (!f.length) return
-        if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus() }
-        else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus() }
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      window.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prev
-      openDialogs.splice(openDialogs.indexOf(me), 1)
-      // Hand focus back unless another dialog has already taken it.
-      const now = document.activeElement
-      const free = !now || now === document.body || panel.current?.contains(now)
-      if (free && before && document.contains(before)) before.focus?.()
-    }
-  }, [])
-  return (
-    <motion.div className="skill-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2, ease: EASE_OUT }}>
-      <motion.div ref={panel} className={`skill-dialog ${className}`} role="dialog" aria-modal="true" aria-labelledby={titleId}
-        initial={{ opacity: 0, transform: 'scale(0.96)' }} animate={{ opacity: 1, transform: 'scale(1)' }} exit={{ opacity: 0, transform: 'scale(0.96)' }}
-        transition={{ duration: 0.2, ease: EASE_OUT }}>
-        <header className="skill-dialog-head">
-          {icon && <span className="skill-icon" aria-hidden="true">{icon}</span>}
-          <h2 id={titleId}>{title}</h2>
-          <button ref={closeBtn} className="overlay-x" type="button" onClick={onClose} aria-label="Close" title="Close">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" strokeLinecap="round" /></svg>
-          </button>
-        </header>
-        {children}
-      </motion.div>
-    </motion.div>
-  )
-}
-
 function SkillForm({ userId, initial, onClose, onSaved }) {
   const [name, setName] = useState(initial?.name || '')
   const [description, setDescription] = useState(initial?.description || '')
@@ -422,22 +320,4 @@ export function ProjectPick({ projects, skill, action, onPick, onCancel }) {
       </div>
     </form>
   )
-}
-
-// 20px stroke icons, one per built-in skill.
-function SkillIcon({ skillKey }) {
-  const p = { width: 20, height: 20, viewBox: '0 0 20 20', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true }
-  if (skillKey === 'pre_meeting_brief') return <svg {...p}><rect x="3" y="4.5" width="14" height="12" rx="2" /><path d="M3 8.5h14M7 2.5v3M13 2.5v3M7 12h2" /></svg>
-  if (skillKey === 'account_news') return <svg {...p}><path d="M4 4.5h10v10.5a1.5 1.5 0 0 0 1.5 1.5H5.5A1.5 1.5 0 0 1 4 15V4.5Z" /><path d="M14 8h2v7a1.5 1.5 0 0 1-3 0M7 8h4M7 11h4M7 14h2" /></svg>
-  if (skillKey === 'stakeholder_map') return <svg {...p}><circle cx="10" cy="5" r="2" /><circle cx="4.5" cy="14.5" r="2" /><circle cx="15.5" cy="14.5" r="2" /><path d="M9 6.8l-3.5 5.9M11 6.8l3.5 5.9M6.5 14.5h7" /></svg>
-  if (skillKey === 'objection_prep') return <svg {...p}><path d="M10 2.5l6 2.2v4.6c0 3.8-2.6 6.6-6 8.2-3.4-1.6-6-4.4-6-8.2V4.7l6-2.2Z" /><path d="M7.5 10l1.8 1.8 3.4-3.6" /></svg>
-  return <svg {...p}><path d="M10 3v3M10 14v3M3 10h3M14 10h3M5.2 5.2l1.8 1.8M13 13l1.8 1.8M5.2 14.8L7 13M13 7l1.8-1.8" /></svg>
-}
-
-function PlusIcon({ size = 16 }) {
-  return <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10" /></svg>
-}
-
-function SearchIcon() {
-  return <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5" /><path d="M10.5 10.5L14 14" /></svg>
 }
