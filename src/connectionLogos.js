@@ -13,5 +13,7 @@ import figma from './assets/connections/figma.png'
 import canva from './assets/connections/canva.png'
 import gmail from './assets/connections/gmail.png'
 import googlecalendar from './assets/connections/googlecalendar.png' // Composio toolkit logo (logos.composio.dev)
+import googledrive from './assets/connections/googledrive.png' // Composio toolkit logo (logos.composio.dev)
+import fireflies from './assets/connections/fireflies.png' // Composio toolkit logo (logos.composio.dev)
 
-export const LOGOS = { googlecalendar, gmail, claude, gong, hubspot, slack, clay, lemlist, granola, sheets, excel, figma, canva }
+export const LOGOS = { googlecalendar, gmail, claude, gong, hubspot, slack, clay, lemlist, granola, sheets, excel, figma, canva, googledrive, fireflies, googlesheets: sheets }

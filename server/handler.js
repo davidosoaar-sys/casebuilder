@@ -121,7 +121,7 @@ export async function handlePublish({ body, headers, fetchImpl, wait }) {
 
 // The suggestion agent: reads only the material the caller sends (what Chris switched
 // on) and proposes values for empty inputs. It never produces a figure.
-const DOC_SOURCES = ['claude', 'gong', 'hubspot', 'slack', 'clay', 'lemlist', 'granola', 'sheets', 'excel', 'figma', 'canva']
+const DOC_SOURCES = ['claude', 'gong', 'hubspot', 'slack', 'clay', 'lemlist', 'granola', 'sheets', 'excel', 'figma', 'canva', 'fireflies', 'googledrive']
 
 export async function handleSuggest({ body, headers }) {
 

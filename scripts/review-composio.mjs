@@ -19,12 +19,18 @@ try {
     window.fetch = async (url, options = {}) => {
       window.calls.push({ url, body: options.body })
       if (options.method === 'POST') { connected = false; return { ok: true, json: async () => ({ disconnected: true }) } }
-      return { ok: true, json: async () => ({ configured: ['googlecalendar', 'gmail', 'slack'], connections: connected ? [{ toolkit: 'gmail', id: 'fake' }] : [] }) }
+      return { ok: true, json: async () => ({ configured: ['googlecalendar', 'gmail', 'slack', 'gong', 'fireflies', 'googlesheets', 'excel', 'googledrive', 'figma', 'canva', 'clay', 'lemlist'], connections: connected ? [{ toolkit: 'gmail', id: 'fake' }, { toolkit: 'googlesheets', id: 'fake2' }] : [{ toolkit: 'googlesheets', id: 'fake2' }] }) }
     }
   })
   await page.addScriptTag({ content: bundled.outputFiles[0].text })
   await page.waitForFunction(() => document.querySelector('[data-connector=gmail]')?.textContent.includes('Disconnect'))
   assert.match(await page.$eval('[data-connector=hubspot]', e => e.textContent), /upload or paste only/i)
+  assert.match(await page.$eval('[data-connector=sheets]', e => e.textContent), /Account connected/)
+  assert.match(await page.$eval('[data-connector=clay]', e => e.textContent), /API key on the secure Composio page/)
+  assert.match(await page.$eval('[data-connector=granola]', e => e.textContent), /Claude connector/)
+  assert.equal(await page.$('[data-connector=granola] .connector-live'), null)
+  for (const key of ['gong', 'fireflies', 'googledrive', 'excel', 'figma', 'canva', 'lemlist']) assert.match(await page.$eval(`[data-connector=${key}]`, e => e.textContent), /Connect/, key)
+  assert.deepEqual(await page.$$eval('.connector-group-title', es => es.map(e => e.textContent)), ['Calls & meetings', 'Email & chat', 'CRM & enrichment', 'Finance & files', 'Design'])
   for (const [width, theme] of [[1280, 'light'], [1280, 'dark'], [390, 'light'], [390, 'dark']]) {
     await page.setViewport({ width, height: 900 })
     await page.evaluate(t => { document.documentElement.dataset.theme = t }, theme)
@@ -39,5 +45,5 @@ try {
   await page.waitForFunction(() => [...document.querySelectorAll('[role=alert]')].some(e => e.textContent.includes('Offline fixture')))
   assert.ok(await page.evaluate(() => [...document.querySelectorAll('[role=alert]')].some(e => /Offline fixture/.test(e.textContent))))
   assert.deepEqual(errors, [])
-  console.log('PASS: connected, connect, disconnect, unconfigured, error/retry; desktop/light and mobile/dark; no overflow or page errors')
+  console.log('PASS: 13 live toolkits grouped, connected, connect, disconnect, unconfigured, API-key note, Granola note, error/retry; desktop/light and mobile/dark; no overflow or page errors')
 } finally { await browser.close() }
