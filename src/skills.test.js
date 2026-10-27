@@ -19,7 +19,7 @@ test('library: prebuilt on by default, a saved row switches off/configures, cust
 
 test('using a skill: visible message, payload reference, required inputs', () => {
   const brief = librarySkills([]).find(s => s.key === 'pre_meeting_brief')
-  assert.equal(missingInput(brief, {}).key, 'who')
+  assert.equal(missingInput(brief, {}), null) // Calendar can supply attendees for manual and scheduled briefs
   assert.equal(missingInput(brief, { who: 'Gustav' }), null)
   assert.equal(skillMessage(brief, { who: 'Gustav', when: '' }), 'Use skill: Pre-meeting brief\nWho are you meeting: Gustav')
   assert.deepEqual(skillRef(brief, { who: ' Gustav ', when: '' }), { skill_key: 'pre_meeting_brief', skill_inputs: { who: 'Gustav' } })

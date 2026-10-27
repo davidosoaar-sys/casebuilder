@@ -63,6 +63,16 @@ The Dashboard answers which deal needs Chris before his next meeting: deals
 least confirmed first (there are no meeting dates without a calendar
 connector), each with a readiness bar, value as a range, stakeholders covered
 and one next action, plus what changed since his last visit. No CRM metrics.
+Local connector work (2026-10-27, Unreleased): Composio-hosted account sign-in for
+Google Calendar, Gmail, Slack and HubSpot, with server-verified status/disconnect.
+Services without configured auth IDs retain labelled upload/paste fallbacks.
+Live authorization is account-wide; upload permissions remain per-project. The
+8 AM daily pre-meeting template can read matching primary-calendar meetings in
+the next 24 hours and bounded recent Gmail threads for the selected deal. General
+chat/research can read company-scoped Slack/HubSpot context. Connected notes only
+produce unconfirmed input suggestions. No Composio key is configured yet; OAuth,
+provider schemas/scopes and scheduled end-to-end behavior still need live checks.
+This does not add calendar ordering to the Dashboard or automatic input confirmation.
 Amr owns agents/APIs, connector and file ingestion, account/backend changes.
 Coordinate shared navigation/data contracts rather than duplicating his work.
 

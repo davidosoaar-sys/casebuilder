@@ -4,11 +4,12 @@
 //
 // The agent can always search the public web for itself, so that is not a connection.
 //
-// Gong, HubSpot, Slack, Clay and Lemlist take uploaded or pasted material in this build
-// (a transcript, a CSV export). Real OAuth connections go behind a security review
-// later; the interface is the same, so swapping one in changes nothing Chris sees.
+// Live account authorization is verified by /api/connect; these switches govern uploads.
+
+export const LIVE_TOOLKITS = ['googlecalendar', 'gmail', 'slack', 'hubspot']
 
 export const CONNECTORS = [
+  { key: 'googlecalendar', label: 'Google Calendar', blurb: 'Meetings and attendees for pre-meeting briefs', allows: 'read uploaded calendar notes', accepts: 'pasted meeting notes or a .txt export', docLabel: 'Calendar notes' },
   { key: 'gmail', label: 'Gmail', blurb: 'Customer email threads and follow-ups', allows: 'read uploaded or pasted Gmail email threads', accepts: 'a pasted email thread or a .txt / .pdf export', docLabel: 'Gmail thread' },
   { key: 'claude', label: 'Claude', blurb: 'Conversation exports and research notes', allows: 'read Claude conversations and research notes', accepts: 'a pasted conversation or a .txt / .md export', docLabel: 'Claude conversation' },
   { key: 'gong', label: 'Gong', blurb: 'Call transcripts', allows: 'read call transcripts', accepts: 'a transcript (paste, or a .txt / .vtt file)', docLabel: 'Call transcript' },
