@@ -25,9 +25,13 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ---
 
-## Unreleased
+## v0.22.3 (2026-10-27): Open sign-up, slides fit the page, Live room fixes
 
 - No waitlist: anyone with the app link can create an account (migration 0016 drops the sign-up gate). Sign in offers "Create an account"; old ?waitlist and ?signup links open Create account. The Waitlist menu item and approval emails are off. Waitlist rows are kept, and nobody on the list is emailed.
+- Slide editor: content taller than a 16:9 page is scaled down to fit it, like the PPTX export, instead of scrolling inside the page.
+- Live room: the pitch-flow chart pages (value breakdown, payback, confidence) no longer spill their headings into the Overview, `{paybackShort}` no longer prints raw, and the default "Today" page no longer repeats the overview copy in a narrow column.
+- Find people: a dropped connection ("Failed to fetch") is retried once automatically, with a clear message if it fails again.
+- Validation: 518 app tests, 120 worker tests, build pass. Sign-in, Create account, old ?waitlist links and ?invited&email links checked in a browser; Nike deck pages measured with no overflow; Live room rendered with no raw placeholders.
 
 ## v0.22.2 (2026-10-27): Action-based onboarding
 
@@ -44,7 +48,10 @@ Every version that lands on `main` gets a line here and a git tag.
 - Fix publishing URLs when Vercel truncates the generated production alias. A local no-customer-data deployment was verified publicly reachable; credentials stay server-only and uncommitted.
 - Validation: 515 of 516 suite tests pass; the existing locale-sensitive schedule AM/PM assertion remains. Application/plugin builds pass. Isolated browser checks verify action-driven onboarding, per-page dismissal, desktop/mobile themes and black/white logo conversion. The complete signed-in customer workflow still needs user acceptance testing. Git release does not itself confirm a Vercel/worker deployment.
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> bruno/v0.22.2-fixes
 ## v0.22.1 (2026-10-27): Restart the tour from Settings
 
 - Settings > Admin has a Restart tour button. It clears your tour progress (welcome and every seen tip, only for your account, nothing else in the browser) and starts the guided tour again from Create a project, the way a new account sees it. Admins only.

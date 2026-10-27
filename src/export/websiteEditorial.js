@@ -33,7 +33,7 @@ body.view-website{display:block;height:auto;min-height:100svh;overflow:visible;b
 .view-website .website-actions button:hover{transform:none!important;text-decoration:underline;text-underline-offset:5px}
 .view-website .slide[data-kind="cover"] .website-actions button[data-scenario]{display:none}
 .view-website .slide:not([data-kind="cover"]) .inner{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.3fr);gap:64px;align-items:start}
-.view-website .section-copy{position:sticky;top:140px;min-width:0}.view-website .section-content{min-width:0}
+.view-website .section-copy{position:sticky;top:140px;min-width:0}.view-website .section-content{min-width:0}.view-website .section-more{grid-column:1/-1;min-width:0;max-width:760px;margin-top:48px;padding-top:32px;border-top:1px solid var(--line)}
 .view-website .website-section-number{display:none}
 .view-website .section-copy h2{font-size:clamp(28px,3cqw,42px);line-height:1.15;max-width:23ch;letter-spacing:-.025em}
 .view-website .section-copy .blk[data-custom-size]:has(h2){font-size:min(var(--authored-size),clamp(28px,3cqw,42px))!important}

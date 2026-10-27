@@ -80,6 +80,7 @@ export function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, na
       cost: inputs.portalCost === '' || inputs.portalCost == null ? '' : VM.fmtMoney(Number(inputs.portalCost) || 0),
       net: when(F.netValue, f => VM.fmtMoney(f.raw)),
       payback: when(F.paybackMonths, f => monthsText(f.value)),
+      paybackShort: when(F.paybackMonths, f => (!(f.value > 0) ? 'n/a' : f.value < 1 ? 'under a month' : f.value < 10 ? Math.round(f.value * 10) / 10 + ' months' : Math.round(f.value) + ' months')),
       roi: when(F.roiMultiple, f => f.value.toFixed(1) + 'x'),
       five: when(F.fiveYearValue, f => VM.fmtMoney(f.raw))
     }
@@ -327,15 +328,17 @@ export function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, na
       $('#scenario-summary').innerHTML = annual ? 'Annual value<strong>' + esc(annual.value) + '</strong>Figures update as you explore.' : 'Add the missing inputs to calculate annual value.'
       main.querySelectorAll('.slide:not([data-kind="cover"]):not([data-kind="content"])').forEach(section => {
         const inner = section.querySelector('.inner')
-        const copy = document.createElement('div'), content = document.createElement('div')
+        const copy = document.createElement('div'), content = document.createElement('div'), more = document.createElement('div')
         const summaries=[]
-        copy.className = 'section-copy'; content.className = 'section-content'
+        copy.className = 'section-copy'; content.className = 'section-content'; more.className = 'section-more'
         Array.from(inner.children).forEach(child => {
           if (child.classList.contains('overview-bento')) {summaries.push(child);return}
           const block = DATA.slides[Number(child.dataset.s)]?.blocks[Number(child.dataset.b)]
+          if (block && block.websiteArea === 'more') {more.appendChild(child);return}
           ;(block && (LIVE[block.type] || ['room','overviewFacts','stakeholderMap'].includes(block.type)) || child.querySelector('.story-waiting') ? content : copy).appendChild(child)
         })
         inner.append(copy, content, ...summaries)
+        if (more.children.length) inner.append(more)
       })
       window.scrollTo({top:keep,behavior:'instant'})
       updateProgress()

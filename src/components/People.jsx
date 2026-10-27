@@ -47,11 +47,19 @@ export default function People({
     setErrors(e => ({ ...e, [role.key]: '' }))
     setNotes(n => ({ ...n, [role.key]: '' }))
     try {
-      const res = await fetch('/api/research', {
+      const send = async () => fetch('/api/research', {
         method: 'POST',
         headers: await apiHeaders(code ? { 'x-access-code': code } : {}),
         body: JSON.stringify({ command:AGENT_COMMANDS.FIND_STAKEHOLDERS,company, role: role.role })
       })
+      // A dropped connection (the browser's "Failed to fetch") is retried once
+      // before it is shown: a manual retry has always worked when it happened.
+      let res
+      try { res = await send() } catch (err) {
+        if (!(err instanceof TypeError)) throw err
+        await new Promise(r => setTimeout(r, 1500))
+        try { res = await send() } catch { throw new Error('Could not reach the search service. Check your connection and press Find people again.') }
+      }
       const data = await res.json().catch(() => ({}))
       if (res.status === 503 && data.error === 'no_key') throw new Error('Add an AI model key in Settings to use the AI agent.')
       if (res.status === 503 && data.error === 'account_keys_unavailable') throw new Error(data.message)
