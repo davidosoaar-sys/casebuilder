@@ -27,7 +27,7 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
-- Waitlist approval: the approval email now links straight to Create account with the address filled in (`/?invited&email=...`), and the sign-in page has a "Create your account" link for approved people. Before, the email pointed at the sign-in page, which had no way to create an account.
+- No waitlist: anyone with the app link can create an account (migration 0016 drops the sign-up gate). Sign in offers "Create an account"; old ?waitlist and ?signup links open Create account. The Waitlist menu item and approval emails are off. Waitlist rows are kept, and nobody on the list is emailed.
 
 ## v0.22.2 (2026-10-27): Action-based onboarding
 

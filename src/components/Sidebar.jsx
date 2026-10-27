@@ -89,7 +89,7 @@ const MAIN_ITEMS = [
   // Skills and Connectors live together under Customize (like Claude): one place
   // for how the agent works and what it can read. The page has a tab for each.
   { id: 'customize', label: 'Customize', title: 'Skills and connectors: how the agent works and what it can read' },
-  { id: 'waitlist', label: 'Waitlist', title: 'Who asked for access', admin: true }
+  // Waitlist page removed from the menu 2026-10-27 (no waitlist). WaitlistAdmin.jsx kept for the data.
 ]
 
 const COLLAPSE_KEY = 'casebuilder.sidebar'

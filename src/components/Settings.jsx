@@ -87,7 +87,7 @@ export default function Settings({ account, name, onName, theme, onTheme, onClos
                   ))}
                 </div>
               </div>
-              <p className="settings-help">Regular user hides admin-only pages (like Waitlist) so you see what everyone else sees. Only you see this switch.</p>
+              <p className="settings-help">Regular user hides admin-only tools so you see what everyone else sees. Only you see this switch.</p>
               <div className="settings-row">
                 <span className="settings-label">Tour</span>
                 <button type="button" className="ghost" onClick={() => onRestartTour && onRestartTour()}>Restart tour</button>

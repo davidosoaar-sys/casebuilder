@@ -2144,10 +2144,8 @@ def main():
         except Exception as e:
             log("claim error:", e); time.sleep(10); continue
         if not jobs:
-            try:
-                send_approval_emails()
-            except Exception as e:
-                log("approval email error:", str(e)[:200])
+            # Waitlist approval emails are off (waitlist removed 2026-10-27): nobody on
+            # the list is told about sign-up. send_approval_emails() is kept, unused.
             if ONCE:
                 log("no job"); return
             time.sleep(POLL); continue

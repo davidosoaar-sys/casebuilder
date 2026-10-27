@@ -504,3 +504,14 @@ test('MCP tokens (0015): owner isolation, hash uniqueness and restricted updates
   await user(A,tx=>tx.query('update public.mcp_tokens set revoked_at=now() where id=$1',[id]))
   assert.ok((await service(tx=>tx.query('select revoked_at from public.mcp_tokens where id=$1',[id]))).rows[0].revoked_at)
 })
+
+test('no waitlist (0016): anyone can create an account, the waitlist data stays', async () => {
+  const before = (await service(tx => tx.query('select count(*)::int as n from public.waitlist'))).rows[0].n
+  await db.exec(readFileSync(new URL('./migrations/0016_remove_waitlist_gate.sql', import.meta.url), 'utf8'))
+  const E = '00000000-0000-0000-0000-0000000000e1'
+  // Never on the list, not invited: Supabase Auth writes auth.users as the owner.
+  await db.query(`insert into auth.users (id, email) values ($1, 'stranger@example.com')`, [E])
+  const { rows } = await service(tx => tx.query('select role from public.profiles where id = $1', [E]))
+  assert.equal(rows[0].role, 'user')
+  assert.equal((await service(tx => tx.query('select count(*)::int as n from public.waitlist'))).rows[0].n, before)
+})
