@@ -415,6 +415,44 @@ function PageEditor({ slide, idx, count, env, brand, shown, current, sel, onCurr
   const [dragging, setDragging] = useState(false)
   const values = order && order.length === ids.length && order.every(id => ids.includes(id)) ? order : ids
   const byId = new Map(slide.blocks.map(b => [b.id, b]))
+  // Pages are fixed 16:9 frames. Content taller than the frame is scaled down
+  // to fit, the same way the PPTX export shrinks it, instead of scrolling.
+  const pageRef = useRef(null)
+  const [fit, setFit] = useState(1)
+  useLayoutEffect(() => {
+    const page = pageRef.current, box = zone.current
+    if (!page || !box || typeof ResizeObserver === 'undefined') return
+    let frame = 0
+    let busy = false
+    const measure = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        if (busy) return
+        const cs = getComputedStyle(page)
+        const room = page.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)
+        if (!(room > 0)) return
+        // Text reflows as the scaled box gets wider, so search for the largest
+        // scale whose reflowed height still fits, writing the width directly.
+        busy = true
+        const prev = box.style.width
+        const heightAt = f => { box.style.width = f < 1 ? `calc(100% / ${f})` : '100%'; return box.offsetHeight * f }
+        let best = 1
+        if (heightAt(1) > room + 1) {
+          let lo = 0.4, hi = 1
+          for (let i = 0; i < 9; i++) { const mid = (lo + hi) / 2; if (heightAt(mid) <= room) lo = mid; else hi = mid }
+          best = lo
+        }
+        box.style.width = prev
+        busy = false
+        setFit(f => (Math.abs(best - f) < 0.003 ? f : best))
+      })
+    }
+    const ro = new ResizeObserver(measure)
+    ro.observe(page)
+    ro.observe(box)
+    measure()
+    return () => { ro.disconnect(); cancelAnimationFrame(frame) }
+  }, [])
 
   function onMove(e) {
     if (picker || dragging) return
@@ -429,7 +467,7 @@ function PageEditor({ slide, idx, count, env, brand, shown, current, sel, onCurr
       const next = items[i + 1]?.getBoundingClientRect()
       const y = next ? (r.bottom + next.top) / 2 : r.bottom + 10
       const d = Math.abs(e.clientY - y)
-      if (d < 12 && (!best || d < best.d)) best = { at: i + 1, y: y - top, d }
+      if (d < 12 && (!best || d < best.d)) best = { at: i + 1, y: (y - top) / fit, d }
     })
     setGap(g => (best ? (g && g.at === best.at && g.y === best.y ? g : { at: best.at, y: best.y }) : null))
   }
@@ -475,8 +513,8 @@ function PageEditor({ slide, idx, count, env, brand, shown, current, sel, onCurr
           }} />
       </Popover>
 
-      <section className={`slide ${slide.variant === 'hero' ? 'slide-hero' : ''}`} style={HEX.test(slide.design?.background) ? { background: slide.design.background, '--page-background': slide.design.background } : undefined}>
-        <div className="blocks-zone" ref={zone} onPointerMove={onMove} onPointerLeave={() => { if (!picker) setGap(null) }}>
+      <section ref={pageRef} className={`slide ${slide.variant === 'hero' ? 'slide-hero' : ''}`} style={HEX.test(slide.design?.background) ? { background: slide.design.background, '--page-background': slide.design.background } : undefined}>
+        <div className="blocks-zone" ref={zone} style={fit < 1 ? { '--page-fit': fit } : undefined} onPointerMove={onMove} onPointerLeave={() => { if (!picker) setGap(null) }}>
           <Reorder.Group as="div" axis="y" values={values} onReorder={setOrder} className="blocks" ref={blocksRef}>
             {values.map((id, bi) => {
               const b = byId.get(id)

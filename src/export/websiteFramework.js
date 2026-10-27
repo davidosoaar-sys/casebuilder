@@ -44,6 +44,10 @@ export function websiteBlockDesign(design = {}, brand) {
 export function websiteSection(slide) {
   if (slide.websiteKind) return {kind:slide.websiteKind,nav:slide.websiteNav}
   const blocks = slide.blocks || []
+  // Pitch-flow chart pages (breakdown, payback, confidence) repeat figures the
+  // impact and drivers sections already show, and the Live room has no chart
+  // renderer, so they are not part of its reading order.
+  if (blocks.some(b => b.type === 'chart')) return { kind: 'chart', nav: '' }
   const kind = slide.variant === 'hero' || blocks.some(b => b.type === 'text' && b.style === 'hero') ? 'overview'
     : blocks.some(b => b.type === 'drivers') ? 'drivers'
     : blocks.some(b => b.type === 'stats') ? 'impact'

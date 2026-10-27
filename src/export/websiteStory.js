@@ -4,10 +4,21 @@ import { websiteSection } from './websiteFramework.js'
 // Original block/slide IDs remain attached so in-place edits still save correctly.
 export function websiteStory(slides) {
   const groups = {}, names = {}
+  // Tokens the overview already shows: a content page that only restates them
+  // (the default "Today" page) adds nothing to the Live room.
+  const SHOWN = new Set(['{caseContext}','{cares}','What this room cares about: {cares}'])
   for (const slide of slides) {
     const kind = websiteSection(slide).kind
+    if (kind === 'chart') continue
     if (slide.websiteNav && !names[kind]) names[kind] = slide.websiteNav
-    ;(groups[kind] ||= []).push(...slide.blocks.filter(b=>!(b.type==='text'&&b.style==='label')).map(b=>({...b,sourceSlideId:slide.id})))
+    let blocks = slide.blocks.filter(b=>!(b.type==='text'&&b.style==='label'))
+    if (kind === 'content') {
+      blocks = blocks.filter(b=>!(b.type==='text'&&SHOWN.has(String(b.text||'').trim())))
+      if (!blocks.some(b=>!(b.type==='text'&&['title','headline'].includes(b.style)))) continue
+      // Extra pages sit full width under the overview, not in its narrow copy column.
+      blocks = blocks.map(b=>({...b,websiteArea:'more'}))
+    }
+    ;(groups[kind] ||= []).push(...blocks.map(b=>({...b,sourceSlideId:slide.id})))
   }
   const block = (type,props={})=>({id:'website-'+type,type,...props})
   const text = (style,value)=>block('text',{style,text:value})

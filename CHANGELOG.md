@@ -37,6 +37,10 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
+- Slide editor: content taller than a 16:9 page is scaled down to fit it, like the PPTX export, instead of scrolling inside the page.
+- Live room: the pitch-flow chart pages (value breakdown, payback, confidence) no longer spill their headings into the Overview, `{paybackShort}` no longer prints raw, and the default "Today" page no longer repeats the overview copy in a narrow column.
+- Find people: a dropped connection ("Failed to fetch") is retried once automatically, with a clear message if it fails again.
+
 ## v0.22.1 (2026-10-27): Restart the tour from Settings
 
 - Settings > Admin has a Restart tour button. It clears your tour progress (welcome and every seen tip, only for your account, nothing else in the browser) and starts the guided tour again from Create a project, the way a new account sees it. Admins only.

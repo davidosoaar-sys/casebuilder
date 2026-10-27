@@ -3097,9 +3097,11 @@ body::after { content: ''; position: fixed; inset: 0; z-index: 200; pointer-even
 
 /* Editor pages are fixed 16:9 canvases, the same 13.333 x 7.5 in proportions as
    the PowerPoint export. Margins match the export (0.7 in sides, 0.6 in top) as a
-   share of the slide width. Content taller than the page scrolls inside it. */
+   share of the slide width. Content taller than the page is scaled down to fit
+   (Deck.jsx sets --page-fit), matching how the PPTX export shrinks it. */
 @media screen {
-  .deck-editor .slide { aspect-ratio: 16 / 9; min-height: 0; height: auto; padding: 4.5% 5.25%; overflow-x: hidden; overflow-y: auto; scrollbar-width: thin; box-sizing: border-box; }
+  .deck-editor .slide { aspect-ratio: 16 / 9; min-height: 0; height: auto; padding: 4.5% 5.25%; overflow: clip; box-sizing: border-box; }
+  .deck-editor .blocks-zone[style*="--page-fit"] { width: calc(100% / var(--page-fit)); transform: scale(var(--page-fit)); transform-origin: top left; }
 }
 .template-setup-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; border:0; padding:0; margin:24px 0; }
 .template-setup-options legend { margin-bottom:12px; color:var(--ink-dim); }
