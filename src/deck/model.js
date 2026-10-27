@@ -55,6 +55,7 @@ export const TOKENS = [
   ['annual', 'Annual value'],
   ['net', 'Net, year one'],
   ['payback', 'Payback'],
+  ['paybackShort', 'Payback (headline)'],
   ['roi', 'Return'],
   ['five', 'Five-year net']
 ]
@@ -90,6 +91,7 @@ export function buildEnv(inputs, fields, active, model = computeModel(inputs)) {
     cost: model.blankInputs.includes('portalCost') ? '' : fmtMoney(model.inputs.portalCost),
     net: show(F.netValue, f => fmtMoney(f.raw)),
     payback: show(F.paybackMonths, f => (f.value > 0 ? fmtMonths(f.value) : 'n/a')),
+    paybackShort: show(F.paybackMonths, f => (!(f.value > 0) ? 'n/a' : f.value < 1 ? 'under a month' : f.value < 10 ? `${Math.round(f.value * 10) / 10} months` : `${Math.round(f.value)} months`)),
     roi: show(F.roiMultiple, f => `${f.value.toFixed(1)}x`),
     five: show(F.fiveYearValue, f => fmtMoney(f.raw))
   }
@@ -245,7 +247,7 @@ function flowSlide(key) {
     case 'payback':
       return slide('plain', [
         text('label', 'Payback'),
-        text('title', 'Pays back in {payback}, {roi} return in year one'),
+        text('title', 'Pays back in {paybackShort}, {roi} return in year one'),
         text('note', 'Cumulative modeled value against the annual subscription of {cost}.'),
         block('chart', { kind: 'payback' })
       ])

@@ -1174,13 +1174,21 @@ function DeckChart({ r }) {
     )
   }
   if (r.chart === 'confidence') {
-    let acc = 0
+    // One row per source state: big count, label, and a bar of its share, so the
+    // slide reads at a glance instead of a thin strip over empty space.
     return (
       <figure className="deck-chart" data-chart="confidence">
-        <svg viewBox="0 0 600 40" width="100%" role="img" aria-label="Inputs by source">
-          {r.rows.map(row => { const xx = acc; acc += row.pct * 6; return <rect key={row.key} x={xx} y="0" width={row.pct * 6} height="40" fill={CONF_COLOR[row.key]} /> })}
+        <svg viewBox="0 0 600 236" width="100%" role="img" aria-label="Inputs by source">
+          {r.rows.map((row, i) => (
+            <g key={row.key} transform={`translate(0 ${i * 59})`}>
+              <text x="0" y="34" fontSize="30" fontWeight="700" fill="currentColor">{row.count}</text>
+              <text x="64" y="20" fontSize="13" fill="currentColor" opacity=".75">{row.label}</text>
+              <rect x="64" y="28" width="520" height="14" rx="3" fill="currentColor" opacity=".08" />
+              <rect x="64" y="28" width={Math.max(row.count ? 4 : 0, row.pct * 5.2)} height="14" rx="3" fill={CONF_COLOR[row.key]} />
+            </g>
+          ))}
         </svg>
-        <figcaption className="eq">{r.rows.map(row => <span key={row.key} style={{ marginRight: 14 }}><span style={{ color: CONF_COLOR[row.key] }}>■</span> {row.label} {row.count}</span>)} of {r.total} inputs</figcaption>
+        <figcaption className="eq">Of {r.total} inputs in this case.</figcaption>
       </figure>
     )
   }
