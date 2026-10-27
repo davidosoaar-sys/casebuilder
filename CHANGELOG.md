@@ -28,6 +28,8 @@ Every version that lands on `main` gets a line here and a git tag.
 ## Unreleased
 - Live room: the site now sizes against its own container instead of the viewport, so the top bar, hero lockup, KPI row and stakeholder centre no longer overlap inside the app; partner logos lose their white boxes and the client sees the company name without the sample suffix.
 
+- Slides use standard 16:9 PowerPoint dimensions (13.333 x 7.5 in) everywhere: editor pages are fixed 16:9 canvases with export-matching margins, rail thumbnails are 16:9, and the exported hero glow no longer bleeds off the slide. A test checks every sample deck for LAYOUT_WIDE and shapes inside the slide.
+
 ## v0.19.2 (2026-10-27): Live calendar and Gmail fixes from the first real connection
 
 - Fix: a project named like "Nike · sample" never matched a meeting titled "Nike ..." because the label suffix was part of the company name. The suffix is now ignored ("Nikelodeon" still does not match).
