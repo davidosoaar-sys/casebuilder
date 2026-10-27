@@ -25,3 +25,14 @@ test('a sparse website still has all seven stages and contains no invented zero-
   assert.equal(data.artwork.includes('landing-node'),false)
   assert.ok(data.artwork.includes('landing-logo'))
 })
+
+test('custom section names survive the Live room reading-order projection', () => {
+  const deck = defaultDeck()
+  const drivers = deck.find(s=>s.blocks.some(b=>b.type==='drivers'))
+  drivers.websiteNav = 'Where time goes'
+  const story = websiteStory(deck)
+  assert.equal(story.find(s=>s.websiteKind==='drivers').websiteNav,'Where time goes')
+  const html=buildWebsite({company:'Example',slides:deck,stakeholders:[],inputs:{},vmSource:''})
+  const data=JSON.parse(html.match(/<script id="data" type="application\/json">([\s\S]*?)<\/script>/)[1])
+  assert.equal(data.layout.find(s=>s.kind==='drivers').nav,'Where time goes')
+})

@@ -1,3 +1,4 @@
+import { artifactReplyText } from '../agentBrandAssets.js'
 // The deal's chat with the agent. Two layouts, same component:
 //   mode="full"  - its own "Agent" tab, chat fills the page
 //   mode="split" - docked beside whatever tab is open, width adjustable
@@ -353,7 +354,7 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
               {markAt(i) ? <AgentMark /> : <span className="agent-mark-gap" />}
               <div className="chat-turn">
                 <p className="mono-label">Scheduled run{m.meta?.schedule_title ? ` · ${m.meta.schedule_title}` : ''} · {stamp(m.created_at)}</p>
-                <div className="chat-bubble"><Reply text={m.content} /></div>
+                <div className="chat-bubble"><Reply text={artifactReplyText(m.content, m.meta, applied[m.id])} /></div>
               </div>
             </motion.div>
           ) : m.role === 'user' ? (
@@ -379,13 +380,13 @@ export default function ChatPanel({ project, userId, userName, mode = 'split', o
                 {m.meta?.research
                   ? <div className="chat-bubble chat-research"><p className="mono-label chat-research-tag">Deep research</p><Answer text={m.content} sources={m.meta.sources || []} /><Sources sources={m.meta.sources || []} dropped={m.meta.dropped_sources || 0} /></div>
                   : m.meta?.error ? <div className="chat-bubble">{m.content}</div>
-                  : <div className="chat-bubble chat-md"><Reply text={m.content} /></div>}
+                  : <div className="chat-bubble chat-md"><Reply text={artifactReplyText(m.content, m.meta, applied[m.id])} /></div>}
                 <ChangeCard log={applied[m.id]} meta={m.meta} onUndo={opts => onUndo(m.id, opts)} onRedo={onRedo && (opts => onRedo(m.id, opts))} onView={onViewCase} />
                 {m.meta?.commands?.length > 0 && (runs[m.id]
                   ? <CommandCards run={runs[m.id]} commands={m.meta.commands} project={project} onPick={onPick} messageId={m.id} />
                   : <div className="cmd-cards"><div className="cmd-card"><p className="cmd-note">This research was not run. <button type="button" className="link-btn" onClick={() => onRun?.(m.id, m.meta.commands)}>Run it now</button></p></div></div>)}
                 <div className="msg-actions on-hover">
-                  <button type="button" className="icon-btn sm" onClick={() => copy(m.id, m.content)} title={copied === m.id ? 'Copied' : 'Copy'} aria-label="Copy reply"><Icon d={copied === m.id ? icons.check : icons.copy} size={14} /></button>
+                  <button type="button" className="icon-btn sm" onClick={() => copy(m.id, artifactReplyText(m.content, m.meta, applied[m.id]))} title={copied === m.id ? 'Copied' : 'Copy'} aria-label="Copy reply"><Icon d={copied === m.id ? icons.check : icons.copy} size={14} /></button>
                   <time className="msg-time" dateTime={m.created_at}>{stamp(m.created_at)}</time>
                   {m.meta?.model && <span className="msg-meta">{AGENT_MODELS.find(x => x.id === m.meta.model)?.name || m.meta.model}{m.meta.seconds ? ` · ${Math.round(m.meta.seconds)}s` : ''}{m.meta.web === false ? ' · search off' : ''}{m.meta.research ? ` · ${(m.meta.sources || []).length} sources` : ''}</span>}
                 </div>

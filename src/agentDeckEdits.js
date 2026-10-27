@@ -6,8 +6,9 @@
 //
 // worker/worker.py parse_deck_ops checks the same operations before they get
 // here; keep the two in step.
+import { publicProfileUrl } from './profileMedia.js'
 import { TEXT_STYLES, SLIDE_TEMPLATES, BLOCK_MENU, TOKENS, textBlock, fill } from './deck/model.js'
-import { COLOR_KEYS, BRAND_FONTS, cleanFont, normalizeBrand } from './brand.js'
+import { COLOR_KEYS, BRAND_FONTS, cleanFont, normalizeBrand, safeAsset } from './brand.js'
 import { applyAgentEdits, undoAgentEdits, redoAgentEdits, editedSince } from './agentEdits.js'
 
 export const MAX_DECK_OPS = 25
@@ -23,7 +24,7 @@ const TEXTS_TEMPLATES = ['blank', 'text', 'bullets']
 const TEXT_FIELDS = { text: ['text'], quote: ['text'], columns: ['left', 'right'], image: ['caption'] }
 const STYLE_KEYS = TEXT_STYLES.map(([k]) => k)
 const BRAND_FONT_KEYS = ['headingFont', 'bodyFont']
-const BRAND_NAMES = { primary: 'Primary colour', background: 'Background', surface: 'Surface colour', text: 'Text colour', muted: 'Muted text colour', headingFont: 'Heading font', bodyFont: 'Body font' }
+const BRAND_NAMES = { hideLogo: 'Logo visibility', logo: 'Company logo', heroImage: 'Brand image', heroAlt: 'Image description', heroSource: 'Image source', primary: 'Primary colour', background: 'Background', surface: 'Surface colour', text: 'Text colour', muted: 'Muted text colour', headingFont: 'Heading font', bodyFont: 'Body font' }
 const BLOCK_NAMES = { stats: 'key numbers', drivers: 'value drivers chart', pairs: 'today vs with Portal comparison', versus: 'Portal vs self-hosting comparison',
   room: 'stakeholder brief', logo: 'logo', image: 'image', divider: 'divider', spacer: 'spacer', quote: 'quote', columns: 'two columns' }
 
@@ -215,10 +216,28 @@ export function applyDeckOps(deck, brand, ops, { now = new Date().toISOString() 
         record(op, { op: 'remove_block', slideId: slide.id, block: clone(b), index: bi, sentence: `Removed the ${blockName(b)} from page ${page}` })
         break
       }
+      case 'set_section_name': {
+        if (!slide) { refused.push(missingPage); break }
+        const value = typeof op.value === 'string' ? op.value.trim() : ''
+        if (!value || value.length > 80 || /[\u0000-\u001f]/.test(value)) { refused.push('A Live room section name needs 1–80 characters.'); break }
+        if (op.expect !== undefined && (slide.websiteNav ?? '') !== op.expect) { refused.push('You renamed that section while the agent was working, so yours was kept.'); break }
+        if (slide.websiteNav === value) break
+        const before = slide.websiteNav
+        slide.websiteNav = value
+        record(op, { op: 'section_name', slideId: slide.id, before, after: value, sentence: `Renamed Live room section ${page} to “${value}”` })
+        break
+      }
       case 'set_brand': {
         const shown = normalizeBrand(br)
+        const heroKeys = ['heroImage', 'heroSource', 'heroAlt']
+        const staleHero = heroKeys.some(k => op.expect && Object.hasOwn(op.expect, k) && (br[k] ?? null) !== op.expect[k])
+        if (staleHero) refused.push('You changed the brand image while the agent was working, so yours was kept.')
+        const invalidHero = Object.hasOwn(op, 'heroImage') && op.heroImage !== '' && (!safeAsset(op.heroImage) || !publicProfileUrl(op.heroSource))
         for (const [key, raw] of Object.entries(op)) {
-          if (key === 'op' || key === 'reason') continue
+          if (key === 'op' || key === 'reason' || key === 'expect') continue
+          if (!heroKeys.includes(key) && op.expect && Object.hasOwn(op.expect, key) && (br[key] ?? null) !== op.expect[key]) { refused.push(`You changed ${BRAND_NAMES[key] || key} while the agent was working, so yours was kept.`); continue }
+          if (heroKeys.includes(key) && staleHero) continue
+          if (heroKeys.includes(key) && invalidHero) { refused.push('The brand image needs validated image bytes and an HTTPS source.'); continue }
           let value
           if (COLOR_KEYS.includes(key)) {
             if (typeof raw !== 'string' || !/^#[0-9a-f]{6}$/i.test(raw)) { refused.push(`${BRAND_NAMES[key]}: "${String(raw).slice(0, 20)}" is not a #rrggbb colour.`); continue }
@@ -226,11 +245,17 @@ export function applyDeckOps(deck, brand, ops, { now = new Date().toISOString() 
           } else if (BRAND_FONT_KEYS.includes(key)) {
             value = fonts.find(f => f.toLowerCase() === String(raw).trim().toLowerCase())
             if (!value) { refused.push(`${BRAND_NAMES[key]}: "${String(raw).slice(0, 40)}" is not one of the fonts the case can use.`); continue }
-          } else { refused.push(`The agent cannot change the brand's ${String(key).slice(0, 30)}.`); continue }
-          if (String(br[key] ?? '').toLowerCase() === value.toLowerCase() && br[key] !== undefined) continue
+          } else if (key === 'hideLogo' && typeof raw === 'boolean') value = raw
+          else if (['logo', 'heroImage'].includes(key) && (raw === '' || safeAsset(raw))) {
+            if (key === 'heroImage' && raw && !publicProfileUrl(op.heroSource)) { refused.push('A web image needs its HTTPS source.'); continue }
+            value = raw
+          } else if (key === 'heroSource' && (raw === '' || publicProfileUrl(raw))) value = raw === '' ? '' : publicProfileUrl(raw)
+          else if (key === 'heroAlt' && typeof raw === 'string' && raw.length <= 240) value = raw
+          else { refused.push(`The agent cannot change the brand's ${String(key).slice(0, 30)}.`); continue }
+          if (br[key] === value) continue
           const before = br[key]
           br = { ...br, [key]: value }
-          record(op, { op: 'brand', key, before, after: value, sentence: `${BRAND_NAMES[key]} ${shown[key]} → ${value}` })
+          record(op, { op: 'brand', key, before, after: value, sentence: COLOR_KEYS.includes(key) || BRAND_FONT_KEYS.includes(key) ? `${BRAND_NAMES[key]} ${shown[key]} → ${value}` : `Changed ${BRAND_NAMES[key].toLowerCase()}` })
         }
         break
       }
@@ -302,6 +327,14 @@ export function undoDeckOps(deck, brand, changes, { force = false } = {}) {
         if (slide && c.block && !slide.blocks.some(b => b.id === c.block.id)) { slide.blocks.splice(Math.min(c.index, slide.blocks.length), 0, clone(c.block)); ok = true }
         break
       }
+      case 'section_name': {
+        if (!slide) break
+        edited = slide.websiteNav !== c.after
+        if (edited && !force) break
+        if (c.before === undefined) delete slide.websiteNav; else slide.websiteNav = c.before
+        ok = true
+        break
+      }
       case 'brand': {
         edited = br[c.key] !== c.after
         if (edited && !force) break
@@ -361,6 +394,9 @@ export function redoDeckOps(deck, brand, changes) {
         if (slide) { slide.blocks = slide.blocks.filter(b => b.id !== c.block?.id); ok = true }
         break
       }
+      case 'section_name':
+        if (slide) { slide.websiteNav = c.after; ok = true }
+        break
       case 'brand': {
         br = { ...br, [c.key]: c.after }
         ok = true
@@ -375,7 +411,7 @@ export function redoDeckOps(deck, brand, changes) {
 // One reply can change inputs and the case. Both go into the same agentLog
 // entry (keyed by the chat message id, saved with the deal), so a reply is
 // applied once and one Undo reverts all of it. Returns a patch for the deal.
-export function applyAgentReply(p, messageId, { edits = [], deckOps = [] } = {}, { now } = {}) {
+export function applyAgentReply(p, messageId, { edits = [], deckOps = [], deckRefused = [] } = {}, { now } = {}) {
   if (!messageId || p.agentLog?.[messageId]) return {}
   const patch = {}
   const entry = { changes: [], refused: [], at: Date.now() }
@@ -390,8 +426,9 @@ export function applyAgentReply(p, messageId, { edits = [], deckOps = [] } = {},
     if (r.changes.some(c => c.op !== 'brand')) patch.deck = r.deck
     if (r.changes.some(c => c.op === 'brand')) patch.brand = r.brand
     entry.deckChanges = r.changes
-    entry.deckRefused = r.refused
+    entry.deckRefused = [...deckRefused, ...r.refused]
   }
+  if (!entry.deckRefused) entry.deckRefused = deckRefused
   return { ...patch, agentLog: { ...(p.agentLog || {}), [messageId]: entry } }
 }
 
@@ -475,6 +512,9 @@ export function agentRedoConflicts(p, messageId) {
         if (b && !same(b, c.block)) places.push(page(c.slideId))
         break
       }
+      case 'section_name':
+        if (slide && slide.websiteNav !== c.before) places.push(page(c.slideId))
+        break
       case 'brand':
         if (brand[c.key] !== c.before) places.push('the deck design')
         break

@@ -2,6 +2,8 @@ import Anthropic from '@anthropic-ai/sdk'
 import { research } from './research.js'
 import { suggest, SUGGESTIBLE } from './suggest.js'
 import { publishSite, PublishError } from './publish.js'
+import { fetchBrandAsset } from './brandAssets.js'
+import { fetchPublic } from './publicWeb.js'
 import { discoverBrand } from './brand.js'
 import { anthropicFor } from './accountKey.js'
 import { ProviderAPIError } from './compatClient.js'
@@ -33,6 +35,10 @@ export async function brandAccountAuthorized(headers, fetcher = fetch) {
 export async function handleBrand({ body, headers }) {
   const signedIn = await brandAccountAuthorized(headers)
   if (!signedIn && needsCode(headers)) return {status:401,body:{error:"Sign in or enter your access code to scan company branding."}}
+  if (body?.command === 'resolve_brand_asset') {
+    try { return { status: 200, body: await fetchBrandAsset(body.url, body.kind, fetchPublic) } }
+    catch (err) { return { status: 422, body: { error: err.message || 'Could not validate that image.' } } }
+  }
   const company = typeof body?.company === 'string' ? body.company.trim().slice(0, 120) : ''
   const website = typeof body?.website === 'string' ? body.website.trim().slice(0, 500) : ''
   if (!company && !website) return { status: 400, body: { error: 'Enter a company name or official website.' } }

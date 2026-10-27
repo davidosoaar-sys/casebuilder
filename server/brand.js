@@ -1,4 +1,4 @@
-import {inspectBrandImage,brandPageLinks,brandKitDownloads,brandHeroCandidates} from './brandAssets.js'
+import {fetchBrandAsset,inspectBrandImage,brandPageLinks,brandKitDownloads,brandHeroCandidates} from './brandAssets.js'
 import { runWithSearch, searchBackendOrNull } from './agentSearch.js'
 import { fetchPublic } from './publicWeb.js'
 import {publicProfileUrl} from '../src/profileMedia.js'
@@ -324,9 +324,15 @@ export async function discoverBrand({ company, website }, fetcher = fetchPublic,
   }))
   const logos=loaded.filter(r=>r.status==='fulfilled').map(r=>r.value)
   let heroImage='',heroAlt='',heroSource=''
+  const heroCandidates=[]
   if(Date.now()<deadline-8000)for(const candidate of brandHeroCandidates(html,home.url,company)){
-    try{const image=await fetcher(candidate.url,{limit:700000}),mime=image.type.split(';')[0];if(!/^image\/(png|jpeg|webp)$/.test(mime))continue;const size=inspectBrandImage(image.buffer,mime);if(size.width<640||size.height<240||size.width/size.height<1.4)continue;heroImage='data:'+mime+';base64,'+image.buffer.toString('base64');heroAlt=candidate.alt||company+' brand image';heroSource=home.url;sources.push(image.url);break}catch{}
+    try {
+      const image=await fetchBrandAsset(candidate.url,'heroImage',fetcher)
+      heroCandidates.push({heroImage:image.data,heroAlt:candidate.alt||company+' brand image',heroSource:image.source})
+      sources.push(image.source)
+    } catch {}
   }
+  if(heroCandidates.length)({heroImage,heroAlt,heroSource}=heroCandidates[0])
   let icon = ''
   const iconUrls = iconCandidates(html, assetBase)
   // A site's standard icon paths, if the page does not link one.
@@ -368,7 +374,7 @@ export async function discoverBrand({ company, website }, fetcher = fetchPublic,
   if(loaded.some(r=>r.status==='rejected'))curated.review.warnings.push('Unusable logo candidates were rejected automatically.')
   const headingFile=fontFaces.find(f=>f.family===selected.headingFont)
   for(const family of [...new Set([selected.headingFont,selected.bodyFont])])if(!fontFaces.some(f=>f.family===family))curated.review.warnings.push('The '+family+' font file is unavailable; other devices may use a fallback.')
-  return normalizeBrand({...selected,heroImage,heroAlt,heroSource,logoVariants:logos.filter(l=>l!==curated.selected&&l.dataUrl.length<250000).slice(0,3).map(l=>({logo:l.dataUrl,sourceUrl:l.sourcePage,authority:l.authority})),website:home.url,linkedinUrl,sourceNotes,sources,fontFaces,fontData:headingFile?.data||'',fontName:headingFile?.family||'',review:curated.review,
+  return normalizeBrand({...selected,heroImage,heroAlt,heroSource,heroCandidates,logoVariants:logos.filter(l=>l!==curated.selected&&l.dataUrl.length<250000).slice(0,3).map(l=>({logo:l.dataUrl,sourceUrl:l.sourcePage,authority:l.authority})),website:home.url,linkedinUrl,sourceNotes,sources,fontFaces,fontData:headingFile?.data||'',fontName:headingFile?.family||'',review:curated.review,
     status:selected.logo?'ready':'error',message:!selected.logo?'Company website found, but no usable company logo could be extracted. Your case can continue with the company name.':'Brand assets found. Checking display and font loading…'})
 
 }

@@ -3,14 +3,15 @@ import { websiteSection } from './websiteFramework.js'
 // The website's reading order is independent of the editable client deck.
 // Original block/slide IDs remain attached so in-place edits still save correctly.
 export function websiteStory(slides) {
-  const groups = {}
+  const groups = {}, names = {}
   for (const slide of slides) {
     const kind = websiteSection(slide).kind
+    if (slide.websiteNav && !names[kind]) names[kind] = slide.websiteNav
     ;(groups[kind] ||= []).push(...slide.blocks.filter(b=>!(b.type==='text'&&b.style==='label')).map(b=>({...b,sourceSlideId:slide.id})))
   }
   const block = (type,props={})=>({id:'website-'+type,type,...props})
   const text = (style,value)=>block('text',{style,text:value})
-  const section = (kind,nav,blocks)=>({id:'website-'+kind,websiteKind:kind,websiteNav:nav,variant:kind==='cover'?'hero':'plain',blocks})
+  const section = (kind,nav,blocks)=>({id:'website-'+kind,websiteKind:kind,websiteNav:names[kind] || (kind === 'overview' && names.content) || nav,variant:kind==='cover'?'hero':'plain',blocks})
   const hero=groups.overview||[]
   const identity=hero.filter(b=>b.type==='logo'||(b.type==='text'&&b.style==='hero'))
   const introduction=hero.filter(b=>!identity.includes(b))

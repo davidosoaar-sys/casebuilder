@@ -1,3 +1,4 @@
+import { publicProfileUrl } from '../src/profileMedia.js'
 // Asset validation is deterministic. Provenance establishes where the mark was
 // published; these checks establish that it is usable, not a semantic guarantee.
 const attr=(tag,key)=>tag.match(new RegExp('\\b'+key+'=["\']([^"\']+)["\']','i'))?.[1]||''
@@ -60,4 +61,17 @@ export function brandHeroCandidates(html,website,company=''){
   try{const url=new URL(src.replace(/&amp;/g,'&'),website);if(url.protocol==='https:')candidates.push({url:url.href,alt:attr(tag,'alt'),score:campaign?100:meta?80:60})}catch{}
  }
  return candidates.sort((a,b)=>b.score-a.score).filter((c,i,list)=>list.findIndex(x=>x.url===c.url)===i).slice(0,2)
+}
+
+// The same byte and public-network checks serve discovery and later replacements.
+export async function fetchBrandAsset(url, kind, fetcher) {
+  if (!['logo', 'heroImage'].includes(kind)) throw Error('Unknown brand asset.')
+  if (!publicProfileUrl(url)) throw Error('Use a public HTTPS image source.')
+  const image = await fetcher(url, { limit: kind === 'heroImage' ? 700000 : 600000 })
+  if (!publicProfileUrl(image.url)) throw Error('The image source is not public HTTPS.')
+  const mime = image.type.split(';')[0].toLowerCase()
+  if (kind === 'heroImage' && !/^image\/(png|jpeg|webp)$/.test(mime)) throw Error('Use PNG, JPEG or WebP for brand imagery.')
+  const size = inspectBrandImage(image.buffer, mime)
+  if (kind === 'heroImage' && (size.width < 640 || size.height < 240 || size.width / size.height < 1.4)) throw Error('Choose a landscape image at least 640 × 240 pixels.')
+  return { data: 'data:' + mime + ';base64,' + image.buffer.toString('base64'), source: image.url }
 }

@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test",
+    "test": "node --test src/*.test.js src/*/*.test.js server/*.test.js plugin-src/*.test.mjs supabase/*.test.js",
     "build:plugin": "node scripts/build-plugin.mjs",
     "prompts:commands": "node scripts/inspect-agent-prompts.mjs",
     "eval:commands": "node scripts/evaluate-agent-commands.mjs"

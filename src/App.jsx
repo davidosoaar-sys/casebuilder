@@ -11,6 +11,7 @@ import People from './components/People.jsx'
 import useCloudDeals from './useCloudDeals.js'
 import ChatPanel from './components/ChatPanel.jsx'
 import { apiHeaders } from './apiAuth.js'
+import { prepareBrandOps } from './agentBrandAssets.js'
 import { applyAgentReply, undoAgentReply, redoAgentReply, agentReplyConflicts, agentRedoConflicts, agentStepLabel } from './agentDeckEdits.js'
 import useHistory from './useHistory.js'
 import { Toaster, showToast } from './components/ui.jsx'
@@ -258,9 +259,24 @@ export default function App({ account }) {
   // saved with the deal), and undoable with one Undo per reply. Each is also a
   // step in the undo history. Undo always undoes: when the user has changed the
   // same thing since, it returns the places so the card can ask first.
-  const applyFromChat = (messageId, edits, deckOps) => {
-    const entry = project && applyAgentReply(project, messageId, { edits, deckOps }).agentLog?.[messageId]
-    update(p => applyAgentReply(p, messageId, { edits, deckOps }), { label: agentStepLabel(entry), agent: { id: messageId, undone: false } })
+  const applyingReplies = useRef(new Set())
+  const activeProjectId = useRef(currentId)
+  activeProjectId.current = currentId
+  const applyFromChat = async (messageId, edits, deckOps) => {
+    if (!project || applyingReplies.current.has(messageId) || project.agentLog?.[messageId]) return
+    applyingReplies.current.add(messageId)
+    const prepared = await prepareBrandOps(deckOps, project.brand, async (url, kind) => {
+      let code = ''
+      try { code = localStorage.getItem('casebuilder.access') || '' } catch {}
+      const response = await fetch('/api/brand', { method: 'POST', headers: await apiHeaders(code ? { 'x-access-code': code } : {}), body: JSON.stringify({ command: 'resolve_brand_asset', url, kind }), signal: AbortSignal.timeout(15000) })
+      const result = await response.json()
+      if (!response.ok) throw Error(result.error || 'Image validation failed.')
+      return result
+    })
+    if (activeProjectId.current !== project.id) { applyingReplies.current.delete(messageId); return }
+    const entry = project && applyAgentReply(project, messageId, { edits, ...prepared }).agentLog?.[messageId]
+    update(p => applyAgentReply(p, messageId, { edits, ...prepared }), { label: agentStepLabel(entry), agent: { id: messageId, undone: false } })
+    applyingReplies.current.delete(messageId)
   }
   const undoFromChat = (messageId, { force = false } = {}) => {
     if (!project) return {}

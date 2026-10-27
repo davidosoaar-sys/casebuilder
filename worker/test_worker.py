@@ -761,7 +761,8 @@ class DeckOpsInReplyMeta(unittest.TestCase):
             for k, v in saved.items():
                 setattr(worker, k, v)
         msg = [b for p, b in posted if p == "/rest/v1/chat_messages" and b.get("role") == "assistant"][0]
-        self.assertEqual(msg["content"], "Changed the title.")
+        self.assertIn("ready for validation", msg["content"])
+        self.assertNotIn("Changed the title", msg["content"])
         self.assertEqual(msg["meta"]["edits"], [])
         self.assertEqual([o["value"] for o in msg["meta"]["deck_ops"]], ["New title"])
         self.assertEqual(len(msg["meta"]["deck_rejected"]), 1)
@@ -857,3 +858,29 @@ class HermesErrorShapes(unittest.TestCase):
         finally:
             worker.run_hermes = orig
         self.assertEqual((calls, used, fell), (["gemini-3.8-flash", "gemini-3.5-flash-lite"], "gemini-3.5-flash-lite", "gemini-3.8-flash"))
+
+class BrandTemplate(unittest.TestCase):
+    def test_brand_assets_and_section_names(self):
+        _, ops, rejected = worker.parse_deck_ops(deck_reply([
+            {"op": "set_brand", "hideLogo": True, "logo": "candidate:logo:0", "heroImage": "https://company.example/hero.png", "heroAlt": "Campus", "heroSource": "https://company.example/"},
+            {"op": "set_section_name", "slide_id": "s1", "value": "Our case"},
+        ]), DECK_DEAL)
+        self.assertEqual(rejected, [])
+        self.assertTrue(ops[0]["hideLogo"])
+        self.assertEqual(ops[1]["value"], "Our case")
+        self.assertIn("expect", ops[1])
+
+    def test_invalid_media_and_section(self):
+        _, ops, rejected = worker.parse_deck_ops(deck_reply([
+            {"op": "set_brand", "hideLogo": "true", "heroImage": "data:image/png;base64,YQ==", "heroSource": "http://company.example", "heroAlt": "x" * 241},
+            {"op": "set_section_name", "slide_id": "s1", "value": ""},
+            {"op": "set_section_name", "slide_id": "missing", "value": "Our case"},
+        ]), DECK_DEAL)
+        self.assertEqual(ops, [])
+        self.assertEqual(len(rejected), 6)
+
+    def test_prompt_permits_search_and_warns_about_artifact_claims(self):
+        prompt = worker.deck_prompt(DECK_DEAL)
+        self.assertIn("use web search", prompt)
+        self.assertIn("Do not claim", prompt)
+        self.assertNotIn("Never logos or images", prompt)

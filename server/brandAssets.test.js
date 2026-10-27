@@ -68,3 +68,16 @@ test('only the company\'s own domain counts, never a subdomain of another site',
   for (const h of ['tesla.com', 'www.tesla.com', 'tesla.co.uk', 'notion.so', 'coca-colacompany.com']) assert.equal(ownDomain(h, h.startsWith('coca') ? 'Coca-Cola' : h.replace(/^www\./, '').split('.')[0]), true, h)
   for (const [h, c] of [['tesla.wegic.app', 'Tesla'], ['apple.fandom.com', 'Apple'], ['notapple.com', 'Apple'], ['visa.gov.example.org', 'Visa']]) assert.equal(ownDomain(h, c), false, h)
 })
+
+test('replacement assets use the discovery byte checks and reject unsafe sources', async () => {
+ const {fetchBrandAsset}=await import('./brandAssets.js')
+ const fetcher=async url=>({url,type:'image/svg+xml',buffer:Buffer.from(svg)})
+ const result=await fetchBrandAsset('https://company.example/logo.svg','logo',fetcher)
+ assert.match(result.data,/^data:image\/svg\+xml;base64,/)
+ assert.equal(result.source,'https://company.example/logo.svg')
+ await assert.rejects(fetchBrandAsset('http://company.example/logo.svg','logo',fetcher),/HTTPS/)
+ await assert.rejects(fetchBrandAsset('https://127.0.0.1/logo.svg','logo',fetcher),/HTTPS/)
+ await assert.rejects(fetchBrandAsset('https://company.example/logo.svg','heroImage',fetcher),/PNG/)
+ await assert.rejects(fetchBrandAsset('https://company.example/logo.png','logo',async url=>({url,type:'image/png',buffer:Buffer.from('not an image')})))
+ await assert.rejects(fetchBrandAsset('https://company.example/logo.svg','logo',async url=>({url,type:'image/svg+xml',buffer:Buffer.from('<svg viewBox="0 0 160 40"><path onclick="bad()"/></svg>')})),/active content/)
+})

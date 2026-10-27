@@ -191,3 +191,31 @@ test('a reply with only field edits behaves as before', () => {
   assert.deepEqual(Object.keys(patch).sort(), ['agentLog', 'fields'])
   assert.equal(patch.agentLog.m1.deckChanges, undefined)
 })
+
+test('brand template assets and section names apply, undo, redo and protect later edits', async () => {
+  const { redoDeckOps } = await import('./agentDeckEdits.js')
+  const { websiteSection } = await import('./export/websiteFramework.js')
+  const d = deck(), b = brand(), image = 'data:image/png;base64,YWJj'
+  const r = applyDeckOps(d, b, [
+    {op:'set_brand',hideLogo:true,logo:image,heroImage:image,heroSource:'https://company.example/hero.png',heroAlt:'Campus'},
+    {op:'set_section_name',slide_id:d[0].id,value:'Our case'}
+  ])
+  assert.equal(r.refused.length, 0)
+  assert.equal(r.brand.hideLogo, true)
+  assert.equal(websiteSection(r.deck[0]).nav, 'Our case')
+  assert.equal(d[0].websiteNav, undefined)
+  const undo = undoDeckOps(r.deck, r.brand, r.changes)
+  assert.deepEqual(undo.deck, d); assert.deepEqual(undo.brand, b)
+  const redo = redoDeckOps(undo.deck, undo.brand, r.changes)
+  assert.deepEqual(redo.deck, r.deck); assert.deepEqual(redo.brand, r.brand)
+  const conflict = undoDeckOps(r.deck.map((s,i)=>i ? s : {...s,websiteNav:'My name'}), {...r.brand,hideLogo:false}, r.changes)
+  assert.equal(conflict.conflicts.length, 2)
+  assert.equal(conflict.deck[0].websiteNav, 'My name')
+})
+
+test('brand template rejects remote URLs before preparation and invalid field values', () => {
+  const r = applyDeckOps(deck(), brand(), [{op:'set_brand',logo:'https://company.example/logo.png',heroImage:'https://company.example/hero.png',heroSource:'http://company.example',hideLogo:'true',heroAlt:'x'.repeat(241)}])
+  assert.equal(r.changes.length,0); assert.equal(r.refused.length,5)
+  const stale = applyDeckOps(deck(), {hideLogo:false}, [{op:'set_brand',hideLogo:true,expect:{hideLogo:true}}])
+  assert.equal(stale.changes.length,0); assert.equal(stale.refused.length,1)
+})

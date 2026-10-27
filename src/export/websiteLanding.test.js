@@ -31,3 +31,11 @@ test('landing website uses document scrolling without changing PDF or Slides mar
     assert.equal(JSON.parse(html.match(/<script id="data" type="application\/json">([\s\S]*?)<\/script>/)[1]).artwork,'')
   }
 })
+
+test('hidden logo removes the Live room identity including its fallback, retaining photography', () => {
+  assert.equal(landingArtwork({company:'Example',logo:'<svg id="logo"/>',brand:{hideLogo:true}}),'')
+  const html=landingArtwork({company:'Example',logo:'<svg id="logo"/>',brand:{hideLogo:true,heroImage:'data:image/png;base64,YWJj',heroSource:'https://company.example/hero.png'}})
+  assert.ok(html.includes('brand-cover-image'))
+  assert.equal(html.includes('id="logo"'),false)
+  assert.equal(html.includes('landing-initial'),false)
+})

@@ -192,3 +192,9 @@ test('the square icon is found separately from the wordmark logo', async () => {
  assert.notEqual(result.icon,result.logo)
  assert.ok(!calls.some(u=>/favicon\.ico|16x16/.test(u)),'tiny favicons are never used')
 })
+
+test('discovered hero choices keep only embedded images with HTTPS provenance', () => {
+  const heroImage='data:image/png;base64,YWJj'
+  const b=normalizeBrand({heroCandidates:[{heroImage,heroSource:'https://company.example/image',heroAlt:'Campus'},{heroImage:'https://tracker.example/image',heroSource:'https://company.example/'}]})
+  assert.deepEqual(b.heroCandidates,[{heroImage,heroSource:'https://company.example/image',heroAlt:'Campus'}])
+})

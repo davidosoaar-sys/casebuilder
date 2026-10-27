@@ -1100,8 +1100,10 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .brand-panel p { font-size: 12px; color: var(--ink-dim); }
 .brand-panel section { margin-top: 22px; border-top: 1px solid var(--line); padding-top: 18px; }
 .brand-panel label { display: block; font-size: 12px; margin-bottom: 10px; }
-.brand-panel input:not([type=file]):not([type=color]) { display: block; width: 100%; padding: 8px 10px; border: 1px solid var(--line-2); background: var(--bg); color: var(--ink); border-radius: 4px; margin-top: 5px; }
+.brand-panel input:not([type=file]):not([type=color]):not([type=checkbox]) { display: block; width: 100%; padding: 8px 10px; border: 1px solid var(--line-2); background: var(--bg); color: var(--ink); border-radius: 4px; margin-top: 5px; }
 .brand-panel .brand-color { display: grid; grid-template-columns: 1fr 36px 86px; gap: 8px; align-items: center; }
+.brand-panel .brand-hide-logo { display: flex; align-items: center; gap: 8px; }
+.brand-panel .brand-hide-logo input { margin: 0; accent-color: var(--accent); }
 .brand-panel .brand-color input { margin: 0!important; }
 .brand-panel input[type=color], .slide-color-control input { width: 30px; height: 26px; padding: 0; border: 0; background: transparent; cursor: pointer; }
 .brand-panel details { margin: 10px 0; font-size: 12px; }

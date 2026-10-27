@@ -52,6 +52,6 @@ export function websiteSection(slide) {
     : blocks.some(b => b.type === 'room') ? 'stakeholder' : 'content'
   const names = { overview: 'Overview', impact: 'Business impact', drivers: 'Value drivers', comparison: 'What changes', alternative: 'The alternative', stakeholder: 'Your perspective' }
   const title = blocks.find(b => b.type === 'text' && ['title', 'label', 'headline'].includes(b.style) && b.text?.trim())
-  return { kind, nav: names[kind] || title?.text || 'More detail' }
+  return { kind, nav: slide.websiteNav || names[kind] || title?.text || 'More detail' }
 }
 

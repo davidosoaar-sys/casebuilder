@@ -928,9 +928,17 @@ def deck_outline(deal):
     b = deal_brand(deal)
     head = ("Brand: " + ", ".join(f"{k} {b[k]}" for k in BRAND_COLORS)
             + f"; headingFont {b['headingFont']}, bodyFont {b['bodyFont']}.")
+    assets = ((deal or {}).get("data") or {}).get("brand") or {}
+    head += f"\nLogo hidden: {assets.get('hideLogo') is True}; logo present: {bool(assets.get('logo'))}; hero image present: {bool(assets.get('heroImage'))}."
+    head += "\nHero description: " + _snip(assets.get('heroAlt'), 240) + "; source: " + _snip(assets.get('heroSource'), 500)
+    for key, collection in (("logo", "logoVariants"), ("heroImage", "heroCandidates")):
+        candidates = assets.get(collection) or []
+        for i, candidate in enumerate(candidates[:3]):
+            if isinstance(candidate, dict):
+                head += f"\nDiscovered {key}: candidate:{key}:{i} | " + _snip(candidate.get('heroAlt') or candidate.get('sourceUrl') or candidate.get('heroSource'), 300)
     pages, total = [], len(head)
     for i, s in enumerate(deck):
-        lines = [f"Page {i + 1} | slide_id={s['id']} | {s.get('variant') or 'plain'}"]
+        lines = [f"Page {i + 1} | slide_id={s['id']} | {s.get('variant') or 'plain'} | Live room name: {_snip(s.get('websiteNav'), 80)}"]
         for blk in s["blocks"]:
             if not isinstance(blk, dict):
                 continue
@@ -980,11 +988,18 @@ def deck_prompt(deal):
         "text only for Text, Heading, Bullet list and Quote; Two columns takes left and right.\n"
         "- remove_block {slide_id, block_id}.\n"
         f"- set_brand {{primary?, background?, surface?, text?, muted?, headingFont?, bodyFont?}}: colours as #rrggbb; fonts one of {', '.join(agent_fonts(deal))}. "
-        "Never logos or images.\n"
+        "Also supports hideLogo (boolean), logo, heroImage, heroAlt (up to 240 characters), heroSource (public HTTPS). "
+        "For logo or heroImage use a candidate reference from the outline, a direct public HTTPS image URL, or an empty string to remove it. "
+        "Brand discovery is an editable starting point. If candidates are weak, use web search to find relevant company imagery "
+        "and inspect its source; never invent image URLs or substitute unrelated stock photos. The server fetches and validates image bytes "
+        "and records the final image URL as heroSource. If web search is unavailable, ask for an upload or source. "
+        "hideLogo hides the logo across case artifacts. heroImage affects the Live room and one-pager. "
+        "Do not claim a requested change has reached an artifact: application and its change card determine success. Published snapshots require republishing.\n"
+        "- set_section_name {slide_id, value}: Live room navigation label, 1–80 characters.\n"
         "Rules: use only slide and block ids from the outline (pages you add in this reply have no id yet). "
         "Keep the user's wording unless they ask you to change it. Never type figures into text: numbers come from the live blocks "
         "and from tokens, which fill in from the inputs. Tokens: " + ", ".join("{" + t + "}" for t in DECK_TOKENS) + ". "
-        "In the text of your reply, say in one or two plain sentences what you changed in the case. Never show JSON, ids or "
+        "In the text of your reply, briefly describe the requested changes; application determines whether they succeeded. Never show JSON, ids or "
         "operation names to the user. The user can undo your changes, so if the deck is not what you left it, they changed it "
         "on purpose: work from the outline. If nothing in the case should change, do not include the block. "
         "You may use this block together with the edits and commands blocks."
@@ -1002,6 +1017,14 @@ def _deck_text(v):
     if FIGURE.search(TOKEN.sub("", t)):
         return None, "the agent cannot type figures into the case; numbers come from the inputs through number blocks and tokens"
     return t, None
+
+
+def _brand_https(value):
+    try:
+        u = urllib.parse.urlparse(value)
+        return len(value) <= 2000 and u.scheme == "https" and bool(u.hostname) and "." in u.hostname and not u.username and not u.password and not u.port and not re.fullmatch(r"[\d.]+", u.hostname)
+    except ValueError:
+        return False
 
 
 def parse_deck_ops(text, deal):
@@ -1038,7 +1061,7 @@ def parse_deck_ops(text, deal):
             rejected.append("One case change was not readable.")
             continue
         kind, sid = o.get("op"), o.get("slide_id")
-        if kind in ("set_text", "set_style", "remove_slide", "move_slide", "add_block", "remove_block") and sid not in blocks:
+        if kind in ("set_section_name", "set_text", "set_style", "remove_slide", "move_slide", "add_block", "remove_block") and sid not in blocks:
             rejected.append(f"{kind}: there is no page {str(sid)[:20]!r} in the deck.")
             continue
         types = dict(blocks.get(sid) or [])
@@ -1138,6 +1161,13 @@ def parse_deck_ops(text, deal):
         elif kind == "remove_block":
             blocks[sid] = [x for x in blocks[sid] if x[0] != o["block_id"]]
             ops.append({"op": kind, "slide_id": sid, "block_id": o["block_id"], "reason": reason(o)})
+        elif kind == "set_section_name":
+            value = o.get("value")
+            if not isinstance(value, str) or not 0 < len(value.strip()) <= 80 or re.search(r"[\x00-\x1f]", value):
+                rejected.append("A Live room section name needs 1–80 characters.")
+                continue
+            slide = next(s for s in deck if s["id"] == sid)
+            ops.append({"op": kind, "slide_id": sid, "value": value.strip(), "expect": slide.get("websiteNav") or "", "reason": reason(o)})
         elif kind == "set_brand":
             op = {"op": kind, "reason": reason(o)}
             for key, v in o.items():
@@ -1154,9 +1184,24 @@ def parse_deck_ops(text, deal):
                         op[key] = f
                     else:
                         rejected.append(f"set_brand: {str(v)[:40]!r} is not one of the fonts the case can use.")
+                elif key == "hideLogo" and isinstance(v, bool):
+                    op[key] = v
+                elif key in ("logo", "heroImage") and isinstance(v, str) and (v == "" or _brand_https(v) or re.fullmatch(r"candidate:" + key + r":[0-2]", v)):
+                    op[key] = v
+                elif key == "heroSource" and isinstance(v, str) and (v == "" or _brand_https(v)):
+                    op[key] = v
+                elif key == "heroAlt" and isinstance(v, str) and len(v) <= 240:
+                    op[key] = v
                 else:
                     rejected.append(f"set_brand: the agent cannot change the brand's {str(key)[:30]}.")
+            if "heroImage" in o and "heroImage" not in op:
+                op.pop("heroAlt", None)
+                op.pop("heroSource", None)
             if len(op) > 2:
+                brand = ((deal or {}).get("data") or {}).get("brand") or {}
+                expected = {k: brand.get(k) for k in op if k in ("hideLogo", "heroAlt", "heroSource")}
+                if expected:
+                    op["expect"] = expected
                 ops.append(op)
         else:
             rejected.append(f"{str(kind)[:30]!r} is not a case change the agent can make.")
@@ -1468,13 +1513,16 @@ def handle(job):
     text, deck_ops, deck_rejected = parse_deck_ops(text, deal) if deal else (text, [], [])
     text, edits, rejected = parse_edits(text, editable_fields(deal)) if deal else (text, [], [])
     rejected += cmd_rejected
-    result = {"text": text, "edits": edits, "commands": commands, "rejected": rejected, "deck_ops": deck_ops, "deck_rejected": deck_rejected,
+    deck_requested = bool(re.search(r"```" + re.escape(DECK_FENCE), raw or ""))
+    if deck_requested:
+        text = "Case changes are ready for validation in the app; the change card reports what was applied." if deck_ops else "No case changes were applied. The requested changes were rejected."
+    result = {"text": text, "edits": edits, "commands": commands, "rejected": rejected, "deck_ops": deck_ops, "deck_rejected": deck_rejected, "deck_requested": deck_requested,
               "trace": trace, "model": model, "seconds": secs, "usage": usage}
     if job.get("deal_id") and deal:
         api("POST", "/rest/v1/chat_messages", {"deal_id": job["deal_id"], "owner_id": owner, "chat_id": chat_id,
             "role": "assistant", "content": text, "job_id": jid,
             "meta": {"model": model, **({"fell_back_from": fell_back} if fell_back else {}), "effort": effort, "web": web, "seconds": secs, "edits": edits, "commands": commands, "rejected": rejected,
-                     "deck_ops": deck_ops, "deck_rejected": deck_rejected, "trace": trace,
+                     "deck_ops": deck_ops, "deck_rejected": deck_rejected, "deck_requested": deck_requested, "trace": trace,
                      **scheduled_meta(job), **({"skill": skill[0]} if skill else {})}}, prefer="return=minimal")
     rpc("complete_job", p_id=jid, p_worker=WORKER_ID, p_result=result)
     u = usage or {}
