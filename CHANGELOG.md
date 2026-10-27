@@ -48,10 +48,6 @@ Every version that lands on `main` gets a line here and a git tag.
 - Fix publishing URLs when Vercel truncates the generated production alias. A local no-customer-data deployment was verified publicly reachable; credentials stay server-only and uncommitted.
 - Validation: 515 of 516 suite tests pass; the existing locale-sensitive schedule AM/PM assertion remains. Application/plugin builds pass. Isolated browser checks verify action-driven onboarding, per-page dismissal, desktop/mobile themes and black/white logo conversion. The complete signed-in customer workflow still needs user acceptance testing. Git release does not itself confirm a Vercel/worker deployment.
 
-<<<<<<< HEAD
-
-=======
->>>>>>> bruno/v0.22.2-fixes
 ## v0.22.1 (2026-10-27): Restart the tour from Settings
 
 - Settings > Admin has a Restart tour button. It clears your tour progress (welcome and every seen tip, only for your account, nothing else in the browser) and starts the guided tour again from Create a project, the way a new account sees it. Admins only.
