@@ -37,6 +37,11 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
+## v0.22.1 (2026-10-27): Restart the tour from Settings
+
+- Settings > Admin has a Restart tour button. It clears your tour progress (welcome and every seen tip, only for your account, nothing else in the browser) and starts the guided tour again from Create a project, the way a new account sees it. Admins only.
+- Validation: 517 tests (new: reset clears only this user's welcome and tips), build pass. Checked in a real signed-in browser: tour marked done, no tip shown; after Restart tour, progress cleared and the Create a project tip shows. Screenshots checked by eye.
+
 ## v0.21.0 (2026-10-27): Pitch deck with charts
 
 - New projects start with an 11-page pitch flow (impact, today, value breakdown, drivers, today vs Portal, payback, self-hosting, this room, assumptions, next steps) using the payback, breakdown and confidence charts. Saved decks are unchanged. The deck agent gets design rules and can add charts as `{type: 'chart', kind}`; case files now accept chart blocks.

@@ -33,3 +33,13 @@ export function tipsFor({stage,view},mainEnabled=true){
 const key=(userId,id)=>`casebuilder.tip.v1:${userId}:${id}`
 export function tipSeen(userId,id,storage=globalThis.localStorage){try{return storage.getItem(key(userId,id))==='seen'}catch{return false}}
 export function markTipSeen(userId,id,storage=globalThis.localStorage){try{storage.setItem(key(userId,id),'seen')}catch{}}
+
+// Admin "Restart tour": forget the welcome and every seen tip for this user, so the
+// whole tour shows again exactly as a new account sees it. Returns how many were cleared.
+export function resetTour(userId,storage=globalThis.localStorage){
+ try{
+  const keys=[]
+  for(let i=0;i<storage.length;i++){const k=storage.key(i);if(k===`casebuilder.welcome.v1:${userId}`||k?.startsWith(`casebuilder.tip.v1:${userId}:`))keys.push(k)}
+  keys.forEach(k=>storage.removeItem(k));return keys.length
+ }catch{return 0}
+}

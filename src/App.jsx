@@ -8,6 +8,7 @@ import BrandSetup from './components/BrandSetup.jsx'
 import TemplateSetup from './components/TemplateSetup.jsx'
 import SetupProgress from './components/SetupProgress.jsx'
 import FirstVisit from './components/FirstVisit.jsx'
+import { resetTour } from './tourTips.js'
 import Details from './components/Details.jsx'
 import StakeholderMap from './components/StakeholderMap.jsx'
 import People from './components/People.jsx'
@@ -84,6 +85,8 @@ export default function App({ account }) {
   const [adminView, setAdminViewState] = useState(() => { try { return localStorage.getItem(ADMIN_VIEW_KEY) !== 'regular' } catch { return true } })
   const setAdminView = on => { setAdminViewState(on); try { localStorage.setItem(ADMIN_VIEW_KEY, on ? 'admin' : 'regular') } catch {} }
   const admin = isAdminAccount && adminView
+  // Admin: replay the guided tour from the start (clears this user's tour progress).
+  const [tourRun, setTourRun] = useState(0)
   const [connections, setConnections] = useState(loadConnections)
   const cloud = useCloudDeals(account.session.user.id, connections)
   const { deals: projects, setDeals: setProjects, loading: dealsLoading } = cloud
@@ -109,6 +112,12 @@ export default function App({ account }) {
   }, [dealsLoading, projects])
   const [createRequest, setCreateRequest] = useState(0)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  function restartTour() {
+    resetTour(account.session.user.id)
+    setSettingsOpen(false)
+    navigate('dashboard')
+    setTourRun(n => n + 1)
+  }
   // Agent: its own tab, or split beside the other tabs (width remembered).
   const [split, setSplit] = useState(() => { try { return localStorage.getItem('casebuilder.agent-split') === '1' } catch { return false } })
   const [chatWidth, setChatWidth] = useState(() => { try { return Number(localStorage.getItem('casebuilder.agent-width')) || 420 } catch { return 420 } })
@@ -349,10 +358,10 @@ export default function App({ account }) {
   }
 
   const settingsOverlay = settingsOpen && (
-    <Settings account={account} name={user} onName={setUser} theme={theme} onTheme={setTheme} isAdminAccount={isAdminAccount} adminView={adminView} onAdminView={setAdminView} onClose={() => setSettingsOpen(false)} />
+    <Settings account={account} name={user} onName={setUser} theme={theme} onTheme={setTheme} isAdminAccount={isAdminAccount} adminView={adminView} onAdminView={setAdminView} onRestartTour={restartTour} onClose={() => setSettingsOpen(false)} />
   )
 
-  const welcomeOverlay=<FirstVisit userId={account.session.user.id} context={{stage,view}} suspended={settingsOpen}/>
+  const welcomeOverlay=<FirstVisit key={tourRun} userId={account.session.user.id} context={{stage,view}} suspended={settingsOpen}/>
   if (project && stage === 'map') {
     return (
       <div className="layout">

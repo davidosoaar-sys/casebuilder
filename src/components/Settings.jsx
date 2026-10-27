@@ -19,7 +19,7 @@ export function useModelKeys(userId) {
   return { keys, error, reload: load }
 }
 
-export default function Settings({ account, name, onName, theme, onTheme, onClose, isAdminAccount = false, adminView = true, onAdminView}) {
+export default function Settings({ account, name, onName, theme, onTheme, onClose, isAdminAccount = false, adminView = true, onAdminView, onRestartTour}) {
   const user = account.session.user
   const { keys, error: keysError, reload } = useModelKeys(user.id)
   const [pwOpen, setPwOpen] = useState(false)
@@ -88,6 +88,11 @@ export default function Settings({ account, name, onName, theme, onTheme, onClos
                 </div>
               </div>
               <p className="settings-help">Regular user hides admin-only pages (like Waitlist) so you see what everyone else sees. Only you see this switch.</p>
+              <div className="settings-row">
+                <span className="settings-label">Tour</span>
+                <button type="button" className="ghost" onClick={() => onRestartTour && onRestartTour()}>Restart tour</button>
+              </div>
+              <p className="settings-help">Shows the guided tour again from the first step, the way a new account sees it.</p>
             </section>
           )}
 
