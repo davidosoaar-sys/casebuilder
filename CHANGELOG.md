@@ -26,6 +26,7 @@ Every version that lands on `main` gets a line here and a git tag.
 ---
 
 ## Unreleased
+- Live room: the site now sizes against its own container instead of the viewport, so the top bar, hero lockup, KPI row and stakeholder centre no longer overlap inside the app; partner logos lose their white boxes and the client sees the company name without the sample suffix.
 
 ## v0.19.2 (2026-10-27): Live calendar and Gmail fixes from the first real connection
 
