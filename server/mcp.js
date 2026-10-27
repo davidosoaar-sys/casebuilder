@@ -16,7 +16,7 @@ export const mcpTools = [
   ['calculate','Calculate with the canonical model; missing values stay unknown.',schema(identity)],
   ['links','Get signed-in app links to the Live Room and deck. Does not publish.',schema(identity)]
 ].map(([name,description,inputSchema]) => ({name:`casebuilder_${name}`,description,inputSchema}))
-const versions = ['2025-06-18','2025-03-26','2024-11-05']
+const versions = ['2025-11-25','2025-06-18','2025-03-26','2024-11-05']
 function validate(value, s) {
   if (s.enum && !s.enum.includes(value)) throw Error('Invalid argument value')
   if (s.type && !(Array.isArray(s.type) ? s.type : [s.type]).some(t => t === 'array' ? Array.isArray(value) : t === 'integer' ? Number.isInteger(value) : t === 'object' ? value && typeof value === 'object' && !Array.isArray(value) : typeof value === t)) throw Error('Invalid argument type')
@@ -34,8 +34,7 @@ export function createMcpHandler({env = process.env, fetchImpl = fetch} = {}) {
     const send = (status,body) => body === undefined ? res.status(status).end() : res.status(status).json(body)
     if (req.method !== 'POST') { res.setHeader('Allow','POST'); return send(405,{error:'Method not allowed'}) }
     const appUrl = env.APP_URL || env.VITE_APP_URL || (env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${env.VERCEL_PROJECT_PRODUCTION_URL}` : '')
-    if (req.headers?.origin && ![appUrl && new URL(appUrl).origin,'https://claude.ai'].includes(req.headers.origin)) return send(403,{error:'Origin not allowed'})
-    if (req.headers?.['mcp-protocol-version'] && !versions.includes(req.headers['mcp-protocol-version'])) return send(400,{error:'Unsupported protocol version'})
+    if (req.headers?.origin && ![appUrl && new URL(appUrl).origin,'https://claude.ai','https://claude.com'].includes(req.headers.origin)) return send(403,{error:'Origin not allowed'})
     const {url,secret} = supabaseServerEnv(env)
     if (!url || !secret) return send(503,{error:'Connector unavailable'})
     const db = async (table,params,method='GET',body) => {

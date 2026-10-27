@@ -32,10 +32,13 @@ const inputs=[{key:'engineers',value:100,state:'input',origin:'Customer'}]
 test('SHA-256 known vector',()=>assert.equal(hashToken('abc'),'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'))
 test('initialize, discovery, ping and notification',async()=>{
  const {request}=fixture()
- for(const version of ['2025-06-18','2025-03-26','2024-11-05']) assert.equal((await request({jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:version}})).body.result.protocolVersion,version)
+ for(const version of ['2025-11-25','2025-06-18','2025-03-26','2024-11-05']) assert.equal((await request({jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:version}})).body.result.protocolVersion,version)
  assert.equal((await request({jsonrpc:'2.0',id:1,method:'tools/list'})).body.result.tools.length,6)
  assert.deepEqual((await request({jsonrpc:'2.0',id:1,method:'ping'})).body.result,{})
  assert.equal((await request({jsonrpc:'2.0',method:'notifications/initialized'})).code,202)
+ // Claude sends the newest protocol header; a newer unknown one must not be refused either.
+ for(const v of ['2025-11-25','2099-01-01']) assert.equal((await request({jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:v}},{headers:{'mcp-protocol-version':v}})).code,200)
+ assert.equal((await request({jsonrpc:'2.0',id:1,method:'ping'},{headers:{origin:'https://claude.ai'}})).code,200)
 })
 test('HTTP and JSON errors, revoked tokens, origin checks',async()=>{
  const {request}=fixture()

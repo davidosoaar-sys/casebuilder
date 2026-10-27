@@ -27,6 +27,11 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
+## v0.19.1 (2026-10-27): Claude connector accepts current Claude clients
+
+- Fix: adding the CaseBuilder connector in Claude failed with 400 "Not found". Claude sends MCP protocol 2025-11-25, which the server refused. The server now accepts it and no longer refuses newer protocol headers; claude.com is an allowed origin alongside claude.ai.
+- Validation: 484 tests pass (MCP handler test covers 2025-11-25, a future version and the claude.ai origin); build passes.
+
 ## v0.19.0 (2026-10-27): Live connectors, Claude connector, editable brand
 
 - Brand discovery is now a starting point, not a lock. In Deck design you can replace the logo or brand image by upload, pick another logo or image found during discovery, remove either, or hide the logo everywhere (deck, Live room, exports). Colours and fonts stay editable as before.
