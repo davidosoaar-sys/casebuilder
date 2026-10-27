@@ -319,8 +319,8 @@ export async function buildPptx({ company, slides, deps, brand }) {
     }
     if (sl.variant === 'hero' && !sl.design?.background) {
       // A soft teal glow bottom-right stands in for the gradient.
-      s.addShape('ellipse', { x: W - 6.2, y: H - 5.2, w: 9, h: 9, fill: { color: C.panel, transparency: 40 }, line: { color: C.panel, width: 0, transparency: 100 } })
-      s.addShape('ellipse', { x: W - 4.2, y: H - 3.8, w: 6, h: 6, fill: { color: C.accent, transparency: 86 }, line: { color: C.accent, width: 0, transparency: 100 } })
+      s.addShape('ellipse', { x: W - 6, y: H - 6, w: 6, h: 6, fill: { color: C.panel, transparency: 40 }, line: { color: C.panel, width: 0, transparency: 100 } })
+      s.addShape('ellipse', { x: W - 4, y: H - 4, w: 4, h: 4, fill: { color: C.accent, transparency: 86 }, line: { color: C.accent, width: 0, transparency: 100 } })
     }
 
     const laid = []
