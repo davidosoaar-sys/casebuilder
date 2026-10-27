@@ -1,3 +1,4 @@
+import { stateOf } from '../source.js'
 import { clientCompanyName } from '../companyName.js'
 import {caseNarrative} from '../caseNarrative.js'
 import { uid } from '../uid.js'
@@ -210,6 +211,9 @@ export const BLOCK_MENU = [
   { name: 'Image', make: () => block('image', { src: '', caption: '' }) },
   { name: 'Key numbers', make: () => block('stats', { items: STAT_KEYS.map(([k]) => k) }) },
   { name: 'Value drivers chart', make: () => block('drivers') },
+  { name: 'Payback chart', make: () => block('chart', { kind: 'payback' }) },
+  { name: 'Value breakdown chart', make: () => block('chart', { kind: 'breakdown' }) },
+  { name: 'Input confidence chart', make: () => block('chart', { kind: 'confidence' }) },
   { name: 'Today vs with Portal', make: () => block('pairs') },
   { name: 'Portal vs self-hosting', make: () => block('versus') },
   { name: 'Stakeholder brief', make: () => block('room') },
@@ -307,6 +311,8 @@ export function resolveBlock(b, env) {
         waiting: waitingFor(env, ['totalValue', 'netValue', 'paybackMonths'].filter(k => keys.some(x => STAT_FIGURE[x] === k)))
       }
     }
+    case 'chart':
+      return resolveChart(b, env)
     case 'drivers': {
       const groups = driversByPillar(model, inputs.archetype, inputs.strategicPriority)
       const max = Math.max(...groups.flatMap(g => g.items.map(d => d.value)), 1)
@@ -394,7 +400,7 @@ export function resolveBlock(b, env) {
   }
 }
 
-export const LIVE = new Set(['stats', 'drivers', 'pairs', 'versus'])
+export const LIVE = new Set(['stats', 'drivers', 'pairs', 'versus', 'chart'])
 
 // A live block with nothing it can compute yet.
 export const isEmptyLive = r =>
@@ -439,4 +445,69 @@ export function hiddenPages(deck, env) {
 export function slideIsEmpty(slide, env) {
   const live = slide.blocks.map(b => resolveBlock(b, env)).filter(r => LIVE.has(r.kind))
   return live.length > 0 && live.every(isEmptyLive)
+}
+
+// ----------------------------------------------------- chart blocks
+// Charts read the model's figures; nothing is recomputed differently here.
+// A chart with nothing to show returns its waiting list instead of zeros.
+const CHART_DRIVERS = [
+  ['productivityValue', 'Engineer time recovered', 'capacity'],
+  ['onboardingValue', 'Faster onboarding', 'capacity'],
+  ['incidentValue', 'Shorter incidents', 'capacity'],
+  ['standardsValue', 'Audit and compliance work avoided', 'capacity'],
+  ['platformValue', 'Platform team maintenance avoided', 'capacity'],
+  ['toolingValue', 'Overlapping tooling retired', 'spend']
+]
+export const CHART_GROUP_LABEL = { capacity: 'Capacity value', spend: 'Spend reduction' }
+export const CONFIDENCE_STATES = [
+  ['input', 'Confirmed'],
+  ['assumption', 'Assumption'],
+  ['suggestion', 'Suggested'],
+  ['empty', 'Empty']
+]
+
+export function resolveChart(b, env) {
+  const { model } = env
+  const F = model.figures
+  const kind = b.kind || 'payback'
+  if (kind === 'payback') {
+    const waiting = waitingFor(env, ['paybackMonths'])
+    const costBlank = model.blankInputs.includes('portalCost')
+    if (F.totalValue.incomplete || F.paybackMonths.incomplete || costBlank) {
+      return { kind: 'chart', chart: 'payback', incomplete: true, waiting: waiting.length ? waiting : ['Annual subscription cost'] }
+    }
+    const monthly = F.totalValue.value / 12
+    const cost = model.inputs.portalCost / 12
+    const months = Array.from({ length: 36 }, (_, i) => i + 1)
+    return {
+      kind: 'chart', chart: 'payback', waiting: [],
+      months,
+      value: months.map(m => Math.round(monthly * m)),
+      cost: months.map(m => Math.round(cost * m)),
+      payback: F.paybackMonths.value > 0 ? fmtMonths(F.paybackMonths.value) : 'n/a',
+      max: Math.max(monthly * 36, cost * 36, 1)
+    }
+  }
+  if (kind === 'breakdown') {
+    const rows = CHART_DRIVERS.filter(([k]) => !F[k].incomplete).map(([k, label, group]) => ({
+      key: k, label, group, groupLabel: CHART_GROUP_LABEL[group], value: Math.max(F[k].value, 0), valueStr: fmtMoney(F[k].value)
+    }))
+    const waiting = waitingFor(env, CHART_DRIVERS.map(([k]) => k))
+    if (!rows.length) return { kind: 'chart', chart: 'breakdown', incomplete: true, rows: [], waiting }
+    const max = Math.max(...rows.map(r => r.value), 1)
+    rows.forEach(r => { r.pct = (r.value / max) * 100 })
+    return { kind: 'chart', chart: 'breakdown', rows, waiting: [] }
+  }
+  if (kind === 'confidence') {
+    const fields = (env.fields || []).filter(f => !f.structural)
+    const counts = Object.fromEntries(CONFIDENCE_STATES.map(([k]) => [k, 0]))
+    fields.forEach(f => { counts[stateOf(f)]++ })
+    const total = fields.length
+    if (!total) return { kind: 'chart', chart: 'confidence', incomplete: true, rows: [], waiting: ['Case inputs'] }
+    return {
+      kind: 'chart', chart: 'confidence', total, waiting: [],
+      rows: CONFIDENCE_STATES.map(([k, label]) => ({ key: k, label, count: counts[k], pct: (counts[k] / total) * 100 }))
+    }
+  }
+  return { kind: 'chart', chart: kind, incomplete: true, waiting: [] }
 }
