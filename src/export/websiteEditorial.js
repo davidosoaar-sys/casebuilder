@@ -120,4 +120,6 @@ body.view-website{display:block;height:auto;min-height:100svh;overflow:visible;b
 .landing-art .brand-logo-overlay{position:static;background:none;padding:0;margin-top:20px;max-width:100%}
 .relation-center .co-brand{flex-wrap:wrap;justify-content:center;gap:4px!important;max-width:100%}.relation-center .co-brand img{max-width:100%!important;max-height:22px!important;height:auto!important;width:auto!important;object-fit:contain;background:none}
 .co-brand-partner{background:none!important;mix-blend-mode:multiply}
+.view-website .inner:has(.stats,.overview-bento,.bento-cell) .section-copy{position:static}
+.view-website .forwhom{position:static;display:block;margin-bottom:12px}
 `
