@@ -782,6 +782,9 @@ function BlockEditor({ block: b, no, first, last, selected, dragging, env, canEd
         </div>
       )
       break
+    case 'chart':
+      content = <DeckChart r={r} />
+      break
     case 'drivers':
       content = (
         <>
@@ -1132,4 +1135,54 @@ export function AddStakeholder({ existing, onAdd }) {
       </button>
     </form>
   )
+}
+
+// Chart blocks: payback, value breakdown, input confidence. Plain SVG in brand colours.
+const CONF_COLOR = { input: 'var(--accent)', assumption: '#ffba00', suggestion: '#7aa2f7', empty: 'var(--line-2)' }
+function DeckChart({ r }) {
+  if (r.incomplete) return <p className="eq chart-waiting">Waiting for: {(r.waiting || []).join(', ')}</p>
+  if (r.chart === 'payback') {
+    const W = 600, H = 220, P = 30
+    const x = i => P + (i / (r.months.length - 1)) * (W - 2 * P)
+    const yv = v => H - P - (v / r.max) * (H - 2 * P)
+    const line = arr => arr.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${yv(v).toFixed(1)}`).join(' ')
+    const area = `${line(r.value)} L${x(r.months.length - 1)},${H - P} L${x(0)},${H - P} Z`
+    return (
+      <figure className="deck-chart" data-chart="payback">
+        <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Cumulative value against cumulative cost over 36 months">
+          <line x1={P} y1={H - P} x2={W - P} y2={H - P} stroke="var(--line-2)" />
+          <path d={area} fill="var(--accent)" opacity="0.15" />
+          <path d={line(r.value)} fill="none" stroke="var(--accent)" strokeWidth="2.5" />
+          <path d={line(r.cost)} fill="none" stroke="#e5399a" strokeWidth="2" strokeDasharray="5 4" />
+          {[0, 11, 23, 35].map(i => <text key={i} x={x(i)} y={H - 10} fill="var(--ink-faint)" fontSize="11" textAnchor="middle">M{i + 1}</text>)}
+        </svg>
+        <figcaption className="eq"><span style={{ color: 'var(--accent)' }}>Cumulative value</span> vs <span style={{ color: '#e5399a' }}>cumulative cost</span>. Payback {r.payback}.</figcaption>
+      </figure>
+    )
+  }
+  if (r.chart === 'breakdown') {
+    return (
+      <div className="chart deck-chart" data-chart="breakdown">
+        {r.rows.map(d => (
+          <div key={d.key} className="bar-row">
+            <div className="bar-label">{d.label} <span className="eq">({d.groupLabel.toLowerCase()})</span></div>
+            <div className="bar-track"><div className="bar-bar" style={{ width: `${d.pct}%`, background: d.group === 'spend' ? '#ffba00' : 'var(--accent)' }} /></div>
+            <div className="bar-value">{d.valueStr}</div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+  if (r.chart === 'confidence') {
+    let acc = 0
+    return (
+      <figure className="deck-chart" data-chart="confidence">
+        <svg viewBox="0 0 600 40" width="100%" role="img" aria-label="Inputs by source">
+          {r.rows.map(row => { const xx = acc; acc += row.pct * 6; return <rect key={row.key} x={xx} y="0" width={row.pct * 6} height="40" fill={CONF_COLOR[row.key]} /> })}
+        </svg>
+        <figcaption className="eq">{r.rows.map(row => <span key={row.key} style={{ marginRight: 14 }}><span style={{ color: CONF_COLOR[row.key] }}>■</span> {row.label} {row.count}</span>)} of {r.total} inputs</figcaption>
+      </figure>
+    )
+  }
+  return null
 }

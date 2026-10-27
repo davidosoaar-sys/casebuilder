@@ -499,7 +499,7 @@ export function resolveChart(b, env) {
     return { kind: 'chart', chart: 'breakdown', rows, waiting: [] }
   }
   if (kind === 'confidence') {
-    const fields = (env.fields || []).filter(f => !f.structural)
+    const fields = (env.fields || []).filter(f => !f.deleted && ['number', 'percent'].includes(f.type) && !f.structural)
     const counts = Object.fromEntries(CONFIDENCE_STATES.map(([k]) => [k, 0]))
     fields.forEach(f => { counts[stateOf(f)]++ })
     const total = fields.length
