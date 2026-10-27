@@ -22,10 +22,10 @@ const pages={
  agent:tip('agent','Ask the Agent','Ask questions or request case edits using the available project context. Review its sources and proposed changes.','[data-tour="agent"]','page')
 }
 export function tipsFor({stage,view},mainEnabled=true){
+ if(!mainEnabled)return []
  if(stage)return mainEnabled&&main[stage]?[main[stage]]:[]
  if(pages[view])return [pages[view]]
  if(view==='details')return [main.inputs]
- if(!mainEnabled)return []
  if(['projects','dashboard'].includes(view))return [main.project]
  if(view==='website'||view==='deck')return [main[view]]
  return []

@@ -13,7 +13,7 @@ export default function FirstVisit({userId,userName='',onName,context={view:'das
  const welcome=!!(intro&&enabled&&userId&&!suspended)
  const target=tip?.target,id=tip?.id
  const dismiss=()=>{if(!tip)return;seen.current.add(tip.id);if(!force)markTipSeen(userId,tip.id);refresh(n=>n+1)}
- const skip=()=>{skipped.current=true;setIntro(false);if(!force){finishIntroduction(userId);finishWelcome(userId)}if(tip?.kind==='page')dismiss();else refresh(n=>n+1)}
+ const skip=()=>{skipped.current=true;setIntro(false);if(!force){finishIntroduction(userId);finishWelcome(userId)}refresh(n=>n+1)}
  useEffect(()=>{
   setGeometry(null);targetNode.current=null
   if(!target||suspended||welcome)return

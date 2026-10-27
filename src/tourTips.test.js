@@ -8,8 +8,10 @@ test('project guidance follows real stages rather than Next advancing to future 
  assert.deepEqual(tipsFor({view:'website'}).map(t=>t.id),['edit-case'])
  assert.deepEqual(tipsFor({stage:'map'},false),[])
 })
-test('page tips remain independent of main-tour completion and persist per account',()=>{
- for(const view of ['details','skills','connections','scheduled','files','research','lookup','agent'])assert.equal(tipsFor({view},false)[0].kind,'page')
+test('Skip tour suppresses every page and stage while individual tips persist per account',()=>{
+ for(const view of ['dashboard','projects','details','website','deck','skills','connections','scheduled','files','research','lookup','agent'])assert.deepEqual(tipsFor({view},false),[])
+ for(const stage of ['map','brand','people','theme'])assert.deepEqual(tipsFor({stage},false),[])
+ for(const view of ['details','skills','connections','scheduled','files','research','lookup','agent'])assert.equal(tipsFor({view},true)[0].kind,'page')
  const map=new Map(),storage={getItem:k=>map.get(k),setItem:(k,v)=>map.set(k,v)}
  assert.equal(tipSeen('chris','skills',storage),false)
  markTipSeen('chris','skills',storage)

@@ -25,6 +25,12 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ---
 
+## v0.23.1 (2026-10-27): Skip the entire tour
+
+- Fix Skip tour to suppress all onboarding, including independent Inputs, Skills, Connectors, lookup and other page tips, across navigation and reloads. Restart tour remains the explicit way to enable it again.
+  Validation: five onboarding tests pass; actual-app checks confirm no guide after Skip tour, reload, Skills or Connectors navigation.
+
+
 ## v0.23.0 (2026-10-27): Guided onboarding, people briefs and slide import options
 
 - Start onboarding with a short welcome/name step. Anchored callouts, arrows and a dark spotlight make the next action clear and block unrelated clicks. Real actions advance their tips; Skip tour remains available. Remove persistent page-wide Skills outlines and add an independent Inputs guide.

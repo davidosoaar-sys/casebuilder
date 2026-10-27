@@ -13,8 +13,10 @@ Side callouts point to the real action, with a dark spotlight blocking clicks
 outside the highlighted area. Clicking the action advances its tip; broad page
 explanations have Continue. Skip tour remains available.
 Guidance waits for actual page/stage changes instead of navigating automatically.
-Other workspace pages have independent tips, remembered per account in this
-browser. Onboarding itself never creates deals, runs research or sets up tools.
+Workspace tips are remembered per account in this browser. Skip tour disables
+all onboarding, including page tips and future setup steps, across navigation
+and reloads. Restart tour explicitly enables it again. Onboarding itself never
+creates deals, runs research or sets up tools.
 Person lookup presents a sourced professional summary and a verified public
 portrait when available. Unavailable background/photos are stated explicitly.
 
