@@ -1,3 +1,4 @@
+import ClaudeConnector from './ClaudeConnector.jsx'
 import PageHead from './PageHead.jsx'
 import React, { useState, useEffect } from 'react'
 import { CONNECTORS, LIVE_TOOLKITS } from '../connectors.js'
@@ -54,14 +55,15 @@ export default function Connections({ project, projects=[],selectedProjectId='',
         Public web search is also available. {allowed ? `${allowed} upload sources allowed.` : 'Upload sources are off until you allow them.'}
       </p>
       <p className="help conn-build-note">
-        Live connections authorize account-wide server reads for the agent and scheduled skills. Upload permissions below apply to the selected project. Unconfigured services use upload or paste only.
+        Connect Claude to your saved projects, and connect live accounts so the agent and scheduled skills can read them. Upload permissions below apply to the selected project. Services that are not connected use upload or paste.
       </p>
       {error && <p className="warn connector-error" role="alert">{error} <button className="ghost" onClick={() => refresh().then(() => setError('')).catch(e => setError(e.message))}>Retry</button></p>}
       {onSelectProject && <div className="connection-project-target"><label htmlFor="connection-project">Settings and material for</label><Select id="connection-project" aria-label="Connection project" value={project?.id || selectedProjectId} onChange={onSelectProject}
         options={[{ value: '', label: 'Default settings for new projects' }, ...projects.map(p => ({ value: p.id, label: p.name }))]} /></div>}
 
       <div className="connector-list">
-        {[...CONNECTORS].sort((a, b) => a.label.localeCompare(b.label)).map((c, i) => (
+        <ClaudeConnector />
+        {CONNECTORS.filter(c => c.key !== 'claude').sort((a, b) => a.label.localeCompare(b.label)).map((c, i) => (
           <section key={c.key} className={`connector stagger-in ${connections[c.key] ? 'connector-on' : ''}`} style={{ '--stagger': `${Math.min(i * 30, 200)}ms` }} data-connector={c.key}>
             <div className="connector-head">
               {LOGOS[c.key] ? <img className="connector-logo" src={LOGOS[c.key]} alt="" width="36" height="36" /> : <span className="connector-logo" aria-hidden="true">▦</span>}

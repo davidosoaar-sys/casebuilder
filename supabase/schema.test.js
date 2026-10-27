@@ -489,3 +489,18 @@ test('skills are account-wide (0013): no project needed, one row per prebuilt pe
   assert.equal((await user(B, tx => tx.query(`select id from public.skills where id = $1`, [mine]))).rows.length, 0)
   await rejects(user(A, tx => tx.query(`insert into public.skills (owner_id, deal_id, name) values ($1, 'deal-b', 'x')`, [A])), /row-level security/)
 })
+
+test('MCP tokens (0015): owner isolation, hash uniqueness and restricted updates', async () => {
+  await db.exec(readFileSync(new URL('./migrations/0015_mcp_tokens.sql', import.meta.url), 'utf8'))
+  const hash = 'a'.repeat(64)
+  const add = (caller, owner, value) => user(caller, tx => tx.query('insert into public.mcp_tokens(owner_id,token_hash) values ($1,$2) returning id',[owner,value]))
+  const id = (await add(A,A,hash)).rows[0].id
+  await rejects(add(B,A,'b'.repeat(64)), /row-level security/)
+  await rejects(add(A,A,hash), /duplicate key|unique/)
+  await rejects(add(A,A,'raw-secret'), /check constraint/)
+  assert.equal((await user(B,tx=>tx.query('select * from public.mcp_tokens'))).rows.length,0)
+  await rejects(user(A,tx=>tx.query('update public.mcp_tokens set token_hash=$1 where id=$2',['c'.repeat(64),id])),/permission denied/)
+  assert.equal((await user(B,tx=>tx.query('update public.mcp_tokens set revoked_at=now() where id=$1',[id]))).affectedRows,0)
+  await user(A,tx=>tx.query('update public.mcp_tokens set revoked_at=now() where id=$1',[id]))
+  assert.ok((await service(tx=>tx.query('select revoked_at from public.mcp_tokens where id=$1',[id]))).rows[0].revoked_at)
+})

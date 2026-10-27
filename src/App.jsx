@@ -93,6 +93,16 @@ export default function App({ account }) {
     supabase.auth.updateUser({ data: { name } }).catch(() => {})
   }
   const [view, setView] = useState(() => new URLSearchParams(window.location.search).has('connector_callback') ? 'connections' : 'dashboard') // 'dashboard' | 'projects' | 'details' | 'deck' | 'website' | 'settings' | ...
+  const connectorLinkOpened = useRef(false)
+  useEffect(() => {
+    if (dealsLoading || connectorLinkOpened.current) return
+    connectorLinkOpened.current = true
+    const params = new URLSearchParams(window.location.search)
+    const id = params.get('deal'), target = params.get('view')
+    if (projects.some(p => p.id === id) && ['website','deck'].includes(target)) {
+      setCurrentId(id); setView(target)
+    }
+  }, [dealsLoading, projects])
   const [createRequest, setCreateRequest] = useState(0)
   const [settingsOpen, setSettingsOpen] = useState(false)
   // Agent: its own tab, or split beside the other tabs (width remembered).

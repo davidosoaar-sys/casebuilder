@@ -34,6 +34,17 @@ Every version that lands on `main` gets a line here and a git tag.
 - Add Composio-hosted Google Calendar, Gmail, Slack and HubSpot connections with Supabase-authenticated status/disconnect, callback refresh, and honest upload/paste fallbacks. Live credentials stay server-side; reads are scoped to the signed-in owner.
 - Pre-meeting briefs keep the daily 8 AM default and can use matching primary-calendar events over the next 24 hours plus bounded recent Gmail threads. Chat/research can read company-scoped Slack/HubSpot context; connected notes can only propose unconfirmed input changes. Verified against the live Composio API: Connect Link returns a hosted sign-in URL for all four toolkits, and the pinned tool argument names match the published schemas. A real OAuth sign-in and a scheduled run with a connected calendar are still unverified; setup and acceptance steps are in `docs/composio-setup.md`.
 - Keep the live test-account token utility out of automatic offline test execution, preventing accidental sign-in/token output from `npm test`.
+- Add a revocable Claude connector URL, six owner-scoped remote MCP tools,
+  reviewed input updates with stale-write protection, project context notes and
+  signed-in Live Room/deck links. Share input validation with the local bridge.
+  Migration 0015 is included but not applied; deployment/live Claude checks remain.
+- Keep the manual account-token utility out of Node's automatic test discovery
+  by renaming it to `scripts/account-token.mjs`; offline tests no longer require
+  live credentials or risk printing a session token.
+- Validation: 463 tests pass, including handler and token-migration/RLS coverage;
+  production build passes (existing chunk-size warning). Mocked browser connect/revoke
+  passes at desktop/light and mobile/dark sizes without overflow.
+
 
 ## v0.17.1 (2026-10-27): Gemini keys work again, any provider's key falls back, setup shows its progress
 
