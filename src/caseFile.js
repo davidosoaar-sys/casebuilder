@@ -25,7 +25,7 @@ export const CASE_VERSION = 1
 const BUILTIN_KEYS = STAKEHOLDERS.map(s => s.key)
 const FIELD_BY_KEY = Object.fromEntries(INPUT_FIELDS.map(f => [f.key, f]))
 const BLOCK_TYPES = [
-  'text', 'quote', 'columns', 'image', 'stats', 'drivers', 'pairs', 'versus', 'assumptions', 'room', 'logo', 'divider', 'spacer'
+  'text', 'quote', 'columns', 'image', 'stats', 'drivers', 'pairs', 'versus', 'assumptions', 'room', 'logo', 'divider', 'spacer', 'chart'
 ]
 const LINKEDIN = /^https:\/\/([a-z]{2,3}\.)?linkedin\.com\/in\/[^\s?#]+/i
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/

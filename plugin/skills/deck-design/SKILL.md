@@ -39,6 +39,16 @@ template and state its design limits. Do not claim bespoke layouts were applied.
 Use canonical build tools for the selected audience/output. Keep charts/editable
 text editable. Unknown figures are open questions, not zero or invented results.
 
+## Default pitch flow
+New decks start as 11 pages: title; business impact (decision and key numbers);
+where engineering time goes today; value breakdown chart; value drivers; today vs
+with Portal; payback chart; against self-hosting; this room; assumptions
+(confidence chart: confirmed vs assumption); the decision and next steps.
+One takeaway headline per page. At most 5 bullets of 12 words. Figures only from
+live blocks and tokens, never typed. Use chart blocks (payback, breakdown,
+confidence) for numeric stories. Capacity value is not cash savings. When asked to
+build or improve a deck, propose the missing flow pages with add_slide/add_block.
+
 ## Example and evaluation
 Good: "Platform ownership is the decision bottleneck" above a two-column current/
 proposed workflow; a later chart shows only computed drivers and clear units.

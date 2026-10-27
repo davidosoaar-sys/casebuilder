@@ -26,6 +26,8 @@ Every version that lands on `main` gets a line here and a git tag.
 ---
 
 ## Unreleased
+
+- New projects start with an 11-page pitch flow (impact, today, value breakdown, drivers, today vs Portal, payback, self-hosting, this room, assumptions, next steps) using the payback, breakdown and confidence charts. Saved decks are unchanged. The deck agent gets design rules and can add charts as `{type: 'chart', kind}`; case files now accept chart blocks.
 - Deck: new Payback, Value breakdown and Input confidence chart blocks, drawn in the app and exported as native, editable PowerPoint charts. Charts with missing inputs show what they are waiting for instead of zeros.
 
 ## v0.20.1 (2026-10-27): Skills use the live connectors

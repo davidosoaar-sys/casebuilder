@@ -1,3 +1,4 @@
+import inspect
 """Tests for the worker's edit parser. Run from worker/: python3 -m unittest test_worker.py"""
 import json, os, sys, unittest
 
@@ -607,6 +608,25 @@ DECK_DEAL = {"id": "d", "name": "Acme", "data": {"name": "Acme", "fields": DEAL[
 
 def deck_reply(ops):
     return "Changed the title.\n```casebuilder-deck\n" + json.dumps(ops) + "\n```"
+
+
+class DeckChartBlocks(unittest.TestCase):
+    def test_add_block_chart_kinds(self):
+        ops = [{"op": "add_block", "slide_id": "s2", "after_block_id": None, "type": "chart", "kind": k} for k in ("payback", "breakdown", "confidence")]
+        _, out, rej = worker.parse_deck_ops(deck_reply(ops), DECK_DEAL)
+        self.assertEqual(rej, [])
+        self.assertEqual([o["kind"] for o in out], ["Payback chart", "Value breakdown chart", "Input confidence chart"])
+
+    def test_add_block_rejects_unknown_chart_kind_and_type(self):
+        for o in ({"type": "chart", "kind": "pie"}, {"type": "chart", "kind": "Text"}, {"type": "chart"}, {"type": "image", "kind": "Text"}):
+            _, out, rej = worker.parse_deck_ops(deck_reply([{"op": "add_block", "slide_id": "s2", "after_block_id": None, **o}]), DECK_DEAL)
+            self.assertEqual(out, [], o)
+            self.assertEqual(len(rej), 1, o)
+
+    def test_prompt_has_design_rules(self):
+        src = inspect.getsource(worker.deck_prompt)
+        for s in ("Deck design rules", "11 pages", "One takeaway headline", "never type numbers", "payback, breakdown, confidence", "not cash savings"):
+            self.assertIn(s, src)
 
 
 class DeckOutline(unittest.TestCase):

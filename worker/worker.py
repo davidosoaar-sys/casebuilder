@@ -1386,7 +1386,9 @@ SLIDE_TEMPLATES = (("blank", "Blank page"), ("text", "Text page"), ("bullets", "
                    ("pairs", "Today vs with Portal"), ("versus", "Against self-hosting"), ("stakeholder", "This room"))
 TEXTS_TEMPLATES = ("blank", "text", "bullets")
 AGENT_BLOCK_KINDS = ("Text", "Heading", "Bullet list", "Quote", "Two columns", "Key numbers", "Value drivers chart",
+                     "Payback chart", "Value breakdown chart", "Input confidence chart",
                      "Today vs with Portal", "Portal vs self-hosting", "Stakeholder brief", "Divider", "Spacer")
+CHART_KINDS = {"payback": "Payback chart", "breakdown": "Value breakdown chart", "confidence": "Input confidence chart"}
 TEXT_KINDS = ("Text", "Heading", "Bullet list", "Quote")
 BLOCK_TEXT_FIELDS = {"text": ("text",), "quote": ("text",), "columns": ("left", "right"), "image": ("caption",)}
 LIVE_NAMES = {"stats": "key numbers", "drivers": "drivers chart", "pairs": "today vs with Portal", "versus": "Portal vs self-hosting",
@@ -1504,7 +1506,8 @@ def deck_prompt(deal):
         "e.g. [{\"style\": \"label\", \"text\": \"Rollout\"}, {\"style\": \"title\", \"text\": \"Rollout plan\"}, {\"style\": \"body\", \"text\": \"- Pilot with one team\\n- ...\"}].\n"
         "- remove_slide {slide_id}. move_slide {slide_id, to_index}: to_index counts from 0, so 1 makes it page 2.\n"
         f"- add_block {{slide_id, after_block_id, kind, text?}}: kind is one of {', '.join(AGENT_BLOCK_KINDS)}; after_block_id null adds it at the bottom; "
-        "text only for Text, Heading, Bullet list and Quote; Two columns takes left and right.\n"
+        "text only for Text, Heading, Bullet list and Quote; Two columns takes left and right. "
+        "A chart can also be named as {\"type\": \"chart\", \"kind\": \"payback\" | \"breakdown\" | \"confidence\"}.\n"
         "- remove_block {slide_id, block_id}.\n"
         f"- set_brand {{primary?, background?, surface?, text?, muted?, headingFont?, bodyFont?}}: colours as #rrggbb; fonts one of {', '.join(agent_fonts(deal))}. "
         "Also supports hideLogo (boolean), logo, heroImage, heroAlt (up to 240 characters), heroSource (public HTTPS). "
@@ -1522,7 +1525,16 @@ def deck_prompt(deal):
         "In the text of your reply, briefly describe the requested changes; application determines whether they succeeded. Never show JSON, ids or "
         "operation names to the user. The user can undo your changes, so if the deck is not what you left it, they changed it "
         "on purpose: work from the outline. If nothing in the case should change, do not include the block. "
-        "You may use this block together with the edits and commands blocks."
+        "You may use this block together with the edits and commands blocks.\n"
+        "Deck design rules:\n"
+        "- Default order (11 pages): 1 title; 2 business impact (the decision and key numbers); 3 where engineering time goes today; "
+        "4 value breakdown chart; 5 value drivers; 6 today vs with Portal; 7 payback chart; 8 against self-hosting; 9 this room; "
+        "10 assumptions (confidence chart: confirmed vs assumption); 11 the decision and next steps.\n"
+        "- One takeaway headline per page. At most 5 bullets, each at most 12 words.\n"
+        "- Every figure comes only from live blocks and tokens; never type numbers.\n"
+        "- Tell numeric stories with chart blocks: payback, breakdown, confidence.\n"
+        "- Capacity value is recovered engineering time, not cash savings; say so and never force a favorable result.\n"
+        "- When asked to build or improve a deck, propose the missing flow pages with add_slide and add_block."
     )
 
 
@@ -1655,6 +1667,14 @@ def parse_deck_ops(text, deal):
             ops.append({"op": kind, "slide_id": sid, "to_index": to, "reason": reason(o)})
         elif kind == "add_block":
             k, after = o.get("kind"), o.get("after_block_id")
+            if o.get("type") == "chart":
+                if not isinstance(k, str) or k not in CHART_KINDS:
+                    rejected.append(f"add_block: there is no {str(k)[:30]!r} chart; use payback, breakdown or confidence.")
+                    continue
+                k = CHART_KINDS[k]
+            elif o.get("type") is not None:
+                rejected.append(f"add_block: a {str(o.get('type'))[:30]!r} block cannot be added by the agent.")
+                continue
             if k not in AGENT_BLOCK_KINDS:
                 rejected.append(f"add_block: {str(k)[:30]!r} cannot be added by the agent.")
                 continue

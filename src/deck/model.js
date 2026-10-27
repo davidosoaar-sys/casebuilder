@@ -222,8 +222,53 @@ export const BLOCK_MENU = [
   { name: 'Spacer', make: () => block('spacer') }
 ]
 
+// Default pitch flow for new projects: impact first, then the workflow and
+// value drivers, then the money, the alternative, the room and the decision.
+export const DEFAULT_FLOW = ['title', 'headline', 'problem', 'breakdown', 'drivers', 'pairs', 'payback', 'versus', 'stakeholder', 'assumptions', 'next']
+
+function flowSlide(key) {
+  switch (key) {
+    case 'problem':
+      return slide('plain', [
+        text('label', 'Today'),
+        text('title', 'Where engineering time goes today at {company}'),
+        text('body', '{caseContext}'),
+        text('note', 'What this room cares about: {cares}')
+      ])
+    case 'breakdown':
+      return slide('plain', [
+        text('label', 'Value breakdown'),
+        text('title', 'Where the modeled value comes from'),
+        text('note', 'Each source of value, from this case’s inputs. Capacity value is not automatically a cash saving.'),
+        block('chart', { kind: 'breakdown' })
+      ])
+    case 'payback':
+      return slide('plain', [
+        text('label', 'Payback'),
+        text('title', 'Pays back in {payback}, {roi} return in year one'),
+        text('note', 'Cumulative modeled value against the annual subscription of {cost}.'),
+        block('chart', { kind: 'payback' })
+      ])
+    case 'assumptions':
+      return slide('plain', [
+        text('label', 'Assumptions'),
+        text('title', 'What is confirmed and what is still an assumption'),
+        text('note', 'Confirmed inputs came from {company}. Assumptions are benchmarks to replace with real numbers before a decision.'),
+        block('chart', { kind: 'confidence' })
+      ])
+    case 'next':
+      return slide('plain', [
+        text('label', 'Next steps'),
+        text('title', 'The decision and next steps'),
+        text('body', '- Confirm the open inputs with {company}\n- Agree the pilot scope and success measures\n- Name the approver and the decision date')
+      ])
+    default:
+      return builtin(key)
+  }
+}
+
 export function defaultDeck() {
-  return ['title','versus','drivers','pairs','stakeholder','headline'].map(t => builtin(t))
+  return DEFAULT_FLOW.map(flowSlide)
 }
 
 // ------------------------------------------------------------- migration

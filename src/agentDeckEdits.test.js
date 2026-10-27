@@ -1,12 +1,14 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { applyDeckOps, undoDeckOps, applyAgentReply, undoAgentReply, agentFonts, MAX_DECK_OPS, MAX_TEXT } from './agentDeckEdits.js'
-import { defaultDeck } from './deck/model.js'
+import { defaultDeck, SLIDE_TEMPLATES } from './deck/model.js'
 import { DEFAULT_BRAND } from './brand.js'
 import { INPUT_FIELDS } from './valueModel.js'
 
 const NOW = '2026-10-26T12:00:00.000Z'
-const deck = () => defaultDeck()
+// the earlier six-page default, kept as a fixed fixture for these op tests
+const LEGACY = ['title', 'versus', 'drivers', 'pairs', 'stakeholder', 'headline']
+const deck = () => LEGACY.map(k => SLIDE_TEMPLATES.find(t => t.key === k).make())
 const brand = () => ({ ...DEFAULT_BRAND })
 const hero = d => d[0].blocks.find(b => b.style === 'hero')
 
@@ -218,4 +220,17 @@ test('brand template rejects remote URLs before preparation and invalid field va
   assert.equal(r.changes.length,0); assert.equal(r.refused.length,5)
   const stale = applyDeckOps(deck(), {hideLogo:false}, [{op:'set_brand',hideLogo:true,expect:{hideLogo:true}}])
   assert.equal(stale.changes.length,0); assert.equal(stale.refused.length,1)
+})
+
+test('add_block accepts a chart by type and kind and refuses unknown kinds', () => {
+  const d = defaultDeck()
+  const ok = applyDeckOps(d, brand(), [
+    { op: 'add_block', slide_id: d[0].id, type: 'chart', kind: 'payback' },
+    { op: 'add_block', slide_id: d[0].id, kind: 'Input confidence chart' }
+  ])
+  assert.deepEqual(ok.refused, [])
+  assert.deepEqual(ok.deck[0].blocks.slice(-2).map(b => [b.type, b.kind]), [['chart', 'payback'], ['chart', 'confidence']])
+  assert.equal(applyDeckOps(d, brand(), [{ op: 'add_block', slide_id: d[0].id, type: 'chart', kind: 'pie' }]).refused.length, 1)
+  assert.equal(applyDeckOps(d, brand(), [{ op: 'add_block', slide_id: d[0].id, type: 'chart', kind: 'Text' }]).refused.length, 1)
+  assert.equal(applyDeckOps(d, brand(), [{ op: 'add_block', slide_id: d[0].id, type: 'image', kind: 'Text' }]).refused.length, 1)
 })
