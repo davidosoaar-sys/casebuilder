@@ -3,7 +3,7 @@ import { build } from 'esbuild'
 import puppeteer from 'puppeteer'
 import fs from 'node:fs'
 import assert from 'node:assert/strict'
-const bundled = await build({ stdin: { contents: `import React from 'react'; import {createRoot} from 'react-dom/client'; import Connections from './src/components/Connections.jsx'; import {defaultConnectors} from './src/connectors.js'; createRoot(document.getElementById('root')).render(<Connections connections={defaultConnectors()} documents={[]} onConnections={()=>{}} onDocuments={()=>{}} />);`, resolveDir: process.cwd(), loader: 'jsx' }, bundle: true, write: false, format: 'iife', loader: { '.png': 'dataurl' }, define: { 'import.meta.env': 'undefined', 'process.env.NODE_ENV': '"production"' }, logLevel: 'silent' })
+const bundled = await build({ stdin: { contents: `import React from 'react'; import {createRoot} from 'react-dom/client'; import Connections from './src/components/Connections.jsx'; import {defaultConnectors} from './src/connectors.js'; createRoot(document.getElementById('root')).render(<Connections connections={defaultConnectors()} documents={[]} onConnections={()=>{}} onDocuments={()=>{}} />);`, resolveDir: process.cwd(), loader: 'jsx' }, bundle: true, write: false, format: 'iife', loader: { '.png': 'dataurl' }, define: { 'import.meta.env': '{}', 'process.env.NODE_ENV': '"production"' }, logLevel: 'silent' })
 const browser = await puppeteer.launch({ headless: true })
 try {
   const page = await browser.newPage()
@@ -36,8 +36,8 @@ try {
   await page.waitForFunction(() => !document.querySelector('[data-connector=gmail]').textContent.includes('Disconnect'))
   assert.equal(await page.evaluate(() => JSON.parse(window.calls.find(c => c.body).body).action), 'disconnect')
   await page.evaluate(() => { window.fetch = async () => { throw new Error('Offline fixture') }; window.dispatchEvent(new Event('focus')) })
-  await page.waitForSelector('[role=alert]')
-  assert.match(await page.$eval('[role=alert]', e => e.textContent), /Offline fixture/)
+  await page.waitForFunction(() => [...document.querySelectorAll('[role=alert]')].some(e => e.textContent.includes('Offline fixture')))
+  assert.ok(await page.evaluate(() => [...document.querySelectorAll('[role=alert]')].some(e => /Offline fixture/.test(e.textContent))))
   assert.deepEqual(errors, [])
   console.log('PASS: connected, connect, disconnect, unconfigured, error/retry; desktop/light and mobile/dark; no overflow or page errors')
 } finally { await browser.close() }
