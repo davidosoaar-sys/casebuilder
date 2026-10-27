@@ -6,7 +6,7 @@ import { buildPptx } from './pptx.js'
 import { outOfBounds } from './pptxDimensions.test.js'
 import { SAMPLE_CASES, createSampleCase } from '../sampleCases.js'
 import { newProject } from '../projects.js'
-import { buildEnv, resolveBlock, block, BLOCK_MENU, LIVE } from '../deck/model.js'
+import { buildEnv, resolveBlock, BLOCK_MENU, LIVE } from '../deck/model.js'
 import { resolveStakeholder } from '../deck/stakeholders.js'
 import { clientStakeholder } from '../stakeholderRequirements.js'
 
@@ -16,7 +16,7 @@ function envFor(blank = false) {
   const inputs = Object.fromEntries(fields.map(f => [f.key, f.value]))
   return { p, env: buildEnv(inputs, fields, clientStakeholder(resolveStakeholder(p.stakeholders[0]))) }
 }
-const chart = kind => block('chart', { kind })
+const chart = kind => ({ id: kind, type: 'chart', kind })
 
 test('chart blocks are in the menu and live', () => {
   for (const n of ['Payback chart', 'Value breakdown chart', 'Input confidence chart']) assert.ok(BLOCK_MENU.some(m => m.name === n))

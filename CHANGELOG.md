@@ -26,6 +26,7 @@ Every version that lands on `main` gets a line here and a git tag.
 ---
 
 ## Unreleased
+- Deck: new Payback, Value breakdown and Input confidence chart blocks, drawn in the app and exported as native, editable PowerPoint charts. Charts with missing inputs show what they are waiting for instead of zeros.
 
 ## v0.20.0 (2026-10-27): Nine more live connectors
 
