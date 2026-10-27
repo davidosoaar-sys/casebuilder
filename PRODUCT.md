@@ -30,6 +30,9 @@ finance system or slide-generation playground. No new connector/backend claims
 without a working integration. No fake customer evidence or testimonials.
 
 ## Current work — 2026-10-25
+Claude artifact generation now explicitly invokes official brand discovery and
+the deck-design skill. A local MCP tool saves authorized brand findings; actual
+research/downloads require host web tools, and visual QA remains host-dependent.
 The four platform built-in skills share source-safe, framework-based instructions
 for manual and scheduled runs. Client logo blocks pair customer × Backstage while
 preserving company fonts/colors. Worker changes take effect on worker deployment.

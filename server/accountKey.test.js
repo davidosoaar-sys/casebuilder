@@ -94,3 +94,17 @@ test('a saved OpenRouter key runs through the OpenAI-compatible client, not Anth
   assert.equal(r.client.provider, 'openrouter')
   assert.equal(typeof r.client.messages.stream, 'function')
 })
+
+test('missing local account configuration never silently falls back when the code gate is off',async()=>{
+ const r=await anthropicFor({authorization:'Bearer good'},{env:{...ENV,SUPABASE_SECRET_KEY:'',ANTHROPIC_API_KEY:'sk-server'},needsCode:()=>false})
+ assert.equal(r.error.body.error,'account_keys_unavailable')
+ assert.equal(r.client,undefined)
+})
+
+test('the saved Gemini provider selects the Gemini adapter',async()=>{
+ const {fetchImpl}=fakeSupabase({provider:'google'})
+ const r=await anthropicFor({authorization:'Bearer good'},{env:ENV,fetchImpl})
+ assert.equal(r.provider,'google')
+ assert.equal(r.client.provider,'google')
+ assert.equal(r.source,'account')
+})

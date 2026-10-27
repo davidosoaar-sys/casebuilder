@@ -27,6 +27,8 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
+## v0.19.0 (2026-10-27): Live connectors, Claude connector, editable brand
+
 - Brand discovery is now a starting point, not a lock. In Deck design you can replace the logo or brand image by upload, pick another logo or image found during discovery, remove either, or hide the logo everywhere (deck, Live room, exports). Colours and fonts stay editable as before.
 - The agent can change the same things from chat: hide or show the logo, swap the logo or brand image (a discovered one, a direct image link, or a public page it found with web search whose own hero image is used), set the image description and source, and rename Live room sections. The server fetches and checks every web image the same way brand discovery does (public HTTPS only, real PNG/JPEG/WebP bytes, landscape and large enough) and records where it came from. Each change shows on the change card with Undo, like other deck edits.
 - The agent's reply no longer claims a case change landed on its own say-so: when a reply carries case changes, the text comes from what was actually applied, and failed or refused changes are listed on the card.
@@ -44,6 +46,19 @@ Every version that lands on `main` gets a line here and a git tag.
 - Validation: 463 tests pass, including handler and token-migration/RLS coverage;
   production build passes (existing chunk-size warning). Mocked browser connect/revoke
   passes at desktop/light and mobile/dark sizes without overflow.
+- Web search is on by default in every agent chat.
+- Merged David's plugin update (casebuilder_apply_brand, deck-design skill).
+
+## v0.18.0 (2026-10-27): Plugin brand workflow and provider routing fixes
+
+- Release validation: 26 targeted tests pass; application and plugin builds pass. Local Tavily live search succeeded. Signed-in Gemini search, Claude host brand research and production deployment remain unverified. Secrets are excluded from Git.
+
+- Prevent signed-in research requests from falling back to the shared Anthropic key when server settings cannot read the selected account key. Local checks found missing Supabase service and Tavily configuration; Gemini adapter/account tests pass, but no live saved-Gemini-key request was performed.
+
+- Explain insufficient Anthropic API credits on stakeholder search instead of the generic 400 error, without exposing raw provider details. Local fallback-key diagnostic confirmed a low-credit rejection. Validation: provider error classification test; signed-in saved-key routing not verified.
+
+- Make the Claude connected workflow explicitly discover official branding before artifact generation, with an approved brand-write MCP tool. Add a decision-focused deck-design skill with storyboard, brand, editable-layout and visual QA rules. Uses host web/download tools; no invented automated provider connection. Validation: MCP brand/source round-trip integration test and plugin build.
+
 
 
 ## v0.17.1 (2026-10-27): Gemini keys work again, any provider's key falls back, setup shows its progress
