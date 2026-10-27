@@ -93,7 +93,7 @@ export function googleProvider(env = process.env, fetchImpl = fetch) {
     label: 'Google Gemini',
     configured: () => !!key,
     keyName: 'GOOGLE_AI_API_KEY',
-    defaultModel: env.GOOGLE_MODEL || 'gemini-3-pro',
+    defaultModel: env.GOOGLE_MODEL || 'gemini-3.5-flash-lite',
     async complete({ system, messages, maxTokens = 4000, temperature }) {
       const model = this.defaultModel
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`

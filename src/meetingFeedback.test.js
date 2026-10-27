@@ -30,7 +30,7 @@ test('optional case context saves through hydration without changing equations o
  assert.deepEqual(computeModel(after),computeModel(inputs))
 })
 test('new decks lead with a cost decision and close with modeled value without fabricating savings',()=>{
- const deck=defaultDeck();assert.ok(deck[1].blocks.some(b=>b.type==='versus'));assert.ok(deck[5].blocks.some(b=>b.type==='stats'))
+ const deck=defaultDeck();assert.ok(deck[1].blocks.some(b=>b.type==='stats'));assert.ok(deck[7].blocks.some(b=>b.type==='versus'));assert.match(deck.at(-1).blocks.find(b=>b.style==='title').text,/decision/)
  const render=inputs=>resolveSlides(deck,buildEnv(inputs,[],NO_ONE)).flatMap(s=>s.blocks).filter(b=>b.kind==='text').map(b=>b.text).join(' ')
  const empty=buildEnv({},[],NO_ONE).ctx.decisionHeadline;assert.ok(empty.includes('Compare Portal with running Backstage in-house'));assert.ok(!empty.includes('$0/yr lower'))
  const costly=render({...DEMO_VALUES,selfHostEngineers:1,selfHostSalary:100000,portalCost:200000})

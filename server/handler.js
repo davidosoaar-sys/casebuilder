@@ -66,7 +66,7 @@ export async function handle({ body, headers }) {
   } catch (err) {
     if (err instanceof ProviderAPIError) {
       if (err.status === 401 || err.status === 403) return { status: 502, body: { error: `Your ${err.provider === 'google' ? 'Google Gemini' : err.provider === 'openrouter' ? 'OpenRouter' : 'OpenAI'} key was rejected. Check it in Settings.` } }
-      if (err.status === 429) return { status: 429, body: { error: 'Rate limited. Try again in a minute.' } }
+      if (err.status === 429) return { status: 429, body: { error: err.quota ? err.message : 'Rate limited. Try again in a minute.' } }
       return { status: 502, body: { error: err.message } }
     }
     if (err instanceof Anthropic.AuthenticationError) {
@@ -121,7 +121,7 @@ export async function handlePublish({ body, headers, fetchImpl, wait }) {
 
 // The suggestion agent: reads only the material the caller sends (what Chris switched
 // on) and proposes values for empty inputs. It never produces a figure.
-const DOC_SOURCES = ['claude', 'gong', 'hubspot', 'slack', 'clay', 'lemlist', 'granola', 'sheets', 'excel', 'figma', 'canva']
+const DOC_SOURCES = ['claude', 'gong', 'hubspot', 'slack', 'clay', 'lemlist', 'granola', 'sheets', 'excel', 'figma', 'canva', 'fireflies', 'googledrive']
 
 export async function handleSuggest({ body, headers }) {
 
@@ -149,7 +149,7 @@ export async function handleSuggest({ body, headers }) {
     return { status: 200, body: await suggest({ company, filled, documents, web, only, labels }, who.client) }
   } catch (err) {
     if (err instanceof Anthropic.AuthenticationError || (err instanceof ProviderAPIError && [401, 403].includes(err.status))) return { status: 502, body: { error: 'The API key was rejected.' } }
-    if (err instanceof Anthropic.RateLimitError || err?.status === 429) return { status: 429, body: { error: 'Rate limited. Try again in a minute.' } }
+    if (err instanceof Anthropic.RateLimitError || err?.status === 429) return { status: 429, body: { error: err?.quota ? err.message : 'Rate limited. Try again in a minute.' } }
     return { status: 502, body: { error: err instanceof ProviderAPIError ? err.message : 'The suggestion service is unavailable.' } }
   }
 }

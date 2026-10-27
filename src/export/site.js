@@ -1,3 +1,4 @@
+import { clientCompanyName } from '../companyName.js'
 import faviconSvg from '../../public/favicon.svg?raw'
 import formatSource from '../format.js?raw'
 import modelSource from '../model.js?raw'
@@ -14,7 +15,7 @@ import { websiteIdentity } from './websiteFramework.js'
 const vmSource = [formatSource, modelSource, sourceSource, valueModelSource].join('\n')
 
 export function buildSiteHtml({ project, inputs, activeKey, mode = 'website' }) {
-  const company = inputs.companyName || project.name
+  const company = clientCompanyName(inputs.companyName, project.name)
   const stakeholders = project.stakeholders.map(s=>{
     const resolved=resolveStakeholder(s)
     return resolved ? {...resolved,pos:s.pos,namedPeople:s.namedPeople||[],requirements:s.requirements||[]} : null

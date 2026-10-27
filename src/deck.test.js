@@ -38,7 +38,7 @@ const find = (slides, kind) => slides.flatMap(s => s.blocks).find(b => b.kind ==
 test('the default deck has a today vs with Portal slide after the drivers slide', () => {
   const { slides } = render(inputsOf())
   const kinds = slides.map(s => s.blocks.map(b => b.kind).filter(k => ['drivers', 'pairs', 'versus', 'assumptions'].includes(k))[0])
-  assert.deepEqual(kinds.filter(Boolean), ['versus', 'drivers', 'pairs'])
+  assert.deepEqual(kinds.filter(Boolean), ['drivers', 'pairs', 'versus'])
 })
 
 test('drivers are grouped under Speed, Chaos-control, Scale with the equation under each bar', () => {
@@ -278,11 +278,11 @@ test('a slide whose figures are all missing is dropped from the client deck', ()
   const blank = Object.fromEntries(INPUT_FIELDS.map(f => [f.key, f.value]))
   const env = buildEnv(blank, fieldsOf(), stake('champion'))
   const kept = resolveSlides(defaultDeck(), env)
-  // only the title and the stakeholder page have content that does not depend on a figure
-  assert.equal(kept.length, 2)
+  // pages with no live figure (title, problem, stakeholder, next steps) stay; chart pages may show their waiting state
+  assert.ok(kept.length >= 2 && kept.length < defaultDeck().length)
   assert.ok(kept.every(s => s.blocks.every(b => !['drivers', 'pairs', 'stats', 'versus'].includes(b.kind))))
   // with data, every page comes back
-  assert.equal(resolveSlides(defaultDeck(), buildEnv(inputsOf(), fieldsOf(), stake('champion'))).length, 6)
+  assert.equal(resolveSlides(defaultDeck(), buildEnv(inputsOf(), fieldsOf(), stake('champion'))).length, 11)
 })
 
 test('hiddenPages counts the dropped pages and names the inputs that bring them back', () => {
@@ -305,10 +305,37 @@ test('the client deck carries no state, origin, source or confidence metadata', 
       : f
   )
   const env = buildEnv(inputsOf(), fields, stake('security'))
-  const text = JSON.stringify(resolveSlides(defaultDeck(), env))
-  for (const leak of ['Based on 3 similar deals', 'we have 500 engineers', 'example.com', 'pinnedAt', 'suggestion', 'assumption', 'confidence', 'origin', 'Gong', 'unconfirmed']) {
+  const slides = resolveSlides(defaultDeck(), env)
+  const text = JSON.stringify(slides)
+  // per-input sources never reach the client deck
+  for (const leak of ['Based on 3 similar deals', 'we have 500 engineers', 'example.com', 'pinnedAt', 'origin', 'Gong', 'unconfirmed']) {
     assert.ok(!text.toLowerCase().includes(leak.toLowerCase()), `the deck leaked "${leak}"`)
+  }
+  // only the assumptions page (an aggregate confidence chart, counts only) talks about input states
+  const rest = JSON.stringify(slides.filter(s => !s.blocks.some(b => b.kind === 'chart' && b.chart === 'confidence')))
+  for (const leak of ['suggestion', 'assumption', 'confidence']) {
+    assert.ok(!rest.toLowerCase().includes(leak), `a non-assumptions page leaked "${leak}"`)
   }
   // the arithmetic stays: that is the customer checking the math
   assert.ok(text.includes('(3 - 2) * 500 * 48 * $100'))
+})
+
+test('the default deck is the 11-page pitch flow and resolves for a full and an empty case', () => {
+  const d = defaultDeck()
+  assert.equal(d.length, 11)
+  const sig = s => {
+    const chart = s.blocks.find(b => b.type === 'chart')
+    if (chart) return `chart:${chart.kind}`
+    const live = s.blocks.find(b => ['logo', 'stats', 'drivers', 'pairs', 'versus', 'room'].includes(b.type))
+    return live ? live.type : s.blocks.find(b => b.style === 'title').text
+  }
+  assert.deepEqual(d.map(sig), ['logo', 'stats', 'Where engineering time goes today at {company}', 'chart:breakdown', 'drivers', 'pairs',
+    'chart:payback', 'versus', 'room', 'chart:confidence', 'The decision and next steps'])
+  const blank = Object.fromEntries(INPUT_FIELDS.map(f => [f.key, f.value]))
+  for (const inputs of [inputsOf(), blank, {}]) {
+    for (const key of ['champion', 'security']) {
+      assert.doesNotThrow(() => resolveSlides(defaultDeck(), buildEnv(inputs, fieldsOf(), stake(key))))
+    }
+  }
+  assert.notEqual(defaultDeck()[0].id, d[0].id)
 })

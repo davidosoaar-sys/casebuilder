@@ -185,6 +185,33 @@ async function layoutBlock(b, deps, theme = DEFAULTS) {
           })
       }
     }
+    case 'chart': {
+      if (b.incomplete) {
+        return { h: 0.5, draw: (s, y, k) => s.addText(`Waiting for: ${(b.waiting || []).join(', ')}`, { x: MX, y, w: CW, h: 0.35 * k, fontFace: FONT, fontSize: 12 * k, color: C.faint, italic: true, margin: 0 }) }
+      }
+      const ch = 3.6
+      const axis = { catAxisLabelColor: C.dim, valAxisLabelColor: C.dim, catAxisLabelFontFace: FONT, valAxisLabelFontFace: FONT, catAxisLabelFontSize: 10, valAxisLabelFontSize: 10, valGridLine: { color: C.track, size: 0.5 }, catGridLine: { style: 'none' }, catAxisLineColor: C.line, valAxisLineColor: C.line, showLegend: true, legendPos: 'b', legendColor: C.dim, legendFontFace: FONT, legendFontSize: 10 }
+      const T = (deps.ChartType || {})
+      return {
+        h: ch + 0.2,
+        draw: (s, y, k) => {
+          const box = { x: MX, y, w: CW, h: ch * k }
+          if (b.chart === 'payback') {
+            const labels = b.months.map(m => `M${m}`)
+            s.addChart(T.line || 'line', [
+              { name: 'Cumulative value', labels, values: b.value },
+              { name: 'Cumulative cost', labels, values: b.cost }
+            ], { ...box, ...axis, chartColors: [C.accent, C.bad], lineSize: 2, lineDataSymbol: 'none', valAxisLabelFormatCode: '$#,##0', catAxisLabelFrequency: 6 })
+          } else if (b.chart === 'breakdown') {
+            s.addChart(T.bar || 'bar', [{ name: 'Annual value', labels: b.rows.map(r => `${r.label} (${r.groupLabel.toLowerCase()})`), values: b.rows.map(r => r.value) }],
+              { ...box, ...axis, barDir: 'bar', chartColors: b.rows.map(r => (r.group === 'spend' ? C.warn : C.accent)), showLegend: false, showValue: true, dataLabelColor: C.ink, dataLabelFormatCode: '$#,##0', valAxisLabelFormatCode: '$#,##0', catAxisOrientation: 'maxMin' })
+          } else if (b.chart === 'confidence') {
+            s.addChart(T.doughnut || 'doughnut', [{ name: 'Inputs', labels: b.rows.map(r => r.label), values: b.rows.map(r => r.count) }],
+              { ...box, chartColors: [C.accent, C.warn, '7AA2F7', C.track], holeSize: 60, showLegend: true, legendPos: 'r', legendColor: C.dim, legendFontFace: FONT, showPercent: false, showValue: true, dataLabelColor: C.strong, title: `${b.total} inputs`, showTitle: true, titleColor: C.dim, titleFontSize: 12 })
+          }
+        }
+      }
+    }
     case 'drivers': {
       // pillar headings and driver rows, in one list
       const items = []
@@ -294,6 +321,7 @@ export async function buildPptx({ company, slides, deps, brand }) {
   const theme = { colors, logoBackground:b.logoBackground, font: brand ? officeFont(b.bodyFont) : DEFAULTS.font, headingFont:brand ? officeFont(b.headingFont) : DEFAULTS.font, styles }
   const C = colors, FONT = theme.font
   const pptx = new deps.PptxGenJS()
+  deps = { ...deps, ChartType: pptx.ChartType }
   pptx.layout = 'LAYOUT_WIDE'
   pptx.title = `${company} - business case`
   pptx.company = 'Spotify'
@@ -319,8 +347,8 @@ export async function buildPptx({ company, slides, deps, brand }) {
     }
     if (sl.variant === 'hero' && !sl.design?.background) {
       // A soft teal glow bottom-right stands in for the gradient.
-      s.addShape('ellipse', { x: W - 6.2, y: H - 5.2, w: 9, h: 9, fill: { color: C.panel, transparency: 40 }, line: { color: C.panel, width: 0, transparency: 100 } })
-      s.addShape('ellipse', { x: W - 4.2, y: H - 3.8, w: 6, h: 6, fill: { color: C.accent, transparency: 86 }, line: { color: C.accent, width: 0, transparency: 100 } })
+      s.addShape('ellipse', { x: W - 6, y: H - 6, w: 6, h: 6, fill: { color: C.panel, transparency: 40 }, line: { color: C.panel, width: 0, transparency: 100 } })
+      s.addShape('ellipse', { x: W - 4, y: H - 4, w: 4, h: 4, fill: { color: C.accent, transparency: 86 }, line: { color: C.accent, width: 0, transparency: 100 } })
     }
 
     const laid = []

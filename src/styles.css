@@ -984,6 +984,9 @@ input[type="number"], select { color-scheme: dark; }
 /* connector panel */
 .sources-page .sub { color: var(--ink-dim); max-width: 64ch; margin: 0 0 20px; }
 .connector-list { display: flex; flex-direction: column; gap: 10px; max-width: 760px; }
+.connector-group { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+.connector-group-title { margin: 0 0 2px; font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-dim); }
+.connector-note { margin: 10px 0 0 50px; }
 .connector { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius-card); padding: 14px 16px; }
 .connector-on { border-color: rgba(155, 240, 222, 0.4); }
 .connector-head { display: flex; align-items: center; gap: 14px; }
@@ -1099,7 +1102,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .connector-live-state.is-on { color: var(--ink); }
 .connector-live-state.is-on::before { background: var(--accent); }
 .connector-live button { flex: none; }
-@media (max-width: 480px) { .connector-live, .connector-allow, .connector-body { margin-left: 0; } }
+@media (max-width: 480px) { .connector-live, .connector-allow, .connector-body, .connector-note { margin-left: 0; } }
 /* Deck design tools only. The application's established chrome is unchanged. */
 .brand-panel { position: fixed; right: 18px; top: 85px; bottom: 18px; width: min(365px, calc(100vw - 36px)); overflow-y: auto; z-index: 55; background: var(--panel); color: var(--ink); border: 1px solid var(--line-2); border-radius: 8px; padding: 20px; box-shadow: 0 12px 50px rgba(0,0,0,.3); }
 .brand-panel-head { display: flex; gap: 12px; justify-content: space-between; align-items: flex-start; }
@@ -2607,7 +2610,7 @@ a.research-cite:hover { background: var(--accent); color: var(--accent-ink) !imp
 .rail-thumb:active { cursor: grabbing; }
 .rail-thumb:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .rail-num { padding-top: 4px; font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; color: var(--ink-faint); }
-.rail-card { position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: 6px; aspect-ratio: 16 / 10; padding: 9px 10px; overflow: hidden; border-radius: 7px; background: var(--deck-bg, var(--panel)); color: var(--deck-text, var(--ink)); box-shadow: 0 0 0 1px var(--line); transition: box-shadow .15s ease; }
+.rail-card { position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: 6px; aspect-ratio: 16 / 9; padding: 9px 10px; overflow: hidden; border-radius: 7px; background: var(--deck-bg, var(--panel)); color: var(--deck-text, var(--ink)); box-shadow: 0 0 0 1px var(--line); transition: box-shadow .15s ease; }
 .rail-card.is-hero { background: linear-gradient(115deg, var(--deck-bg, var(--panel)), var(--deck-surface, var(--panel-2))); }
 .rail-title { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-family: var(--deck-heading-font, var(--heading)); font-size: 11.5px; font-weight: 700; line-height: 1.25; }
 .rail-thumb[aria-current="true"] .rail-card { box-shadow: 0 0 0 2px var(--accent), 0 6px 18px -8px color-mix(in srgb, var(--accent) 45%, transparent); }
@@ -3090,3 +3093,11 @@ body::after { content: ''; position: fixed; inset: 0; z-index: 200; pointer-even
 .input-info-content { position:absolute; top:30px; left:0; z-index:25; width:240px; max-width:calc(100vw - 64px); padding:14px; border:1px solid var(--line); border-radius:10px; background:var(--panel); color:var(--ink); box-shadow:0 8px 28px #0002; font-size:13px; line-height:1.5; }
 .input-info-content p { margin:6px 0; }
 @media(max-width:600px) { .input-info-content { left:auto; right:-30px; } }
+
+
+/* Editor pages are fixed 16:9 canvases, the same 13.333 x 7.5 in proportions as
+   the PowerPoint export. Margins match the export (0.7 in sides, 0.6 in top) as a
+   share of the slide width. Content taller than the page scrolls inside it. */
+@media screen {
+  .deck-editor .slide { aspect-ratio: 16 / 9; min-height: 0; height: auto; padding: 4.5% 5.25%; overflow-x: hidden; overflow-y: auto; scrollbar-width: thin; box-sizing: border-box; }
+}

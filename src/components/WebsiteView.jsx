@@ -1,3 +1,4 @@
+import { clientCompanyName } from '../companyName.js'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { buildSiteHtml, hashText } from '../export/site.js'
 import { download } from '../export/download.js'
@@ -63,7 +64,7 @@ export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, o
   const [code, setCode] = useState(readCode)
   const [copied, setCopied] = useState(false)
 
-  const company = inputs.companyName || project.name
+  const company = clientCompanyName(inputs.companyName, project.name)
   const site = project.site
   const slug = String(company).replace(/[^\w\- ]+/g, '').trim() || 'site'
 

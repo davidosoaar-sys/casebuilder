@@ -1,3 +1,5 @@
+import { stateOf } from '../source.js'
+import { clientCompanyName } from '../companyName.js'
 import {caseNarrative} from '../caseNarrative.js'
 import { uid } from '../uid.js'
 import { computeModel } from '../model.js'
@@ -53,6 +55,7 @@ export const TOKENS = [
   ['annual', 'Annual value'],
   ['net', 'Net, year one'],
   ['payback', 'Payback'],
+  ['paybackShort', 'Payback (headline)'],
   ['roi', 'Return'],
   ['five', 'Five-year net']
 ]
@@ -77,7 +80,7 @@ export function buildEnv(inputs, fields, active, model = computeModel(inputs)) {
   const show = (f, fn) => (f.incomplete ? '' : fn(f))
   const total = F.totalValue
   const ctx = {
-    company: inputs.companyName || 'Untitled',
+    company: clientCompanyName(inputs.companyName) || 'Untitled',
     ...caseNarrative(inputs,F,fmtMoney),
     role: active.role,
     archetype: inputs.archetype,
@@ -88,6 +91,7 @@ export function buildEnv(inputs, fields, active, model = computeModel(inputs)) {
     cost: model.blankInputs.includes('portalCost') ? '' : fmtMoney(model.inputs.portalCost),
     net: show(F.netValue, f => fmtMoney(f.raw)),
     payback: show(F.paybackMonths, f => (f.value > 0 ? fmtMonths(f.value) : 'n/a')),
+    paybackShort: show(F.paybackMonths, f => (!(f.value > 0) ? 'n/a' : f.value < 1 ? 'under a month' : f.value < 10 ? `${Math.round(f.value * 10) / 10} months` : `${Math.round(f.value)} months`)),
     roi: show(F.roiMultiple, f => `${f.value.toFixed(1)}x`),
     five: show(F.fiveYearValue, f => fmtMoney(f.raw))
   }
@@ -209,6 +213,9 @@ export const BLOCK_MENU = [
   { name: 'Image', make: () => block('image', { src: '', caption: '' }) },
   { name: 'Key numbers', make: () => block('stats', { items: STAT_KEYS.map(([k]) => k) }) },
   { name: 'Value drivers chart', make: () => block('drivers') },
+  { name: 'Payback chart', make: () => block('chart', { kind: 'payback' }) },
+  { name: 'Value breakdown chart', make: () => block('chart', { kind: 'breakdown' }) },
+  { name: 'Input confidence chart', make: () => block('chart', { kind: 'confidence' }) },
   { name: 'Today vs with Portal', make: () => block('pairs') },
   { name: 'Portal vs self-hosting', make: () => block('versus') },
   { name: 'Stakeholder brief', make: () => block('room') },
@@ -217,8 +224,53 @@ export const BLOCK_MENU = [
   { name: 'Spacer', make: () => block('spacer') }
 ]
 
+// Default pitch flow for new projects: impact first, then the workflow and
+// value drivers, then the money, the alternative, the room and the decision.
+export const DEFAULT_FLOW = ['title', 'headline', 'problem', 'breakdown', 'drivers', 'pairs', 'payback', 'versus', 'stakeholder', 'assumptions', 'next']
+
+function flowSlide(key) {
+  switch (key) {
+    case 'problem':
+      return slide('plain', [
+        text('label', 'Today'),
+        text('title', 'Where engineering time goes today at {company}'),
+        text('body', '{caseContext}'),
+        text('note', 'What this room cares about: {cares}')
+      ])
+    case 'breakdown':
+      return slide('plain', [
+        text('label', 'Value breakdown'),
+        text('title', 'Where the modeled value comes from'),
+        text('note', 'Each source of value, from this case’s inputs. Capacity value is not automatically a cash saving.'),
+        block('chart', { kind: 'breakdown' })
+      ])
+    case 'payback':
+      return slide('plain', [
+        text('label', 'Payback'),
+        text('title', 'Pays back in {paybackShort}, {roi} return in year one'),
+        text('note', 'Cumulative modeled value against the annual subscription of {cost}.'),
+        block('chart', { kind: 'payback' })
+      ])
+    case 'assumptions':
+      return slide('plain', [
+        text('label', 'Assumptions'),
+        text('title', 'What is confirmed and what is still an assumption'),
+        text('note', 'Confirmed inputs came from {company}. Assumptions are benchmarks to replace with real numbers before a decision.'),
+        block('chart', { kind: 'confidence' })
+      ])
+    case 'next':
+      return slide('plain', [
+        text('label', 'Next steps'),
+        text('title', 'The decision and next steps'),
+        text('body', '- Confirm the open inputs with {company}\n- Agree the pilot scope and success measures\n- Name the approver and the decision date')
+      ])
+    default:
+      return builtin(key)
+  }
+}
+
 export function defaultDeck() {
-  return ['title','versus','drivers','pairs','stakeholder','headline'].map(t => builtin(t))
+  return DEFAULT_FLOW.map(flowSlide)
 }
 
 // ------------------------------------------------------------- migration
@@ -306,6 +358,8 @@ export function resolveBlock(b, env) {
         waiting: waitingFor(env, ['totalValue', 'netValue', 'paybackMonths'].filter(k => keys.some(x => STAT_FIGURE[x] === k)))
       }
     }
+    case 'chart':
+      return resolveChart(b, env)
     case 'drivers': {
       const groups = driversByPillar(model, inputs.archetype, inputs.strategicPriority)
       const max = Math.max(...groups.flatMap(g => g.items.map(d => d.value)), 1)
@@ -393,7 +447,7 @@ export function resolveBlock(b, env) {
   }
 }
 
-export const LIVE = new Set(['stats', 'drivers', 'pairs', 'versus'])
+export const LIVE = new Set(['stats', 'drivers', 'pairs', 'versus', 'chart'])
 
 // A live block with nothing it can compute yet.
 export const isEmptyLive = r =>
@@ -438,4 +492,69 @@ export function hiddenPages(deck, env) {
 export function slideIsEmpty(slide, env) {
   const live = slide.blocks.map(b => resolveBlock(b, env)).filter(r => LIVE.has(r.kind))
   return live.length > 0 && live.every(isEmptyLive)
+}
+
+// ----------------------------------------------------- chart blocks
+// Charts read the model's figures; nothing is recomputed differently here.
+// A chart with nothing to show returns its waiting list instead of zeros.
+const CHART_DRIVERS = [
+  ['productivityValue', 'Engineer time recovered', 'capacity'],
+  ['onboardingValue', 'Faster onboarding', 'capacity'],
+  ['incidentValue', 'Shorter incidents', 'capacity'],
+  ['standardsValue', 'Audit and compliance work avoided', 'capacity'],
+  ['platformValue', 'Platform team maintenance avoided', 'capacity'],
+  ['toolingValue', 'Overlapping tooling retired', 'spend']
+]
+export const CHART_GROUP_LABEL = { capacity: 'Capacity value', spend: 'Spend reduction' }
+export const CONFIDENCE_STATES = [
+  ['input', 'Confirmed'],
+  ['assumption', 'Assumption'],
+  ['suggestion', 'Suggested'],
+  ['empty', 'Empty']
+]
+
+export function resolveChart(b, env) {
+  const { model } = env
+  const F = model.figures
+  const kind = b.kind || 'payback'
+  if (kind === 'payback') {
+    const waiting = waitingFor(env, ['paybackMonths'])
+    const costBlank = model.blankInputs.includes('portalCost')
+    if (F.totalValue.incomplete || F.paybackMonths.incomplete || costBlank) {
+      return { kind: 'chart', chart: 'payback', incomplete: true, waiting: waiting.length ? waiting : ['Annual subscription cost'] }
+    }
+    const monthly = F.totalValue.value / 12
+    const cost = model.inputs.portalCost / 12
+    const months = Array.from({ length: 36 }, (_, i) => i + 1)
+    return {
+      kind: 'chart', chart: 'payback', waiting: [],
+      months,
+      value: months.map(m => Math.round(monthly * m)),
+      cost: months.map(m => Math.round(cost * m)),
+      payback: F.paybackMonths.value > 0 ? fmtMonths(F.paybackMonths.value) : 'n/a',
+      max: Math.max(monthly * 36, cost * 36, 1)
+    }
+  }
+  if (kind === 'breakdown') {
+    const rows = CHART_DRIVERS.filter(([k]) => !F[k].incomplete).map(([k, label, group]) => ({
+      key: k, label, group, groupLabel: CHART_GROUP_LABEL[group], value: Math.max(F[k].value, 0), valueStr: fmtMoney(F[k].value)
+    }))
+    const waiting = waitingFor(env, CHART_DRIVERS.map(([k]) => k))
+    if (!rows.length) return { kind: 'chart', chart: 'breakdown', incomplete: true, rows: [], waiting }
+    const max = Math.max(...rows.map(r => r.value), 1)
+    rows.forEach(r => { r.pct = (r.value / max) * 100 })
+    return { kind: 'chart', chart: 'breakdown', rows, waiting: [] }
+  }
+  if (kind === 'confidence') {
+    const fields = (env.fields || []).filter(f => !f.deleted && ['number', 'percent'].includes(f.type) && !f.structural)
+    const counts = Object.fromEntries(CONFIDENCE_STATES.map(([k]) => [k, 0]))
+    fields.forEach(f => { counts[stateOf(f)]++ })
+    const total = fields.length
+    if (!total) return { kind: 'chart', chart: 'confidence', incomplete: true, rows: [], waiting: ['Case inputs'] }
+    return {
+      kind: 'chart', chart: 'confidence', total, waiting: [],
+      rows: CONFIDENCE_STATES.map(([k, label]) => ({ key: k, label, count: counts[k], pct: (counts[k] / total) * 100 }))
+    }
+  }
+  return { kind: 'chart', chart: kind, incomplete: true, waiting: [] }
 }

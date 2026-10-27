@@ -1,6 +1,7 @@
 import { supabaseServerEnv } from './accountKey.js'
 
-export const TOOLKITS = ['googlecalendar', 'gmail', 'slack', 'hubspot']
+// Composio toolkit slugs. Each is live only when COMPOSIO_AUTH_<SLUG> is set.
+export const TOOLKITS = ['googlecalendar', 'gmail', 'slack', 'hubspot', 'gong', 'googlesheets', 'excel', 'googledrive', 'figma', 'canva', 'fireflies', 'clay', 'lemlist']
 const BASE = 'https://backend.composio.dev/api/v3.1'
 
 export async function handleConnect(req, { env = process.env, fetchImpl = fetch } = {}) {

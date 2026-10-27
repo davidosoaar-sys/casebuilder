@@ -55,3 +55,23 @@ test('expired Supabase bearer cannot access Composio', async () => {
   assert.equal(result.status, 401)
   assert.equal(count, 1)
 })
+
+test('all thirteen toolkits are known; each is live only with its own auth config', async () => {
+  const { TOOLKITS } = await import('./composio.js')
+  assert.deepEqual(TOOLKITS, ['googlecalendar', 'gmail', 'slack', 'hubspot', 'gong', 'googlesheets', 'excel', 'googledrive', 'figma', 'canva', 'fireflies', 'clay', 'lemlist'])
+  const all = { ...env, ...Object.fromEntries(TOOLKITS.map(k => [`COMPOSIO_AUTH_${k.toUpperCase()}`, `ac_${k}`])) }
+  const f = fixture([{ items: [account({ toolkit: { slug: 'fireflies' }, auth_config: { id: 'ac_fireflies' } }), account({ id: 'ca_granola', toolkit: { slug: 'granola' }, auth_config: { id: 'ac_granola' } })] }])
+  const status = await handleConnect(req(), { env: { ...all, COMPOSIO_AUTH_GRANOLA: 'ac_granola' }, ...f })
+  assert.deepEqual(status.body.configured, TOOLKITS)
+  assert.deepEqual(status.body.connections, [{ id: 'ca_one', toolkit: 'fireflies', status: 'ACTIVE' }])
+  for (const toolkit of ['gong', 'googlesheets', 'excel', 'googledrive', 'figma', 'canva', 'fireflies', 'clay', 'lemlist']) {
+    const g = fixture()
+    const result = await handleConnect(req('POST', { toolkit }), { env: all, ...g })
+    assert.equal(result.status, 200, toolkit)
+    assert.equal(JSON.parse(g.calls[1].body).auth_config_id, `ac_${toolkit}`)
+  }
+  assert.equal((await handleConnect(req('POST', { toolkit: 'granola' }), { env: { ...all, COMPOSIO_AUTH_GRANOLA: 'x' }, ...fixture() })).status, 400)
+  const partial = await handleConnect(req(), { env: { ...env, COMPOSIO_AUTH_CLAY: 'ac_clay' }, ...fixture([{ items: [] }]) })
+  assert.deepEqual(partial.body.configured, ['gmail', 'clay'])
+  assert.equal((await handleConnect(req('POST', { toolkit: 'lemlist' }), { env: { ...env, COMPOSIO_AUTH_CLAY: 'ac_clay' }, ...fixture() })).status, 503)
+})

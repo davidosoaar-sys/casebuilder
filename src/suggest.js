@@ -33,7 +33,9 @@ const WHAT = {
   sheets: 'finance figures',
   excel: 'finance figures',
   figma: 'design notes',
-  canva: 'design material'
+  canva: 'design material',
+  fireflies: 'meeting transcripts',
+  googledrive: 'documents'
 }
 
 const WHOLE = new Set(['newHiresPerYear', 'incidentsPerMonth', 'peoplePerIncident', 'peoplePerAudit', 'auditsPerYear', 'toolSpendToday', 'toolSpendPortal', 'portalCost', 'selfHostSalary', 'engineers'])

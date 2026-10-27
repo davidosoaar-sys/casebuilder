@@ -18,7 +18,10 @@ export const MAX_BLOCKS = 30
 export const MAX_SLIDE_TEXTS = 8
 // What the agent may add. No Image (it would need a URL) and no Logo.
 export const AGENT_BLOCK_KINDS = ['Text', 'Heading', 'Bullet list', 'Quote', 'Two columns', 'Key numbers', 'Value drivers chart',
+  'Payback chart', 'Value breakdown chart', 'Input confidence chart',
   'Today vs with Portal', 'Portal vs self-hosting', 'Stakeholder brief', 'Divider', 'Spacer']
+// add_block may also name a chart as { type: 'chart', kind: 'payback' | 'breakdown' | 'confidence' }
+export const CHART_KINDS = { payback: 'Payback chart', breakdown: 'Value breakdown chart', confidence: 'Input confidence chart' }
 const TEXT_KINDS = ['Text', 'Heading', 'Bullet list', 'Quote']
 const TEXTS_TEMPLATES = ['blank', 'text', 'bullets']
 const TEXT_FIELDS = { text: ['text'], quote: ['text'], columns: ['left', 'right'], image: ['caption'] }
@@ -26,7 +29,7 @@ const STYLE_KEYS = TEXT_STYLES.map(([k]) => k)
 const BRAND_FONT_KEYS = ['headingFont', 'bodyFont']
 const BRAND_NAMES = { hideLogo: 'Logo visibility', logo: 'Company logo', heroImage: 'Brand image', heroAlt: 'Image description', heroSource: 'Image source', primary: 'Primary colour', background: 'Background', surface: 'Surface colour', text: 'Text colour', muted: 'Muted text colour', headingFont: 'Heading font', bodyFont: 'Body font' }
 const BLOCK_NAMES = { stats: 'key numbers', drivers: 'value drivers chart', pairs: 'today vs with Portal comparison', versus: 'Portal vs self-hosting comparison',
-  room: 'stakeholder brief', logo: 'logo', image: 'image', divider: 'divider', spacer: 'spacer', quote: 'quote', columns: 'two columns' }
+  room: 'stakeholder brief', logo: 'logo', image: 'image', divider: 'divider', spacer: 'spacer', quote: 'quote', columns: 'two columns', chart: 'chart' }
 
 // Fonts the agent may pick: the brand panel's list plus whatever the brand already uses.
 export function agentFonts(brand) {
@@ -93,7 +96,7 @@ export function applyDeckOps(deck, brand, ops, { now = new Date().toISOString() 
   const missingBlock = 'A block the agent named is not on that page any more.'
   const record = (op, c) => changes.push({ ...c, reason: typeof op.reason === 'string' ? op.reason.slice(0, 300) : '', at: now })
 
-  for (const op of list.slice(0, MAX_DECK_OPS)) {
+  for (let op of list.slice(0, MAX_DECK_OPS)) {
     if (!op || typeof op !== 'object') { refused.push('One change was not readable.'); continue }
     const si = op.slide_id != null ? findSlide(d, op.slide_id) : -1
     const slide = si >= 0 ? d[si] : null
@@ -178,6 +181,10 @@ export function applyDeckOps(deck, brand, ops, { now = new Date().toISOString() 
       }
       case 'add_block': {
         if (!slide) { refused.push(missingPage); break }
+        if (op.type === 'chart') {
+          if (!Object.hasOwn(CHART_KINDS, op.kind)) { refused.push(`There is no "${String(op.kind).slice(0, 40)}" chart. Use payback, breakdown or confidence.`); break }
+          op = { ...op, kind: CHART_KINDS[op.kind] }
+        } else if (op.type != null) { refused.push(`The agent cannot add a "${String(op.type).slice(0, 40)}" block.`); break }
         if (!AGENT_BLOCK_KINDS.includes(op.kind)) { refused.push(`The agent cannot add "${String(op.kind).slice(0, 40)}".`); break }
         if (slide.blocks.length >= MAX_BLOCKS) { refused.push(`Page ${page} already has ${MAX_BLOCKS} blocks.`); break }
         let at = slide.blocks.length

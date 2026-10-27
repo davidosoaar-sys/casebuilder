@@ -65,7 +65,7 @@ export function fontFaceCss(value) {
 export function brandLogoHtml(value, fallback = '') {
   const b = normalizeBrand(value)
   if (b.hideLogo) return ''
-  return coBrandHtml(b.logo ? `<img src="${b.logo}" alt="Company logo" style="height:40px;width:auto;max-width:220px;object-fit:contain;${b.logoBackground!=='transparent'?'background:'+b.logoBackground+';padding:8px;border-radius:4px;':''}">` : fallback)
+  return coBrandHtml(b.logo ? `<img class="co-brand-customer" src="${b.logo}" alt="Company logo" style="height:40px;width:auto;max-width:220px;object-fit:contain;flex:0 1 auto;min-width:0;${b.logoBackground!=='transparent'?'background:'+b.logoBackground+';padding:8px;border-radius:4px;':''}">` : fallback, b.background)
 }
 // Apply the palette after the default CSS, only in exported client documents.
 export function brandDocument(html, value) {

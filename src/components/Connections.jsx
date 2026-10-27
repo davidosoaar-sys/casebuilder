@@ -1,7 +1,7 @@
 import ClaudeConnector from './ClaudeConnector.jsx'
 import PageHead from './PageHead.jsx'
 import React, { useState, useEffect } from 'react'
-import { CONNECTORS, LIVE_TOOLKITS } from '../connectors.js'
+import { CONNECTORS, CONNECTOR_GROUPS, KEY_AUTH_TOOLKITS, toolkitOf } from '../connectors.js'
 import { apiHeaders } from '../apiAuth.js'
 import { LOGOS } from '../connectionLogos.js'
 import { uid } from '../uid.js'
@@ -63,52 +63,66 @@ export default function Connections({ project, projects=[],selectedProjectId='',
 
       <div className="connector-list">
         <ClaudeConnector />
-        {CONNECTORS.filter(c => c.key !== 'claude').sort((a, b) => a.label.localeCompare(b.label)).map((c, i) => (
-          <section key={c.key} className={`connector stagger-in ${connections[c.key] ? 'connector-on' : ''}`} style={{ '--stagger': `${Math.min(i * 30, 200)}ms` }} data-connector={c.key}>
-            <div className="connector-head">
-              {LOGOS[c.key] ? <img className="connector-logo" src={LOGOS[c.key]} alt="" width="36" height="36" /> : <span className="connector-logo" aria-hidden="true">▦</span>}
-              <div className="connector-title">
-                <strong>{c.label}</strong>
-                <span className="connector-blurb">{c.blurb}</span>
-              </div>
-              <span className="connector-status">{connections[c.key] ? 'Uploads on' : 'Uploads off'}</span>
-              <label className="switch">
-                <input
-                  type="checkbox"
-                  checked={!!connections[c.key]}
-                  onChange={e => onConnections(cs => ({ ...cs, [c.key]: e.target.checked }))}
-                  aria-label={`Allow the agent to ${c.allows}`}
-                />
-                <span className="switch-track" aria-hidden="true" />
-              </label>
-            </div>
-            {LIVE_TOOLKITS.includes(c.key) && <div className="connector-live">
-              {!live ? <p className="help">{error ? 'Live status unavailable.' : 'Checking live connection…'}</p> : live.configured.includes(c.key) ? (() => {
-                const on = live.connections.some(a => a.toolkit === c.key)
-                return <>
-                  <span className={`connector-live-state${on ? ' is-on' : ''}`}>{on ? 'Account connected' : 'Account not connected'}</span>
-                  <button className={on ? 'ghost' : 'primary'} disabled={!!busy} onClick={() => changeLive(c.key, on ? 'disconnect' : 'connect')}>
-                    {busy === c.key ? 'Working…' : on ? 'Disconnect' : 'Connect'}
-                  </button>
-                </>
-              })() : <p className="help">Live connection not configured. Upload or paste only.</p>}
-            </div>}
-            <p className="connector-allow">{connections[c.key] ? `The agent may ${c.allows}.` : `The agent may not ${c.allows}.`}</p>
-
-            {connections[c.key] &&
-              (project ? (
-                <Uploader
-                  connector={c}
-                  projectName={project.name}
-                  docs={documents.filter(d => d.source === c.key)}
-                  onDocuments={onDocuments}
-                />
-              ) : (
-                <p className="help connector-body">Open a project to add {c.accepts} for it.</p>
-              ))}
+        {CONNECTOR_GROUPS.map(group => (
+          <section key={group} className="connector-group" aria-labelledby={`connector-group-${group.replace(/\W+/g, '-')}`}>
+            <h2 className="connector-group-title" id={`connector-group-${group.replace(/\W+/g, '-')}`}>{group}</h2>
+            {CONNECTORS.filter(c => c.group === group).sort((a, b) => a.label.localeCompare(b.label)).map((c, i) => (
+              <ConnectorCard key={c.key} c={c} i={i} live={live} error={error} busy={busy} changeLive={changeLive}
+                connections={connections} onConnections={onConnections} project={project} documents={documents} onDocuments={onDocuments} />
+            ))}
           </section>
         ))}
       </div>
+    </div>
+  )
+}
+
+function ConnectorCard({ c, i, live, error, busy, changeLive, connections, onConnections, project, documents, onDocuments }) {
+  const toolkit = toolkitOf(c)
+  return (
+    <div className={`connector stagger-in ${connections[c.key] ? 'connector-on' : ''}`} style={{ '--stagger': `${Math.min(i * 30, 200)}ms` }} data-connector={c.key}>
+      <div className="connector-head">
+        {LOGOS[c.key] ? <img className="connector-logo" src={LOGOS[c.key]} alt="" width="36" height="36" /> : <span className="connector-logo" aria-hidden="true">▦</span>}
+        <div className="connector-title">
+          <strong>{c.label}</strong>
+          <span className="connector-blurb">{c.blurb}</span>
+        </div>
+        <span className="connector-status">{connections[c.key] ? 'Uploads on' : 'Uploads off'}</span>
+        <label className="switch">
+          <input
+            type="checkbox"
+            checked={!!connections[c.key]}
+            onChange={e => onConnections(cs => ({ ...cs, [c.key]: e.target.checked }))}
+            aria-label={`Allow the agent to ${c.allows}`}
+          />
+          <span className="switch-track" aria-hidden="true" />
+        </label>
+      </div>
+      {toolkit && <div className="connector-live">
+        {!live ? <p className="help">{error ? 'Live status unavailable.' : 'Checking live connection…'}</p> : live.configured.includes(toolkit) ? (() => {
+          const on = live.connections.some(a => a.toolkit === toolkit)
+          return <>
+            <span className={`connector-live-state${on ? ' is-on' : ''}`}>{on ? 'Account connected' : KEY_AUTH_TOOLKITS.includes(toolkit) ? 'Not connected. You enter your API key on the secure Composio page.' : 'Account not connected'}</span>
+            <button className={on ? 'ghost' : 'primary'} disabled={!!busy} onClick={() => changeLive(toolkit, on ? 'disconnect' : 'connect')} aria-label={`${on ? 'Disconnect' : 'Connect'} ${c.label}`}>
+              {busy === toolkit ? 'Working…' : on ? 'Disconnect' : 'Connect'}
+            </button>
+          </>
+        })() : <p className="help">Live connection not configured. Upload or paste only.</p>}
+      </div>}
+      {c.note && <p className="help connector-note">{c.note}</p>}
+      <p className="connector-allow">{connections[c.key] ? `The agent may ${c.allows}.` : `The agent may not ${c.allows}.`}</p>
+
+      {connections[c.key] &&
+        (project ? (
+          <Uploader
+            connector={c}
+            projectName={project.name}
+            docs={documents.filter(d => d.source === c.key)}
+            onDocuments={onDocuments}
+          />
+        ) : (
+          <p className="help connector-body">Open a project to add {c.accepts} for it.</p>
+        ))}
     </div>
   )
 }

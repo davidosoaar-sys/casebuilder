@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-- Refine input info controls with a matching stroke icon and compact themed disclosure; every standard input now has a one-sentence definition rather than research advice. Validation: definition coverage test and production build. Shared pull is blocked by existing uncommitted overlaps; no work discarded.
+- Merge Amr’s v0.21.0 into the local logo/template/input-help work; preserve background-aware co-branding and 16:9 editor sizing. Local-only merge; no new release, push or deployment.
+
+- Refine input info controls with a matching stroke icon and compact themed disclosure; every standard input now has a one-sentence definition rather than research advice. Validation: definition coverage test and production build. Merged with Amr’s v0.21.0 while preserving local work.
 
 - Add keyboard/touch-accessible information disclosures beside individual Case Inputs, including each Today/With Portal field. Explanations use existing field help and units, with guidance for custom inputs; calculations and source controls are unchanged. Validation: production build.
 
@@ -38,6 +40,33 @@ Every version that lands on `main` gets a line here and a git tag.
 ---
 
 ## Unreleased
+
+## v0.21.0 (2026-10-27): Pitch deck with charts
+
+- New projects start with an 11-page pitch flow (impact, today, value breakdown, drivers, today vs Portal, payback, self-hosting, this room, assumptions, next steps) using the payback, breakdown and confidence charts. Saved decks are unchanged. The deck agent gets design rules and can add charts as `{type: 'chart', kind}`; case files now accept chart blocks.
+- Deck: new Payback, Value breakdown and Input confidence chart blocks, drawn in the app and exported as native, editable PowerPoint charts. Charts with missing inputs show what they are waiting for instead of zeros.
+- Payback headline reads "Pays back in under a month" instead of "0.62 months"; the input confidence chart is a readable list of counts and bars per source state.
+- Validation: 505 app tests, 120 worker tests, build pass. Nike sample PPTX: 11 slides, 3 native chart parts, sldSz 12192000 x 6858000. In-app pages screenshotted and checked by eye.
+
+## v0.20.1 (2026-10-27): Skills use the live connectors
+
+- All four built-in skills now say what to do with each connected source instead of treating connectors as uploads. Pre-meeting brief: Calendar sets the agenda (one brief per matching meeting), every external attendee is researched (Clay record if connected), the last Gong or Fireflies call is summarised with quotes, open asks come from Gmail and Slack, deal stage from HubSpot, and a new section 6 lists the case inputs to confirm in the meeting. Stakeholder map builds people from meeting attendees, call speakers, email and CRM contacts, with stance only from what people said. Objection prep puts objections the customer actually raised (calls, email, CRM) first, labelled recorded, before hypotheses. Account news cross-checks public news against the deal's own calls and email.
+- Pre-meeting brief reads more when there is a meeting: Slack, HubSpot, Clay and Lemlist for the meeting's company are now included (files stay out to keep briefs fast). Without Google Calendar, a brief for a typed-in meeting now also uses Gmail, the latest call transcript, Slack and CRM, instead of reading nothing. With Calendar connected but no matching meeting, it still reads nothing else and says so.
+- Validation: 493 app tests, 117 worker tests pass. Live on Amr's account: brief with no matching meeting reads Calendar only; chat reads Calendar and Gmail.
+
+## v0.20.0 (2026-10-27): Nine more live connectors
+
+- Live connectors grow from 4 to 13: Gong, Fireflies, Google Sheets, Excel, Google Drive, Figma, Canva, Clay and Lemlist join Google Calendar, Gmail, Slack and HubSpot. Connectors are grouped (Calls & meetings, Email & chat, CRM & enrichment, Finance & files, Design). Fireflies, Clay and Lemlist take the user's own API key on Composio's secure page, never in CaseBuilder.
+- The agent reads them read-only and bounded: recent call transcripts mentioning the deal's company (Gong, Fireflies) with input changes only PROPOSED and quoted; spreadsheets and documents named after the company (Sheets, Excel, Drive; a fixed A1:Z60 range); CRM and enrichment records (Clay, Lemlist); Figma file metadata and comments; Canva design titles. Pre-meeting briefs include the latest transcript with the meeting's company.
+- Granola has no live connection (not offered by Composio): paste or upload notes, or push them from Claude through the Claude connector.
+- Validation: 493 app tests, 114 worker tests, build and connector review pass. All 23 read tools checked against the live Composio catalog (exist, read-only, versions match). Live Connect links returned for all 13 toolkits.
+
+## v0.19.3 (2026-10-27): Live room layout, 16:9 slides, Gemini free keys
+
+- Live room: the site now sizes against its own container instead of the viewport, so the top bar, hero lockup, KPI row and stakeholder centre no longer overlap inside the app; partner logos lose their white boxes and the client sees the company name without the sample suffix.
+- Slides use standard 16:9 PowerPoint dimensions (13.333 x 7.5 in) everywhere: editor pages are fixed 16:9 canvases with export-matching margins, rail thumbnails are 16:9, and the exported hero glow no longer bleeds off the slide. A test checks every sample deck for LAYOUT_WIDE and shapes inside the slide.
+- Gemini: free keys start at Gemini 3.5 Flash-Lite and only try Gemini 3.1 Pro when you pick Best in chat (server buttons need GOOGLE_ALLOW_PRO=1), so a turn no longer burns two 429s first. A model that hits its quota is skipped for 10 minutes for that key (server and worker). When every Gemini model is out of quota you now see "Your Gemini key hit its free daily limit. It resets at midnight Pacific; add a paid key or another provider in Settings." Model IDs checked against the live Gemini model list.
+- Validation: 492 app tests, 102 worker tests, build and connector review pass. Live room checked by eye at 1070px (Nike, Lovable): no overlaps, no white logo boxes.
 
 ## v0.19.2 (2026-10-27): Live calendar and Gmail fixes from the first real connection
 
