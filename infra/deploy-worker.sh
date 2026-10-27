@@ -8,6 +8,8 @@ scp -q src/prebuiltSkills.json casebuilder-vps:/tmp/cb-prebuiltSkills.json
 # worker.env -> server, stripped to the two needed vars, owner-only.
 { grep -E '^(SUPABASE_URL|SUPABASE_SECRET_KEY)=' ~/.config/casebuilder/worker.env
   grep -E '^TAVILY_API_KEY=tvly-' ~/.config/casebuilder/search.env 2>/dev/null || true
+  # Live read-only connectors (Composio): key + one auth config per toolkit.
+  grep -E '^COMPOSIO_(API_KEY|AUTH_[A-Z]+|VERSION_[A-Z]+)=' ~/.config/casebuilder/composio.env 2>/dev/null || true
   # Waitlist approval emails go out from this Gmail (app password, same as sign-up codes).
   grep -E '^GMAIL_APP_PASSWORD=.{16}$' ~/.config/casebuilder/gmail-smtp.env 2>/dev/null && echo 'GMAIL_USER=casebuilder.app@gmail.com' || true; } | ssh casebuilder-vps 'cat > /tmp/cb-worker.env'
 ssh casebuilder-vps 'bash -s' <<'EOF'
