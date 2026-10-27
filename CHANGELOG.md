@@ -27,6 +27,13 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
+## v0.20.0 (2026-10-27): Nine more live connectors
+
+- Live connectors grow from 4 to 13: Gong, Fireflies, Google Sheets, Excel, Google Drive, Figma, Canva, Clay and Lemlist join Google Calendar, Gmail, Slack and HubSpot. Connectors are grouped (Calls & meetings, Email & chat, CRM & enrichment, Finance & files, Design). Fireflies, Clay and Lemlist take the user's own API key on Composio's secure page, never in CaseBuilder.
+- The agent reads them read-only and bounded: recent call transcripts mentioning the deal's company (Gong, Fireflies) with input changes only PROPOSED and quoted; spreadsheets and documents named after the company (Sheets, Excel, Drive; a fixed A1:Z60 range); CRM and enrichment records (Clay, Lemlist); Figma file metadata and comments; Canva design titles. Pre-meeting briefs include the latest transcript with the meeting's company.
+- Granola has no live connection (not offered by Composio): paste or upload notes, or push them from Claude through the Claude connector.
+- Validation: 493 app tests, 114 worker tests, build and connector review pass. All 23 read tools checked against the live Composio catalog (exist, read-only, versions match). Live Connect links returned for all 13 toolkits.
+
 ## v0.19.3 (2026-10-27): Live room layout, 16:9 slides, Gemini free keys
 
 - Live room: the site now sizes against its own container instead of the viewport, so the top bar, hero lockup, KPI row and stakeholder centre no longer overlap inside the app; partner logos lose their white boxes and the client sees the company name without the sample suffix.
