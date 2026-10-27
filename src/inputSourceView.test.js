@@ -11,6 +11,10 @@ const nodeRequire=createRequire(import.meta.url)
 const ui={exports:{}}
 new Function('require','module','exports',transformSync(fs.readFileSync(new URL('components/ui.jsx',import.meta.url),'utf8'),{loader:'jsx',format:'cjs',tsconfigRaw:{}}).code)(nodeRequire,ui,ui.exports)
 modules['./ui.jsx']=ui.exports
+const inputInfo={exports:{}}
+const inputHelp=await import('./inputHelp.js')
+new Function('require','module','exports',transformSync(fs.readFileSync(new URL('components/InputInfo.jsx',import.meta.url),'utf8'),{loader:'jsx',format:'cjs',tsconfigRaw:{}}).code)(id=>id==='react'?React:id==='../inputHelp.js'?inputHelp:{},inputInfo,inputInfo.exports)
+modules['./InputInfo.jsx']=inputInfo.exports
 const compiled=transformSync(fs.readFileSync(new URL('components/InputSheet.jsx',import.meta.url),'utf8'),{loader:'jsx',format:'cjs',tsconfigRaw:{}}).code
 const module={exports:{}}
 new Function('require','module','exports',compiled)(id=>modules[id],module,module.exports)

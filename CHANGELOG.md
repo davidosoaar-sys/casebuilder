@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Merge Amr’s v0.21.0 into the local logo/template/input-help work; preserve background-aware co-branding and 16:9 editor sizing. Local-only merge; no new release, push or deployment.
+- Merge Amr’s v0.21.0 into the local logo/template/input-help work; preserve background-aware co-branding and 16:9 editor sizing. Validation: production build passes; 509 of 510 tests pass, with the existing locale-sensitive schedule AM/PM assertion remaining. Updated component test loaders for the merged co-brand/input-help dependencies. Local-only merge; no new release, push or deployment.
 
 - Refine input info controls with a matching stroke icon and compact themed disclosure; every standard input now has a one-sentence definition rather than research advice. Validation: definition coverage test and production build. Merged with Amr’s v0.21.0 while preserving local work.
 

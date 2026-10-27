@@ -1,3 +1,4 @@
+import * as coBrand from './coBrand.js'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -5,7 +6,7 @@ import React from 'react'
 import {renderToStaticMarkup} from 'react-dom/server'
 import {transformSync} from 'esbuild'
 import * as branding from './brand.js'
-function load(name){const compiled=transformSync(fs.readFileSync(new URL('components/'+name,import.meta.url),'utf8'),{loader:'jsx',format:'cjs',tsconfigRaw:{}}).code;const module={exports:{}};new Function('require','module','exports',compiled)(id=>id==='react'?React:id==='../brand.js'?branding:id==='./BrandReview.jsx'?{__esModule:true,default:load('BrandReview.jsx')}:id==='./AgentProgress.jsx'?loadAll('AgentProgress.jsx'):{default:()=>null},module,module.exports);return module.exports.default}
+function load(name){const compiled=transformSync(fs.readFileSync(new URL('components/'+name,import.meta.url),'utf8'),{loader:'jsx',format:'cjs',tsconfigRaw:{}}).code;const module={exports:{}};new Function('require','module','exports',compiled)(id=>id==='react'?React:id==='../brand.js'?branding:id==='../coBrand.js'?coBrand:id==='./BrandReview.jsx'?{__esModule:true,default:load('BrandReview.jsx')}:id==='./AgentProgress.jsx'?loadAll('AgentProgress.jsx'):{default:()=>null},module,module.exports);return module.exports.default}
 // Every export of a component file (AgentProgress exports several).
 function loadAll(name){const compiled=transformSync(fs.readFileSync(new URL('components/'+name,import.meta.url),'utf8'),{loader:'jsx',format:'cjs',tsconfigRaw:{}}).code;const module={exports:{}};new Function('require','module','exports',compiled)(id=>id==='react'?React:{},module,module.exports);return module.exports}
 const BrandSetup=load('BrandSetup.jsx'),DeckLogo=load('DeckLogo.jsx')
