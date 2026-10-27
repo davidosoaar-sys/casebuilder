@@ -27,6 +27,13 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
+## v0.19.3 (2026-10-27): Live room layout, 16:9 slides, Gemini free keys
+
+- Live room: the site now sizes against its own container instead of the viewport, so the top bar, hero lockup, KPI row and stakeholder centre no longer overlap inside the app; partner logos lose their white boxes and the client sees the company name without the sample suffix.
+- Slides use standard 16:9 PowerPoint dimensions (13.333 x 7.5 in) everywhere: editor pages are fixed 16:9 canvases with export-matching margins, rail thumbnails are 16:9, and the exported hero glow no longer bleeds off the slide. A test checks every sample deck for LAYOUT_WIDE and shapes inside the slide.
+- Gemini: free keys start at Gemini 3.5 Flash-Lite and only try Gemini 3.1 Pro when you pick Best in chat (server buttons need GOOGLE_ALLOW_PRO=1), so a turn no longer burns two 429s first. A model that hits its quota is skipped for 10 minutes for that key (server and worker). When every Gemini model is out of quota you now see "Your Gemini key hit its free daily limit. It resets at midnight Pacific; add a paid key or another provider in Settings." Model IDs checked against the live Gemini model list.
+- Validation: 492 app tests, 102 worker tests, build and connector review pass. Live room checked by eye at 1070px (Nike, Lovable): no overlaps, no white logo boxes.
+
 ## v0.19.2 (2026-10-27): Live calendar and Gmail fixes from the first real connection
 
 - Fix: a project named like "Nike · sample" never matched a meeting titled "Nike ..." because the label suffix was part of the company name. The suffix is now ignored ("Nikelodeon" still does not match).

@@ -1,3 +1,4 @@
+import { clientCompanyName } from '../src/companyName.js'
 import {clientStakeholder} from '../src/stakeholderRequirements.js'
 // casebuilder: the command line behind the Claude plugin. It reads and writes
 // a case file (see src/caseFile.js), runs the value model, and builds the
@@ -457,7 +458,7 @@ async function cmdBuild(pos, flags) {
   fs.mkdirSync(outDir, { recursive: true })
 
   const inputs = inputsOf(project.fields)
-  const company = inputs.companyName || project.name
+  const company = clientCompanyName(inputs.companyName, project.name)
   const deck = inlineImages(project.deck, path.dirname(path.resolve(file)))
   const name = slug(company)
   const written = []

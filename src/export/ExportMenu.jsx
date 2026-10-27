@@ -1,3 +1,4 @@
+import { clientCompanyName } from '../companyName.js'
 import {clientStakeholder} from '../stakeholderRequirements.js'
 import React, { useState, useRef, useEffect } from 'react'
 import faviconSvg from '../../public/favicon.svg?raw'
@@ -46,7 +47,7 @@ function imageSize(src) {
 
 export default function ExportMenu({ company: projectName, deck, inputs, fields, connectors, stakeholders, activeKey, onWebsite, brand, requestedView, onViewOpened, onFillInputs, triggerClass = 'primary' }) {
   // The deck itself says {company} from the Company input, so use that name everywhere.
-  const company = inputs.companyName || projectName
+  const company = clientCompanyName(inputs.companyName, projectName)
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')

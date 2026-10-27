@@ -771,6 +771,7 @@ class DeckOpsInReplyMeta(unittest.TestCase):
 class ModelFallback(unittest.TestCase):
     """Any provider's key: step down a tier when a model is refused, fail clearly on a bad key."""
     def run_fb(self, errors, model="claude-opus-5-5", provider="google"):
+        worker._EXHAUSTED.clear()
         calls = []
         def fake(profile, prompt, key, m, effort, web, prov):
             calls.append(worker.provider_model(prov, m))
@@ -791,9 +792,28 @@ class ModelFallback(unittest.TestCase):
         self.assertEqual(calls, ["gemini-3.1-pro-preview", "gemini-3.8-flash"])
         self.assertEqual((raw, used, fell), ("ok", "gemini-3.8-flash", "gemini-3.1-pro-preview"))
 
-    def test_overloaded_then_fast(self):
+    def test_overloaded_then_next(self):
         (_, _, used, _), calls = self.run_fb(["hermes exit 2: 503 This model is currently experiencing high demand"], model="claude-sonnet-5-5")
-        self.assertEqual(used, "gemini-3.5-flash-lite")
+        self.assertEqual(calls, ["gemini-3.5-flash-lite", "gemini-3.8-flash"])
+
+    def test_gemini_balanced_starts_cheapest_never_pro(self):
+        (_, _, used, fell), calls = self.run_fb([], model="claude-sonnet-5-5")
+        self.assertEqual((calls, used, fell), (["gemini-3.5-flash-lite"], "gemini-3.5-flash-lite", None))
+
+    def test_429_model_is_skipped_next_time(self):
+        q = "hermes exit 2: 429 RESOURCE_EXHAUSTED quota"
+        _, calls = self.run_fb([q])
+        self.assertEqual(calls, ["gemini-3.1-pro-preview", "gemini-3.8-flash"])
+        calls2 = []
+        def fake(profile, prompt, key, m, effort, web, prov):
+            calls2.append(worker.provider_model(prov, m)); return "ok", None
+        orig = worker.run_hermes; worker.run_hermes = fake
+        try:
+            worker.run_with_fallback("p", "hi", "k", "claude-opus-5-5", None, True, "google")
+            worker.run_with_fallback("p", "hi", "other-key", "claude-opus-5-5", None, True, "google")
+        finally:
+            worker.run_hermes = orig
+        self.assertEqual(calls2, ["gemini-3.8-flash", "gemini-3.1-pro-preview"])
 
     def test_no_fallback_needed(self):
         (_, _, used, fell), calls = self.run_fb([], model="claude-sonnet-5-5", provider="openai")
@@ -815,7 +835,8 @@ class ModelFallback(unittest.TestCase):
         with self.assertRaises(worker.KeyError_) as cm:
             self.run_fb([q, q, q])
         self.assertEqual(cm.exception.kind, "quota")
-        self.assertIn("Gemini 3.1 Pro", str(cm.exception))
+        self.assertEqual(str(cm.exception), worker.GEMINI_QUOTA_MESSAGE)
+        self.assertIn("midnight Pacific", str(cm.exception))
 
     def test_other_errors_still_raise(self):
         with self.assertRaises(RuntimeError):
@@ -846,6 +867,7 @@ class HermesErrorShapes(unittest.TestCase):
         self.assertIsNone(worker.model_error_kind("hermes exit 1: Traceback ... line 403, in run ... took 401ms"))
 
     def test_daily_quota_steps_down(self):
+        worker._EXHAUSTED.clear()
         calls = []
         def fake(profile, prompt, key, m, effort, web, prov):
             calls.append(worker.provider_model(prov, m))
@@ -857,7 +879,7 @@ class HermesErrorShapes(unittest.TestCase):
             raw, _, used, fell = worker.run_with_fallback("p", "q", "k", "claude-sonnet-5-5", None, True, "google")
         finally:
             worker.run_hermes = orig
-        self.assertEqual((calls, used, fell), (["gemini-3.8-flash", "gemini-3.5-flash-lite"], "gemini-3.5-flash-lite", "gemini-3.8-flash"))
+        self.assertEqual((calls, used, fell), (["gemini-3.5-flash-lite", "gemini-3.8-flash"], "gemini-3.8-flash", "gemini-3.5-flash-lite"))
 
 class BrandTemplate(unittest.TestCase):
     def test_brand_assets_and_section_names(self):

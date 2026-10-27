@@ -1,3 +1,4 @@
+import { clientCompanyName } from '../companyName.js'
 import {caseNarrative} from '../caseNarrative.js'
 import { uid } from '../uid.js'
 import { computeModel } from '../model.js'
@@ -77,7 +78,7 @@ export function buildEnv(inputs, fields, active, model = computeModel(inputs)) {
   const show = (f, fn) => (f.incomplete ? '' : fn(f))
   const total = F.totalValue
   const ctx = {
-    company: inputs.companyName || 'Untitled',
+    company: clientCompanyName(inputs.companyName) || 'Untitled',
     ...caseNarrative(inputs,F,fmtMoney),
     role: active.role,
     archetype: inputs.archetype,
