@@ -25,6 +25,12 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ---
 
+## Unreleased
+
+- Slide editor: content taller than a 16:9 page is scaled down to fit it, like the PPTX export, instead of scrolling inside the page.
+- Live room: the pitch-flow chart pages (value breakdown, payback, confidence) no longer spill their headings into the Overview, `{paybackShort}` no longer prints raw, and the default "Today" page no longer repeats the overview copy in a narrow column.
+- Find people: a dropped connection ("Failed to fetch") is retried once automatically, with a clear message if it fails again.
+
 ## v0.22.0 (2026-10-27): Guided onboarding, deck themes and reliable publishing
 
 - Add compact onboarding cards tied to actual project stages: create project, stakeholders, branding, people, theme, inputs and artifact editing/format/export. Cards never advance the workflow; they wait for the relevant screen and can be dismissed or skipped.
@@ -34,12 +40,6 @@ Every version that lands on `main` gets a line here and a git tag.
 - Remove the Live Room cover Scroll prompt and tighten its composition. Preserve Amr’s v0.21.0 pitch-deck and export work.
 - Fix publishing URLs when Vercel truncates the generated production alias. A local no-customer-data deployment was verified publicly reachable; credentials stay server-only and uncommitted.
 - Validation: 515 of 516 suite tests pass; the existing locale-sensitive schedule AM/PM assertion remains. Application/plugin builds pass. Isolated browser checks verify action-driven onboarding, per-page dismissal, desktop/mobile themes and black/white logo conversion. The complete signed-in customer workflow still needs user acceptance testing. Git release does not itself confirm a Vercel/worker deployment.
-
-## Unreleased
-
-- Slide editor: content taller than a 16:9 page is scaled down to fit it, like the PPTX export, instead of scrolling inside the page.
-- Live room: the pitch-flow chart pages (value breakdown, payback, confidence) no longer spill their headings into the Overview, `{paybackShort}` no longer prints raw, and the default "Today" page no longer repeats the overview copy in a narrow column.
-- Find people: a dropped connection ("Failed to fetch") is retried once automatically, with a clear message if it fails again.
 
 ## v0.22.1 (2026-10-27): Restart the tour from Settings
 
