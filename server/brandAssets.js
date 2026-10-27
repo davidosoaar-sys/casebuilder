@@ -64,12 +64,23 @@ export function brandHeroCandidates(html,website,company=''){
 }
 
 // The same byte and public-network checks serve discovery and later replacements.
-export async function fetchBrandAsset(url, kind, fetcher) {
+// A public web page also works for brand imagery: its own hero or social image
+// is used, so the agent can pass the page it found in a search.
+export async function fetchBrandAsset(url, kind, fetcher, { page = true } = {}) {
   if (!['logo', 'heroImage'].includes(kind)) throw Error('Unknown brand asset.')
   if (!publicProfileUrl(url)) throw Error('Use a public HTTPS image source.')
-  const image = await fetcher(url, { limit: kind === 'heroImage' ? 700000 : 600000 })
+  const image = await fetcher(url, { limit: kind === 'heroImage' ? (page ? 1500000 : 700000) : 600000 })
   if (!publicProfileUrl(image.url)) throw Error('The image source is not public HTTPS.')
   const mime = image.type.split(';')[0].toLowerCase()
+  if (mime === 'text/html' || mime === 'application/xhtml+xml') {
+    if (kind !== 'heroImage' || !page) throw Error('That link is a web page, not an image.')
+    const html = image.buffer.toString('utf8'), candidates = brandHeroCandidates(html, image.url)
+    let last = Error('That page has no usable landscape image.')
+    for (const candidate of candidates) {
+      try { return await fetchBrandAsset(candidate.url, kind, fetcher, { page: false }) } catch (error) { last = error }
+    }
+    throw last
+  }
   if (kind === 'heroImage' && !/^image\/(png|jpeg|webp)$/.test(mime)) throw Error('Use PNG, JPEG or WebP for brand imagery.')
   const size = inspectBrandImage(image.buffer, mime)
   if (kind === 'heroImage' && (size.width < 640 || size.height < 240 || size.width / size.height < 1.4)) throw Error('Choose a landscape image at least 640 × 240 pixels.')

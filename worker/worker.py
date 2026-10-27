@@ -990,6 +990,7 @@ def deck_prompt(deal):
         f"- set_brand {{primary?, background?, surface?, text?, muted?, headingFont?, bodyFont?}}: colours as #rrggbb; fonts one of {', '.join(agent_fonts(deal))}. "
         "Also supports hideLogo (boolean), logo, heroImage, heroAlt (up to 240 characters), heroSource (public HTTPS). "
         "For logo or heroImage use a candidate reference from the outline, a direct public HTTPS image URL, or an empty string to remove it. "
+        "For heroImage you may also give the public HTTPS page the image is published on; the server then uses that page's own hero or social image. "
         "Brand discovery is an editable starting point. If candidates are weak, use web search to find relevant company imagery "
         "and inspect its source; never invent image URLs or substitute unrelated stock photos. The server fetches and validates image bytes "
         "and records the final image URL as heroSource. If web search is unavailable, ask for an upload or source. "

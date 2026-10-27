@@ -81,3 +81,14 @@ test('replacement assets use the discovery byte checks and reject unsafe sources
  await assert.rejects(fetchBrandAsset('https://company.example/logo.png','logo',async url=>({url,type:'image/png',buffer:Buffer.from('not an image')})))
  await assert.rejects(fetchBrandAsset('https://company.example/logo.svg','logo',async url=>({url,type:'image/svg+xml',buffer:Buffer.from('<svg viewBox="0 0 160 40"><path onclick="bad()"/></svg>')})),/active content/)
 })
+
+test('a hero image can come from the public page it is published on', async () => {
+ const {fetchBrandAsset}=await import('./brandAssets.js')
+ const png=Buffer.alloc(64);Buffer.from([137,80,78,71,13,10,26,10]).copy(png);png.write('IHDR',12);png.writeUInt32BE(1200,16);png.writeUInt32BE(600,20);png.write('IDAT',32);png.write('IEND',48)
+ const fetcher=async url=>url.endsWith('.png')?{url,type:'image/png',buffer:png}:{url,type:'text/html; charset=utf-8',buffer:Buffer.from('<meta property="og:image" content="/media/hero.png">')}
+ const result=await fetchBrandAsset('https://company.example/about','heroImage',fetcher)
+ assert.equal(result.source,'https://company.example/media/hero.png')
+ assert.match(result.data,/^data:image\/png;base64,/)
+ await assert.rejects(fetchBrandAsset('https://company.example/about','logo',fetcher),/web page/)
+ await assert.rejects(fetchBrandAsset('https://company.example/about','heroImage',async url=>({url,type:'text/html',buffer:Buffer.from('<p>none</p>')})),/no usable/)
+})

@@ -38,4 +38,5 @@ test('hidden logo removes the Live room identity including its fallback, retaini
   assert.ok(html.includes('brand-cover-image'))
   assert.equal(html.includes('id="logo"'),false)
   assert.equal(html.includes('landing-initial'),false)
+  assert.equal(html.includes('brand-logo-overlay'),false,'no empty logo box over the photo')
 })

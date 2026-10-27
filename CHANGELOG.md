@@ -27,6 +27,11 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
+- Brand discovery is now a starting point, not a lock. In Deck design you can replace the logo or brand image by upload, pick another logo or image found during discovery, remove either, or hide the logo everywhere (deck, Live room, exports). Colours and fonts stay editable as before.
+- The agent can change the same things from chat: hide or show the logo, swap the logo or brand image (a discovered one, a direct image link, or a public page it found with web search whose own hero image is used), set the image description and source, and rename Live room sections. The server fetches and checks every web image the same way brand discovery does (public HTTPS only, real PNG/JPEG/WebP bytes, landscape and large enough) and records where it came from. Each change shows on the change card with Undo, like other deck edits.
+- The agent's reply no longer claims a case change landed on its own say-so: when a reply carries case changes, the text comes from what was actually applied, and failed or refused changes are listed on the card.
+- Live room cover: no empty box over the photo when the logo is hidden, and the logo lockup and image credit fit on phone screens.
+
 ## v0.17.1 (2026-10-27): Gemini keys work again, any provider's key falls back, setup shows its progress
 
 - Gemini: Google AI Studio now issues keys that start with `AQ.`; Settings only accepted the old `AIza` keys, so a new Gemini key could not be saved. Both are accepted now (migration 0014, applied live). The buttons (Find people, Suggest values, Person lookup, brand) reach Gemini through Google's own API instead of its OpenAI-compatible endpoint, which rejects the new keys.
