@@ -88,7 +88,7 @@ test('google: native generateContent, key in x-goog-api-key, tools and thought s
   } })
   const tools = [{ name: 'search', description: 'Search', input_schema: { type: 'object', properties: { q: { type: 'string' } }, required: ['q'] } }]
   const first = await client.messages.create({ model: 'claude-sonnet-5-5', max_tokens: 100, system: 'Be brief.', tools, messages: [{ role: 'user', content: 'Find the CFO' }] })
-  assert.match(seen[0].url, /^https:\/\/generativelanguage\.googleapis\.com\/v1beta\/models\/gemini-3\.8-flash:generateContent$/)
+  assert.match(seen[0].url, /^https:\/\/generativelanguage\.googleapis\.com\/v1beta\/models\/gemini-3\.5-flash-lite:generateContent$/)
   assert.equal(seen[0].init.headers['x-goog-api-key'], 'AQ.Ab-test')
   assert.ok(!seen[0].url.includes('AQ.'), 'key never in the URL')
   assert.ok(!('authorization' in seen[0].init.headers))

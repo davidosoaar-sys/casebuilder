@@ -32,6 +32,31 @@ export function modelFor(provider, requested, env = process.env) {
   return env[`${provider.toUpperCase()}_MODEL_${tier.toUpperCase()}`] || TIERS[provider][tier]
 }
 
+// Gemini free keys get 0 requests on Pro and run out on Flash first, so unless
+// the caller asked for the best tier we start at the cheapest model and step up.
+// A model that answered 429 for a key is skipped for a while (in memory, per key)
+// so later calls go straight to the model that works.
+// Server buttons ask for the Claude best tier by default, which is not a user
+// choice, so Gemini only tries Pro when GOOGLE_ALLOW_PRO=1 (a paid key).
+export function tierOrder(provider, requested, env = process.env) {
+  const tier = tierOf(String(requested || ''))
+  if (provider === 'google') return tier === 'best' && env.GOOGLE_ALLOW_PRO === '1' ? ['best', 'balanced', 'fast'] : ['fast', 'balanced']
+  const all = ['best', 'balanced', 'fast']
+  return all.slice(all.indexOf(tier))
+}
+const QUOTA_TTL_MS = 10 * 60 * 1000
+const exhausted = new Map() // `${provider}:${key tail}:${tier}` -> expires at
+const slot = (provider, apiKey, tier) => `${provider}:${String(apiKey || '').slice(-12)}:${tier}`
+export function markExhausted(provider, apiKey, tier, now = Date.now()) { exhausted.set(slot(provider, apiKey, tier), now + QUOTA_TTL_MS) }
+export function isExhausted(provider, apiKey, tier, now = Date.now()) {
+  const k = slot(provider, apiKey, tier), t = exhausted.get(k)
+  if (t && t > now) return true
+  if (t) exhausted.delete(k)
+  return false
+}
+export function resetExhausted() { exhausted.clear() }
+export const GEMINI_QUOTA_MESSAGE = 'Your Gemini key hit its free daily limit. It resets at midnight Pacific; add a paid key or another provider in Settings.'
+
 export class ProviderAPIError extends Error {
   constructor(status, message, provider) {
     super(message); this.status = status; this.provider = provider; this.name = 'ProviderAPIError'
@@ -188,13 +213,15 @@ export function compatClient(provider, apiKey, { env = process.env, fetchImpl = 
   // overloaded or not on the account): step down a tier instead of failing. A
   // rejected key (401/403) is not retried, since no tier will work.
   const withFallback = async (fn, req, opts) => {
-    const tiers = ['best', 'balanced', 'fast']
     const asModel = { best: 'claude-opus-5-5', balanced: 'claude-sonnet-5-5', fast: 'claude-haiku-5-5' }
     // A model that never answers (Gemini under load hangs instead of returning 503)
     // gets a time limit per tier; the caller's own abort still ends everything.
     const perTier = Number(env.PROVIDER_TIER_TIMEOUT_MS) || 60000
-    let last
-    for (const tier of tiers.slice(tiers.indexOf(tierOf(String(req.model || ''))))) {
+    const order = tierOrder(provider, req.model, env)
+    let tiers = order.filter(t => !isExhausted(provider, apiKey, t))
+    if (!tiers.length) tiers = order.slice(-1) // all cooling down: try once anyway, the limit may have reset
+    let last, quotaOnly = true
+    for (const tier of tiers) {
       const limit = AbortSignal.timeout(perTier)
       const signal = opts.signal ? AbortSignal.any([opts.signal, limit]) : limit
       try { return await fn({ ...req, model: asModel[tier] }, { ...opts, signal }) }
@@ -203,7 +230,12 @@ export function compatClient(provider, apiKey, { env = process.env, fetchImpl = 
         const timedOut = limit.aborted
         last = timedOut ? new ProviderAPIError(504, `${PROVIDERS[provider].label} did not answer within ${Math.round(perTier / 1000)}s`, provider) : e
         if (!timedOut && (!(e instanceof ProviderAPIError) || ![404, 429, 503, 529].includes(e.status))) throw e
+        if (!timedOut && e.status === 429) markExhausted(provider, apiKey, tier)
+        else quotaOnly = false
       }
+    }
+    if (provider === 'google' && quotaOnly && last?.status === 429) {
+      const err = new ProviderAPIError(429, GEMINI_QUOTA_MESSAGE, 'google'); err.quota = true; throw err
     }
     throw last
   }
