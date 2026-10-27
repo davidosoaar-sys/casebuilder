@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import {enrichPublicProfile} from './publicProfile.js'
+import {enrichPublicProfile,findPublicPhoto} from './publicProfile.js'
 import { agentPrompt } from './agent-commands/index.js'
 import { AGENT_COMMANDS } from '../src/agentCommands.js'
 import { SUGGESTIBLE, quoteSupportsValue } from './suggest.js'
@@ -71,7 +71,7 @@ function validate(data, urls, documents, enabledSources) {
   const person = p => ({ name: claim(p?.name), title: claim(p?.title), company: claim(p?.company) })
   const role = claim(data.roleMatch?.role), why = claim(data.roleMatch?.why), roleEvidence = evidence(data.roleMatch)
   return {
-    ...person(data), tenure: claim(data.tenure), reportsTo: claim(data.reportsTo), reports: list(data.reports),
+    ...person(data), bio: claim(data.bio), tenure: claim(data.tenure), reportsTo: claim(data.reportsTo), reports: list(data.reports),
     roleMatch: role && why && roleEvidence ? { role, confidence: ['high', 'medium', 'low'].includes(data.roleMatch.confidence) ? data.roleMatch.confidence : 'low', why, ...roleEvidence } : null,
     publicSignals: (Array.isArray(data.publicSignals) ? data.publicSignals.slice(0, 20) : []).flatMap(c => { const e = evidence(c); return e?.sourceType === 'web' && clean(c.claim) ? [{ claim: clean(c.claim), ...e }] : [] }),
     likelyCares: claim(data.likelyCares),
@@ -102,10 +102,10 @@ export async function* searchPerson(input, { signal, provider = anthropicProvide
     if (snapshot) {
       for (const key of ['name', 'title', 'company']) checked[key] ||= snapshot[key]
     }
-    if (phase === 'identity') Object.assign(checked, { reportsTo: null, reports: [], roleMatch: null, publicSignals: [], likelyCares: null, suggestedInputs: [] })
+    if (phase === 'identity') Object.assign(checked, { bio: null, reportsTo: null, reports: [], roleMatch: null, publicSignals: [], likelyCares: null, suggestedInputs: [] })
     snapshot = { ...(snapshot || {}), ...checked, phase, sourcesUsed: [], sourcesSkipped: prepared.sourcesSkipped }
     if (snapshot.candidates.length > 1) {
-      snapshot = { ...snapshot, name: null, title: null, company: null, tenure: null, reportsTo: null, reports: [], roleMatch: null, publicSignals: [], likelyCares: null, suggestedInputs: [] }
+      snapshot = { ...snapshot, name: null, title: null, company: null, tenure: null, bio: null, reportsTo: null, reports: [], roleMatch: null, publicSignals: [], likelyCares: null, suggestedInputs: [] }
     }
     const used = new Set()
     const track = value => {
@@ -116,9 +116,11 @@ export async function* searchPerson(input, { signal, provider = anthropicProvide
     track(snapshot)
     snapshot.sourcesUsed = [...used]
     yield snapshot
-    if(phase==='enriched'&&snapshot.name&&!snapshot.candidates.length&&prepared.web&&result.data&&('photo' in result.data||'links' in result.data||'email' in result.data||'linkedin' in result.data)){
+    if(phase==='enriched'&&snapshot.name&&!snapshot.candidates.length&&prepared.web&&result.data&&['photo','links','email','linkedin','bio'].some(key=>key in result.data)){
       const permitted=urls.filter(u=>{const safe=httpUrl(u);return safe&&(!hostedConnector(safe)||prepared.enabledSources.includes(hostedConnector(safe)))})
       const media=await enrichPublicProfile({...result.data,name:snapshot.name},{observedUrls:permitted,citations:result.citations||{},...(assetFetcher?{fetcher:assetFetcher}:{})})
+      signal?.throwIfAborted()
+      if(!media.photo){media.photo=await findPublicPhoto({name:snapshot.name.value,company:snapshot.company?.value||prepared.input.company,sourceUrls:permitted},{search:null,...(assetFetcher?{fetcher:assetFetcher}:{})}).catch(()=>null)}
       signal?.throwIfAborted()
       snapshot={...snapshot,photo:media.photo,links:media.links,email:media.email?{value:media.email,sourceUrl:media.emailSourceUrl,sourceType:'web'}:null,linkedin:media.linkedin?{value:media.linkedin,sourceUrl:media.linkedinSourceUrl,sourceType:'web'}:null}
       if((media.photo||media.links.length||media.email||media.linkedin)&&!snapshot.sourcesUsed.includes('web'))snapshot.sourcesUsed=[...snapshot.sourcesUsed,'web']

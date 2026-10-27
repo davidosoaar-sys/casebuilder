@@ -78,7 +78,7 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
     setPreview({ kind, title: kind === 'pdf' ? 'PDF preview' : 'Slides', file: `${slug(company)} - ${kind}.html`, html: buildSiteHtml({ project: { name: company, deck, fields, stakeholders, brand }, inputs, activeKey, mode: kind }) })
   }
 
-  async function pptx() {
+  async function pptx(target='powerpoint') {
     setOpen(false)
     setError('')
     setBusy('Building the PowerPoint…')
@@ -89,9 +89,9 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
         company,
         brand,
         slides: resolveSlides(deck, env),
-        deps: { PptxGenJS, logoPng: () => rasterLogo(brand), imageSize }
+        deps: { PptxGenJS, logoPng: () => rasterLogo(brand), imageSize, importTarget:target }
       })
-      await file.writeFile({ fileName: `${slug(company)} - business case.pptx` })
+      await file.writeFile({ fileName: `${slug(company)} - business case${target==='powerpoint'?'':' - '+target}.pptx` })
     } catch (err) {
       console.error(err)
       setError('Could not build the PowerPoint. ' + (err?.message || ''))
@@ -110,6 +110,8 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
   const items = [
     { name: 'PDF', note: 'Preview, then save as PDF', gets: 'PDF', run: () => show('pdf') },
     { name: 'Slides', note: 'Present, or download PowerPoint (.pptx)', gets: 'PPTX', run: () => show('slides') },
+    { name: 'Google Slides', note: 'Editable PPTX to import into Google Slides', gets: 'Import', run: () => {show('slides');setPreview(p=>({...p,destination:'google-slides'}))} },
+    { name: 'Canva', note: 'Editable PPTX with import-friendly charts', gets: 'Import', run: () => {show('slides');setPreview(p=>({...p,destination:'canva'}))} },
     { name: 'One-pager', note: 'Preview, then PDF or HTML', gets: 'PDF, HTML', run: () => show('onepager') },
     { name: 'Live room', note: 'Interactive page you can share', gets: 'Link', run: () => show('website') }
   ]
@@ -168,6 +170,7 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
           audience={who.role}
           onView={show}
           onDownloadSlides={pptx}
+          brand={brand}
           busy={!!busy}
           hidden={hiddenForClient({ deck, inputs, fields, stakeholders, activeKey })}
           onFillInputs={onFillInputs}

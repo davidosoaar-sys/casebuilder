@@ -3,6 +3,7 @@ import {enrichPublicProfile,findPublicPhoto} from './publicProfile.js'
 import { agentPrompt } from './agent-commands/index.js'
 import { AGENT_COMMANDS } from '../src/agentCommands.js'
 import { runWithSearch } from './agentSearch.js'
+import {researchNote} from './researchNote.js'
 
 // The people-finder agent. One call researches one role at one company with
 // our own web search (Tavily, see agentSearch.js), then every claim is checked against what the search
@@ -96,7 +97,7 @@ export async function research({ company, role }, client = new Anthropic(), {fet
     const photo = await findPublicPhoto({ name: p.name, company, sourceUrls: p.sources }, { ...(photoSearch !== undefined ? { search: photoSearch } : {}), ...(fetcher ? { fetcher } : {}) }).catch(() => null)
     if (photo) p.photo = photo
   }))
-  return { people: top, note: clean(parsed.note, 300) || null, search: run.search }
+  return { people: top, note: researchNote(parsed.note), search: run.search }
 }
 
 const clean = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '')

@@ -20,7 +20,8 @@ outputs are a read-only snapshot, not a pretend shared task database.
 
 These choices extend the incumbent implementation; they do not rebrand the app.
 
-Onboarding follows real actions: one concise card for the current page/stage,
-with a soft 2px background blur. Okay restores the page and leaves its target
-outlined. No automatic page switching or immediate chain of same-page cards.
-Informed by Intercom’s action-driven tours and Appcues’ contextual guidance.
+Onboarding starts with a short welcome/name step. Use anchored callouts with an
+arrow, a dark scrim and a clear spotlight around the action; unrelated pointer
+and keyboard navigation is blocked while the guide is open. Clicking the actual
+action progresses its tip. Broad section tips use Continue; Skip tour is always
+available. Position cards within the viewport and avoid whole-page outlines.

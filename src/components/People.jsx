@@ -28,6 +28,7 @@ export default function People({
   people,
   onPeople,
   onContinue,
+  onBack,
   continueLabel,
   showStep,
   embedded = false
@@ -110,7 +111,8 @@ export default function People({
           <div className="topbar topbar-flush">
             <AppLogo height={26} />
           </div>
-          <p className="mono-label">{showStep ? 'Step 4 of 4 · ' : ''}People</p>
+          {onBack&&<button className="ghost" onClick={onBack}>Back to stakeholders</button>}
+          <p className="mono-label">{showStep ? 'Step 3 of 4 · ' : ''}People</p>
           <h1>Who are they at {company}?</h1>
           <p className="sub">
             An AI agent searches public web pages for the people who hold each role. Every result
@@ -200,7 +202,7 @@ export default function People({
 
       {!embedded && (
         <div className="map-actions">
-          <span />
+          {onBack?<button className="ghost" onClick={onBack}>Back to stakeholders</button>:<span />}
           <button className="primary" onClick={onContinue}>
             {continueLabel}
           </button>

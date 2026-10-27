@@ -25,6 +25,15 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ---
 
+## v0.23.0 (2026-10-27): Guided onboarding, people briefs and slide import options
+
+- Start onboarding with a short welcome/name step. Anchored callouts, arrows and a dark spotlight make the next action clear and block unrelated clicks. Real actions advance their tips; Skip tour remains available. Remove persistent page-wide Skills outlines and add an independent Inputs guide.
+- Make field help easier to recognise with an Info label and keep mobile explanations inside the viewport. Keep the branding-panel close button visible while scrolling. Add Back to stakeholders on Company assets and People, and correct People’s setup step label.
+- Add a sourced professional About section and larger portrait to person lookup. Request concise public background, check cited public pages for a verified photo, and show not found when unavailable. Preserve enabled-source and identity-verification boundaries. Remove the old 300-character cutoff on people-search explanations.
+- Add Google Slides and Canva handoffs: preview, then download an editable PPTX for manual import. Retain brand font names and use editable chart shapes for those destinations. Unsupported fonts can still be substituted by the destination; direct account export is not connected.
+- Validation: 525 of 526 full-suite tests pass; the existing locale-sensitive schedule assertion expects PM instead of the system’s pm. Targeted feature checks pass. Desktop/mobile onboarding checks, blocked-click and Back-button checks, actual Info and branding-close checks, downloaded import files with 11 slides and retained brand font names. Targeted onboarding, profile, agent, typography and chart tests and production build pass. External Google Slides/Canva imports and a production deployment have not been verified.
+
+
 ## v0.22.4 (2026-10-27): Passwords need 6 characters
 
 - Passwords need at least 6 characters (was 10) on Create account, Reset password and Change password. Supabase's own minimum lowered to match (Auth config, verified 10 -> 6).
@@ -40,7 +49,7 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## v0.22.2 (2026-10-27): Action-based onboarding
 
-- Make onboarding follow real actions: Okay clears the card and soft blur, leaving the target highlighted; the next tip waits for the user to reach another page or setup stage. No automatic navigation or sample deal is needed.
+- Make onboarding follow real actions: pointed callouts focus the current action; the next tip waits for the user to reach another page or setup stage. No automatic navigation or sample deal is needed.
   Validation: onboarding persistence/routing tests, production build, and browser checks of Okay → New project → stakeholders → branding → people.
 
 ## v0.22.0 (2026-10-27): Guided onboarding, deck themes and reliable publishing

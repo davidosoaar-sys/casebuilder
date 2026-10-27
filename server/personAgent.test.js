@@ -9,6 +9,14 @@ const claim = value => ({ value, sourceUrl: url, sourceType: 'web' })
 const identity = { name: claim('Alex Doe'), title: claim('VP Engineering'), company: claim('Acme') }
 const collect = async gen => { const out = []; for await (const v of gen) out.push(v); return out }
 
+test('professional bio streams only after identity and requires observed evidence',async()=>{
+ const snapshots=await collect(searchPerson({name:'Alex',enabledSources:['web']},{assetFetcher:async()=>{throw Error('No photo available')},provider:async()=>({urls:[url],data:{...identity,bio:claim('Leads the platform engineering organization.')}})}))
+ assert.equal(snapshots[0].bio,null)
+ assert.equal(snapshots.at(-1).bio.value,'Leads the platform engineering organization.')
+ const unsupported=await collect(searchPerson({name:'Alex',enabledSources:['web']},{assetFetcher:async()=>{throw Error('No photo available')},provider:async()=>({urls:[url],data:{...identity,bio:{...claim('Unverified bio'),sourceUrl:'https://invented.test'}}})}))
+ assert.equal(unsupported.at(-1).bio,null)
+})
+
 test('Claude material reaches the agent only with its permission enabled',async()=>{
   for(const allowed of [false,true]){
     let received

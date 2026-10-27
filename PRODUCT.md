@@ -3,15 +3,25 @@
 CaseBuilder is a platform for Chris to turn customer conversations, research and
 his business-case inputs into one credible case he can present in a Live Room,
 slides, PDF or a one-pager.
+Slides can be downloaded as editable PPTX for manual import into Google Slides
+or Canva; no direct account export is connected. These imports use editable
+chart shapes and preserve font names. Font availability in the destination
+still controls editable rendering; web fonts are not embedded in PowerPoint.
 
-First-visit guidance explains the real page over a softly blurred background.
-Okay clears the card and blur; the user then clicks the highlighted control.
+First-visit guidance starts with a short welcome and account display-name entry.
+Side callouts point to the real action, with a dark spotlight blocking clicks
+outside the highlighted area. Clicking the action advances its tip; broad page
+explanations have Continue. Skip tour remains available.
 Guidance waits for actual page/stage changes instead of navigating automatically.
 Other workspace pages have independent tips, remembered per account in this
 browser. Onboarding itself never creates deals, runs research or sets up tools.
+Person lookup presents a sourced professional summary and a verified public
+portrait when available. Unavailable background/photos are stated explicitly.
 
 New-case setup follows stakeholders → company assets → people → theme. Company
-uses a white canvas and company typography/accent; Backstage applies its full dark
+assets and People offer a direct return to stakeholders without resetting the case.
+The Inputs tab has an independent first-visit guide, even if the main tour was skipped.
+Company uses a white canvas and company typography/accent; Backstage applies its full dark
 palette and typography. Existing decks change only when explicitly selected.
 Backstage’s partner mark stays green. Transparent black/white customer marks adapt
 to the theme with originals retained; multicolor and opaque artwork stay intact.

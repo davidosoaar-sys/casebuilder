@@ -1,6 +1,13 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { sanitizePerson, matchPersonRole, parsePersonList, addPersonToDeal, acceptPersonInput } from './personLookup.js'
+
+test('professional summary requires its own enabled source',()=>{
+ const bio={value:'Leads platform engineering.',sourceUrl:'https://example.com/team',sourceType:'web'}
+ assert.deepEqual(sanitizePerson({bio},['web']).bio,bio)
+ assert.equal(sanitizePerson({bio:{value:'Unverified background'}},['web']).bio,null)
+ assert.equal(sanitizePerson({bio},[]).bio,null)
+})
 import { searchPerson } from './personAgent.js'
 import { stubSearchPerson } from './personAgentStub.js'
 import { newProject } from './projects.js'

@@ -4,12 +4,12 @@ import {tipsFor,tipSeen,markTipSeen,resetTour} from './tourTips.js'
 import {needsWelcome,finishWelcome} from './firstVisit.js'
 test('project guidance follows real stages rather than Next advancing to future pages',()=>{
  for(const [stage,id]of [['map','stakeholders'],['brand','branding'],['people','people'],['theme','theme']])assert.deepEqual(tipsFor({stage,view:'projects'}).map(t=>t.id),[id])
- assert.deepEqual(tipsFor({view:'details'}).map(t=>t.id),['inputs'])
+ assert.deepEqual(tipsFor({view:'details'}).map(t=>t.id),['case-inputs'])
  assert.deepEqual(tipsFor({view:'website'}).map(t=>t.id),['edit-case'])
  assert.deepEqual(tipsFor({stage:'map'},false),[])
 })
 test('page tips remain independent of main-tour completion and persist per account',()=>{
- for(const view of ['skills','connections','scheduled','files','research','lookup','agent'])assert.equal(tipsFor({view},false)[0].kind,'page')
+ for(const view of ['details','skills','connections','scheduled','files','research','lookup','agent'])assert.equal(tipsFor({view},false)[0].kind,'page')
  const map=new Map(),storage={getItem:k=>map.get(k),setItem:(k,v)=>map.set(k,v)}
  assert.equal(tipSeen('chris','skills',storage),false)
  markTipSeen('chris','skills',storage)

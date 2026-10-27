@@ -361,7 +361,7 @@ export default function App({ account }) {
     <Settings account={account} name={user} onName={setUser} theme={theme} onTheme={setTheme} isAdminAccount={isAdminAccount} adminView={adminView} onAdminView={setAdminView} onRestartTour={restartTour} onClose={() => setSettingsOpen(false)} />
   )
 
-  const welcomeOverlay=<FirstVisit key={tourRun} userId={account.session.user.id} context={{stage,view}} suspended={settingsOpen}/>
+  const welcomeOverlay=<FirstVisit key={tourRun} userId={account.session.user.id} userName={user} onName={async name=>{const {error}=await supabase.auth.updateUser({data:{name}});if(error)throw error;setUserState(name)}} context={{stage,view}} suspended={settingsOpen}/>
   if (project && stage === 'map') {
     return (
       <div className="layout">
@@ -377,7 +377,7 @@ export default function App({ account }) {
     )
   }
 
-  if (project && stage === 'brand') return <div className="layout">{projectSidebar}<main className="content"><SetupProgress stage={stage}/><BrandSetup company={project.name} brand={project.brand} onScan={website=>scanBrand(project.id,project.name,website)} onChange={brand=>{brandScans.current.delete(project.id);update({brand:{...templateBrand(brand,project.brand?.template),status:'ready',message:'Your branding is saved.'}})}} onContinue={()=>setStage('people')}/></main>{settingsOverlay}{welcomeOverlay}</div>
+  if (project && stage === 'brand') return <div className="layout">{projectSidebar}<main className="content"><SetupProgress stage={stage}/><BrandSetup onBack={()=>setStage('map')} company={project.name} brand={project.brand} onScan={website=>scanBrand(project.id,project.name,website)} onChange={brand=>{brandScans.current.delete(project.id);update({brand:{...templateBrand(brand,project.brand?.template),status:'ready',message:'Your branding is saved.'}})}} onContinue={()=>setStage('people')}/></main>{settingsOverlay}{welcomeOverlay}</div>
 
   if (project && stage === 'people') {
     return (
@@ -385,6 +385,7 @@ export default function App({ account }) {
       {projectSidebar}<main className="content"><SetupProgress stage={stage}/>
       <People
         showStep
+        onBack={()=>setStage('map')}
         company={project.name}
         stakeholders={project.stakeholders}
         people={project.people}

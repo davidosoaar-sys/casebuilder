@@ -41,7 +41,7 @@ export function matchPersonRole(title) {
 
 export function sanitizePerson(raw = {}, enabledSources = ['web']) {
   const out = {}
-  for (const key of ['name', 'title', 'company', 'tenure', 'reportsTo', 'likelyCares']) out[key] = sourcedClaim(raw[key], enabledSources)
+  for (const key of ['name', 'title', 'company', 'tenure', 'reportsTo', 'likelyCares', 'bio']) out[key] = sourcedClaim(raw[key], enabledSources)
   out.photo = raw.photo && sourceFor(raw.photo,enabledSources) && profilePhotoData(raw.photo.dataUrl) ? {dataUrl:profilePhotoData(raw.photo.dataUrl),...sourceFor(raw.photo,enabledSources)} : null
   out.links = (Array.isArray(raw.links)?raw.links:[]).slice(0,8).flatMap(link=>{const source=sourceFor(link,enabledSources),url=publicProfileUrl(link?.url);return source&&url?[{url,label:text(link.label)||new URL(url).hostname,...source}]:[]})
   out.email = sourcedClaim(raw.email,enabledSources)

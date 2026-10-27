@@ -7,6 +7,7 @@
 
 import { normalizeBrand, blockDesign, officeFont } from '../brand.js'
 import { backstageData } from '../coBrand.js'
+import {drawImportChart} from './importCharts.js'
 
 const W = 13.333
 const H = 7.5
@@ -181,7 +182,7 @@ async function layoutBlock(b, deps, theme = DEFAULTS) {
               x: x + 0.2, y: yy + 0.42 * k, w: tw - 0.3, h: 0.55 * k, fontFace: HEADING, fontSize: 28 * k, bold: true, margin: 0,
               color: it.tone === 'good' ? C.accent : it.tone === 'bad' ? C.bad : C.strong
             })
-            if (it.eq) s.addText(it.eq, { x: x + 0.2, y: yy + 0.86 * k, w: tw - 0.3, h: 0.2 * k, fontFace: 'Consolas', fontSize: 7 * k, color: C.faint, margin: 0, fit: 'shrink' })
+            if (it.eq) s.addText(it.eq, { x: x + 0.2, y: yy + 0.86 * k, w: tw - 0.3, h: 0.2 * k, fontFace: FONT, fontSize: 7 * k, color: C.faint, margin: 0, fit: 'shrink' })
           })
       }
     }
@@ -196,6 +197,7 @@ async function layoutBlock(b, deps, theme = DEFAULTS) {
         h: ch + 0.2,
         draw: (s, y, k) => {
           const box = { x: MX, y, w: CW, h: ch * k }
+          if(deps.importTarget==='google-slides'||deps.importTarget==='canva'){drawImportChart(s,b,box,{font:FONT,colors:C});return}
           if (b.chart === 'payback') {
             const labels = b.months.map(m => `M${m}`)
             s.addChart(T.line || 'line', [
@@ -244,14 +246,14 @@ async function layoutBlock(b, deps, theme = DEFAULTS) {
               fill: { color: hex(d.key === 'platform' ? C.accent : d.color), transparency: d.lead ? 0 : 55 }, line: { color: hex(d.color), width: 0 }
             })
             s.addText(d.valueStr, { x: W - MX - 1.6, y: yy, w: 1.6, h: 0.3 * k, fontFace: FONT, fontSize: 12 * k, bold: d.lead, color: d.lead ? C.strong : C.dim, align: 'right', margin: 0, valign: 'middle' })
-            s.addText(d.detail, { x: trackX, y: yy + 0.3 * k, w: CW - 3.5, h: 0.22 * k, fontFace: 'Consolas', fontSize: 8 * k, color: C.faint, margin: 0, valign: 'top', fit: 'shrink' })
+            s.addText(d.detail, { x: trackX, y: yy + 0.3 * k, w: CW - 3.5, h: 0.22 * k, fontFace: FONT, fontSize: 8 * k, color: C.faint, margin: 0, valign: 'top', fit: 'shrink' })
             yy += rh * k
           })
           const ty = y + height * k + 0.08
           s.addShape('line', { x: MX, y: ty, w: CW, h: 0, line: { color: C.track, width: 1 } })
           s.addText('TOTAL ANNUAL VALUE', { x: MX, y: ty + 0.1, w: 5, h: 0.4 * k, fontFace: FONT, fontSize: 10 * k, bold: true, color: C.dim, charSpacing: 1, margin: 0, valign: 'middle' })
           s.addText(b.total, { x: W - MX - 4, y: ty + 0.06, w: 4, h: 0.5 * k, fontFace: FONT, fontSize: 24 * k, bold: true, color: C.strong, align: 'right', margin: 0, valign: 'middle' })
-          s.addText(b.totalEq, { x: MX, y: ty + 0.56 * k, w: CW, h: 0.22 * k, fontFace: 'Consolas', fontSize: 8 * k, color: C.faint, margin: 0, fit: 'shrink' })
+          s.addText(b.totalEq, { x: MX, y: ty + 0.56 * k, w: CW, h: 0.22 * k, fontFace: FONT, fontSize: 8 * k, color: C.faint, margin: 0, fit: 'shrink' })
         }
       }
     }
@@ -292,7 +294,7 @@ async function layoutBlock(b, deps, theme = DEFAULTS) {
               fill: { color: r.tone === 'bad' ? 'E0636A' : C.accent }, line: { color: C.accent, width: 0 }
             })
             s.addText(r.valueStr, { x: W - MX - 1.6, y: yy, w: 1.6, h: 0.4 * k, fontFace: FONT, fontSize: 15 * k, bold: true, color: C.strong, align: 'right', margin: 0, valign: 'middle' })
-            if (r.eq) s.addText(r.eq, { x: trackX, y: yy + 0.38 * k, w: trackW, h: 0.2 * k, fontFace: 'Consolas', fontSize: 8 * k, color: C.faint, margin: 0, fit: 'shrink' })
+            if (r.eq) s.addText(r.eq, { x: trackX, y: yy + 0.38 * k, w: trackW, h: 0.2 * k, fontFace: FONT, fontSize: 8 * k, color: C.faint, margin: 0, fit: 'shrink' })
           })
           s.addText(
             [

@@ -1104,8 +1104,12 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .connector-live button { flex: none; }
 @media (max-width: 480px) { .connector-live, .connector-allow, .connector-body, .connector-note { margin-left: 0; } }
 /* Deck design tools only. The application's established chrome is unchanged. */
+.slide-import-options{display:flex;gap:20px;align-items:flex-start;padding:12px 20px;background:var(--panel);border-bottom:1px solid var(--line);color:var(--ink);max-height:30vh;overflow:auto;flex-shrink:0}
+.slide-import-options>label{display:flex;align-items:center;gap:10px;white-space:nowrap;font-size:12px}.slide-import-options p{font-size:12px;line-height:1.5;margin:0 0 5px;color:var(--ink-dim)}.slide-import-options p:last-child{margin-bottom:0}.slide-import-options a{color:var(--ink);text-decoration:underline}
+@media(max-width:650px){.slide-import-options{flex-direction:column;gap:10px;padding:12px 16px}}
 .brand-panel { position: fixed; right: 18px; top: 85px; bottom: 18px; width: min(365px, calc(100vw - 36px)); overflow-y: auto; z-index: 55; background: var(--panel); color: var(--ink); border: 1px solid var(--line-2); border-radius: 8px; padding: 20px; box-shadow: 0 12px 50px rgba(0,0,0,.3); }
-.brand-panel-head { display: flex; gap: 12px; justify-content: space-between; align-items: flex-start; }
+.brand-panel-head { position: sticky; top: -20px; z-index: 2; display: flex; gap: 12px; justify-content: space-between; align-items: flex-start; margin: -20px -20px 0; padding: 20px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.brand-panel-head > .icon-btn { flex-shrink: 0; }
 .brand-panel h2 { font-size: 22px; margin: 0; }
 .brand-panel h3 { font-size: 13px; margin: 0 0 12px; }
 .brand-panel p { font-size: 12px; color: var(--ink-dim); }
