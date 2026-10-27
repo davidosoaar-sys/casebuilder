@@ -26,6 +26,7 @@ Every version that lands on `main` gets a line here and a git tag.
 ---
 
 ## Unreleased
+- Gemini: free keys start at Gemini 3.5 Flash-Lite and only try Gemini 3.1 Pro when you pick Best in chat (server buttons need GOOGLE_ALLOW_PRO=1), so a turn no longer burns two 429s first. A model that hits its quota is skipped for 10 minutes for that key (server and worker). When every Gemini model is out of quota you now see "Your Gemini key hit its free daily limit. It resets at midnight Pacific; add a paid key or another provider in Settings." Model IDs checked against the live Gemini model list.
 
 ## v0.19.2 (2026-10-27): Live calendar and Gmail fixes from the first real connection
 

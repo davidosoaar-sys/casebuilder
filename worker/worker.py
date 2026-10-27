@@ -88,6 +88,8 @@ def key_error_text(kind, provider, detail):
     if kind == "auth":
         return (f"Your {label} key was rejected ({detail}). Check it in Settings → API keys: "
                 f"paste it again, or switch to another key.")
+    if provider == "google":
+        return GEMINI_QUOTA_MESSAGE
     return (f"Your {label} key has hit its usage limit on every model I can use ({detail}). "
             f"Wait a minute and try again, or add billing to that {label} account. "
             + ("Free Gemini keys can't use Gemini 3.1 Pro at all, but the faster models work." if provider == "google" else ""))
@@ -100,13 +102,42 @@ class KeyError_(Exception):
         super().__init__(key_error_text(kind, provider, detail))
 
 
+GEMINI_QUOTA_MESSAGE = ("Your Gemini key hit its free daily limit. It resets at midnight Pacific; "
+                        "add a paid key or another provider in Settings.")
+QUOTA_TTL = 600  # seconds a model that answered 429 is skipped for that key
+_EXHAUSTED = {}  # (provider, key tail, tier) -> expires at
+
+
+def tier_order(provider, model):
+    """Gemini free keys get 0 Pro requests and run out on Flash first: start at the
+    cheapest model and only try Pro when the user picked best."""
+    tier = tier_of(model)
+    if provider == "google":
+        return ("best", "balanced", "fast") if tier == "best" else ("fast", "balanced")
+    return TIER_ORDER[TIER_ORDER.index(tier):]
+
+
+def _slot(provider, api_key, tier):
+    return (provider, str(api_key or "")[-12:], tier)
+
+
+def mark_exhausted(provider, api_key, tier, now=None):
+    _EXHAUSTED[_slot(provider, api_key, tier)] = (now or time.time()) + QUOTA_TTL
+
+
+def is_exhausted(provider, api_key, tier, now=None):
+    t = _EXHAUSTED.get(_slot(provider, api_key, tier))
+    return bool(t and t > (now or time.time()))
+
+
 def run_with_fallback(profile, prompt, api_key, model, effort, web, provider):
-    """run_hermes, stepping down a tier when the provider refuses the model.
+    """run_hermes, stepping through tiers when the provider refuses the model.
     Returns (raw, usage, model_id_used, fell_back_from or None)."""
-    start = TIER_ORDER.index(tier_of(model))
-    first = provider_model(provider, model)
+    order = tier_order(provider, model)
+    tiers = [t for t in order if not is_exhausted(provider, api_key, t)] or [order[-1]]
+    first = PROVIDERS[provider]["models"][tiers[0]]
     last_err = None
-    for tier in TIER_ORDER[start:]:
+    for tier in tiers:
         try:
             raw, usage = run_hermes(profile, prompt, api_key, TIER_MODEL[tier], effort, web, provider)
             used = PROVIDERS[provider]["models"][tier]
@@ -120,6 +151,8 @@ def run_with_fallback(profile, prompt, api_key, model, effort, web, provider):
                 raise KeyError_("auth", provider, provider_said(e)) from None
             if kind not in ("quota", "busy", "model"):
                 raise
+            if kind == "quota":
+                mark_exhausted(provider, api_key, tier)
             log("model refused", PROVIDERS[provider]["models"][tier], kind, provider_said(e)[:120])
     if model_error_kind(last_err) == "quota":
         raise KeyError_("quota", provider, provider_said(last_err)) from None
