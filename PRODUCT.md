@@ -70,8 +70,8 @@ Live authorization is account-wide; upload permissions remain per-project. The
 8 AM daily pre-meeting template can read matching primary-calendar meetings in
 the next 24 hours and bounded recent Gmail threads for the selected deal. General
 chat/research can read company-scoped Slack/HubSpot context. Connected notes only
-produce unconfirmed input suggestions. No Composio key is configured yet; OAuth,
-provider schemas/scopes and scheduled end-to-end behavior still need live checks.
+produce unconfirmed input suggestions. Connect Link and tool schemas are checked against the live Composio API; a real
+OAuth sign-in and a scheduled run with a connected calendar still need live checks.
 This does not add calendar ordering to the Dashboard or automatic input confirmation.
 Amr owns agents/APIs, connector and file ingestion, account/backend changes.
 Coordinate shared navigation/data contracts rather than duplicating his work.

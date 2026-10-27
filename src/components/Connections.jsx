@@ -56,7 +56,7 @@ export default function Connections({ project, projects=[],selectedProjectId='',
       <p className="help conn-build-note">
         Live connections authorize account-wide server reads for the agent and scheduled skills. Upload permissions below apply to the selected project. Unconfigured services use upload or paste only.
       </p>
-      {error && <p className="warn" role="alert">{error} <button className="ghost" onClick={() => refresh().then(() => setError('')).catch(e => setError(e.message))}>Retry</button></p>}
+      {error && <p className="warn connector-error" role="alert">{error} <button className="ghost" onClick={() => refresh().then(() => setError('')).catch(e => setError(e.message))}>Retry</button></p>}
       {onSelectProject && <div className="connection-project-target"><label htmlFor="connection-project">Settings and material for</label><Select id="connection-project" aria-label="Connection project" value={project?.id || selectedProjectId} onChange={onSelectProject}
         options={[{ value: '', label: 'Default settings for new projects' }, ...projects.map(p => ({ value: p.id, label: p.name }))]} /></div>}
 
@@ -80,15 +80,17 @@ export default function Connections({ project, projects=[],selectedProjectId='',
                 <span className="switch-track" aria-hidden="true" />
               </label>
             </div>
-            {LIVE_TOOLKITS.includes(c.key) && <div className="connector-body">
-              {!live ? <p className="help">{error ? 'Live status unavailable.' : 'Checking live connection…'}</p> : live.configured.includes(c.key) ? <>
-                <span className="connector-status">{live.connections.some(a => a.toolkit === c.key) ? 'Connected' : 'Not connected'}</span>{' '}
-                <button className="ghost" disabled={!!busy} onClick={() => changeLive(c.key, live.connections.some(a => a.toolkit === c.key) ? 'disconnect' : 'connect')}>
-                  {busy === c.key ? 'Working…' : live.connections.some(a => a.toolkit === c.key) ? 'Disconnect' : 'Connect'}
-                </button>
-              </> : <p className="help">Live connection not configured — upload or paste only.</p>}
+            {LIVE_TOOLKITS.includes(c.key) && <div className="connector-live">
+              {!live ? <p className="help">{error ? 'Live status unavailable.' : 'Checking live connection…'}</p> : live.configured.includes(c.key) ? (() => {
+                const on = live.connections.some(a => a.toolkit === c.key)
+                return <>
+                  <span className={`connector-live-state${on ? ' is-on' : ''}`}>{on ? 'Account connected' : 'Account not connected'}</span>
+                  <button className={on ? 'ghost' : 'primary'} disabled={!!busy} onClick={() => changeLive(c.key, on ? 'disconnect' : 'connect')}>
+                    {busy === c.key ? 'Working…' : on ? 'Disconnect' : 'Connect'}
+                  </button>
+                </>
+              })() : <p className="help">Live connection not configured. Upload or paste only.</p>}
             </div>}
-            <p className="help connector-body">Upload / paste permission</p>
             <p className="connector-allow">{connections[c.key] ? `The agent may ${c.allows}.` : `The agent may not ${c.allows}.`}</p>
 
             {connections[c.key] &&

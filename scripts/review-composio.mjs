@@ -24,7 +24,7 @@ try {
   })
   await page.addScriptTag({ content: bundled.outputFiles[0].text })
   await page.waitForFunction(() => document.querySelector('[data-connector=gmail]')?.textContent.includes('Disconnect'))
-  assert.match(await page.$eval('[data-connector=hubspot]', e => e.textContent), /upload or paste only/)
+  assert.match(await page.$eval('[data-connector=hubspot]', e => e.textContent), /upload or paste only/i)
   for (const [width, theme] of [[1280, 'light'], [1280, 'dark'], [390, 'light'], [390, 'dark']]) {
     await page.setViewport({ width, height: 900 })
     await page.evaluate(t => { document.documentElement.dataset.theme = t }, theme)
@@ -32,7 +32,7 @@ try {
     await page.screenshot({ path: `/tmp/composio-${width}-${theme}.png`, fullPage: true })
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'no horizontal overflow')
   }
-  await page.click('[data-connector=gmail] .connector-body button')
+  await page.click('[data-connector=gmail] .connector-live button')
   await page.waitForFunction(() => !document.querySelector('[data-connector=gmail]').textContent.includes('Disconnect'))
   assert.equal(await page.evaluate(() => JSON.parse(window.calls.find(c => c.body).body).action), 'disconnect')
   await page.evaluate(() => { window.fetch = async () => { throw new Error('Offline fixture') }; window.dispatchEvent(new Event('focus')) })

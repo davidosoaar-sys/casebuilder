@@ -28,7 +28,7 @@ Every version that lands on `main` gets a line here and a git tag.
 ## Unreleased
 
 - Add Composio-hosted Google Calendar, Gmail, Slack and HubSpot connections with Supabase-authenticated status/disconnect, callback refresh, and honest upload/paste fallbacks. Live credentials stay server-side; reads are scoped to the signed-in owner.
-- Pre-meeting briefs keep the daily 8 AM default and can use matching primary-calendar events over the next 24 hours plus bounded recent Gmail threads. Chat/research can read company-scoped Slack/HubSpot context; connected notes can only propose unconfirmed input changes. No live Composio credentials or provider checks yet; setup and acceptance steps are in `docs/composio-setup.md`.
+- Pre-meeting briefs keep the daily 8 AM default and can use matching primary-calendar events over the next 24 hours plus bounded recent Gmail threads. Chat/research can read company-scoped Slack/HubSpot context; connected notes can only propose unconfirmed input changes. Verified against the live Composio API: Connect Link returns a hosted sign-in URL for all four toolkits, and the pinned tool argument names match the published schemas. A real OAuth sign-in and a scheduled run with a connected calendar are still unverified; setup and acceptance steps are in `docs/composio-setup.md`.
 - Keep the live test-account token utility out of automatic offline test execution, preventing accidental sign-in/token output from `npm test`.
 
 ## v0.17.1 (2026-10-27): Gemini keys work again, any provider's key falls back, setup shows its progress
