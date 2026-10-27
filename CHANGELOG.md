@@ -27,8 +27,12 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
+## v0.21.0 (2026-10-27): Pitch deck with charts
+
 - New projects start with an 11-page pitch flow (impact, today, value breakdown, drivers, today vs Portal, payback, self-hosting, this room, assumptions, next steps) using the payback, breakdown and confidence charts. Saved decks are unchanged. The deck agent gets design rules and can add charts as `{type: 'chart', kind}`; case files now accept chart blocks.
 - Deck: new Payback, Value breakdown and Input confidence chart blocks, drawn in the app and exported as native, editable PowerPoint charts. Charts with missing inputs show what they are waiting for instead of zeros.
+- Payback headline reads "Pays back in under a month" instead of "0.62 months"; the input confidence chart is a readable list of counts and bars per source state.
+- Validation: 505 app tests, 120 worker tests, build pass. Nike sample PPTX: 11 slides, 3 native chart parts, sldSz 12192000 x 6858000. In-app pages screenshotted and checked by eye.
 
 ## v0.20.1 (2026-10-27): Skills use the live connectors
 
