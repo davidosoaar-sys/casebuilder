@@ -58,7 +58,7 @@ export default function ProjectList({ projects, loading = false, createRequest =
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M5 3.5h9M5 8h9M5 12.5h9M2 3.5h.5M2 8h.5M2 12.5h.5" strokeLinecap="round"/></svg>
           </button>
         </div>
-        <button className="primary" onClick={() => setCreating(true)}>New project</button>
+        <button data-tour="project" className="primary" onClick={() => setCreating(true)}>New project</button>
         {onCreateSample && <Select aria-label="Add a sample project" className="sample-select" value="" placeholder="Add sample project" disabled={loading}
           onChange={key => { if (key) onCreateSample(key) }} options={SAMPLES} />}
       </PageHead>
@@ -105,7 +105,7 @@ export default function ProjectList({ projects, loading = false, createRequest =
 
       {creating && (
         <div className="modal-backdrop" onClick={close}>
-          <form className="modal" onClick={e => e.stopPropagation()} onSubmit={submit} onKeyDown={e => e.key === 'Escape' && close()}>
+          <form data-tour="project-form" className="modal" onClick={e => e.stopPropagation()} onSubmit={submit} onKeyDown={e => e.key === 'Escape' && close()}>
             <p className="mono-label">New project</p>
             <label htmlFor="company-name">What is the company called?</label>
             <input id="company-name" type="text" placeholder="e.g. Northwind Retail" value={name} onChange={e => setName(e.target.value)} autoFocus />

@@ -139,7 +139,8 @@ export async function publishSite(opts) {
   if (state !== 'READY') throw new PublishError('The site was uploaded but is not ready yet. Give it a minute and open the address below.', 'not_ready')
 
   // 4. the address: the project's production domain
-  const host = aliases.find(a => a === `${name}.vercel.app`) || aliases.find(a => a.startsWith(`${name}`) && a.endsWith('.vercel.app')) || `${name}.vercel.app`
+  const safeHost = value => typeof value === 'string' && /^[a-z0-9-]+\.vercel\.app$/i.test(value)
+  const host = aliases.find(a => a === `${name}.vercel.app`) || aliases.find(a => safeHost(a) && a.startsWith(name)) || aliases.find(safeHost) || (safeHost(dep.json?.url) ? dep.json.url : `${name}.vercel.app`)
   const url = `https://${host}`
 
   // 5. is it really public?

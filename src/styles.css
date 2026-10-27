@@ -3084,7 +3084,7 @@ body::after { content: ''; position: fixed; inset: 0; z-index: 200; pointer-even
   .ghost-box::after, .agent-progress-steps li.is-now .agent-progress-dot::after { animation: none; }
 }
 .undo-redo-labels .undo-btn { width: auto; padding: 8px 10px; gap: 6px; display: inline-flex; align-items: center; }
-.input-label-with-info { display:flex; align-items:center; gap:8px; }
+.input-label-with-info { display:flex; align-items:center; gap:4px; min-width:0; }
 .input-info { display:inline-block; position:relative; flex-shrink:0; font-weight:400; }
 .input-info summary { display:flex; align-items:center; justify-content:center; width:24px; height:24px; border:1px solid currentColor; border-radius:50%; cursor:pointer; font:600 12px Georgia,serif; list-style:none; opacity:.7; }
 .input-info summary::-webkit-details-marker { display:none; }
@@ -3101,3 +3101,20 @@ body::after { content: ''; position: fixed; inset: 0; z-index: 200; pointer-even
 @media screen {
   .deck-editor .slide { aspect-ratio: 16 / 9; min-height: 0; height: auto; padding: 4.5% 5.25%; overflow-x: hidden; overflow-y: auto; scrollbar-width: thin; box-sizing: border-box; }
 }
+.template-setup-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; border:0; padding:0; margin:24px 0; }
+.template-setup-options legend { margin-bottom:12px; color:var(--ink-dim); }
+.template-setup-option { display:grid; grid-template-columns:20px 1fr; align-items:center; gap:12px; padding:18px; border:1px solid var(--line-2); border-radius:12px; cursor:pointer; }
+.template-setup-option:has(input:checked) { border-color:var(--ink); }
+.template-setup-option input { width:16px; height:16px; margin:0; }
+.template-setup-option > span { grid-column:1 / -1; }
+.template-setup-swatch { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:24px; padding:24px 12px; min-height:160px; border-radius:6px; overflow:hidden; }
+.template-setup-swatch .deck-company-logo { max-width:100px; max-height:40px; }
+.template-setup-option > span:last-child { color:var(--ink-dim); font-size:13px; line-height:1.5; }
+@media(max-width:640px) { .template-setup-options { grid-template-columns:1fr; } }
+.setup-progress { margin:0 0 28px; padding:0 0 18px; border-bottom:1px solid var(--line); }
+.setup-progress ol { display:flex; flex-wrap:wrap; gap:12px 24px; list-style:none; padding:0; margin:0; }
+.setup-progress li { display:flex; gap:8px; align-items:center; font-size:12px; color:var(--ink-dim); }
+.setup-progress li[aria-current="step"] { color:var(--ink); font-weight:600; }
+.setup-progress li > span { display:grid; place-items:center; width:22px; height:22px; border:1px solid var(--line-2); border-radius:50%; }
+.setup-progress li[aria-current="step"] > span { background:var(--ink); color:var(--panel); border-color:var(--ink); }
+.setup-progress p { margin:12px 0 0; color:var(--ink-dim); font-size:12px; }

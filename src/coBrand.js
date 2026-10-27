@@ -10,7 +10,7 @@ const lum = hex => {
   return c[0] * .2126 + c[1] * .7152 + c[2] * .0722
 }
 // The partner mark that reads on a given page background, without a backing box.
-export const backstageFor = background => lum(background) > .4 ? backstageInkData : backstageData
+export const backstageFor = () => backstageData
 // Customer logo × Backstage. Classes let each surface size the pair; the inline
 // styles are the defaults for documents that carry no co-brand CSS.
 export function coBrandHtml(logo, background) {

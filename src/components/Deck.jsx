@@ -244,7 +244,7 @@ export default function Deck({ inputs, model, fields, connectors, stakeholders, 
 
   return (
     <MotionConfig reducedMotion="user">
-    <main className="deck-wrap deck-editor-wrap" ref={wrap}>
+    <main className="deck-wrap deck-editor-wrap" data-tour="edit-deck" ref={wrap}>
       <div className="deck-top no-print" ref={bar}>
         <nav className="toolbar">
           <div className="who">

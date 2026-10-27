@@ -29,6 +29,8 @@ export function normalizeBrand(value) {
   const b = value && typeof value === 'object' ? value : {}
   return {
     template: ['company','backstage'].includes(b.template)?b.template:'custom',
+    originalLogo:safeAsset(b.originalLogo),
+    companyStyle:b.companyStyle&&/^#[0-9a-f]{6}$/i.test(b.companyStyle.primary)?{primary:b.companyStyle.primary,headingFont:cleanFont(b.companyStyle.headingFont)||'Arial',bodyFont:cleanFont(b.companyStyle.bodyFont)||'Arial'}:null,
     ...DEFAULT_BRAND,
     ...Object.fromEntries(COLOR_KEYS.map(k => [k, /^#[0-9a-f]{6}$/i.test(b[k]) ? b[k] : DEFAULT_BRAND[k]])),
     headingFont: cleanFont(b.headingFont) || DEFAULT_BRAND.headingFont,

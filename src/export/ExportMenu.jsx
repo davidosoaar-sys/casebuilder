@@ -131,7 +131,7 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
   }
 
   return (
-    <div className="export" ref={ref}>
+    <div className="export" ref={ref} data-tour="export">
       <button ref={trigger} className={`${triggerClass} export-trigger`} onClick={() => setOpen(o => !o)} aria-haspopup="menu" aria-expanded={open} disabled={!!busy}>
         <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 2.5v7.5M4.75 6.75 8 10l3.25-3.25M3 12.5h10" /></svg>
         {busy ? 'Working…' : 'Export'}

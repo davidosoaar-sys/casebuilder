@@ -1,19 +1,5 @@
 # Changelog
 
-## Unreleased
-
-- Merge Amr’s v0.21.0 into the local logo/template/input-help work; preserve background-aware co-branding and 16:9 editor sizing. Validation: production build passes; 509 of 510 tests pass, with the existing locale-sensitive schedule AM/PM assertion remaining. Updated component test loaders for the merged co-brand/input-help dependencies. Local-only merge; no new release, push or deployment.
-
-- Refine input info controls with a matching stroke icon and compact themed disclosure; every standard input now has a one-sentence definition rather than research advice. Validation: definition coverage test and production build. Merged with Amr’s v0.21.0 while preserving local work.
-
-- Add keyboard/touch-accessible information disclosures beside individual Case Inputs, including each Today/With Portal field. Explanations use existing field help and units, with guidance for custom inputs; calculations and source controls are unchanged. Validation: production build.
-
-- Add Company (white) and Backstage (dark) template choices in Deck design. New projects use Company; brand rescans preserve that canvas choice. Explicit template switches reset page color overrides while retaining content/assets/fonts and support Undo. Existing custom decks remain unchanged. Validation: template inheritance/preservation tests and production build.
-
-- Reject Join Prime/sign-up/shopping promotional graphics during logo discovery. Homepage links no longer automatically qualify every nested image as a company logo. Add Amazon regression fixtures; missing identity remains missing instead of selecting a call-to-action image.
-
-- Remove the forced white Backstage logo tile from editor, HTML and PPTX outputs. Prefer official transparent-friendly vector/alpha logo candidates over opaque profile tiles during discovery; preserve original artwork when no verified transparent asset exists. Existing baked-in image backgrounds require a replacement asset. Validation: transparency preference and co-brand/export tests, production build.
-
 Every version that lands on `main` gets a line here and a git tag.
 
 ## How we version
@@ -38,6 +24,16 @@ Every version that lands on `main` gets a line here and a git tag.
 - **See what a version looked like:** `git checkout vX.Y.Z` (read-only).
 
 ---
+
+## v0.22.0 (2026-10-27): Guided onboarding, deck themes and reliable publishing
+
+- Add compact onboarding cards tied to actual project stages: create project, stakeholders, branding, people, theme, inputs and artifact editing/format/export. Cards never advance the workflow; they wait for the relevant screen and can be dismissed or skipped.
+- Add independent one-time page tips for Skills, Connectors, Scheduled, Files, Research/person lookup and Agent, remembered per account in this browser. New-case setup includes theme previews and four-step progress.
+- Add Company (white canvas, company type/accent) and full Backstage (dark palette and typography) templates, retaining existing custom decks until explicitly changed. Backstage co-branding stays green. Transparent monochrome customer logos adapt to black/white by theme while originals remain saved; multicolor and opaque artwork remain unchanged.
+- Add concise input explanations behind matching info buttons directly beside labels. Reject promotional graphics such as Join Prime during logo discovery and prefer official transparent-friendly candidates.
+- Remove the Live Room cover Scroll prompt and tighten its composition. Preserve Amr’s v0.21.0 pitch-deck and export work.
+- Fix publishing URLs when Vercel truncates the generated production alias. A local no-customer-data deployment was verified publicly reachable; credentials stay server-only and uncommitted.
+- Validation: 515 of 516 suite tests pass; the existing locale-sensitive schedule AM/PM assertion remains. Application/plugin builds pass. Isolated browser checks verify action-driven onboarding, per-page dismissal, desktop/mobile themes and black/white logo conversion. The complete signed-in customer workflow still needs user acceptance testing. Git release does not itself confirm a Vercel/worker deployment.
 
 ## Unreleased
 

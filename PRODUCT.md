@@ -1,16 +1,19 @@
 # What we are building
 
-Deck design offers Company (white canvas with company assets/accent) or Backstage
-(dark canvas). New projects default to Company; existing custom decks keep their
-design until an explicit template switch. Brand rescans retain the template.
-
-Logo rendering: Backstage co-branding uses its transparent mark without an added
-white tile. Discovery prefers official transparent-friendly candidates; opaque
-customer images are preserved until a verified replacement is available.
-
 CaseBuilder is a platform for Chris to turn customer conversations, research and
 his business-case inputs into one credible case he can present in a Live Room,
 slides, PDF or a one-pager.
+
+First-visit guidance uses compact, dismissible cards tied to actual project
+stages and routes. The cards do not create projects, run services or advance the
+workflow. Other workspace pages have independent tips, remembered per account in
+this browser. No connector setup is required by onboarding.
+
+New-case setup follows stakeholders → company assets → people → theme. Company
+uses a white canvas and company typography/accent; Backstage applies its full dark
+palette and typography. Existing decks change only when explicitly selected.
+Backstage’s partner mark stays green. Transparent black/white customer marks adapt
+to the theme with originals retained; multicolor and opaque artwork stay intact.
 
 ## Who and why
 Chris sells Spotify Portal for Backstage against running open-source Backstage
@@ -25,7 +28,8 @@ synchronization and team collaboration are not assumed to exist.
 
 ## Keep fixed
 - Chris’s deterministic equations and source objects; missing values are unknown.
-- Customer logos, heading/body fonts and palettes across formats.
+- Customer identity across formats; preserve company type/palette in Company theme,
+  or the explicitly selected Backstage typography/palette in Backstage theme.
 - Authored edits, saved deals, private notes and enabled-source boundaries.
 - The established application sidebar and light/dark visual system.
 - Private evidence, objections, inferred framing and preparation stay out of

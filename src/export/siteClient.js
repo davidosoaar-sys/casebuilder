@@ -317,7 +317,6 @@ export function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, na
       const overview = main.querySelector('[data-kind="overview"] .inner')
       const cover = main.querySelector('[data-kind="cover"] .inner')
       if (cover) cover.insertAdjacentHTML('afterbegin', DATA.artwork || '')
-      if (cover) cover.parentElement.insertAdjacentHTML('beforeend', '<div class="cover-scroll-hint" aria-hidden="true"><span>Scroll</span><svg viewBox="0 0 24 40" width="20" height="34" fill="none"><path d="M12 2v34m-7-7 7 7 7-7" stroke="currentColor" stroke-width="1.5"/></svg></div>')
       main.querySelectorAll('[data-perspective]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.perspective === st.key)))
       main.querySelectorAll('h1,h2').forEach(title => { if (title.textContent.length > 55) title.classList.add('long-title') })
       const summary = ['annual', 'payback', 'roi'].map(statItem).filter(Boolean)

@@ -68,7 +68,7 @@ export default function StakeholderMap({
     )
 
   return (
-    <div className={embedded ? 'map-embedded' : 'map-page'}>
+    <div data-tour="stakeholders" className={embedded ? 'map-embedded' : 'map-page'}>
       {embedded ? (
         <p className="sub embedded-sub">
           Drag people to arrange the map, add anyone this case has to convince, and remove anyone

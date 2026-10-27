@@ -6,7 +6,7 @@ import {AgentProgress,BrandPlaceholder,BRAND_STEPS} from './AgentProgress.jsx'
 export default function BrandSetup({company,brand,onChange,onScan,onContinue}){
  const b=normalizeBrand(brand),[editing,setEditing]=useState(false)
  const scanning=b.status==='scanning'
- return <section className="page brand-setup"><h1>Make it look like {company}.</h1><p className="sub">Company assets are found and checked automatically. You can adjust them anytime.</p><style>{fontFaceCss(b)}</style>
+ return <section className="page brand-setup" data-tour="branding"><h1>Make it look like {company}.</h1><p className="sub">Company assets are found and checked automatically. You can adjust them anytime.</p><style>{fontFaceCss(b)}</style>
  {scanning?<AgentProgress steps={BRAND_STEPS} every={7000} label={`Finding ${company}'s brand`}><BrandPlaceholder/></AgentProgress>:<>
  <div className="brand-setup-preview" style={brandVars(b)} aria-label="Company brand preview">
  {(b.logo||b.icon)?<div className="brand-setup-marks">{b.icon&&<img className="brand-setup-icon" src={b.icon} alt={company+' icon'}/>}{b.logo&&<img className="brand-setup-logo" style={b.logoBackground!=='transparent'?{background:b.logoBackground,padding:8,borderRadius:4}:undefined} src={b.logo} alt={company+' logo'}/>}</div>:<p role="status">No verified company logo found yet.</p>}

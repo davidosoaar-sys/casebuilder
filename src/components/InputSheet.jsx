@@ -130,7 +130,7 @@ export default function InputSheet({ fields, model, company, connectors, documen
   }
 
   return (
-    <div className="inputs-page">
+    <div className="inputs-page" data-tour="inputs">
       <header className="inputs-toolbar"><div><h2>Inputs</h2><p>Build the case with your numbers, or suggest values for empty fields.</p></div><button type="button" className="primary" onClick={() => suggest(emptyKeys(fields), 'all')} disabled={!!busy}>{busy ? 'Suggesting…' : 'Suggest values'}</button></header>
       {msg && <p className="suggest-msg" role="status">{msg}</p>}
       <div className="internal-note">Only you see this page. Nothing on it (sources, states, confidence) appears on the client deck.</div>
@@ -318,11 +318,13 @@ function Field({ field, onChange, onRemove, onEdit, ...rest }) {
   return (
     <div className={`field is-${number ? stateOf(field) : 'input'}`}>
       <div className="field-row">
+        <div className="input-label-with-info">
         <label htmlFor={field.key}>
           {field.label}
           {field.unit ? <span className="unit"> ({field.unit})</span> : null}
         </label>
         <InputInfo field={field}/>
+        </div>
         <InputActions field={field} onEdit={onEdit} onRemove={onRemove} />
       </div>
 

@@ -195,7 +195,7 @@ export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, o
     <div className="site-view">
       <div className="site-bar no-print">
         <div className="site-bar-left">
-          <button className="link-btn" onClick={onBack}>
+          <button data-tour="edit-case" className="link-btn" onClick={onBack}>
             Edit slides
           </button>
           <strong>Live Room</strong>

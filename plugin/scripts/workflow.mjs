@@ -5,18 +5,21 @@ import { fileURLToPath } from "node:url";
 
 // src/connectors.js
 var CONNECTORS = [
-  { key: "gmail", label: "Gmail", blurb: "Customer email threads and follow-ups", allows: "read uploaded or pasted Gmail email threads", accepts: "a pasted email thread or a .txt / .pdf export", docLabel: "Gmail thread" },
-  { key: "claude", label: "Claude", blurb: "Conversation exports and research notes", allows: "read Claude conversations and research notes", accepts: "a pasted conversation or a .txt / .md export", docLabel: "Claude conversation" },
-  { key: "gong", label: "Gong", blurb: "Call transcripts", allows: "read call transcripts", accepts: "a transcript (paste, or a .txt / .vtt file)", docLabel: "Call transcript" },
-  { key: "hubspot", label: "HubSpot", blurb: "CRM deal and contact records", allows: "read CRM deal and contact records", accepts: "a CSV export of the deal", docLabel: "HubSpot export" },
-  { key: "slack", label: "Slack", blurb: "Internal threads", allows: "read internal threads", accepts: "a pasted thread or export", docLabel: "Slack thread" },
-  { key: "clay", label: "Clay", blurb: "Company and contact enrichment", allows: "read company and contact enrichment", accepts: "a CSV export or pasted record", docLabel: "Clay record" },
-  { key: "lemlist", label: "Lemlist", blurb: "Outreach campaigns and replies", allows: "read outreach campaigns and replies", accepts: "a CSV export or pasted replies", docLabel: "Lemlist export" },
-  { key: "granola", label: "Granola", blurb: "Meeting notes and call summaries", allows: "read meeting notes and call summaries", accepts: "pasted notes or an exported .md / .txt / .pdf", docLabel: "Granola notes" },
-  { key: "sheets", label: "Google Sheets", blurb: "Finance models and forecasts", allows: "read finance models and forecasts", accepts: "a sheet downloaded as .xlsx or .csv", docLabel: "Google Sheet" },
-  { key: "excel", label: "Excel", blurb: "Finance models and forecasts", allows: "read finance models and forecasts", accepts: "an .xlsx or .csv file", docLabel: "Excel workbook" },
-  { key: "figma", label: "Figma", blurb: "Design specs and handoff notes", allows: "read design specs and handoff notes", accepts: "a design spec exported as .pdf, or pasted notes", docLabel: "Figma export" },
-  { key: "canva", label: "Canva", blurb: "Decks and one-pagers", allows: "read decks and one-pagers", accepts: "a design downloaded as .pdf or .pptx", docLabel: "Canva design" }
+  { key: "googlecalendar", group: "Calls & meetings", label: "Google Calendar", blurb: "Meetings and attendees for pre-meeting briefs", allows: "read uploaded calendar notes", accepts: "pasted meeting notes or a .txt export", docLabel: "Calendar notes" },
+  { key: "gmail", group: "Email & chat", label: "Gmail", blurb: "Customer email threads and follow-ups", allows: "read uploaded or pasted Gmail email threads", accepts: "a pasted email thread or a .txt / .pdf export", docLabel: "Gmail thread" },
+  { key: "claude", label: "Claude", blurb: "Connect Claude to your saved CaseBuilder projects", allows: "read Claude conversations and research notes", accepts: "a pasted conversation or a .txt / .md export", docLabel: "Claude conversation" },
+  { key: "gong", group: "Calls & meetings", label: "Gong", blurb: "Call transcripts with the customer", allows: "read call transcripts", accepts: "a transcript (paste, or a .txt / .vtt file)", docLabel: "Call transcript" },
+  { key: "hubspot", group: "CRM & enrichment", label: "HubSpot", blurb: "CRM deal and contact records", allows: "read CRM deal and contact records", accepts: "a CSV export of the deal", docLabel: "HubSpot export" },
+  { key: "slack", group: "Email & chat", label: "Slack", blurb: "Internal threads", allows: "read internal threads", accepts: "a pasted thread or export", docLabel: "Slack thread" },
+  { key: "clay", group: "CRM & enrichment", label: "Clay", blurb: "Company and contact enrichment", allows: "read company and contact enrichment", accepts: "a CSV export or pasted record", docLabel: "Clay record" },
+  { key: "lemlist", group: "CRM & enrichment", label: "Lemlist", blurb: "Outreach companies, notes and replies", allows: "read outreach campaigns and replies", accepts: "a CSV export or pasted replies", docLabel: "Lemlist export" },
+  { key: "granola", group: "Calls & meetings", label: "Granola", blurb: "Meeting notes and call summaries", allows: "read meeting notes and call summaries", accepts: "pasted notes or an exported .md / .txt / .pdf", docLabel: "Granola notes", note: "Granola has no live connection here. Paste or upload notes, or push them from Claude through the Claude connector." },
+  { key: "sheets", toolkit: "googlesheets", group: "Finance & files", label: "Google Sheets", blurb: "Finance models and forecasts", allows: "read finance models and forecasts", accepts: "a sheet downloaded as .xlsx or .csv", docLabel: "Google Sheet" },
+  { key: "excel", group: "Finance & files", label: "Excel", blurb: "Finance models and forecasts in OneDrive", allows: "read finance models and forecasts", accepts: "an .xlsx or .csv file", docLabel: "Excel workbook" },
+  { key: "figma", group: "Design", label: "Figma", blurb: "File details and comments from a linked design", allows: "read design specs and handoff notes", accepts: "a design spec exported as .pdf, or pasted notes", docLabel: "Figma export" },
+  { key: "canva", group: "Design", label: "Canva", blurb: "Decks and one-pagers (titles and links)", allows: "read decks and one-pagers", accepts: "a design downloaded as .pdf or .pptx", docLabel: "Canva design" },
+  { key: "fireflies", group: "Calls & meetings", label: "Fireflies", blurb: "Meeting transcripts and summaries", allows: "read meeting transcripts", accepts: "a transcript (paste, or a .txt / .vtt file)", docLabel: "Fireflies transcript" },
+  { key: "googledrive", group: "Finance & files", label: "Google Drive", blurb: "Docs and sheets named for the customer", allows: "read Drive documents and spreadsheets", accepts: "a downloaded .pdf, .docx, .xlsx or .csv", docLabel: "Drive file" }
 ];
 var connectorByKey = Object.fromEntries(CONNECTORS.map((c) => [c.key, c]));
 

@@ -63,6 +63,7 @@ function Item({ id, icon: iconId, label, view, onNav, disabled, title, pill }) {
       disabled={disabled}
       title={title || label}
       aria-label={label}
+      data-tour={id==='research'?'research-nav':id==='agent'?'agent':id==='details'?'inputs':id==='website'||id==='deck'?'artifacts':undefined}
       aria-current={on ? 'page' : undefined}
     >
       {on && <motion.span layoutId={pill} className="side-pill" aria-hidden="true" transition={{ duration: 0.2, ease: EASE_IN_OUT }} />}

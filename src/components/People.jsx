@@ -90,7 +90,7 @@ export default function People({
   const anyBusy = Object.values(busy).some(Boolean)
 
   return (
-    <div className={embedded ? 'people-embedded' : 'map-page people-page'}>
+    <div data-tour="people" className={embedded ? 'people-embedded' : 'map-page people-page'}>
       {embedded ? (
         <p className="sub embedded-sub">
           An AI agent searches public web pages for the people who hold each role. Every result comes

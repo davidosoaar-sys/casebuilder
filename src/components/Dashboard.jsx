@@ -29,7 +29,7 @@ function Hero({ name, loading, summaries, attention, feed, onOpen, onAct, onCrea
     <section className="dash-hero" aria-labelledby="dash-hello">
       <div className="dash-aurora" aria-hidden="true"><i /><i /><i /></div>
       <div className="dash-hero-inner">
-        <div className="dash-hero-top"><p className="dash-date">{today()}</p><button className="primary" onClick={onCreate}>New project</button></div>
+        <div className="dash-hero-top"><p className="dash-date">{today()}</p><button data-tour="project" className="primary" onClick={onCreate}>New project</button></div>
         <h1 id="dash-hello" className="dash-hello">{name ? <>{greeting()},<br /><em>{name}</em>.</> : <>{greeting()}.</>}</h1>
         <p className="dash-lede">{loading ? <SkeletonText label="Loading" width="28ch" />
           : first ? <><strong>{first.deal.name}</strong> needs you before anything else today.</>
