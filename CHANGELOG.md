@@ -25,6 +25,11 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ---
 
+## v0.22.4 (2026-10-27): Passwords need 6 characters
+
+- Passwords need at least 6 characters (was 10) on Create account, Reset password and Change password. Supabase's own minimum lowered to match (Auth config, verified 10 -> 6).
+- Validation: app tests and build pass; production sign-up page checked.
+
 ## v0.22.3 (2026-10-27): Open sign-up, slides fit the page, Live room fixes
 
 - No waitlist: anyone with the app link can create an account (migration 0016 drops the sign-up gate). Sign in offers "Create an account"; old ?waitlist and ?signup links open Create account. The Waitlist menu item and approval emails are off. Waitlist rows are kept, and nobody on the list is emailed.

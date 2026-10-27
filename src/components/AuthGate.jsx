@@ -77,7 +77,7 @@ function AuthScreens({ onReset = () => {} }) {
 
   async function resetPassword(e) {
     e.preventDefault()
-    if (newPw.length < 10) { setError('Use at least 10 characters for the password.'); return }
+    if (newPw.length < 6) { setError('Use at least 6 characters for the password.'); return }
     if (newPw !== newPwAgain) { setError('The two passwords do not match.'); return }
     setBusy(true); setError('')
     onReset(true)
@@ -112,7 +112,7 @@ function AuthScreens({ onReset = () => {} }) {
 
   async function signUp(e) {
     e.preventDefault()
-    if (password.length < 10) { setError('Use at least 10 characters for the password.'); return }
+    if (password.length < 6) { setError('Use at least 6 characters for the password.'); return }
     setBusy(true); setError('')
     const { data, error } = await supabase.auth.signUp({ email: email.trim(), password })
     setBusy(false)
@@ -178,9 +178,9 @@ function AuthScreens({ onReset = () => {} }) {
           <input id="reset-password" type="password" autoComplete="new-password" value={newPw} onChange={e => setNewPw(e.target.value)} required />
           <label htmlFor="reset-password-again">Type it again</label>
           <input id="reset-password-again" type="password" autoComplete="new-password" value={newPwAgain} onChange={e => setNewPwAgain(e.target.value)} required />
-          <p className="auth-hint">At least 10 characters.</p>
+          <p className="auth-hint">At least 6 characters.</p>
           {error && <p className="auth-error" role="alert">{error}</p>}
-          <button className="primary" type="submit" disabled={busy || code.trim().length < 6 || newPw.length < 10 || newPw !== newPwAgain}>{busy ? 'Saving…' : 'Set new password'}</button>
+          <button className="primary" type="submit" disabled={busy || code.trim().length < 6 || newPw.length < 6 || newPw !== newPwAgain}>{busy ? 'Saving…' : 'Set new password'}</button>
           <p className="auth-switch">No email? <button type="button" className="link-btn" onClick={() => sendReset()}>Send a new code</button> · <button type="button" className="link-btn" onClick={() => go('signin')}>Back to sign in</button></p>
         </form>
       </AuthStage>
@@ -217,7 +217,7 @@ function AuthScreens({ onReset = () => {} }) {
         <label htmlFor="auth-password">Password</label>
         <input id="auth-password" type="password" autoComplete={signup ? 'new-password' : 'current-password'} value={password} onChange={e => setPassword(e.target.value)} autoFocus={signup && !!email} required />
         {signup
-          ? <p className="auth-hint">At least 10 characters.</p>
+          ? <p className="auth-hint">At least 6 characters.</p>
           : <p className="auth-forgot"><button type="button" className="link-btn" onClick={() => { setError(''); setNotice(''); setMode('forgot') }}>Forgot password?</button></p>}
         {error && <p className="auth-error" role="alert">{error}</p>}
         <button className="primary" type="submit" disabled={busy || !email.trim() || !password}>

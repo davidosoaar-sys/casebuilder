@@ -13,12 +13,12 @@ export default function ChangePassword({ onClose }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
-  const tooShort = pw.length > 0 && pw.length < 10
+  const tooShort = pw.length > 0 && pw.length < 6
   const mismatch = again.length > 0 && pw !== again
 
   async function submit(e) {
     e.preventDefault()
-    if (!current || pw.length < 10 || pw !== again) return
+    if (!current || pw.length < 6 || pw !== again) return
     if (pw === current) { setError('The new password must be different from the current one.'); return }
     setBusy(true); setError('')
     const { error } = await supabase.auth.updateUser({ password: pw, current_password: current })
@@ -48,11 +48,11 @@ export default function ChangePassword({ onClose }) {
             <input id="new-password" type="password" autoComplete="new-password" value={pw} onChange={e => setPw(e.target.value)} />
             <label htmlFor="new-password-again">Type it again</label>
             <input id="new-password-again" type="password" autoComplete="new-password" value={again} onChange={e => setAgain(e.target.value)} />
-            {tooShort && <p className="auth-error">At least 10 characters.</p>}
+            {tooShort && <p className="auth-error">At least 6 characters.</p>}
             {mismatch && <p className="auth-error">The two passwords do not match.</p>}
             {error && <p className="auth-error" role="alert">{error}</p>}
             <div className="modal-actions">
-              <button className="primary" type="submit" disabled={busy || !current || pw.length < 10 || pw !== again}>{busy ? 'Saving…' : 'Change password'}</button>
+              <button className="primary" type="submit" disabled={busy || !current || pw.length < 6 || pw !== again}>{busy ? 'Saving…' : 'Change password'}</button>
               <button className="ghost" type="button" onClick={onClose}>Cancel</button>
             </div>
           </>
