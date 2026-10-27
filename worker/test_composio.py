@@ -119,3 +119,10 @@ def test_handle_live_notes_are_only_suggestions():
     reply = next(body for path, body in posted if path == '/rest/v1/chat_messages' and body.get('role') == 'assistant')
     assert reply['meta']['edits'][0]['from_user'] is False
     assert deal['data']['fields'][0]['value'] == 100
+
+
+def test_deal_identity_strips_project_label_suffix():
+    name, _ = worker.deal_identity({'name': 'Nike \u00b7 sample', 'data': {}})
+    assert name == 'Nike'
+    assert worker.event_matches_deal({'summary': 'Nike business case review', 'attendees': []}, {'name': 'Nike \u00b7 sample', 'data': {}})
+    assert not worker.event_matches_deal({'summary': 'Nikelodeon sync', 'attendees': []}, {'name': 'Nike \u00b7 sample', 'data': {}})

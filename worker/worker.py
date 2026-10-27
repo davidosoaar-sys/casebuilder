@@ -372,6 +372,8 @@ def deal_identity(deal):
     data = (deal or {}).get('data') or {}
     fields = {f.get('key'): f.get('value') for f in data.get('fields', []) if isinstance(f, dict)}
     name = str(fields.get('companyName') or (deal or {}).get('name') or '').strip()
+    # Project labels like "Nike \u00b7 sample" carry a suffix; the company is the part before it.
+    name = re.split(r'\s+[\u00b7|\-\u2013\u2014]\s+', name, maxsplit=1)[0].strip()
     website = str((data.get('brand') or {}).get('website') or fields.get('companyWebsite') or '')
     domain = (urllib.parse.urlparse(website if '://' in website else 'https://' + website).hostname or '').lower().removeprefix('www.')
     if domain in PUBLIC_EMAIL_DOMAINS or '.' not in domain:
@@ -488,7 +490,8 @@ def connected_source_context(job, deal, meeting=False, now=None):
             if emails is None:
                 continue
             messages = emails.get('messages') or []
-            messages = sorted(messages, key=lambda m: int(m.get('internalDate') or 0) if str(m.get('internalDate') or '0').isdigit() else 0, reverse=True)
+            # Live Composio messages carry messageTimestamp (ISO); older payloads carry internalDate (ms).
+            messages = sorted(messages, key=lambda m: str(m.get('messageTimestamp') or '') or str(int(m.get('internalDate') or 0) if str(m.get('internalDate') or '0').isdigit() else ''), reverse=True)
             ids = list(dict.fromkeys(m.get('threadId') for m in messages if m.get('threadId')))[:3]
             blocks.append('Gmail: up to 3 recent threads from a bounded 90-day sample for ' + d + '; not an exhaustive inbox search.')
             for tid in ids:

@@ -27,6 +27,12 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ## Unreleased
 
+## v0.19.2 (2026-10-27): Live calendar and Gmail fixes from the first real connection
+
+- Fix: a project named like "Nike · sample" never matched a meeting titled "Nike ..." because the label suffix was part of the company name. The suffix is now ignored ("Nikelodeon" still does not match).
+- Fix: Gmail threads were picked in random order on live data. Composio returns messageTimestamp, not internalDate; threads are now newest first.
+- Verified live on Amr's account: Google Calendar and Gmail ACTIVE, worker read 3 days of real events and real Gmail threads through Composio. 100 worker tests pass.
+
 ## v0.19.1 (2026-10-27): Claude connector accepts current Claude clients
 
 - Fix: adding the CaseBuilder connector in Claude failed with 400 "Not found". Claude sends MCP protocol 2025-11-25, which the server refused. The server now accepts it and no longer refuses newer protocol headers; claude.com is an allowed origin alongside claude.ai.
