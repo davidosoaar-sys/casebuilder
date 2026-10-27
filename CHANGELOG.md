@@ -25,6 +25,11 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ---
 
+## v0.22.2 (2026-10-27): Action-based onboarding
+
+- Make onboarding follow real actions: Okay clears the card and soft blur, leaving the target highlighted; the next tip waits for the user to reach another page or setup stage. No automatic navigation or sample deal is needed.
+  Validation: onboarding persistence/routing tests, production build, and browser checks of Okay → New project → stakeholders → branding → people.
+
 ## v0.22.0 (2026-10-27): Guided onboarding, deck themes and reliable publishing
 
 - Add compact onboarding cards tied to actual project stages: create project, stakeholders, branding, people, theme, inputs and artifact editing/format/export. Cards never advance the workflow; they wait for the relevant screen and can be dismissed or skipped.
@@ -35,7 +40,6 @@ Every version that lands on `main` gets a line here and a git tag.
 - Fix publishing URLs when Vercel truncates the generated production alias. A local no-customer-data deployment was verified publicly reachable; credentials stay server-only and uncommitted.
 - Validation: 515 of 516 suite tests pass; the existing locale-sensitive schedule AM/PM assertion remains. Application/plugin builds pass. Isolated browser checks verify action-driven onboarding, per-page dismissal, desktop/mobile themes and black/white logo conversion. The complete signed-in customer workflow still needs user acceptance testing. Git release does not itself confirm a Vercel/worker deployment.
 
-## Unreleased
 
 ## v0.22.1 (2026-10-27): Restart the tour from Settings
 

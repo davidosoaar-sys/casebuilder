@@ -19,3 +19,8 @@ and visible defaults. No decorative moving background. Status boxes in client
 outputs are a read-only snapshot, not a pretend shared task database.
 
 These choices extend the incumbent implementation; they do not rebrand the app.
+
+Onboarding follows real actions: one concise card for the current page/stage,
+with a soft 2px background blur. Okay restores the page and leaves its target
+outlined. No automatic page switching or immediate chain of same-page cards.
+Informed by Intercom’s action-driven tours and Appcues’ contextual guidance.

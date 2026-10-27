@@ -5,10 +5,10 @@ const main={
  brand:tip('branding','Review the company branding','Check the company logo, fonts and colors, then continue to meet the people.','[data-tour="branding"]'),
  people:tip('people','Meet the people','Find who holds each role and review the sources. Continue when you’re ready to choose a theme.','[data-tour="people"]'),
  theme:tip('theme','Choose the case theme','Pick Company-inspired styling or the full Backstage theme, then create your case.','[data-tour="theme"]'),
- inputs:tip('inputs','Put your inputs here','Enter your numbers and assumptions in Case Inputs. Use the info buttons if a field is unfamiliar.','[data-tour="inputs"]'),
+ inputs:tip('inputs','Put your inputs here','Enter your numbers and assumptions here. The info buttons explain each field. Research and the Agent are available from the navigation when you need help.','[data-tour="inputs"]'),
  researchNav:tip('research-nav','Research and person lookup','Open Research for account context or to look up someone you’re meeting.','[data-tour="research-nav"]'),
- website:tip('edit-case','Edit the case','Use Edit slides to change pages and layout, or Edit content to revise the Live Room’s text.','[data-tour="edit-case"]'),
- deck:tip('edit-deck','Make the story yours','Click text to edit, add or rearrange pages, and use Undo when needed.','[data-tour="edit-deck"]'),
+ website:tip('edit-case','Edit, preview and share','Use Edit slides to change pages or Edit content to revise the Live Room. View as previews each format; download or share only when you’re ready.','[data-tour="edit-case"]'),
+ deck:tip('edit-deck','Make the story yours','Click text to edit, add or rearrange pages, and use Undo when needed. View as previews your format before you export.','[data-tour="edit-deck"]'),
  format:tip('format','Choose a format','Use View as to preview slides, PDF, a one-pager or the Live Room before exporting.','.website-view-format, [data-tour="export"]'),
  share:tip('share','Export or share','Download your chosen format, or Copy link to publish the Live Room. Republish after changes.','[data-tour="export"], [data-tour="publish"]')
 }
@@ -26,8 +26,8 @@ export function tipsFor({stage,view},mainEnabled=true){
  if(pages[view])return [pages[view]]
  if(!mainEnabled)return []
  if(['projects','dashboard'].includes(view))return [main.project]
- if(view==='details')return [main.inputs,main.researchNav]
- if(view==='website'||view==='deck')return [main[view],main.format,main.share]
+ if(view==='details')return [main.inputs]
+ if(view==='website'||view==='deck')return [main[view]]
  return []
 }
 const key=(userId,id)=>`casebuilder.tip.v1:${userId}:${id}`

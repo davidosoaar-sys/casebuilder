@@ -4,10 +4,11 @@ CaseBuilder is a platform for Chris to turn customer conversations, research and
 his business-case inputs into one credible case he can present in a Live Room,
 slides, PDF or a one-pager.
 
-First-visit guidance uses compact, dismissible cards tied to actual project
-stages and routes. The cards do not create projects, run services or advance the
-workflow. Other workspace pages have independent tips, remembered per account in
-this browser. No connector setup is required by onboarding.
+First-visit guidance explains the real page over a softly blurred background.
+Okay clears the card and blur; the user then clicks the highlighted control.
+Guidance waits for actual page/stage changes instead of navigating automatically.
+Other workspace pages have independent tips, remembered per account in this
+browser. Onboarding itself never creates deals, runs research or sets up tools.
 
 New-case setup follows stakeholders → company assets → people → theme. Company
 uses a white canvas and company typography/accent; Backstage applies its full dark
