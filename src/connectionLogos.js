@@ -12,5 +12,6 @@ import excel from './assets/connections/excel.png'
 import figma from './assets/connections/figma.png'
 import canva from './assets/connections/canva.png'
 import gmail from './assets/connections/gmail.png'
+import googlecalendar from './assets/connections/googlecalendar.png' // Composio toolkit logo (logos.composio.dev)
 
-export const LOGOS = { gmail, claude, gong, hubspot, slack, clay, lemlist, granola, sheets, excel, figma, canva }
+export const LOGOS = { googlecalendar, gmail, claude, gong, hubspot, slack, clay, lemlist, granola, sheets, excel, figma, canva }

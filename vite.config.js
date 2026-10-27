@@ -23,6 +23,18 @@ function serverOnlyEnv() {
 
 function localApi() {
   const makeMiddleware = (loadHandlers, loadPerson) => async (req, res, next) => {
+    if (req.url?.split('?')[0] === '/api/connect') {
+      const chunks = []
+      for await (const c of req) chunks.push(c)
+      let body
+      try { body = JSON.parse(Buffer.concat(chunks).toString() || '{}') } catch { body = {} }
+      const { handleConnect } = await import('./server/composio.js')
+      const out = await handleConnect({ method: req.method, headers: req.headers, body })
+      res.statusCode = out.status
+      res.setHeader('Cache-Control', 'no-store')
+      res.setHeader('Content-Type', 'application/json')
+      return res.end(JSON.stringify(out.body))
+    }
     if (req.url?.split('?')[0] === '/api/person') {
       const { servePerson } = await loadPerson()
       return servePerson(req, res)

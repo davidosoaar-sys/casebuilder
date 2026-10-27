@@ -92,7 +92,7 @@ export default function App({ account }) {
     setUserState(name)
     supabase.auth.updateUser({ data: { name } }).catch(() => {})
   }
-  const [view, setView] = useState('dashboard') // 'dashboard' | 'projects' | 'details' | 'deck' | 'website' | 'settings' | ...
+  const [view, setView] = useState(() => new URLSearchParams(window.location.search).has('connector_callback') ? 'connections' : 'dashboard') // 'dashboard' | 'projects' | 'details' | 'deck' | 'website' | 'settings' | ...
   const [createRequest, setCreateRequest] = useState(0)
   const [settingsOpen, setSettingsOpen] = useState(false)
   // Agent: its own tab, or split beside the other tabs (width remembered).

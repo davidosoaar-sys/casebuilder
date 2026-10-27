@@ -20,7 +20,7 @@ const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 
 // weekday here only picks the first run; the repeat does the rest.
 const TEMPLATES = [
   { id: 'brief', title: 'Pre-meeting brief', skill: 'pre_meeting_brief', every: { n: 1, unit: 'days' }, at: { hour: 8 },
-    desc: 'Fill in who you\'re meeting. Calendar-triggered briefs come later.' },
+    desc: 'At 8 AM daily: matching Calendar meetings in the next 24 hours, or the meeting details you enter.' },
   { id: 'news', title: 'Monday account news', skill: 'account_news', every: { n: 1, unit: 'weeks' }, at: { weekday: 1, hour: 9 },
     desc: 'What changed at the account last week: leadership, funding, launches, earnings.' },
   { id: 'map', title: 'Weekly stakeholder map', skill: 'stakeholder_map', every: { n: 1, unit: 'weeks' }, at: { weekday: 5, hour: 16 },

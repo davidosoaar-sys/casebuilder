@@ -112,7 +112,7 @@ const model0 = fields => computeModel(valuesOf(fields))
 const ALL_OFF = defaultConnectors()
 
 test('all connections start off, including Claude, Lemlist and the new file-based ones', () => {
-  assert.deepEqual(Object.keys(ALL_OFF), ['gmail', 'claude', 'gong', 'hubspot', 'slack', 'clay', 'lemlist', 'granola', 'sheets', 'excel', 'figma', 'canva'])
+  assert.deepEqual(Object.keys(ALL_OFF), ['googlecalendar', 'gmail', 'claude', 'gong', 'hubspot', 'slack', 'clay', 'lemlist', 'granola', 'sheets', 'excel', 'figma', 'canva'])
   assert.ok(Object.values(ALL_OFF).every(v => v === false))
 })
 
