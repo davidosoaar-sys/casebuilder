@@ -607,10 +607,13 @@ def connected_source_context(job, deal, meeting=False, now=None):
             blocks.append('Google Calendar meeting (match is a candidate; verify identity): ' + json.dumps(item, ensure_ascii=False)[:12000])
         if len(events) > 20:
             blocks.append('Only the first 20 matching meetings are included.')
-    elif meeting:
-        # Exactly the previous skill behavior when Calendar is not connected.
-        return '', []
-    if not meeting and domain:
+    # A brief is "about a meeting" when Calendar found one, or when Calendar is not
+    # connected (the salesperson typed the meeting in). Calendar connected with no
+    # matching meeting means there is nothing to prepare: read nothing more.
+    briefing = meeting and (bool(events) or 'googlecalendar' not in connections)
+    if meeting and not briefing:
+        return ('Live connected source data.\n' + '\n'.join(blocks)) if blocks else '', steps
+    if domain and (not meeting or not events):
         domains.add(domain)
     if 'gmail' in connections:
         for d in sorted(domains)[:3]:
@@ -629,7 +632,7 @@ def connected_source_context(job, deal, meeting=False, now=None):
                     blocks.append('Gmail thread ' + str(tid) + ': ' + json.dumps(gmail_thread_text(thread), ensure_ascii=False)[:12000])
     # Call transcripts with this company. A pre-meeting brief reads only the latest one,
     # and only when there is a matching meeting to brief.
-    if name and (not meeting or events):
+    if name and (not meeting or briefing):
         transcript_limit = 1 if meeting else LIVE_TRANSCRIPTS
         since = (now - timedelta(days=90)).isoformat()
         if 'gong' in connections:
@@ -698,7 +701,8 @@ def connected_source_context(job, deal, meeting=False, now=None):
                             'transcript_excerpt': mention_excerpt(body, name, domain) if body else 'transcript text unavailable; do not infer its content'}
                     blocks.append('Fireflies transcript (verify the company): ' + json.dumps(item, ensure_ascii=False)[:LIVE_TRANSCRIPT_CHARS + 4000])
     # Search other connected tools only for the current company; never a workspace dump.
-    if name and not meeting:
+    # A brief adds chat, CRM and enrichment; files stay out of briefs (budget).
+    if name and (not meeting or briefing):
         if 'slack' in connections:
             result = read('SLACK_SEARCH_MESSAGES', {'query': '"' + re.sub(r'[^\w\s.-]', '', name)[:120] + '"', 'count': 5, 'sort': 'timestamp', 'sort_dir': 'desc'})
             if result is not None:
@@ -729,6 +733,7 @@ def connected_source_context(job, deal, meeting=False, now=None):
                     item = {'company': {k: c.get(k) for k in ('_id', 'domain', 'fields', 'createdAt')},
                             'notes': [{k: n.get(k) for k in ('note', 'type', 'createdAt')} for n in ((notes or {}).get('data') or []) if isinstance(n, dict)][:10] if notes is not None else 'notes unavailable'}
                     blocks.append('Lemlist company record (outreach; verify relevance): ' + json.dumps(item, ensure_ascii=False)[:LIVE_RECORD_CHARS])
+    if name and not meeting:
         # Spreadsheets and documents whose NAME mentions the company, bounded range only.
         quoted = name.replace('\\', '\\\\').replace("'", "\\'")[:120]
         read_ids = set()

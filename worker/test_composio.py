@@ -54,10 +54,32 @@ def test_next_24h_matches_current_deal_and_includes_threads():
     assert 'Unrelated' not in text and 'do not include' not in text
     assert len(steps) == 4
 
-def test_missing_calendar_preserves_skill_behavior_and_does_not_read_mail():
-    with patch.dict(os.environ, ENV), patch.object(worker, 'composio_connections', return_value={'gmail': 'mail'}), patch.object(worker, 'composio_execute') as execute:
-        assert worker.connected_source_context(JOB, DEAL, meeting=True) == ('', [])
-        execute.assert_not_called()
+def test_brief_without_calendar_uses_other_sources_for_the_typed_meeting():
+    # No Calendar: the salesperson typed the meeting in, so the brief still reads the
+    # deal company's email (and transcripts, chat, CRM), never files.
+    calls = []
+    def execute(owner, slug, args, connections=None):
+        calls.append(slug)
+        if slug == 'GMAIL_FETCH_EMAILS':
+            assert 'acme.test' in args['query']
+            return {'messages': [{'threadId': 't1', 'messageTimestamp': '2026-10-26T10:00:00Z'}]}
+        return {'messages': [{'snippet': 'Acme asked for the security review'}]}
+    with patch.dict(os.environ, ENV), patch.object(worker, 'composio_connections', return_value={'gmail': 'mail'}), patch.object(worker, 'composio_execute', side_effect=execute):
+        text, steps = worker.connected_source_context(JOB, DEAL, meeting=True, now=NOW)
+    assert calls == ['GMAIL_FETCH_EMAILS', 'GMAIL_FETCH_MESSAGE_BY_THREAD_ID']
+    assert 'Acme asked for the security review' in text and 'from_user=false' in text
+
+
+def test_brief_with_calendar_but_no_matching_meeting_reads_nothing_else():
+    calls = []
+    def execute(owner, slug, args, connections=None):
+        calls.append(slug); return {'items': []}
+    with patch.dict(os.environ, ENV), patch.object(worker, 'composio_connections', return_value={'googlecalendar': 'c', 'gmail': 'mail', 'slack': 's'}), patch.object(worker, 'composio_execute', side_effect=execute):
+        text, _ = worker.connected_source_context(JOB, DEAL, meeting=True, now=NOW)
+    assert calls == ['GOOGLECALENDAR_EVENTS_LIST'] and 'no meetings matching' in text
+
+
+def test_no_composio_key_reads_nothing():
     with patch.dict(os.environ, {'COMPOSIO_API_KEY': ''}), patch.object(worker, 'composio_connections') as connections:
         assert worker.connected_source_context(JOB, DEAL, meeting=True) == ('', [])
         connections.assert_not_called()
@@ -304,3 +326,14 @@ def test_mention_excerpt_keeps_company_windows():
     out = worker.mention_excerpt(text, 'Acme', limit=2000)
     assert 'Acme has 500 engineers' in out and len(out) <= 2100
     assert worker.mention_excerpt('short', 'Acme') == 'short'
+
+
+def test_brief_with_matching_meeting_adds_chat_and_crm_but_not_files():
+    responses = {'GOOGLECALENDAR_EVENTS_LIST': {'items': [EVENT]},
+                 'SLACK_SEARCH_MESSAGES': {'messages': {'matches': [{'text': 'Acme wants SSO first'}]}},
+                 'HUBSPOT_SEARCH_DEALS': {'results': [{'properties': {'dealname': 'Acme Portal', 'dealstage': 'proposal'}}]},
+                 'GOOGLESHEETS_SEARCH_SPREADSHEETS': AssertionError('files are not read for briefs')}
+    text, _, calls = run_context({'googlecalendar': 'cal', 'slack': 's', 'hubspot': 'h', 'googlesheets': 'g'}, responses, meeting=True)
+    slugs = [s for s, _ in calls]
+    assert 'SLACK_SEARCH_MESSAGES' in slugs and 'HUBSPOT_SEARCH_DEALS' in slugs and 'GOOGLESHEETS_SEARCH_SPREADSHEETS' not in slugs
+    assert 'Acme wants SSO first' in text and 'proposal' in text

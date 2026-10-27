@@ -28,6 +28,12 @@ Every version that lands on `main` gets a line here and a git tag.
 ## Unreleased
 - Deck: new Payback, Value breakdown and Input confidence chart blocks, drawn in the app and exported as native, editable PowerPoint charts. Charts with missing inputs show what they are waiting for instead of zeros.
 
+## v0.20.1 (2026-10-27): Skills use the live connectors
+
+- All four built-in skills now say what to do with each connected source instead of treating connectors as uploads. Pre-meeting brief: Calendar sets the agenda (one brief per matching meeting), every external attendee is researched (Clay record if connected), the last Gong or Fireflies call is summarised with quotes, open asks come from Gmail and Slack, deal stage from HubSpot, and a new section 6 lists the case inputs to confirm in the meeting. Stakeholder map builds people from meeting attendees, call speakers, email and CRM contacts, with stance only from what people said. Objection prep puts objections the customer actually raised (calls, email, CRM) first, labelled recorded, before hypotheses. Account news cross-checks public news against the deal's own calls and email.
+- Pre-meeting brief reads more when there is a meeting: Slack, HubSpot, Clay and Lemlist for the meeting's company are now included (files stay out to keep briefs fast). Without Google Calendar, a brief for a typed-in meeting now also uses Gmail, the latest call transcript, Slack and CRM, instead of reading nothing. With Calendar connected but no matching meeting, it still reads nothing else and says so.
+- Validation: 493 app tests, 117 worker tests pass. Live on Amr's account: brief with no matching meeting reads Calendar only; chat reads Calendar and Gmail.
+
 ## v0.20.0 (2026-10-27): Nine more live connectors
 
 - Live connectors grow from 4 to 13: Gong, Fireflies, Google Sheets, Excel, Google Drive, Figma, Canva, Clay and Lemlist join Google Calendar, Gmail, Slack and HubSpot. Connectors are grouped (Calls & meetings, Email & chat, CRM & enrichment, Finance & files, Design). Fireflies, Clay and Lemlist take the user's own API key on Composio's secure page, never in CaseBuilder.
