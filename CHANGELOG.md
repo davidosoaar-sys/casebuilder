@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- Refine input info controls with a matching stroke icon and compact themed disclosure; every standard input now has a one-sentence definition rather than research advice. Validation: definition coverage test and production build. Shared pull is blocked by existing uncommitted overlaps; no work discarded.
+
+- Add keyboard/touch-accessible information disclosures beside individual Case Inputs, including each Today/With Portal field. Explanations use existing field help and units, with guidance for custom inputs; calculations and source controls are unchanged. Validation: production build.
+
+- Add Company (white) and Backstage (dark) template choices in Deck design. New projects use Company; brand rescans preserve that canvas choice. Explicit template switches reset page color overrides while retaining content/assets/fonts and support Undo. Existing custom decks remain unchanged. Validation: template inheritance/preservation tests and production build.
+
+- Reject Join Prime/sign-up/shopping promotional graphics during logo discovery. Homepage links no longer automatically qualify every nested image as a company logo. Add Amazon regression fixtures; missing identity remains missing instead of selecting a call-to-action image.
+
+- Remove the forced white Backstage logo tile from editor, HTML and PPTX outputs. Prefer official transparent-friendly vector/alpha logo candidates over opaque profile tiles during discovery; preserve original artwork when no verified transparent asset exists. Existing baked-in image backgrounds require a replacement asset. Validation: transparency preference and co-brand/export tests, production build.
+
 Every version that lands on `main` gets a line here and a git tag.
 
 ## How we version

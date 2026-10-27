@@ -1,4 +1,5 @@
 import {ensureCaseContext} from './caseContext.js'
+import {templateBrand} from './deck/template.js'
 import { INPUT_FIELDS, STAKEHOLDERS, migrateOldInputs, sourceOf } from './valueModel.js'
 import { uid } from './uid.js'
 import { defaultDeck, migrateDeck } from './deck/model.js'
@@ -75,7 +76,7 @@ export function newProject(name, connectors = loadConnections()) {
     deck: defaultDeck(),
     people: {},
     documents: [],
-    brand: normalizeBrand()
+    brand: templateBrand(normalizeBrand(),'company')
   })
 }
 

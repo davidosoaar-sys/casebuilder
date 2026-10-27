@@ -28,6 +28,7 @@ export default function BrandPanel({ brand, onChange, onScan, onClose }) {
   return (
     <aside className="brand-panel no-print" aria-label="Deck design">
       <div className="brand-panel-head"><div><h2>Deck design</h2><p>Use the company’s branding, or make it your own.</p></div><button className="icon-btn" onClick={onClose} aria-label="Close deck design">×</button></div>
+      <section><h3>Template</h3><label htmlFor="deck-template">Choose a starting style</label><select id="deck-template" value={b.template} onChange={e=>set({template:e.target.value})}><option value="custom" disabled>Current custom design</option><option value="company">Company · white background</option><option value="backstage">Backstage · dark background</option></select><p className="help">Company keeps your logo, fonts and brand accent on white. Switching templates replaces page color overrides; Undo restores them.</p></section>
       <form className="brand-scan" onSubmit={e => { e.preventDefault(); onScan(website.trim()) }}>
         <label htmlFor="brand-website">Official company website</label>
         <input id="brand-website" type="text" placeholder="https://company.com" value={website} onChange={e => setWebsite(e.target.value)} />

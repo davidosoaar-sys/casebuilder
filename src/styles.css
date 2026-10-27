@@ -3081,3 +3081,12 @@ body::after { content: ''; position: fixed; inset: 0; z-index: 200; pointer-even
   .ghost-box::after, .agent-progress-steps li.is-now .agent-progress-dot::after { animation: none; }
 }
 .undo-redo-labels .undo-btn { width: auto; padding: 8px 10px; gap: 6px; display: inline-flex; align-items: center; }
+.input-label-with-info { display:flex; align-items:center; gap:8px; }
+.input-info { display:inline-block; position:relative; flex-shrink:0; font-weight:400; }
+.input-info summary { display:flex; align-items:center; justify-content:center; width:24px; height:24px; border:1px solid currentColor; border-radius:50%; cursor:pointer; font:600 12px Georgia,serif; list-style:none; opacity:.7; }
+.input-info summary::-webkit-details-marker { display:none; }
+.input-info summary:focus-visible { outline:2px solid currentColor; outline-offset:3px; }
+.input-info[open] summary { opacity:1; }
+.input-info-content { position:absolute; top:30px; left:0; z-index:25; width:240px; max-width:calc(100vw - 64px); padding:14px; border:1px solid var(--line); border-radius:10px; background:var(--panel); color:var(--ink); box-shadow:0 8px 28px #0002; font-size:13px; line-height:1.5; }
+.input-info-content p { margin:6px 0; }
+@media(max-width:600px) { .input-info-content { left:auto; right:-30px; } }

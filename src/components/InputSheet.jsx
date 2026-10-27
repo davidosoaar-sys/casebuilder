@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import InputInfo from './InputInfo.jsx'
 import {
   confidence,
   unconfirmed,
@@ -277,7 +278,7 @@ function PairField({ pair, today, portal, model, onChange, onEdit, onRemove, ...
   const show = n => (pair.money ? fmtMoneyFull(n) : `${fmtDec(n, 2)}${pair.unit === '%' ? '%' : ''}`)
   const side = (f, label) => (
     <div className={`pair-side is-${stateOf(f)}`}>
-      <label htmlFor={f.key}>{label}</label>
+      <div className="input-label-with-info"><label htmlFor={f.key}>{label}</label><InputInfo field={f}/></div>
       <InputActions field={f} onEdit={onEdit} onRemove={onRemove} />
       <SourceLine field={f} {...rest} />
       <input
@@ -321,6 +322,7 @@ function Field({ field, onChange, onRemove, onEdit, ...rest }) {
           {field.label}
           {field.unit ? <span className="unit"> ({field.unit})</span> : null}
         </label>
+        <InputInfo field={field}/>
         <InputActions field={field} onEdit={onEdit} onRemove={onRemove} />
       </div>
 

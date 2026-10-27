@@ -1,5 +1,13 @@
 # What we are building
 
+Deck design offers Company (white canvas with company assets/accent) or Backstage
+(dark canvas). New projects default to Company; existing custom decks keep their
+design until an explicit template switch. Brand rescans retain the template.
+
+Logo rendering: Backstage co-branding uses its transparent mark without an added
+white tile. Discovery prefers official transparent-friendly candidates; opaque
+customer images are preserved until a verified replacement is available.
+
 CaseBuilder is a platform for Chris to turn customer conversations, research and
 his business-case inputs into one credible case he can present in a Live Room,
 slides, PDF or a one-pager.

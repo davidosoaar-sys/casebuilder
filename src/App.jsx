@@ -26,6 +26,7 @@ import {
   defaultStakeholders
 } from './projects.js'
 import { defaultDeck } from './deck/model.js'
+import {templateBrand,chooseDeckTemplate} from './deck/template.js'
 import { loadConnections, saveConnections } from './connectors.js'
 import Connections from './components/Connections.jsx'
 import Dashboard from './components/Dashboard.jsx'
@@ -136,7 +137,7 @@ export default function App({ account }) {
       if (!response.ok) throw new Error(result.error || 'Brand discovery could not finish.')
       const checked=await verifyBrandForDisplay(result)
       if (brandScans.current.get(id) !== token) return
-      setProjects(ps => ps.map(p => p.id === id ? { ...p, brand: checked, updatedAt: Date.now() } : p))
+      setProjects(ps => ps.map(p => p.id === id ? { ...p, brand: templateBrand(checked,p.brand?.template), updatedAt: Date.now() } : p))
     } catch (error) {
       if (brandScans.current.get(id) !== token) return
       setProjects(ps => ps.map(p => p.id === id ? { ...p, brand: { ...p.brand, status: 'error', message: error.message || 'Brand discovery could not finish. You can edit everything manually.' } } : p))
@@ -363,7 +364,7 @@ export default function App({ account }) {
     )
   }
 
-  if (project && stage === 'brand') return <div className="layout">{projectSidebar}<main className="content"><BrandSetup company={project.name} brand={project.brand} onScan={website=>scanBrand(project.id,project.name,website)} onChange={brand=>{brandScans.current.delete(project.id);update({brand:{...brand,status:'ready',message:'Your branding is saved.'}})}} onContinue={()=>setStage('people')}/></main>{settingsOverlay}</div>
+  if (project && stage === 'brand') return <div className="layout">{projectSidebar}<main className="content"><BrandSetup company={project.name} brand={project.brand} onScan={website=>scanBrand(project.id,project.name,website)} onChange={brand=>{brandScans.current.delete(project.id);update({brand:{...templateBrand(brand,project.brand?.template),status:'ready',message:'Your branding is saved.'}})}} onContinue={()=>setStage('people')}/></main>{settingsOverlay}</div>
 
   if (project && stage === 'people') {
     return (
@@ -474,7 +475,7 @@ export default function App({ account }) {
             onPreviewOpened={() => setPreviewRequest(null)}
             key={project.id}
             brand={project.brand}
-            onBrand={brand => { brandScans.current.delete(project.id); update({ brand: { ...brand, status: 'ready', message: 'Your custom deck design is saved.' } }, { label: 'Changed the deck design', key: 'brand-panel' }) }}
+            onBrand={brand => { brandScans.current.delete(project.id); const changed=brand.template!==project.brand?.template&&['company','backstage'].includes(brand.template); update(changed?chooseDeckTemplate(project,brand):{ brand: { ...brand, status: 'ready', message: 'Your custom deck design is saved.' } }, { label: changed?'Changed the deck template':'Changed the deck design', key: changed?undefined:'brand-panel' }) }}
             history={history}
             onScanBrand={website => scanBrand(project.id, project.name, website)}
             inputs={inputs}

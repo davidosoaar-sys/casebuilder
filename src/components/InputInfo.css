@@ -1,0 +1,5 @@
+.input-info-refined.input-info > summary { border:0; border-radius:6px; width:28px; height:28px; color:var(--ink-dim); background:transparent; opacity:1; transition:background .15s,color .15s; }
+.input-info-refined.input-info > summary:hover,
+.input-info-refined.input-info[open] > summary { color:var(--ink); background:var(--panel-3); }
+.input-info-refined .input-info-content { width:270px; padding:10px 12px; border-radius:8px; border-color:var(--line-2); background:var(--panel-2); font-size:12px; line-height:1.5; font-weight:400; }
+@media(prefers-reduced-motion:reduce) { .input-info-refined.input-info > summary { transition:none; } }

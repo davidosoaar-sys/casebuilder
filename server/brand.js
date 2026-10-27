@@ -4,6 +4,7 @@ import { fetchPublic } from './publicWeb.js'
 import {publicProfileUrl} from '../src/profileMedia.js'
 export { fetchPublic, publicAddress } from './publicWeb.js'
 import {curateBrand} from './brandSelection.js'
+import {transparentLogoPreference} from './logoTransparency.js'
 import {tightenSvg} from './logoFit.js'
 import { normalizeBrand } from '../src/brand.js'
 import { agentPrompt } from './agent-commands/index.js'
@@ -22,19 +23,26 @@ export function logoCandidates(html, website, company = '', assetBase = document
   const host = new URL(website).hostname.replace(/^www\./, '')
   const identity = (company || host.split('.')[0]).toLowerCase().replace(/[^a-z0-9]/g, '')
   const candidates = []
+  const promotion = value => /join[\s_+%.-]*(?:prime|now)|sign[\s_.-]*up|subscribe|shop[\s_.-]*now|free[\s_.-]*trial|buy[\s_.-]*now|add[\s_.-]*to[\s_.-]*cart|cta[-_.]|promo|banner/i.test(value)
   const add = (tag, score) => {
     const src = attr(tag, 'src') || attr(tag, 'data-src')
-    if (src && !/favicon|sprite|customer|partner|promo|banner|scenery/i.test(src+' '+attr(tag,'alt'))) candidates.push({ url: absolute(src, assetBase), score })
+    const label=[src,attr(tag,'alt'),attr(tag,'title'),attr(tag,'aria-label'),attr(tag,'class')].join(' ')
+    if (src && !promotion(label) && !/favicon|sprite|customer|partner|promo|banner|scenery/i.test(label)) candidates.push({ url: absolute(src, assetBase), score })
   }
   for (const match of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)) {
     const tag = '<a ' + match[1] + '>', href = absolute(attr(tag, 'href'), website)
     let home = false
     try { const u = new URL(href); home = u.hostname.replace(/^www\./, '') === host && /^\/(?:home\/?|[a-z]{2}(?:-[a-z]{2})?\/?)?$/i.test(u.pathname) } catch {}
     const label = [attr(tag, 'aria-label'), attr(tag, 'title'), attr(tag, 'class'), attr(tag, 'data-component-name')].join(' ')
-    if (!home || !/logo|home/i.test(label) && !label.toLowerCase().replace(/[^a-z0-9]/g, '').includes(identity)) continue
-    for (const image of match[2].matchAll(/<img\b[^>]*>/gi)) add(image[0], 100)
+    if (!home || promotion(label+' '+match[2].replace(/<[^>]*>/g,' ')) || !/logo|home/i.test(label) && !label.toLowerCase().replace(/[^a-z0-9]/g, '').includes(identity)) continue
+    // A home link may wrap a promotion as well as the identity. Do not treat
+    // every nested image as a logo merely because the parent points home.
+    for (const image of match[2].matchAll(/<img\b[^>]*>/gi)) {
+      const mark=[attr(image[0],'alt'),attr(image[0],'class'),attr(image[0],'src')].join(' ')
+      if(/logo|wordmark/i.test(mark)||attr(image[0],'alt').toLowerCase().replace(/[^a-z0-9]/g,'')===identity)add(image[0],100)
+    }
     const svg = match[2].match(/<svg\b[\s\S]*?<\/svg>/i)?.[0]
-    if (svg) candidates.push({ svg, score: 95 })
+    if (svg && !promotion(svg)) candidates.push({ svg, score: 95 })
   }
   for (const match of html.matchAll(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
     try {
@@ -43,7 +51,7 @@ export function logoCandidates(html, website, company = '', assetBase = document
         if (!item || typeof item !== 'object') return
         if (/Organization|Corporation/.test(String(item['@type'])) && String(item.name || '').toLowerCase().replace(/[^a-z0-9]/g, '').includes(identity)) {
           const url = typeof item.logo === 'string' ? item.logo : item.logo?.url || item.logo?.contentUrl
-          if (url) candidates.push({ url: absolute(url, assetBase), score: 90 })
+          if (url && !promotion(url)) candidates.push({ url: absolute(url, assetBase), score: 90 })
         }
         if (item['@graph']) visit(item['@graph'])
       }; visit(JSON.parse(match[1]))
@@ -322,7 +330,12 @@ export async function discoverBrand({ company, website }, fetcher = fetchPublic,
     const variant=allWhite?'light':allBlack?'dark':!svg&&/white/i.test(candidate.url||'')?'light':!svg&&/black/i.test(candidate.url||'')?'dark':'unknown'
     return {dataUrl,sourceUrl,dimensions,authority:candidate.authority||(candidate.sourcePage?'company-profile':'official-site'),sourcePage:candidate.sourcePage||home.url,variant,score:candidate.score,location:candidate.authority==='official-brand-kit'?'Official brand resource':candidate.sourcePage?'Public company LinkedIn logo':candidate.score>=95?'Official homepage mark':candidate.score===90?'Organization logo':candidate.score===0?'Favicon':'Official site logo'}
   }))
-  const logos=loaded.filter(r=>r.status==='fulfilled').map(r=>r.value)
+  const logos=loaded.filter(r=>r.status==='fulfilled').map(r=>r.value).sort((a,b)=>{
+    // Keep official site assets ahead of profile tiles, then prefer vector/alpha
+    // candidates. No pixel recolouring or deletion of customer artwork.
+    const rank=x=>(x.authority==='company-profile'?0:10)+transparentLogoPreference(x.dataUrl.slice(5,x.dataUrl.indexOf(';')),Buffer.from(x.dataUrl.split(',')[1],'base64'))
+    return rank(b)-rank(a)||b.score-a.score
+  })
   let heroImage='',heroAlt='',heroSource=''
   const heroCandidates=[]
   if(Date.now()<deadline-8000)for(const candidate of brandHeroCandidates(html,home.url,company)){

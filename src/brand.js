@@ -28,6 +28,7 @@ export const safeAsset = value => typeof value === 'string' && value.length < 1_
 export function normalizeBrand(value) {
   const b = value && typeof value === 'object' ? value : {}
   return {
+    template: ['company','backstage'].includes(b.template)?b.template:'custom',
     ...DEFAULT_BRAND,
     ...Object.fromEntries(COLOR_KEYS.map(k => [k, /^#[0-9a-f]{6}$/i.test(b[k]) ? b[k] : DEFAULT_BRAND[k]])),
     headingFont: cleanFont(b.headingFont) || DEFAULT_BRAND.headingFont,

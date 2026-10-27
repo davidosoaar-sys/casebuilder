@@ -4,6 +4,7 @@ import { SPOTIFY_LOGO } from './spotifyLogo.js'
 // A saved, editable preset for the requested Spotify sample. Apply once so
 // subsequent customer edits survive reloads. No inputs or formulas are changed.
 export function styleSpotifyDeck(project) {
+  if(project.brand?.template==='company')return project
   if (!/^spotify$/i.test(project.name.trim()) || project.spotifyDesignVersion === 1) return project
   const green = '#1DB954'
   const typography = {

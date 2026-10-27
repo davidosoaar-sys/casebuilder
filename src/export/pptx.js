@@ -156,7 +156,7 @@ async function layoutBlock(b, deps, theme = DEFAULTS) {
     case 'logo': {
       const png = await deps.logoPng()
       if (!png) return { h: 0, draw: () => {} }
-      return { h: 0.7, draw: (s, y, k) => {const w=Math.min(0.34*png.ratio,3)*k,h=0.34*k;if(theme.logoBackground&&theme.logoBackground!=='transparent')s.addShape('rect',{x:MX,y,w,h,fill:{color:hex(theme.logoBackground)},line:{transparency:100}});s.addImage({data:png.data,x:MX,y,w,h});s.addText('×',{x:MX+w+0.12*k,y,w:0.25*k,h,color:theme.colors.ink||'777777',fontSize:15*k,margin:0});s.addShape('rect',{x:MX+w+0.5*k,y,w:1.3*k,h,fill:{color:'FFFFFF'},line:{transparency:100}});s.addImage({data:backstageData,x:MX+w+0.55*k,y:y+0.04*k,w:1.2*k,h:0.26*k})} }
+      return { h: 0.7, draw: (s, y, k) => {const w=Math.min(0.34*png.ratio,3)*k,h=0.34*k;if(theme.logoBackground&&theme.logoBackground!=='transparent')s.addShape('rect',{x:MX,y,w,h,fill:{color:hex(theme.logoBackground)},line:{transparency:100}});s.addImage({data:png.data,x:MX,y,w,h});s.addText('×',{x:MX+w+0.12*k,y,w:0.25*k,h,color:theme.colors.ink||'777777',fontSize:15*k,margin:0});s.addImage({data:backstageData,x:MX+w+0.55*k,y:y+0.04*k,w:1.2*k,h:0.26*k})} }
     }
     case 'divider':
       return { h: 0.35, draw: (s, y) => s.addShape('line', { x: MX, y: y + 0.1, w: CW, h: 0, line: { color: C.line, width: 1 } }) }
