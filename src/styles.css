@@ -2607,7 +2607,7 @@ a.research-cite:hover { background: var(--accent); color: var(--accent-ink) !imp
 .rail-thumb:active { cursor: grabbing; }
 .rail-thumb:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .rail-num { padding-top: 4px; font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; color: var(--ink-faint); }
-.rail-card { position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: 6px; aspect-ratio: 16 / 10; padding: 9px 10px; overflow: hidden; border-radius: 7px; background: var(--deck-bg, var(--panel)); color: var(--deck-text, var(--ink)); box-shadow: 0 0 0 1px var(--line); transition: box-shadow .15s ease; }
+.rail-card { position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: 6px; aspect-ratio: 16 / 9; padding: 9px 10px; overflow: hidden; border-radius: 7px; background: var(--deck-bg, var(--panel)); color: var(--deck-text, var(--ink)); box-shadow: 0 0 0 1px var(--line); transition: box-shadow .15s ease; }
 .rail-card.is-hero { background: linear-gradient(115deg, var(--deck-bg, var(--panel)), var(--deck-surface, var(--panel-2))); }
 .rail-title { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-family: var(--deck-heading-font, var(--heading)); font-size: 11.5px; font-weight: 700; line-height: 1.25; }
 .rail-thumb[aria-current="true"] .rail-card { box-shadow: 0 0 0 2px var(--accent), 0 6px 18px -8px color-mix(in srgb, var(--accent) 45%, transparent); }
@@ -3081,3 +3081,10 @@ body::after { content: ''; position: fixed; inset: 0; z-index: 200; pointer-even
   .ghost-box::after, .agent-progress-steps li.is-now .agent-progress-dot::after { animation: none; }
 }
 .undo-redo-labels .undo-btn { width: auto; padding: 8px 10px; gap: 6px; display: inline-flex; align-items: center; }
+
+/* Editor pages are fixed 16:9 canvases, the same 13.333 x 7.5 in proportions as
+   the PowerPoint export. Margins match the export (0.7 in sides, 0.6 in top) as a
+   share of the slide width. Content taller than the page scrolls inside it. */
+@media screen {
+  .deck-editor .slide { aspect-ratio: 16 / 9; min-height: 0; height: auto; padding: 4.5% 5.25%; overflow-x: hidden; overflow-y: auto; scrollbar-width: thin; box-sizing: border-box; }
+}
