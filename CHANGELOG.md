@@ -25,6 +25,10 @@ Every version that lands on `main` gets a line here and a git tag.
 
 ---
 
+## Unreleased
+
+- Waitlist approval: the approval email now links straight to Create account with the address filled in (`/?invited&email=...`), and the sign-in page has a "Create your account" link for approved people. Before, the email pointed at the sign-in page, which had no way to create an account.
+
 ## v0.22.2 (2026-10-27): Action-based onboarding
 
 - Make onboarding follow real actions: Okay clears the card and soft blur, leaving the target highlighted; the next tip waits for the user to reach another page or setup stage. No automatic navigation or sample deal is needed.

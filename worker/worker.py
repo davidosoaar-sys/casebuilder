@@ -2087,7 +2087,10 @@ APP_URL = os.environ.get("CB_APP_URL", "https://casebuilder-three.vercel.app").r
 
 def approval_message(to, name, app_url=APP_URL, sender=GMAIL_USER):
     from email.message import EmailMessage
+    from urllib.parse import quote
     first = (name or "").strip().split(" ")[0]
+    # ?invited opens Create account with the address filled in (AuthGate.jsx).
+    link = f"{app_url}/?invited&email={quote(to)}"
     m = EmailMessage()
     m["Subject"] = "You're in: your CaseBuilder access is confirmed"
     m["From"] = f"CaseBuilder <{sender}>"
@@ -2095,10 +2098,11 @@ def approval_message(to, name, app_url=APP_URL, sender=GMAIL_USER):
     m.set_content(
         f"Hi{(' ' + first) if first else ''},\n\n"
         "You've been approved for CaseBuilder.\n\n"
-        "To get started:\n"
-        f"1. Go to {app_url}\n"
-        f"2. Sign up with {to}, the address this email was sent to.\n"
-        "3. Choose a password, and you're in.\n\n"
+        "Create your account here:\n"
+        f"{link}\n\n"
+        f"Sign up with {to}, the address this email was sent to.\n"
+        "Choose a password, and you're in.\n"
+        "On the sign-in page instead? Press \"Create your account\" under it.\n\n"
         "Thanks for your patience while we test it.\n"
         "The CaseBuilder team\n")
     return m

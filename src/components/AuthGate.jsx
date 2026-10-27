@@ -231,7 +231,8 @@ function AuthScreens({ onReset = () => {} }) {
         <p className="auth-switch">
           {signup
             ? <>Already have an account? <button type="button" className="link-btn" onClick={() => go('signin')}>Sign in</button></>
-            : <>New to CaseBuilder? <button type="button" className="link-btn" onClick={() => go('waitlist')}>Join the waitlist</button></>}
+            : <>New to CaseBuilder? <button type="button" className="link-btn" onClick={() => go('waitlist')}>Join the waitlist</button><br />
+              Approved from the waitlist? <button type="button" className="link-btn" onClick={() => go('signup')}>Create your account</button></>}
         </p>
       </form>
     </AuthStage>

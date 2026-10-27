@@ -397,7 +397,7 @@ class ApprovalEmail(unittest.TestCase):
         body = m.get_content()
         self.assertIn("Hi Mia,", body)
         self.assertIn("Sign up with mia@example.com, the address this email was sent to.", body)
-        self.assertIn("https://app.example", body)
+        self.assertIn("https://app.example/?invited&email=mia%40example.com", body)
         self.assertNotIn("enter this email", body.lower())
         self.assertEqual(m["To"], "mia@example.com")
         self.assertEqual(m["From"], "CaseBuilder <cb@gmail.com>")
