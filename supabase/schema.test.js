@@ -52,6 +52,7 @@ before(async () => {
   db = new PGlite()
   await db.exec(SUPABASE_STUB)
   await db.exec(readFileSync(new URL('./migrations/0001_init.sql', import.meta.url), 'utf8'))
+  await db.exec(readFileSync(new URL('./migrations/0017_save_deal_conflict_not_retried.sql', import.meta.url), 'utf8'))
   await db.exec(readFileSync(new URL('./migrations/0003_model_keys.sql', import.meta.url), 'utf8'))
   await db.exec(readFileSync(new URL('./migrations/0004_project_files.sql', import.meta.url), 'utf8'))
   await db.exec(`insert into auth.users (id, email) values
@@ -112,6 +113,9 @@ test('save_deal bumps the version, and a stale save is refused, not merged', asy
   assert.equal(r.rows[0].v, start + 1)
   // The agent read version `start` too and now tries to save over Chris's edit.
   await rejects(user(A, tx => tx.query('select public.save_deal($1, $2, $3, $4)', ['deal-a', 'Agent', deal('deal-a'), start])), /deal_conflict/)
+  // 0017: the conflict must NOT be SQLSTATE 40001. PostgREST retries 40001 forever,
+  // which looped a stale save in production and exhausted the connection pool.
+  await assert.rejects(user(A, tx => tx.query('select public.save_deal($1, $2, $3, $4)', ['deal-a', 'Agent', deal('deal-a'), start])), e => e.code !== '40001' && /deal_conflict/.test(e.message), 'conflict must not use the retried SQLSTATE 40001')
   const { rows } = await user(A, tx => tx.query(`select name from public.deals where id = 'deal-a'`))
   assert.equal(rows[0].name, 'Acme 2')
 })
