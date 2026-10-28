@@ -48,7 +48,7 @@ await build({entryPoints:[path.join(root,'plugin-src/workflow.mjs')],outfile:pat
 const designRefs=path.join(plugin,'skills/case-deliverables/references')
 fs.mkdirSync(designRefs,{recursive:true})
 for(const [source,name] of [['docs/agents/design-case.md','design-case.md'],['docs/agents/one-pager.md','one-pager.md'],['docs/design-reference-study.md','design-reference-study.md'],['docs/agents/design-plan.schema.json','design-plan.schema.json']]){
-  let contents=fs.readFileSync(path.join(root,source),'utf8')
+  let contents=fs.readFileSync(path.join(root,source),'utf8').replace(/\r\n/g,'\n')
   contents=contents.replaceAll('../design-reference-study.md','design-reference-study.md').replaceAll('agents/design-case.md','design-case.md')
   fs.writeFileSync(path.join(designRefs,name),contents)
 }

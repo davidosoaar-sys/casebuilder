@@ -16,7 +16,7 @@ test('MCP case workflow generates artifacts, retains evidence and rejects unappr
  const call=(name,args={})=>request('tools/call',{name,arguments:args})
  try{
   assert.equal((await request('initialize',{protocolVersion:'2025-06-18'})).serverInfo.name,'casebuilder-local')
-  assert.equal((await request('tools/list')).tools.length,7)
+  assert.equal((await request('tools/list')).tools.length,8)
   const created=JSON.parse((await call('casebuilder_create',{company:'Northwind demo'})).content[0].text)
   const caseId=created.caseId
   assert.equal((await call('casebuilder_apply_brand',{caseId,approved:false,brand:{primary:'#112233'},sources:['https://example.com/brand']})).isError,true)
@@ -35,5 +35,19 @@ test('MCP case workflow generates artifacts, retains evidence and rejects unappr
   const files=fs.readdirSync(path.join(home,caseId+'-artifacts'))
   assert.ok(files.some(f=>f.endsWith('.pptx')))
   assert.ok(files.some(f=>f.endsWith('.html')))
+  for(const format of ['google-slides','canva']){
+   const result=await call('casebuilder_build',{caseId,format})
+   assert.equal(result.isError,undefined,result.content[0].text)
+   const artifact=JSON.parse(result.content[0].text).built[0]
+   assert.equal(artifact.format,format)
+   assert.ok(artifact.file.endsWith('-'+format+'.pptx'))
+   assert.ok(artifact.importInstructions)
+  }
+  const dryRun=await call('casebuilder_publish',{caseId,approved:false})
+  assert.equal(dryRun.isError,undefined,dryRun.content[0].text)
+  const publication=JSON.parse(dryRun.content[0].text)
+  assert.equal(publication.published,false)
+  assert.ok(publication.warning.includes('public address'))
+  assert.equal((await call('casebuilder_publish',{caseId})).isError,true)
  }finally{child.kill(); await new Promise(r=>child.once('close',r));fs.rmSync(home,{recursive:true,force:true})}
 })

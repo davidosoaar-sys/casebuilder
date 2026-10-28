@@ -1,6 +1,6 @@
 ---
 description: Build the PowerPoint, one-pager and interactive website for a case
-argument-hint: [case file] [stakeholder] [pptx|onepager|website|all]
+argument-hint: [case file] [stakeholder] [pptx|google-slides|canva|onepager|website|all]
 ---
 
 Build using `${CLAUDE_PLUGIN_ROOT}/skills/case-deliverables/SKILL.md`.

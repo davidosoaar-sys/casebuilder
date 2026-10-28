@@ -111,13 +111,13 @@ export function waitingFor(env, figureKeys) {
 function builtin(type, ed = {}) {
   switch (type) {
     case 'title':
-      return slide('hero', [
+      return {...slide('hero', [
         block('logo'),
         text('hero', ed.title ?? '{company}'),
         text('lede', ed.lede ?? 'The case for Spotify Portal for Backstage at {company}.'),
         text('body', '{caseContext}'),
         text('forwhom', ed.forwhom ?? 'Prepared for {role} · {archetype}')
-      ])
+      ]),design:{coverLayout:'split'}}
     case 'headline':
       return slide('plain', [
         text('label', 'Business impact'),

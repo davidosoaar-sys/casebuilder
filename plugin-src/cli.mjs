@@ -451,7 +451,7 @@ async function cmdBuild(pos, flags) {
   const { project } = loadProject(file)
   const wanted = one(flags, 'format') || 'all'
   const formats = wanted === 'all' ? ['pptx', 'onepager', 'website'] : String(wanted).split(',').map(s => s.trim())
-  for (const f of formats) if (!['pptx', 'onepager', 'website'].includes(f)) fail(`Unknown format "${f}". Use pptx, onepager, website or all.`)
+  for (const f of formats) if (!['pptx', 'google-slides', 'canva', 'onepager', 'website'].includes(f)) fail(`Unknown format "${f}". Use pptx, google-slides, canva, onepager, website or all.`)
 
   const { list, who } = audienceFor(project, one(flags, 'stakeholder'))
   const outDir = path.resolve(one(flags, 'out') || path.dirname(path.resolve(file)))
@@ -467,19 +467,19 @@ async function cmdBuild(pos, flags) {
   const companyLogo=brandLogoHtml(brand,'')
   const rasterLogo=hasCompanyLogo&&/^data:image\/(png|jpeg);base64,/.test(brand.logo)?brand.logo:null
   const warnings=[]
-  if(hasCompanyLogo&&!rasterLogo&&formats.includes('pptx'))warnings.push('The company logo is not PNG/JPEG. PPTX omits it; supply a PNG/JPEG variant for an embedded logo. HTML outputs retain the original asset.')
+  if(hasCompanyLogo&&!rasterLogo&&formats.some(f=>['pptx','google-slides','canva'].includes(f)))warnings.push('The company logo is not PNG/JPEG. PPTX omits it; supply a PNG/JPEG variant for an embedded logo. HTML outputs retain the original asset.')
 
-  if (formats.includes('pptx')) {
+  for(const target of formats.filter(f=>['pptx','google-slides','canva'].includes(f))) {
     const env = buildEnv(inputs, project.fields, clientStakeholder(who))
     const pptx = await buildPptx({
       company,
       brand,
       slides: resolveSlides(deck, env),
-      deps: { PptxGenJS, logoPng: async () => {if(!rasterLogo)return null;const size=dataUrlSize(rasterLogo);return {data:rasterLogo,ratio:size.w/size.h}}, imageSize: async src => dataUrlSize(src) }
+      deps: { PptxGenJS, importTarget:target, logoPng: async () => {if(!rasterLogo)return null;const size=dataUrlSize(rasterLogo);return {data:rasterLogo,ratio:size.w/size.h}}, imageSize: async src => dataUrlSize(src) }
     })
-    const out = path.join(outDir, `${name}-business-case.pptx`)
+    const out = path.join(outDir, `${name}-business-case${target==='pptx'?'':'-'+target}.pptx`)
     fs.writeFileSync(out, await pptx.write({ outputType: 'nodebuffer' }))
-    written.push({ format: 'pptx', file: out, bytes: fs.statSync(out).size, audience: who.role })
+    written.push({ format: target, file: out, bytes: fs.statSync(out).size, audience: who.role,...(target==='google-slides'?{importInstructions:'Google Slides: File → Open → Upload this PPTX.',openUrl:'https://slides.google.com/'}:target==='canva'?{importInstructions:'Upload this PPTX in Canva. Charts are editable shapes.',openUrl:'https://www.canva.com/'}:{}) })
   }
 
   if (formats.includes('onepager')) {
@@ -592,7 +592,7 @@ function help() {
   person <add|remove> <f> --stakeholder k ...      record a researched person (with sources)
   validate <f>                                     check the file, in plain words
   calc <f> [--stakeholder k] [--md]                run the value model
-  build <f> [--format pptx|onepager|website|all] [--stakeholder k] [--out dir] [--pdf]
+  build <f> [--format pptx|google-slides|canva|onepager|website|all] [--stakeholder k] [--out dir] [--pdf]
   publish <f> [--stakeholder k] [--yes]            put the website on Vercel (needs --yes)
   export <f> [--out f]                             write the full case file for the app`)
 }

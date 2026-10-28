@@ -9,8 +9,8 @@ there is no custom checkbox screen in this ZIP. Output selection is not inferred
 as "all". See skills/connected-case/onboarding.md and pranav-framework.md for the
 flow, eight-part framework and acceptance scorecard.
 
-The plugin now includes a local stdio MCP server with seven tools: save reviewed official branding, inspect the input
-schema, create/read a case, apply reviewed sourced inputs, calculate and build.
+The plugin now includes a local stdio MCP server with eight tools: save reviewed official branding, inspect the input
+schema, create/read a case, apply reviewed sourced inputs, calculate, build and explicitly approved website publishing.
 Brand discovery uses the host’s authorized web/download tools, saves reviewed assets with provenance, then deck-design guides composition and visual checks.
 The tools call the same bundled CaseBuilder model/exporters as the existing CLI.
 No Anthropic API key is needed by this local bridge: Claude supplies the reasoning.
@@ -154,3 +154,9 @@ Hand-written skills, commands, templates and fixtures remain in `plugin/`.
 Workflow/content owner and technical maintainer must be named before wider team
 rollout; they are not assigned by this prototype. Release versions are assigned
 only on an authorized release push. Current work is recorded under Unreleased.
+
+## Output compatibility and sharing
+
+The plugin uses the same split-image cover as CaseBuilder. Build `google-slides` or `canva` for editable PPTX imports; upload the resulting file in that service. Font names are preserved, but availability in the destination controls editable rendering. These are not direct account uploads.
+
+For a shareable Live Room, `/casebuilder:publish` or the local `casebuilder_publish` tool uses your host Vercel setup after explicit approval. Configure your own VERCEL_TOKEN in the host environment, or use an authenticated Vercel CLI. No credentials ship in the package. Publish returns the actual URL; changes require republishing. Without hosting configuration, you still get a portable interactive HTML file.

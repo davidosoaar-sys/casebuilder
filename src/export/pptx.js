@@ -8,6 +8,7 @@
 import { normalizeBrand, blockDesign, officeFont } from '../brand.js'
 import { backstageData } from '../coBrand.js'
 import {drawImportChart} from './importCharts.js'
+import {splitCover} from '../deck/cover.js'
 
 const W = 13.333
 const H = 7.5
@@ -346,6 +347,18 @@ export async function buildPptx({ company, slides, deps, brand }) {
         ...(design.fontWeight ? { bold: Number(design.fontWeight) >= 600 } : {}),
         fit: 'shrink'
       })
+    }
+    if(splitCover(sl,b)){
+      // Fixed split composition; text remains editable in Office/Slides/Canva.
+      s.addImage({data:b.heroImage,x:7.0,y:0,w:W-7,h:H,sizing:{type:'cover',w:W-7,h:H}})
+      for(let i=0;i<24;i++)s.addShape('rect',{x:7+i*.05,y:0,w:.055,h:H,line:{transparency:100},fill:{color:s.background.color,transparency:Math.round(i/23*100)}})
+      const logo=await deps.logoPng?.()
+      if(logo){const w=Math.min(1.8,.35*logo.ratio);s.addImage({data:logo.data,x:MX,y:.65,w,h:.35});s.addText('×',{x:MX+w+.12,y:.65,w:.25,h:.3,fontSize:12,color:C.dim});s.addImage({data:backstageData,x:MX+w+.52,y:.69,w:1.15,h:.25})}
+      const copy=sl.blocks.filter(x=>x.kind==='text')
+      let y=2.0
+      for(const item of copy){const title=item.style==='hero',small=item.style==='forwhom';heading=title;activeDesign=item.design||{};const h=title?1.3:small ? .35 : .9;s.addText(item.text,{x:MX,y:small?6.5:y,w:5.7,h,fontFace:title?theme.headingFont:FONT,fontSize:title?52:small?9:17,bold:title,color:title?C.strong:small?C.dim:C.ink,margin:0,valign:'top'});if(!small)y+=h+.2}
+      activeDesign={};heading=false
+      continue
     }
     if (sl.variant === 'hero' && !sl.design?.background) {
       // A soft teal glow bottom-right stands in for the gradient.

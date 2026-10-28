@@ -2,6 +2,13 @@
 
 Version: 1.0.0 · 2026-10-24
 
+Cover implementation update — 2026-10-28: the shared app/plugin renderer now
+supports `design.coverLayout: "split"` with `brand.heroImage`, `heroAlt` and
+`heroSource`. Follow the CaseBuilder landing-page examples: editable identity and
+short pitch at left, sourced product/campaign image at right. Preserve selected
+brand fonts/theme. Use a typographic fallback when imagery is unavailable; do not
+substitute a screenshot of a finished slide. Existing authored pages opt in.
+
 This is a provider-neutral instruction for the future CaseBuilder design agent.
 It is a prompt contract, not an installed slash command or a running service.
 Supply this entire file as the design agent's instructions. Send the request

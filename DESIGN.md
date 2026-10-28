@@ -20,6 +20,12 @@ outputs are a read-only snapshot, not a pretend shared task database.
 
 These choices extend the incumbent implementation; they do not rebrand the app.
 
+Deck-cover reference: https://casebuilder-site-omega.vercel.app/ — small customer
+mark, large company name and concise pitch at left; cropped brand photography at
+right with a soft fade in browser/PDF views. Preserve selected theme colors and
+company fonts. Export actual editable text and a separate image, never a screenshot
+of a composed marketing slide. Retain a typographic fallback when no image is found.
+
 Onboarding starts with a short welcome/name step. Use anchored callouts with an
 arrow, a dark scrim and a clear spotlight around the action; unrelated pointer
 and keyboard navigation is blocked while the guide is open. Clicking the actual

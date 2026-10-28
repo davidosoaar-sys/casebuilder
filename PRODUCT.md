@@ -25,6 +25,14 @@ assets and People offer a direct return to stakeholders without resetting the ca
 The Inputs tab has an independent first-visit guide, even if the main tour was skipped.
 Company uses a white canvas and company typography/accent; Backstage applies its full dark
 palette and typography. Existing decks change only when explicitly selected.
+New deck covers use an editable split layout: customer identity and pitch on the
+left, sourced product/campaign photography on the right. It follows the cover
+examples on the CaseBuilder landing page. Without usable imagery the cover stays
+typographic; existing pages can opt in through their page-options menu.
+The Claude plugin shares this renderer and supports editable Google Slides/Canva
+import PPTX files. Its local MCP can publish a shareable website after explicit
+approval using the host's Vercel setup; it does not bundle credentials or host
+account authorization, and shared snapshots require republishing after changes.
 Backstage’s partner mark stays green. Transparent black/white customer marks adapt
 to the theme with originals retained; multicolor and opaque artwork stay intact.
 

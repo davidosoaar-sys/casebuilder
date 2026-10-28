@@ -10,6 +10,17 @@ references/design-case.md and design-reference-study.md relative to the skills
 directory. Research is limited to user-enabled sources. No new financial claims.
 
 ## Story and composition
+
+Use the same cover template as the app, referenced by the examples at
+https://casebuilder-site-omega.vercel.app/: small customer × green Backstage mark,
+large company name and short pitch at left; cropped, sourced company product or
+campaign photography at right. Keep text editable and preserve the selected
+company/Backstage theme and fonts. New cases already use
+`design.coverLayout: "split"` on the title slide. For an existing case, offer this
+layout before changing authored content. The renderer uses `brand.heroImage`,
+`heroAlt` and `heroSource`; no usable image means a clean typographic fallback.
+Do not use a complete landing-page slide screenshot as the photo. Do not add
+decorative images to financial slides or alter equations to fit the layout.
 Storyboard before rendering: customer × Backstage identity; customer problem and
 decision; modeled business impact; value drivers; what changes; alternative;
 stakeholder requirements and next decision. Adapt to evidence and audience rather

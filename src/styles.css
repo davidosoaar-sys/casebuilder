@@ -3124,3 +3124,7 @@ body::after { content: ''; position: fixed; inset: 0; z-index: 200; pointer-even
 .setup-progress li > span { display:grid; place-items:center; width:22px; height:22px; border:1px solid var(--line-2); border-radius:50%; }
 .setup-progress li[aria-current="step"] > span { background:var(--ink); color:var(--panel); border-color:var(--ink); }
 .setup-progress p { margin:12px 0 0; color:var(--ink-dim); font-size:12px; }
+/* Brand-image covers: editable copy on the left, company imagery on the right. */
+.customer-deck .slide.deck-image-cover{position:relative;overflow:hidden;background:var(--page-background,var(--deck-bg))!important}
+.deck-image-cover .deck-cover-photo{position:absolute;inset:0 0 0 auto;width:47%;height:100%;object-fit:cover;mask-image:linear-gradient(to right,transparent,#000 22%);pointer-events:none}
+.deck-editor .deck-image-cover .blocks-zone{position:relative;z-index:1;width:53%}.deck-image-cover .blocks::before{display:none!important}.deck-image-cover .b-hero{font-size:clamp(36px,5vw,76px);line-height:1.02;letter-spacing:-.035em}.deck-image-cover .title-logo{margin-bottom:32px}.deck-image-cover .b-lede{font-size:20px}

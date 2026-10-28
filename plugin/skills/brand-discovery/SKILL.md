@@ -39,3 +39,12 @@ sources. If `web` is disabled, do not visit the supplied URL or fetch its assets
 Do not claim a font was embedded just because its name was saved. Validate actual
 font loading and logo visibility during deliverable QA. If an export cannot use
 an asset, explain the format-specific fallback. Research success is not design QA.
+
+For the deck cover, also find a clear product, campaign, packaging or company
+environment photograph on official public pages. Prefer a large image suitable
+for cropping into the right half of a landscape slide. Shoes and other products
+are valid imagery; logo tiles, screenshots and precomposed deck covers are not.
+Save the verified embedded PNG/JPEG/WebP as `brand.heroImage`, an accurate
+description as `heroAlt` and its public provenance as `heroSource`. Keep a safe
+PNG/JPEG logo variant for editable PPTX when the host can produce one; otherwise
+report the existing SVG/PPTX limitation. Never generate substitute brand assets.

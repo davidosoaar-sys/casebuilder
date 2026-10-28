@@ -11,6 +11,7 @@ import { fileToDataUrl } from '../deck/image.js'
 import { slideName } from '../agentDeckEdits.js'
 import { stepId } from '../useHistory.js'
 import { inheritSlideStyle } from '../deck/inheritStyle.js'
+import {splitCover} from '../deck/cover.js'
 import {
   TEXT_STYLES,
   STAT_KEYS,
@@ -478,6 +479,7 @@ function PageEditor({ slide, idx, count, env, brand, shown, current, sel, onCurr
     { label: 'Page colour', onSelect: () => setColor('page') },
     { label: 'Text colour', onSelect: () => setColor('text') },
     { label: slide.variant === 'hero' ? 'Turn off hero background' : 'Hero background', onSelect: () => ops.patchSlide(slide.id, s => ({ ...s, variant: s.variant === 'hero' ? 'plain' : 'hero' }), `Changed the background of page ${no}`) },
+    { label: slide.design?.coverLayout==='split'?'Use standard cover layout':'Use branded image cover', onSelect:()=>ops.patchSlide(slide.id,s=>({...s,design:{...s.design,coverLayout:s.design?.coverLayout==='split'?'standard':'split'}}),`Changed the cover layout on page ${no}`) },
     { label: 'Add a block', onSelect: () => setPicker({ at: slide.blocks.length, anchor: head }) },
     { label: 'Duplicate', onSelect: () => ops.duplicateSlide(slide.id) },
     { label: 'Move up', disabled: idx === 0, onSelect: () => ops.moveSlideTo(slide.id, idx - 1) },
@@ -491,6 +493,7 @@ function PageEditor({ slide, idx, count, env, brand, shown, current, sel, onCurr
       onPointerDown={() => { if (!current) onCurrent() }}>
       <div className="slide-head no-print" ref={head}>
         <span className="slide-num">Page {no}</span>
+        {slide.design?.coverLayout==='split'&&!brand?.heroImage&&<span className="help">Brand imagery will appear here when found. You can add it in Deck design.</span>}
         {waiting && <span className="hidden-pill">Hidden</span>}
         <span className="slide-head-space" />
         <Menu label={`Page ${no} options`} title="Page options" className="icon-btn page-more" items={menu} />
@@ -513,7 +516,8 @@ function PageEditor({ slide, idx, count, env, brand, shown, current, sel, onCurr
           }} />
       </Popover>
 
-      <section ref={pageRef} className={`slide ${slide.variant === 'hero' ? 'slide-hero' : ''}`} style={HEX.test(slide.design?.background) ? { background: slide.design.background, '--page-background': slide.design.background } : undefined}>
+      <section ref={pageRef} className={`slide ${slide.variant === 'hero' ? 'slide-hero' : ''}${splitCover(slide,brand)?' deck-image-cover':''}`} style={HEX.test(slide.design?.background) ? { background: slide.design.background, '--page-background': slide.design.background } : undefined}>
+        {splitCover(slide,brand)&&<img className="deck-cover-photo" src={brand.heroImage} alt={brand.heroAlt||'Company brand imagery'}/>}
         <div className="blocks-zone" ref={zone} style={fit < 1 ? { '--page-fit': fit } : undefined} onPointerMove={onMove} onPointerLeave={() => { if (!picker) setGap(null) }}>
           <Reorder.Group as="div" axis="y" values={values} onReorder={setOrder} className="blocks" ref={blocksRef}>
             {values.map((id, bi) => {

@@ -92,3 +92,12 @@ test('a hero image can come from the public page it is published on', async () =
  await assert.rejects(fetchBrandAsset('https://company.example/about','logo',fetcher),/web page/)
  await assert.rejects(fetchBrandAsset('https://company.example/about','heroImage',async url=>({url,type:'text/html',buffer:Buffer.from('<p>none</p>')})),/no usable/)
 })
+
+test('cover imagery accepts official product photos and responsive sources but rejects logo tiles',async()=>{
+ const {brandHeroCandidates}=await import('./brandAssets.js')
+ const html='<img src="/shoe-product.jpg" alt="Nike running shoe"><img srcset="/small.jpg 320w, /campaign-large.jpg 1600w" alt="Campaign"><img src="/logo-tile.jpg" alt="Nike logo">'
+ const images=brandHeroCandidates(html,'https://www.nike.com/','Nike')
+ assert.ok(images.some(i=>i.url.endsWith('/shoe-product.jpg')))
+ assert.ok(images.some(i=>i.url.endsWith('/campaign-large.jpg')))
+ assert.equal(images.some(i=>i.url.includes('logo-tile')),false)
+})

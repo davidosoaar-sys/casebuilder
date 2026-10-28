@@ -51,14 +51,15 @@ export function brandHeroCandidates(html,website,company=''){
  const key=company.toLowerCase().replace(/[^a-z0-9]/g,'')
  const candidates=[]
  for(const tag of html.match(/<(?:img|meta)\b[^>]*>/gi)||[]){
-  const meta=/^<meta/i.test(tag),src=meta?(/^(?:og:image|twitter:image)$/i.test(attr(tag,'property')||attr(tag,'name'))?attr(tag,'content'):''):attr(tag,'src')||attr(tag,'data-src')
+  const meta=/^<meta/i.test(tag),src=meta?(/^(?:og:image|twitter:image)$/i.test(attr(tag,'property')||attr(tag,'name'))?attr(tag,'content'):''):attr(tag,'src')||attr(tag,'data-src')||(attr(tag,'srcset')||attr(tag,'data-srcset')).split(',').at(-1)?.trim().split(/\s+/)[0]
   if(!src)continue
   const label=(src+' '+attr(tag,'alt')+' '+attr(tag,'class')).toLowerCase()
-  if(/logo|favicon|icon|avatar|portrait|shoe|sneaker|jordan|sprite|product-detail|download-page|opengraph|screenshot/i.test(label))continue
+  if(/logo|favicon|icon|avatar|portrait|sprite|download-page|opengraph|screenshot|size[-_ ]?chart|swatch/i.test(label))continue
   const campaign=/hero|masthead|banner|campaign|just-do-it/i.test(label)
+  const product=/product|shoe|sneaker|jordan|headphone|packaging|commerce|storefront/i.test(label)
   const named=key&&label.replace(/[^a-z0-9]/g,'').includes(key)
-  if(!campaign&&!meta&&!named)continue
-  try{const url=new URL(src.replace(/&amp;/g,'&'),website);if(url.protocol==='https:')candidates.push({url:url.href,alt:attr(tag,'alt'),score:campaign?100:meta?80:60})}catch{}
+  if(!campaign&&!meta&&!named&&!product)continue
+  try{const url=new URL(src.replace(/&amp;/g,'&'),website);if(url.protocol==='https:')candidates.push({url:url.href,alt:attr(tag,'alt'),score:campaign?100:product?90:meta?80:60})}catch{}
  }
  return candidates.sort((a,b)=>b.score-a.score).filter((c,i,list)=>list.findIndex(x=>x.url===c.url)===i).slice(0,2)
 }
@@ -83,6 +84,6 @@ export async function fetchBrandAsset(url, kind, fetcher, { page = true } = {}) 
   }
   if (kind === 'heroImage' && !/^image\/(png|jpeg|webp)$/.test(mime)) throw Error('Use PNG, JPEG or WebP for brand imagery.')
   const size = inspectBrandImage(image.buffer, mime)
-  if (kind === 'heroImage' && (size.width < 640 || size.height < 240 || size.width / size.height < 1.4)) throw Error('Choose a landscape image at least 640 × 240 pixels.')
+  if (kind === 'heroImage' && (size.width < 480 || size.height < 240 || size.width / size.height < .5 || size.width / size.height > 4)) throw Error('Choose a clear brand image at least 480 × 240 pixels, suitable for a cropped cover panel.')
   return { data: 'data:' + mime + ';base64,' + image.buffer.toString('base64'), source: image.url }
 }

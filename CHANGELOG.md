@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Align Claude plugin design/asset instructions and bundled renderer with the app’s split-image cover. Add editable Google Slides/Canva PPTX import targets and a human-approved MCP/command publishing path for shareable website snapshots using the host’s Vercel setup.
+  Validation: rebuilt plugin ZIP; 13 plugin/cover/import tests pass, including both editable import files and publishing without approval remaining a dry run. No live external account import or customer-site publication performed.
+
+- Use the landing-page examples as the new deck-cover template: editable identity/pitch at left and cropped brand photography at right across editor, slide/PDF previews and PowerPoint. Existing pages opt in through Page options → Use branded image cover; missing imagery keeps the typographic cover.
+- Discover official product/campaign images alongside logo/font work, accept clear portrait crops, read responsive image sources, and reject logo tiles/screenshots as photography. Keep the selected theme, brand fonts and image-source records.
+  Validation: 26 cover/asset/typography/preview/PowerPoint checks pass; separate PowerPoint pictures and editable branded text are verified. Browser review confirms split imagery in the editor and Slides preview; build passes. Live image discovery across arbitrary companies still depends on their public site exposing usable assets.
+
 Every version that lands on `main` gets a line here and a git tag.
 
 ## How we version

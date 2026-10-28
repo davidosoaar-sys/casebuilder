@@ -272,6 +272,8 @@ export async function discoverBrand({ company, website }, fetcher = fetchPublic,
   }
   if (!/html/i.test(home.type)) throw new Error('Enter the company homepage, rather than an asset URL.')
   const html = home.buffer.toString('utf8')
+  // Start cover photography alongside logo/font work, rather than after its budget.
+  const heroWork=Promise.allSettled(brandHeroCandidates(html,home.url,company).map(async candidate=>({candidate,image:await fetchBrandAsset(candidate.url,'heroImage',fetcher)})))
   const assetBase=documentBase(html,home.url)
   const sources = [home.url]
   const sheets = [...html.matchAll(/<link\b[^>]*>/gi)].map(m => m[0]).filter(t => /stylesheet/i.test(attr(t, 'rel'))).map(t => absolute(attr(t, 'href'), assetBase)).filter(Boolean).slice(0, 4)
@@ -338,12 +340,12 @@ export async function discoverBrand({ company, website }, fetcher = fetchPublic,
   })
   let heroImage='',heroAlt='',heroSource=''
   const heroCandidates=[]
-  if(Date.now()<deadline-8000)for(const candidate of brandHeroCandidates(html,home.url,company)){
-    try {
-      const image=await fetchBrandAsset(candidate.url,'heroImage',fetcher)
+  for(const result of await heroWork){
+    if(result.status==='fulfilled'){
+      const {candidate,image}=result.value
       heroCandidates.push({heroImage:image.data,heroAlt:candidate.alt||company+' brand image',heroSource:image.source})
       sources.push(image.source)
-    } catch {}
+    }
   }
   if(heroCandidates.length)({heroImage,heroAlt,heroSource}=heroCandidates[0])
   let icon = ''

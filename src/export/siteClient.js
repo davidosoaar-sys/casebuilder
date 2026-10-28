@@ -301,7 +301,7 @@ export function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, na
     const slideHtml = shown
       .map(
         (v, n) =>
-          '<section class="slide ' + (v.s.variant === 'hero' ? 'hero-bg' : '') + '" data-kind="' + esc(DATA.layout?.[v.i]?.kind || 'content') + '" data-i="' + n + '"' + (mode !== 'website' && /^#[0-9a-f]{6}$/i.test(v.s.design?.background) ? ' style="background:' + v.s.design.background + '!important"' : '') + '><div class="inner">' +
+          '<section class="slide ' + (v.s.variant === 'hero' ? 'hero-bg' : '') + (DATA.splitCovers?.[v.i]?' brand-split-cover':'') + '" data-kind="' + esc(DATA.layout?.[v.i]?.kind || 'content') + '" data-i="' + n + '"' + (mode !== 'website' && /^#[0-9a-f]{6}$/i.test(v.s.design?.background) ? ' style="background:' + v.s.design.background + '!important"' : '') + '>' + (DATA.splitCovers?.[v.i]?'<img class="cover-photo" src="'+esc(DATA.coverPhoto)+'" alt="'+esc(DATA.coverAlt)+'">':'') + '<div class="inner">' +
           (mode === 'website' && n > 0 ? '<div class="website-section-number">' + String(n + 1).padStart(2, '0') + ' / ' + String(shown.length).padStart(2, '0') + '</div>' : '') + v.kept
             .map(
               p =>

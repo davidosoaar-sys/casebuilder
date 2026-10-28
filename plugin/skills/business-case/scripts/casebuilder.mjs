@@ -15842,6 +15842,7 @@ function websiteBlockDesign(design = {}, brand) {
 function websiteSection(slide2) {
   if (slide2.websiteKind) return { kind: slide2.websiteKind, nav: slide2.websiteNav };
   const blocks = slide2.blocks || [];
+  if (blocks.some((b) => b.type === "chart")) return { kind: "chart", nav: "" };
   const kind = slide2.variant === "hero" || blocks.some((b) => b.type === "text" && b.style === "hero") ? "overview" : blocks.some((b) => b.type === "drivers") ? "drivers" : blocks.some((b) => b.type === "stats") ? "impact" : blocks.some((b) => b.type === "pairs") ? "comparison" : blocks.some((b) => b.type === "versus") ? "alternative" : blocks.some((b) => b.type === "room") ? "stakeholder" : "content";
   const names = { overview: "Overview", impact: "Business impact", drivers: "Value drivers", comparison: "What changes", alternative: "The alternative", stakeholder: "Your perspective" };
   const title = blocks.find((b) => b.type === "text" && ["title", "label", "headline"].includes(b.style) && b.text?.trim());
@@ -16047,13 +16048,13 @@ function waitingFor(env, figureKeys) {
 function builtin(type, ed = {}) {
   switch (type) {
     case "title":
-      return slide("hero", [
+      return { ...slide("hero", [
         block("logo"),
         text("hero", ed.title ?? "{company}"),
         text("lede", ed.lede ?? "The case for Spotify Portal for Backstage at {company}."),
         text("body", "{caseContext}"),
         text("forwhom", ed.forwhom ?? "Prepared for {role} \xB7 {archetype}")
-      ]);
+      ]), design: { coverLayout: "split" } };
     case "headline":
       return slide("plain", [
         text("label", "Business impact"),
@@ -16855,6 +16856,7 @@ function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, narrative
       cost: inputs.portalCost === "" || inputs.portalCost == null ? "" : VM.fmtMoney(Number(inputs.portalCost) || 0),
       net: when(F.netValue, (f) => VM.fmtMoney(f.raw)),
       payback: when(F.paybackMonths, (f) => monthsText(f.value)),
+      paybackShort: when(F.paybackMonths, (f) => !(f.value > 0) ? "n/a" : f.value < 1 ? "under a month" : f.value < 10 ? Math.round(f.value * 10) / 10 + " months" : Math.round(f.value) + " months"),
       roi: when(F.roiMultiple, (f) => f.value.toFixed(1) + "x"),
       five: when(F.fiveYearValue, (f) => VM.fmtMoney(f.raw))
     };
@@ -17017,7 +17019,7 @@ function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, narrative
       shown.push({ s, i, kept });
     });
     const slideHtml = shown.map(
-      (v, n) => '<section class="slide ' + (v.s.variant === "hero" ? "hero-bg" : "") + '" data-kind="' + esc5(DATA.layout?.[v.i]?.kind || "content") + '" data-i="' + n + '"' + (mode !== "website" && /^#[0-9a-f]{6}$/i.test(v.s.design?.background) ? ' style="background:' + v.s.design.background + '!important"' : "") + '><div class="inner">' + (mode === "website" && n > 0 ? '<div class="website-section-number">' + String(n + 1).padStart(2, "0") + " / " + String(shown.length).padStart(2, "0") + "</div>" : "") + v.kept.map(
+      (v, n) => '<section class="slide ' + (v.s.variant === "hero" ? "hero-bg" : "") + (DATA.splitCovers?.[v.i] ? " brand-split-cover" : "") + '" data-kind="' + esc5(DATA.layout?.[v.i]?.kind || "content") + '" data-i="' + n + '"' + (mode !== "website" && /^#[0-9a-f]{6}$/i.test(v.s.design?.background) ? ' style="background:' + v.s.design.background + '!important"' : "") + ">" + (DATA.splitCovers?.[v.i] ? '<img class="cover-photo" src="' + esc5(DATA.coverPhoto) + '" alt="' + esc5(DATA.coverAlt) + '">' : "") + '<div class="inner">' + (mode === "website" && n > 0 ? '<div class="website-section-number">' + String(n + 1).padStart(2, "0") + " / " + String(shown.length).padStart(2, "0") + "</div>" : "") + v.kept.map(
         (p) => '<div class="blk" data-s="' + v.i + '" data-b="' + p.j + '"' + (EDITABLE[p.b.type] && (mode !== "website" || p.b.sourceSlideId) ? ' data-e="1"' : "") + formatAttrs(p.b.design) + ">" + p.html + "</div>"
       ).join("") + "</div>" + (mode === "pdf" ? '<footer class="pdf-footer"><span>' + esc5(DATA.company) + " \xB7 Business case</span><span>" + (n + 1) + " / " + shown.length + "</span></footer>" : "") + "</section>"
     );
@@ -17039,19 +17041,26 @@ function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, narrative
       $("#scenario-summary").innerHTML = annual ? "Annual value<strong>" + esc5(annual.value) + "</strong>Figures update as you explore." : "Add the missing inputs to calculate annual value.";
       main2.querySelectorAll('.slide:not([data-kind="cover"]):not([data-kind="content"])').forEach((section) => {
         const inner = section.querySelector(".inner");
-        const copy = document.createElement("div"), content = document.createElement("div");
+        const copy = document.createElement("div"), content = document.createElement("div"), more = document.createElement("div");
         const summaries = [];
         copy.className = "section-copy";
         content.className = "section-content";
+        more.className = "section-more";
         Array.from(inner.children).forEach((child) => {
           if (child.classList.contains("overview-bento")) {
             summaries.push(child);
             return;
           }
           const block2 = DATA.slides[Number(child.dataset.s)]?.blocks[Number(child.dataset.b)];
+          if (block2 && block2.websiteArea === "more") {
+            more.appendChild(child);
+            return;
+          }
+          ;
           (block2 && (LIVE2[block2.type] || ["room", "overviewFacts", "stakeholderMap"].includes(block2.type)) || child.querySelector(".story-waiting") ? content : copy).appendChild(child);
         });
         inner.append(copy, content, ...summaries);
+        if (more.children.length) inner.append(more);
       });
       window.scrollTo({ top: keep, behavior: "instant" });
       updateProgress();
@@ -17458,7 +17467,7 @@ body.view-website{display:block;height:auto;min-height:100svh;overflow:visible;b
 .view-website .website-actions button:hover{transform:none!important;text-decoration:underline;text-underline-offset:5px}
 .view-website .slide[data-kind="cover"] .website-actions button[data-scenario]{display:none}
 .view-website .slide:not([data-kind="cover"]) .inner{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.3fr);gap:64px;align-items:start}
-.view-website .section-copy{position:sticky;top:140px;min-width:0}.view-website .section-content{min-width:0}
+.view-website .section-copy{position:sticky;top:140px;min-width:0}.view-website .section-content{min-width:0}.view-website .section-more{grid-column:1/-1;min-width:0;max-width:760px;margin-top:48px;padding-top:32px;border-top:1px solid var(--line)}
 .view-website .website-section-number{display:none}
 .view-website .section-copy h2{font-size:clamp(28px,3cqw,42px);line-height:1.15;max-width:23ch;letter-spacing:-.025em}
 .view-website .section-copy .blk[data-custom-size]:has(h2){font-size:min(var(--authored-size),clamp(28px,3cqw,42px))!important}
@@ -17559,13 +17568,37 @@ function landingArtwork({ company, logo, brand }) {
   return '<div class="landing-art cover-art"><div class="landing-logo">' + identity + "</div></div>";
 }
 
+// src/deck/cover.js
+function splitCover(slide2, brand) {
+  const b = normalizeBrand(brand);
+  return slide2?.design?.coverLayout === "split" && !!b.heroImage && slide2.blocks.every((x) => ["logo", "text", "spacer"].includes(x.type || x.kind));
+}
+var SPLIT_COVER_CSS = `
+.slide.brand-split-cover{position:relative;overflow:hidden;background:var(--bg)!important}
+.brand-split-cover .cover-photo{position:absolute;right:0;top:0;width:47%;height:100%;object-fit:cover;mask-image:linear-gradient(to right,transparent,#000 22%);pointer-events:none}
+.brand-split-cover>.inner{position:relative;z-index:1;width:53%!important;max-width:none!important;margin:0!important}
+.brand-split-cover h1{font-size:clamp(40px,5vw,76px);line-height:1.02;letter-spacing:-.035em}
+.brand-split-cover .logo{margin-bottom:52px}.brand-split-cover .logo img{max-width:150px;max-height:32px}
+.brand-split-cover .blk{max-width:100%}.brand-split-cover .lede{font-size:20px;line-height:1.4}
+@media(max-width:650px){.brand-split-cover h1{font-size:38px}.brand-split-cover .logo{margin-bottom:28px}}
+`;
+
 // src/export/websiteStory.js
 function websiteStory(slides) {
   const groups = {}, names = {};
+  const SHOWN = /* @__PURE__ */ new Set(["{caseContext}", "{cares}", "What this room cares about: {cares}"]);
   for (const slide2 of slides) {
     const kind = websiteSection(slide2).kind;
+    if (kind === "chart") continue;
     if (slide2.websiteNav && !names[kind]) names[kind] = slide2.websiteNav;
-    (groups[kind] ||= []).push(...slide2.blocks.filter((b) => !(b.type === "text" && b.style === "label")).map((b) => ({ ...b, sourceSlideId: slide2.id })));
+    let blocks = slide2.blocks.filter((b) => !(b.type === "text" && b.style === "label"));
+    if (kind === "content") {
+      blocks = blocks.filter((b) => !(b.type === "text" && SHOWN.has(String(b.text || "").trim())));
+      if (!blocks.some((b) => !(b.type === "text" && ["title", "headline"].includes(b.style)))) continue;
+      blocks = blocks.map((b) => ({ ...b, websiteArea: "more" }));
+    }
+    ;
+    (groups[kind] ||= []).push(...blocks.map((b) => ({ ...b, sourceSlideId: slide2.id })));
   }
   const block2 = (type, props = {}) => ({ id: "website-" + type, type, ...props });
   const text2 = (style, value) => block2("text", { style, text: value });
@@ -17870,6 +17903,9 @@ function buildWebsite({ company, slides, stakeholders, activeKey, inputs, openFi
   stakeholders = stakeholders.map(clientStakeholder);
   const data = { company, slides, stakeholders, activeKey, inputs, openFields, sliders: sliders || [], logo: logoSvg || "", viewMode, layout: viewMode === "website" ? slides.map(websiteSection) : [], artwork: viewMode === "website" ? landingArtwork({ company, logo: logoSvg, roles: stakeholders, brand: websiteBrand, cover: true }) : "" };
   const safe = (obj) => JSON.stringify(obj).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+  data.coverPhoto = websiteBrand?.heroImage || "";
+  data.coverAlt = websiteBrand?.heroAlt || "";
+  data.splitCovers = slides.map((s) => viewMode !== "website" && splitCover(s, websiteBrand));
   data.fontStacks = Object.fromEntries(slides.flatMap((s) => s.blocks).filter((b) => b.design?.font).map((b) => [b.design.font, fontStack(b.design.font)]));
   data.journeyHtml = viewMode === "website" ? stakeholderJourneyHtml(company, logoSvg, stakeholders) : "";
   const json = safe(data);
@@ -17886,6 +17922,7 @@ ${needsOutfit ? '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?
 <style>${REQUIREMENTS_CSS}
 ${SITE_CSS}
 ${VIEW_CSS}
+${SPLIT_COVER_CSS}
 ${viewMode === "website" ? WEBSITE_CSS + EDITORIAL_CSS + GRAPHIC_CSS + websiteThemeCss(websiteBrand) : ""}</style></head>
 <body class="view-${viewMode}">
 <header class="top">
@@ -18012,6 +18049,35 @@ hr{border:0;border-top:1px solid var(--line2);margin:22px 0}.spacer{height:40px}
 .edit-ta:focus{outline:none;border-style:solid}
 @media(max-width:780px){.top{gap:10px;padding:0 12px}.co{display:none}.aud-wrap>span{display:none}.slide{padding:40px 36px 40px 16px}.cols,.stats{grid-template-columns:1fr}.bar-row{grid-template-columns:1fr 70px;grid-template-areas:"l v" "t t" "d d"}.bar-detail{padding-left:0}.v-row{grid-template-columns:1fr 90px}.v-row .track{grid-column:1/-1;order:3}.whatif{left:12px;right:12px;width:auto}}
 `;
+
+// src/export/importCharts.js
+function drawImportChart(slide2, b, box, { font, colors }) {
+  const { x, y, w, h } = box;
+  const text2 = (value, options) => slide2.addText(String(value), { fontFace: font, fontSize: 11, color: colors.ink, margin: 0, breakLine: false, ...options });
+  const bar = (left, top, width, height, color) => {
+    if (width > 0 && height > 0) slide2.addShape("rect", { x: left, y: top, w: width, h: height, line: { color, transparency: 100 }, fill: { color } });
+  };
+  const money2 = (n) => "$" + Math.round(n).toLocaleString("en-US");
+  if (b.chart === "payback") {
+    const max2 = Math.max(1, ...b.value, ...b.cost), plotH = h - 0.65, step = w / b.months.length;
+    b.months.forEach((month, i) => {
+      for (const [values, color, offset] of [[b.value, colors.accent, 0.1], [b.cost, colors.bad, 0.53]]) {
+        const height = Math.max(0, values[i]) / max2 * plotH;
+        bar(x + i * step + offset * step, y + plotH - height, step * 0.35, height, color);
+      }
+      if (i % 6 === 5) text2("M" + month, { x: x + i * step - step, y: y + plotH + 0.04, w: step * 3, h: 0.2, fontSize: 8, align: "center" });
+    });
+    text2("Cumulative value " + money2(b.value.at(-1)) + " \xB7 Cumulative cost " + money2(b.cost.at(-1)), { x, y: y + h - 0.25, w, h: 0.25, fontSize: 10 });
+    return;
+  }
+  const rows = b.rows || [], max = Math.max(1, ...rows.map((r) => b.chart === "confidence" ? r.count : r.value)), rowH = h / Math.max(1, rows.length);
+  rows.forEach((r, i) => {
+    const value = b.chart === "confidence" ? r.count : r.value, top = y + i * rowH;
+    text2(r.label, { x, y: top, w: w * 0.4, h: rowH * 0.85, fit: "shrink" });
+    bar(x + w * 0.42, top + 0.06, w * 0.35 * value / max, Math.min(0.2, rowH * 0.45), r.group === "spend" ? colors.warn : colors.accent);
+    text2(b.chart === "confidence" ? value : money2(value), { x: x + w * 0.79, y: top, w: w * 0.21, h: rowH * 0.85, align: "right", fit: "shrink" });
+  });
+}
 
 // src/export/pptx.js
 var W = 13.333;
@@ -18197,7 +18263,7 @@ async function layoutBlock(b, deps, theme = DEFAULTS) {
             margin: 0,
             color: it.tone === "good" ? C2.accent : it.tone === "bad" ? C2.bad : C2.strong
           });
-          if (it.eq) s.addText(it.eq, { x: x + 0.2, y: yy + 0.86 * k, w: tw - 0.3, h: 0.2 * k, fontFace: "Consolas", fontSize: 7 * k, color: C2.faint, margin: 0, fit: "shrink" });
+          if (it.eq) s.addText(it.eq, { x: x + 0.2, y: yy + 0.86 * k, w: tw - 0.3, h: 0.2 * k, fontFace: FONT3, fontSize: 7 * k, color: C2.faint, margin: 0, fit: "shrink" });
         })
       };
     }
@@ -18212,6 +18278,10 @@ async function layoutBlock(b, deps, theme = DEFAULTS) {
         h: ch + 0.2,
         draw: (s, y, k) => {
           const box = { x: MX, y, w: CW, h: ch * k };
+          if (deps.importTarget === "google-slides" || deps.importTarget === "canva") {
+            drawImportChart(s, b, box, { font: FONT3, colors: C2 });
+            return;
+          }
           if (b.chart === "payback") {
             const labels = b.months.map((m) => `M${m}`);
             s.addChart(T.line || "line", [
@@ -18270,14 +18340,14 @@ async function layoutBlock(b, deps, theme = DEFAULTS) {
               line: { color: hex2(d.color), width: 0 }
             });
             s.addText(d.valueStr, { x: W - MX - 1.6, y: yy, w: 1.6, h: 0.3 * k, fontFace: FONT3, fontSize: 12 * k, bold: d.lead, color: d.lead ? C2.strong : C2.dim, align: "right", margin: 0, valign: "middle" });
-            s.addText(d.detail, { x: trackX, y: yy + 0.3 * k, w: CW - 3.5, h: 0.22 * k, fontFace: "Consolas", fontSize: 8 * k, color: C2.faint, margin: 0, valign: "top", fit: "shrink" });
+            s.addText(d.detail, { x: trackX, y: yy + 0.3 * k, w: CW - 3.5, h: 0.22 * k, fontFace: FONT3, fontSize: 8 * k, color: C2.faint, margin: 0, valign: "top", fit: "shrink" });
             yy += rh * k;
           });
           const ty = y + height * k + 0.08;
           s.addShape("line", { x: MX, y: ty, w: CW, h: 0, line: { color: C2.track, width: 1 } });
           s.addText("TOTAL ANNUAL VALUE", { x: MX, y: ty + 0.1, w: 5, h: 0.4 * k, fontFace: FONT3, fontSize: 10 * k, bold: true, color: C2.dim, charSpacing: 1, margin: 0, valign: "middle" });
           s.addText(b.total, { x: W - MX - 4, y: ty + 0.06, w: 4, h: 0.5 * k, fontFace: FONT3, fontSize: 24 * k, bold: true, color: C2.strong, align: "right", margin: 0, valign: "middle" });
-          s.addText(b.totalEq, { x: MX, y: ty + 0.56 * k, w: CW, h: 0.22 * k, fontFace: "Consolas", fontSize: 8 * k, color: C2.faint, margin: 0, fit: "shrink" });
+          s.addText(b.totalEq, { x: MX, y: ty + 0.56 * k, w: CW, h: 0.22 * k, fontFace: FONT3, fontSize: 8 * k, color: C2.faint, margin: 0, fit: "shrink" });
         }
       };
     }
@@ -18323,7 +18393,7 @@ async function layoutBlock(b, deps, theme = DEFAULTS) {
               line: { color: C2.accent, width: 0 }
             });
             s.addText(r.valueStr, { x: W - MX - 1.6, y: yy, w: 1.6, h: 0.4 * k, fontFace: FONT3, fontSize: 15 * k, bold: true, color: C2.strong, align: "right", margin: 0, valign: "middle" });
-            if (r.eq) s.addText(r.eq, { x: trackX, y: yy + 0.38 * k, w: trackW, h: 0.2 * k, fontFace: "Consolas", fontSize: 8 * k, color: C2.faint, margin: 0, fit: "shrink" });
+            if (r.eq) s.addText(r.eq, { x: trackX, y: yy + 0.38 * k, w: trackW, h: 0.2 * k, fontFace: FONT3, fontSize: 8 * k, color: C2.faint, margin: 0, fit: "shrink" });
           });
           s.addText(
             [
@@ -18377,6 +18447,30 @@ async function buildPptx({ company, slides, deps, brand }) {
         fit: "shrink"
       });
     };
+    if (splitCover(sl, b)) {
+      s.addImage({ data: b.heroImage, x: 7, y: 0, w: W - 7, h: H, sizing: { type: "cover", w: W - 7, h: H } });
+      for (let i = 0; i < 24; i++) s.addShape("rect", { x: 7 + i * 0.05, y: 0, w: 0.055, h: H, line: { transparency: 100 }, fill: { color: s.background.color, transparency: Math.round(i / 23 * 100) } });
+      const logo = await deps.logoPng?.();
+      if (logo) {
+        const w = Math.min(1.8, 0.35 * logo.ratio);
+        s.addImage({ data: logo.data, x: MX, y: 0.65, w, h: 0.35 });
+        s.addText("\xD7", { x: MX + w + 0.12, y: 0.65, w: 0.25, h: 0.3, fontSize: 12, color: C2.dim });
+        s.addImage({ data: backstageData, x: MX + w + 0.52, y: 0.69, w: 1.15, h: 0.25 });
+      }
+      const copy = sl.blocks.filter((x) => x.kind === "text");
+      let y2 = 2;
+      for (const item of copy) {
+        const title = item.style === "hero", small = item.style === "forwhom";
+        heading = title;
+        activeDesign = item.design || {};
+        const h = title ? 1.3 : small ? 0.35 : 0.9;
+        s.addText(item.text, { x: MX, y: small ? 6.5 : y2, w: 5.7, h, fontFace: title ? theme.headingFont : FONT3, fontSize: title ? 52 : small ? 9 : 17, bold: title, color: title ? C2.strong : small ? C2.dim : C2.ink, margin: 0, valign: "top" });
+        if (!small) y2 += h + 0.2;
+      }
+      activeDesign = {};
+      heading = false;
+      continue;
+    }
     if (sl.variant === "hero" && !sl.design?.background) {
       s.addShape("ellipse", { x: W - 6, y: H - 6, w: 6, h: 6, fill: { color: C2.panel, transparency: 40 }, line: { color: C2.panel, width: 0, transparency: 100 } });
       s.addShape("ellipse", { x: W - 4, y: H - 4, w: 4, h: 4, fill: { color: C2.accent, transparency: 86 }, line: { color: C2.accent, width: 0, transparency: 100 } });
@@ -19040,7 +19134,7 @@ async function cmdBuild(pos, flags) {
   const { project } = loadProject(file);
   const wanted = one(flags, "format") || "all";
   const formats = wanted === "all" ? ["pptx", "onepager", "website"] : String(wanted).split(",").map((s) => s.trim());
-  for (const f of formats) if (!["pptx", "onepager", "website"].includes(f)) fail(`Unknown format "${f}". Use pptx, onepager, website or all.`);
+  for (const f of formats) if (!["pptx", "google-slides", "canva", "onepager", "website"].includes(f)) fail(`Unknown format "${f}". Use pptx, google-slides, canva, onepager, website or all.`);
   const { list, who } = audienceFor(project, one(flags, "stakeholder"));
   const outDir = path.resolve(one(flags, "out") || path.dirname(path.resolve(file)));
   fs.mkdirSync(outDir, { recursive: true });
@@ -19054,22 +19148,22 @@ async function cmdBuild(pos, flags) {
   const companyLogo = brandLogoHtml(brand, "");
   const rasterLogo = hasCompanyLogo && /^data:image\/(png|jpeg);base64,/.test(brand.logo) ? brand.logo : null;
   const warnings = [];
-  if (hasCompanyLogo && !rasterLogo && formats.includes("pptx")) warnings.push("The company logo is not PNG/JPEG. PPTX omits it; supply a PNG/JPEG variant for an embedded logo. HTML outputs retain the original asset.");
-  if (formats.includes("pptx")) {
+  if (hasCompanyLogo && !rasterLogo && formats.some((f) => ["pptx", "google-slides", "canva"].includes(f))) warnings.push("The company logo is not PNG/JPEG. PPTX omits it; supply a PNG/JPEG variant for an embedded logo. HTML outputs retain the original asset.");
+  for (const target of formats.filter((f) => ["pptx", "google-slides", "canva"].includes(f))) {
     const env = buildEnv(inputs, project.fields, clientStakeholder(who));
     const pptx = await buildPptx({
       company,
       brand,
       slides: resolveSlides(deck, env),
-      deps: { PptxGenJS, logoPng: async () => {
+      deps: { PptxGenJS, importTarget: target, logoPng: async () => {
         if (!rasterLogo) return null;
         const size = dataUrlSize(rasterLogo);
         return { data: rasterLogo, ratio: size.w / size.h };
       }, imageSize: async (src) => dataUrlSize(src) }
     });
-    const out = path.join(outDir, `${name}-business-case.pptx`);
+    const out = path.join(outDir, `${name}-business-case${target === "pptx" ? "" : "-" + target}.pptx`);
     fs.writeFileSync(out, await pptx.write({ outputType: "nodebuffer" }));
-    written.push({ format: "pptx", file: out, bytes: fs.statSync(out).size, audience: who.role });
+    written.push({ format: target, file: out, bytes: fs.statSync(out).size, audience: who.role, ...target === "google-slides" ? { importInstructions: "Google Slides: File \u2192 Open \u2192 Upload this PPTX.", openUrl: "https://slides.google.com/" } : target === "canva" ? { importInstructions: "Upload this PPTX in Canva. Charts are editable shapes.", openUrl: "https://www.canva.com/" } : {} });
   }
   if (formats.includes("onepager")) {
     const facts = prepareOnePager({ inputs, fields: project.fields, who });
@@ -19168,7 +19262,7 @@ function help() {
   person <add|remove> <f> --stakeholder k ...      record a researched person (with sources)
   validate <f>                                     check the file, in plain words
   calc <f> [--stakeholder k] [--md]                run the value model
-  build <f> [--format pptx|onepager|website|all] [--stakeholder k] [--out dir] [--pdf]
+  build <f> [--format pptx|google-slides|canva|onepager|website|all] [--stakeholder k] [--out dir] [--pdf]
   publish <f> [--stakeholder k] [--yes]            put the website on Vercel (needs --yes)
   export <f> [--out f]                             write the full case file for the app`);
 }

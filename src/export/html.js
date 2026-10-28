@@ -5,6 +5,7 @@ import { WEBSITE_CSS } from './websiteStyle.js'
 import { createWebsiteMotion } from './websiteMotion.js'
 import { LANDING_CSS, landingArtwork } from './websiteLanding.js'
 import { fontStack } from '../brand.js'
+import {splitCover,SPLIT_COVER_CSS} from '../deck/cover.js'
 import { websiteStory } from './websiteStory.js'
 import { renderWebsiteGraphic, GRAPHIC_CSS } from './websiteGraphics.js'
 import { stakeholderJourneyHtml, mountStakeholderJourney } from './stakeholderJourney.js'
@@ -142,6 +143,8 @@ export function buildWebsite({ company, slides, stakeholders, activeKey, inputs,
   const data = { company, slides, stakeholders, activeKey, inputs, openFields, sliders: sliders || [], logo: logoSvg || '', viewMode, layout: viewMode === 'website' ? slides.map(websiteSection) : [], artwork: viewMode === 'website' ? landingArtwork({ company, logo:logoSvg, roles:stakeholders, brand:websiteBrand, cover:true }) : '' }
   // JSON inside a <script> must not be able to close the tag.
   const safe = obj => JSON.stringify(obj).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029')
+  data.coverPhoto=websiteBrand?.heroImage||'';data.coverAlt=websiteBrand?.heroAlt||''
+  data.splitCovers=slides.map(s=>viewMode!=='website'&&splitCover(s,websiteBrand))
   data.fontStacks = Object.fromEntries(slides.flatMap(s=>s.blocks).filter(b=>b.design?.font).map(b=>[b.design.font,fontStack(b.design.font)]))
   data.journeyHtml = viewMode==='website' ? stakeholderJourneyHtml(company,logoSvg,stakeholders) : ''
   const json = safe(data)
@@ -157,7 +160,7 @@ return {computeModel:computeModel,STAKEHOLDERS:STAKEHOLDERS,PAIRS:PAIRS,driversB
 ${iconLink(faviconSvg)}
 ${needsOutfit ? '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap">' : ''}
 <title>${esc(company)} · Business case</title>
-<style>${REQUIREMENTS_CSS}\n${SITE_CSS}\n${VIEW_CSS}\n${viewMode === 'website' ? WEBSITE_CSS + LANDING_CSS + GRAPHIC_CSS + websiteThemeCss(websiteBrand) : ''}</style></head>
+<style>${REQUIREMENTS_CSS}\n${SITE_CSS}\n${VIEW_CSS}\n${SPLIT_COVER_CSS}\n${viewMode === 'website' ? WEBSITE_CSS + LANDING_CSS + GRAPHIC_CSS + websiteThemeCss(websiteBrand) : ''}</style></head>
 <body class="view-${viewMode}">
 <header class="top">
   <div class="brand">${logoSvg || (viewMode === 'website' ? '<span class="company-monogram">' + esc(String(company || 'C').slice(0, 1).toUpperCase()) + '</span>' : '')}</div>

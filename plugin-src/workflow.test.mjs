@@ -99,4 +99,8 @@ test('bundled plugin completes an offline fixture from empty case to branded out
   const {default:JSZip}=await import('jszip')
   const zip=await JSZip.loadAsync(fs.readFileSync(built.built.find(f=>f.format==='pptx').file))
   assert.ok((await zip.file('ppt/theme/theme1.xml').async('string')).includes('Georgia'))
+  assert.equal(caseFileToProject(raw).deck[0].design.coverLayout,'split')
+  const imports=run('build',file,'--format','google-slides,canva','--out',path.join(dir,'imports'))
+  assert.deepEqual(imports.built.map(b=>b.format),['google-slides','canva'])
+  for(const artifact of imports.built){assert.ok(fs.existsSync(artifact.file));assert.ok(artifact.importInstructions)}
 })

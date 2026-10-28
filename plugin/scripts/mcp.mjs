@@ -1,5 +1,5 @@
 import { reviewedInputs } from './reviewed-inputs.mjs'
-// Local MCP bridge: no network credentials, arbitrary shell commands or publishing.
+// Local MCP bridge: no bundled credentials or arbitrary shell commands; publishing requires explicit approval.
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -20,7 +20,8 @@ const tools=[
  {name:'casebuilder_read',description:'Read a local case and its evidence.',inputSchema:{...schema({caseId:str}),required:['caseId']}},
  {name:'casebuilder_apply_inputs',description:'Apply user-reviewed sourced inputs only. Never infer confirmation from a transcript automatically.',inputSchema:{...schema({caseId:str,approved:{type:'boolean'},inputs:{type:'array',items:{...schema({key:str,value:{type:['string','number']},state:{enum:['input','assumption','suggestion']},origin:str,quote:str,link:str}),required:['key','value','state','origin']}}}),required:['caseId','approved','inputs']}},
  {name:'casebuilder_calculate',description:'Run CaseBuilder canonical equations; missing values remain unknown.',inputSchema:{...schema({caseId:str}),required:['caseId']}},
- {name:'casebuilder_build',description:'Generate local PPTX, one-pager HTML or interactive Live Room HTML using the same exporters as the app. Does not publish.',inputSchema:{...schema({caseId:str,format:{enum:['pptx','onepager','website','all']}}),required:['caseId','format']}}
+ {name:'casebuilder_publish',description:'Publish a local case as a shareable Vercel website only after explicit human approval. Without approved:true, returns a dry run. Requires host VERCEL_TOKEN or logged-in Vercel CLI; never include credentials in arguments.',inputSchema:{...schema({caseId:str,approved:{type:'boolean'}}),required:['caseId','approved']}},
+ {name:'casebuilder_build',description:'Generate editable PowerPoint, Google Slides/Canva import PPTX, one-pager HTML or interactive Live Room HTML using the app exporters. Does not publish.',inputSchema:{...schema({caseId:str,format:{enum:['pptx','google-slides','canva','onepager','website','all']}}),required:['caseId','format']}}
 ]
 function file(id){if(typeof id!=='string'||!/^[-a-z0-9]{36}$/.test(id))throw Error('Invalid case ID');const f=path.join(root,id+'.case.json');if(fs.existsSync(f)&&fs.lstatSync(f).isSymbolicLink())throw Error('Case symlinks are not supported');return f}
 function run(args){return execFileSync(process.execPath,[cli,...args],{encoding:'utf8',timeout:60000,maxBuffer:8e6})}
@@ -48,8 +49,12 @@ function call(name,a){
  }
  if(name==='casebuilder_read')return fs.readFileSync(f,'utf8')
  if(name==='casebuilder_calculate')return run(['calc',f])
+ if(name==='casebuilder_publish'){
+  if(typeof a.approved!=='boolean')throw Error('approved must be a boolean')
+  return run(['publish',f,...(a.approved?['--yes']:[])])
+ }
  if(name==='casebuilder_build'){
-  if(!['pptx','onepager','website','all'].includes(a.format))throw Error('Invalid format')
+  if(!['pptx','google-slides','canva','onepager','website','all'].includes(a.format))throw Error('Invalid format')
   return run(['build',f,'--format',a.format,'--out',path.join(root,a.caseId+'-artifacts')])
  }
  if(name==='casebuilder_apply_inputs'){
