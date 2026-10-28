@@ -49,7 +49,7 @@ async function copyText(text) {
   }
 }
 
-export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, onScenario, audienceKey, onView, onFillInputs, history }) {
+export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, onScenario, onImagery, audienceKey, onView, onFillInputs, history }) {
   const stakeholders = useMemo(() => project.stakeholders.map(resolveStakeholder).filter(Boolean), [project.stakeholders])
   const hidden = useMemo(() => hiddenForClient({ deck: project.deck, inputs, fields: project.fields, stakeholders, activeKey: audienceKey }), [project.deck, project.fields, inputs, stakeholders, audienceKey])
   const frame = useRef(null)
@@ -210,7 +210,7 @@ export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, o
           <button className={`ghost ${editing ? 'ghost-on' : ''}`} onClick={() => {if(!editing)setShown(current);setEditing(e => !e)}}>
             {editing ? 'Finish editing' : 'Edit content'}
           </button>
-          <ExportMenu triggerClass="ghost" company={project.name} deck={project.deck} inputs={inputs} fields={project.fields} stakeholders={stakeholders}
+          <ExportMenu onImagery={onImagery} triggerClass="ghost" company={project.name} deck={project.deck} inputs={inputs} fields={project.fields} stakeholders={stakeholders}
             activeKey={audienceKey} brand={project.brand} onWebsite={() => {}} onFillInputs={onFillInputs} />
           <Menu label="More ways to share" title="More" className="icon-btn site-more" items={[
             { label: 'Open in new tab', onSelect: openTab, disabled: busy },

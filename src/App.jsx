@@ -197,7 +197,7 @@ export default function App({ account }) {
     onAdd={person => update(p => addPersonToDeal(p, person))}
     onInput={suggestion => setPendingPersonInput({ dealId: project.id, suggestion })} />
   function navigate(next) {
-    if(next==='deck')setPreviewRequest('slides') // Case Artifacts opens the slide viewer; View as switches formats.
+    if(next==='deck')setPreviewRequest(null) // Start with all editable slides; previews open only through View as.
     if (next === 'customize') next = 'skills' // Customize opens on its Skills tab
     setStage(null)
     if (next === 'settings') { setSettingsOpen(true); return } // overlay: never leaves the current page
@@ -494,6 +494,7 @@ export default function App({ account }) {
         ) : page === 'deck' ? (
           <Deck
             initialAudienceKey={websiteAudience}
+            onImagery={patch=>update(p=>p.brand.heroImage||p.brand.heroImageHidden?{}:{brand:{...p.brand,...patch,sources:[...new Set([...(p.brand.sources||[]),...(patch.sources||[])])]}},{label:'Found official cover imagery'})}
             previewRequest={previewRequest}
             onPreviewOpened={() => setPreviewRequest(null)}
             key={project.id}
@@ -515,6 +516,7 @@ export default function App({ account }) {
           />
         ) : page === 'website' ? (
           <WebsiteView
+            onImagery={patch=>update(p=>p.brand.heroImage||p.brand.heroImageHidden?{}:{brand:{...p.brand,...patch,sources:[...new Set([...(p.brand.sources||[]),...(patch.sources||[])])]}},{label:'Found official cover imagery'})}
             key={project.id}
             project={project}
             audienceKey={websiteAudience}

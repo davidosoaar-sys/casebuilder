@@ -76,7 +76,7 @@ function pageWaiting(slide, env) {
   return [...missing]
 }
 
-export default function Deck({ inputs, model, fields, connectors, stakeholders, onStakeholders, deck, onDeck, company, onWebsite, brand, onBrand, onScanBrand, initialAudienceKey, previewRequest, onPreviewOpened, onFillInputs, history }) {
+export default function Deck({ inputs, model, fields, connectors, stakeholders, onStakeholders, deck, onDeck, company, onWebsite, brand, onBrand, onImagery, onScanBrand, initialAudienceKey, previewRequest, onPreviewOpened, onFillInputs, history }) {
   const [designOpen, setDesignOpen] = useState(false)
   const available = stakeholders.map(resolve).filter(Boolean)
   const [activeKey, setActiveKey] = useState(initialAudienceKey || available[0]?.key)
@@ -267,6 +267,8 @@ export default function Deck({ inputs, model, fields, connectors, stakeholders, 
             <UndoRedo history={history} labels />
             <button className="ghost" onClick={() => setDesignOpen(v => !v)} aria-expanded={designOpen}>Deck design{brand?.status === 'scanning' ? ' · scanning' : ''}</button>
             <ExportMenu
+              viewPicker
+              onImagery={onImagery}
               requestedView={previewRequest}
               onViewOpened={onPreviewOpened}
               brand={brand}

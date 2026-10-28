@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+## v0.26.1 (2026-10-28)
+
+- Validation: all 57 targeted brand/image/font/export and plugin checks pass; production/plugin builds pass. Browser WebP→JPEG conversion preserves dimensions. Public Sony and Shopify discovery verified; Sony now returns campaign photography. A fictional presentation imported successfully into Google Slides; the user confirmed it works. Automated visual inspection stopped at Google sign-in.
+
+- Fix Sony-style hero discovery: read surrounding picture/hero markup, reject subsidiary logo tiles/portraits/tracking pixels, and stop advertising unsupported AVIF in public requests. Public Sony discovery now returns a campaign photo instead of no photo or a logo tile.
+
+- Preserve supported Google Slides fonts and disclose Poppins substitution for unsupported company fonts instead of silently falling back to Arial. Keep company font metadata unchanged.
+- Normalize browser-exported cover/authored images to PNG/JPEG; use side imagery on legacy title covers without overriding explicit standard layouts. Search and save missing cover imagery without replacing authored branding or intentionally hidden images. Broaden official-page image discovery and responsive image selection.
+
+- Validation: nine export/typography checks and production build pass. Browser sample confirms Case Artifacts opens all editable slides with no preview overlay, and View as → Slides opens the presentation only on request.
+
+- Open Case Artifacts in the multi-slide editor, without an automatic presentation overlay. Add View as beside Export so presentation/PDF/one-pager/Live Room previews remain available on demand.
+
+- Validation: 15 export/ownership/connector tests and production build pass. Google auth config inspected read-only; Vercel variable presence checked without exposing values. Google account authorization and a fictional live import were subsequently confirmed.
+
+- Simplify platform direct export to Google Slides only; remove Canva export choices and reject Canva/poll requests before any external call. Preserve PowerPoint download and existing source connectors.
+- Verify the existing local Google Drive auth config includes write scope and confirm the required Composio variable names exist in Vercel Production/Preview. No credentials printed or changed.
+
 ## v0.26.0 (2026-10-28)
 
 - Add authenticated direct Google Slides conversion and Canva import using the signed-in user’s verified Composio connection, with connection/setup actions and a returned editing link. Keep PowerPoint download. Provider OAuth configuration with write/import scopes is required; real account imports are not yet verified.

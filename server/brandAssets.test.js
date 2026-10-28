@@ -108,3 +108,15 @@ test('responsive picture sources and CSS campaigns provide cover images',async()
  assert.match(photos[0].url,/largetall_2x/);
  assert.equal(brandCssHeroCandidates('a{background:url(/logo.png)}.hero{background:url(/campaign_product.jpg)}','https://company.example/style/main.css').length,1);
 });
+
+test('missing homepage imagery is found on a linked official product page',async()=>{
+ const png=Buffer.alloc(64);Buffer.from([137,80,78,71,13,10,26,10]).copy(png);png.write('IHDR',12);png.writeUInt32BE(1200,16);png.writeUInt32BE(600,20);png.write('IDAT',32);png.write('IEND',48);
+ const calls=[];const result=await discoverBrand({company:'Example',website:'https://example.com/'},async url=>{calls.push(url);if(url.endsWith('/product/campaign'))return {url,type:'text/html',buffer:Buffer.from('<img src="/hero-product.png" alt="Product campaign">')};if(url.endsWith('.png'))return {url,type:'image/png',buffer:png};if(url==='https://example.com/')return {url,type:'text/html',buffer:Buffer.from('<a href="/" aria-label="Example logo">'+svg+'</a><a href="/product/campaign">Product</a><a href="https://evil.example/product">Other</a>')};throw Error('Not found')});
+ assert.ok(result.heroImage);assert.equal(result.heroSource,'https://example.com/hero-product.png');assert.equal(calls.some(u=>u.includes('evil.example')),false);
+});
+
+test('hero-picture context supports unnamed photography while rejecting logo tiles and tracking pixels',async()=>{
+ const {brandHeroCandidates}=await import('./brandAssets.js');
+ const images=brandHeroCandidates('<a data-aa-play="H1_hero_campaign"><picture><source srcset="/frames/photo_l.jpg"><img data-src="/frames/photo_s.jpg"></picture></a><img src="https://company.example/pixel_123" alt=""><img src="/groupcompany_financial.png" alt="Company"><img src="/ceo_sp.webp" alt="Company">','https://company.example/','Company');
+ assert.ok(images.some(i=>i.url.endsWith('/photo_l.jpg')));assert.equal(images.some(i=>/pixel_|groupcompany|ceo_sp/.test(i.url)),false);
+});

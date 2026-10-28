@@ -1,4 +1,4 @@
-import {fetchBrandAsset,inspectBrandImage,brandPageLinks,brandKitDownloads,brandHeroCandidates,brandCssHeroCandidates} from './brandAssets.js'
+import {fetchBrandAsset,inspectBrandImage,brandPageLinks,brandKitDownloads,brandHeroCandidates,brandCssHeroCandidates,brandImagePages} from './brandAssets.js'
 import { runWithSearch, searchBackendOrNull } from './agentSearch.js'
 import { fetchPublic } from './publicWeb.js'
 import {publicProfileUrl} from '../src/profileMedia.js'
@@ -359,6 +359,23 @@ export async function discoverBrand({ company, website }, fetcher = fetchPublic,
       const {candidate,image}=result.value
       heroCandidates.push({heroImage:image.data,heroAlt:candidate.alt||company+' brand image',heroSource:image.source})
       sources.push(image.source)
+    }
+  }
+  if(!heroCandidates.length&&Date.now()<deadline-15000){
+    let pages=brandImagePages(html,home.url)
+    const engine=searchBackendOrNull()
+    if(!pages.length&&engine)try{
+      const results=await engine.search(`site:${host} ${company} official product campaign images`,{count:4})
+      pages=(results||[]).flatMap(r=>{try{const u=new URL(r.url),h=u.hostname.replace(/^www\./,'');return u.protocol==='https:'&&(h===host||h.endsWith('.'+host))?[u.href]:[]}catch{return []}}).slice(0,2)
+    }catch{}
+    const found=await Promise.allSettled(pages.map(async url=>{
+      const page=await fetcher(url,{limit:1500000})
+      if(!/html/i.test(page.type))return []
+      return Promise.allSettled(brandHeroCandidates(page.buffer.toString(),page.url,company).slice(0,3).map(async candidate=>({candidate,image:await fetchBrandAsset(candidate.url,'heroImage',fetcher)})))
+    }))
+    for(const page of found)if(page.status==='fulfilled')for(const result of page.value)if(result.status==='fulfilled'){
+      const {candidate,image}=result.value
+      heroCandidates.push({heroImage:image.data,heroAlt:candidate.alt||company+' brand image',heroSource:image.source});sources.push(image.source)
     }
   }
   if(heroCandidates.length)({heroImage,heroAlt,heroSource}=heroCandidates[0])

@@ -3,12 +3,14 @@ import {clientStakeholder} from '../stakeholderRequirements.js'
 import React, { useState, useRef, useEffect } from 'react'
 import faviconSvg from '../../public/favicon.svg?raw'
 import { AnimatePresence, MotionConfig, motion } from 'framer-motion'
-import { EASE_OUT } from '../components/ui.jsx'
+import { EASE_OUT, Select } from '../components/ui.jsx'
 import { prepareOnePager, pickAudience, hiddenForClient } from './prepare.js'
 import { buildEnv, resolveSlides } from '../deck/model.js'
 import {SLIDE_DESTINATIONS} from './slideHandoff.js'
 import {importPresentation} from './connectedSlideExport.js'
 import {apiHeaders} from '../apiAuth.js'
+import {compatibleSlideImage} from './imageCompat.js'
+import {ensureImagery} from './ensureImagery.js'
 import { buildOnePager } from './html.js'
 import { buildSiteHtml } from './site.js'
 import Preview from './Preview.jsx'
@@ -48,7 +50,7 @@ function imageSize(src) {
   })
 }
 
-export default function ExportMenu({ company: projectName, deck, inputs, fields, connectors, stakeholders, activeKey, onWebsite, brand, requestedView, onViewOpened, onFillInputs, triggerClass = 'primary' }) {
+export default function ExportMenu({ company: projectName, deck, inputs, fields, connectors, stakeholders, activeKey, onWebsite, brand, onImagery, requestedView, onViewOpened, onFillInputs, viewPicker = false, triggerClass = 'primary' }) {
   // The deck itself says {company} from the Company input, so use that name everywhere.
   const company = clientCompanyName(inputs.companyName, projectName)
   const [open, setOpen] = useState(false)
@@ -93,20 +95,27 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
     if(popup)popup.opener=null
     setBusy('Building the PowerPoint…')
     try {
+      let exportBrand=brand,imageWarning=''
+      if(destination&&!brand?.heroImage&&!brand?.heroImageHidden){
+        setBusy('Finding official cover imagery…')
+        const found=await ensureImagery({company,brand})
+        exportBrand=found.brand;imageWarning=found.warning||''
+        if(found.patch)onImagery?.(found.patch)
+      }
       const [{ default: PptxGenJS }, { buildPptx }] = await Promise.all([import('pptxgenjs'), import('./pptx.js')])
       const env = buildEnv(inputs, fields, clientStakeholder(who))
       const file = await buildPptx({
         company,
-        brand,
+        brand:exportBrand,
         slides: resolveSlides(deck, env),
-        deps: { PptxGenJS, logoPng: () => rasterLogo(brand), imageSize, importTarget:target }
+        deps: { PptxGenJS, logoPng: () => rasterLogo(brand), imageSize, compatibleImage:compatibleSlideImage, importTarget:target }
       })
       if(destination){
         setBusy(`Importing into ${destination.name}…`)
         const bytes=await file.write({outputType:'arraybuffer'})
         const result=await importPresentation({target,title:company+' — business case',bytes})
         if(popup&&!popup.closed)popup.location.replace(result.url)
-        setHandoff({...destination,url:result.url,instructions:'Presentation imported. Open it to edit.'})
+        setHandoff({...destination,url:result.url,instructions:'Presentation imported. Open it to edit. '+(file.casebuilderFontWarnings||[]).join(' ')+' '+imageWarning})
       }else await file.writeFile({fileName:`${slug(company)} - business case.pptx`})
     } catch (err) {
       if(popup&&!popup.closed)popup.close()
@@ -141,7 +150,6 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
     { name: 'PDF', note: 'Preview, then save as PDF', gets: 'PDF', run: () => show('pdf') },
     { name: 'Slides', note: 'Present, or download PowerPoint (.pptx)', gets: 'PPTX', run: () => show('slides') },
     { name: 'Google Slides', note: 'Import into your connected Google account and open to edit', gets: 'Open', run: () => pptx('google-slides') },
-    { name: 'Canva', note: 'Import into your connected Canva account and open to edit', gets: 'Open', run: () => pptx('canva') },
     { name: 'One-pager', note: 'Preview, then PDF or HTML', gets: 'PDF, HTML', run: () => show('onepager') },
     { name: 'Live room', note: 'Interactive page you can share', gets: 'Link', run: () => show('website') }
   ]
@@ -163,7 +171,8 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
   }
 
   return (
-    <div className="export" ref={ref} data-tour="export">
+    <div className="export" ref={ref} data-tour="export" style={viewPicker?{display:'inline-flex',alignItems:'center',gap:8}:undefined}>
+      {viewPicker&&<label style={{display:'inline-flex',alignItems:'center',gap:8}}>View as <Select aria-label="View as format" value="editor" options={[{value:'editor',label:'All slides'},{value:'slides',label:'Slides'},{value:'pdf',label:'PDF'},{value:'onepager',label:'One-pager'},{value:'website',label:'Live Room'}]} onChange={format=>{if(format!=='editor')show(format)}}/></label>}
       <button ref={trigger} className={`${triggerClass} export-trigger`} onClick={() => setOpen(o => !o)} aria-haspopup="menu" aria-expanded={open} disabled={!!busy}>
         <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 2.5v7.5M4.75 6.75 8 10l3.25-3.25M3 12.5h10" /></svg>
         {busy ? 'Working…' : 'Export'}
@@ -190,7 +199,7 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
       {handoff && !preview && <div className="export-toast" role="status">{handoff.instructions} <a href={handoff.url} target="_blank" rel="noopener noreferrer">Open {handoff.name}</a> <button onClick={()=>setHandoff(null)}>Dismiss</button></div>}
       {error && (
         <div className="export-toast export-error" role="alert">
-          {error} {connectToolkit&&<button disabled={!!busy} onClick={connectDestination}>Connect {connectToolkit==='canva'?'Canva':'Google Drive'}</button>} <button onClick={() => setError('')}>Dismiss</button>
+          {error} {connectToolkit&&<button disabled={!!busy} onClick={connectDestination}>Connect Google Drive</button>} <button onClick={() => setError('')}>Dismiss</button>
         </div>
       )}
 

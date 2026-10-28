@@ -50,18 +50,29 @@ export function brandKitDownloads(html,website,company){
 export function brandHeroCandidates(html,website,company=''){
  const key=company.toLowerCase().replace(/[^a-z0-9]/g,'')
  const candidates=[]
- for(const tag of html.match(/<(?:img|meta|source)\b[^>]*>/gi)||[]){
-  const meta=/^<meta/i.test(tag),src=meta?(/^(?:og:image|twitter:image)$/i.test(attr(tag,'property')||attr(tag,'name'))?attr(tag,'content'):''):attr(tag,'src')||attr(tag,'data-src')||(attr(tag,'srcset')||attr(tag,'data-srcset')).split(',').at(-1)?.trim().split(/\s+/)[0]
+ for(const match of html.matchAll(/<(?:img|meta|source|video)\b[^>]*>/gi)){
+  const tag=match[0],context=html.slice(Math.max(0,match.index-500),match.index)
+  const meta=/^<meta/i.test(tag),src=meta?(/^(?:og:image|twitter:image)$/i.test(attr(tag,'property')||attr(tag,'name'))?attr(tag,'content'):''):(attr(tag,'srcset')||attr(tag,'data-srcset')).split(',').at(-1)?.trim().split(/\s+/)[0]||attr(tag,'data-src')||attr(tag,'src')||attr(tag,'poster')
   if(!src)continue
-  const label=(src+' '+attr(tag,'alt')+' '+attr(tag,'class')).toLowerCase()
-  if(/logo|favicon|icon|avatar|portrait|sprite|download-page|opengraph|screenshot|size[-_ ]?chart|swatch/i.test(label))continue
-  const campaign=/hero|masthead|banner|campaign|just-do-it/i.test(label)
+  let path=src;try{path=new URL(src,website).pathname}catch{}
+  const label=(path+' '+attr(tag,'alt')+' '+attr(tag,'class')).toLowerCase()
+  if(/logo|favicon|icon|avatar|portrait|sprite|download-page|opengraph|screenshot|size[-_ ]?chart|swatch|groupcompany|tracking|beacon|pixel_|(?:^|[\/_-])ceo[\/_.-]|headshot|leadership/i.test(label))continue
+  const campaign=/hero|masthead|banner|campaign|just-do-it|key[-_ ]?visual|main[-_ ]?visual|(?:^|[\/_-])kv[\/_.-]/i.test(label)||/^<video/i.test(tag)||/(?:class|id|data-[\w-]+)=["'][^"']*(?:hero|masthead|campaign|banner)/i.test(context)
   const product=/product|shoe|sneaker|jordan|headphone|packaging|commerce|storefront/i.test(label)
   const named=key&&label.replace(/[^a-z0-9]/g,'').includes(key)
   if(!campaign&&!meta&&!named&&!product)continue
   try{const url=new URL(src.replace(/&amp;/g,'&'),website);if(url.protocol==='https:')candidates.push({url:url.href,alt:attr(tag,'alt'),score:(campaign?100:product?90:meta?80:60)+(/largetall|portrait|mediumtall/.test(label)?10:0)-(/small|thumbnail/.test(label)?30:0)})}catch{}
  }
- return candidates.sort((a,b)=>b.score-a.score).filter((c,i,list)=>list.findIndex(x=>x.url===c.url)===i).slice(0,2)
+ return candidates.sort((a,b)=>b.score-a.score).filter((c,i,list)=>list.findIndex(x=>x.url===c.url)===i).slice(0,6)
+}
+
+export function brandImagePages(html,website){
+ const host=new URL(website).hostname.replace(/^www\./,'')
+ return [...html.matchAll(/<a\b[^>]*>/gi)].flatMap(m=>{
+  try{const u=new URL(attr(m[0],'href'),website),h=u.hostname.replace(/^www\./,'')
+   return u.protocol==='https:'&&(h===host||h.endsWith('.'+host))&&/about|newsroom|press|campaign|products?|company/i.test(u.pathname)&&!/privacy|legal|login|support/i.test(u.pathname)?[u.href]:[]
+  }catch{return []}
+ }).filter((u,i,all)=>all.indexOf(u)===i).slice(0,2)
 }
 
 export function brandCssHeroCandidates(css, stylesheet) {
@@ -92,6 +103,6 @@ export async function fetchBrandAsset(url, kind, fetcher, { page = true } = {}) 
   }
   if (kind === 'heroImage' && !/^image\/(png|jpeg|webp)$/.test(mime)) throw Error('Use PNG, JPEG or WebP for brand imagery.')
   const size = inspectBrandImage(image.buffer, mime)
-  if (kind === 'heroImage' && (size.width < 480 || size.height < 240 || size.width / size.height < .5 || size.width / size.height > 4)) throw Error('Choose a clear brand image at least 480 × 240 pixels, suitable for a cropped cover panel.')
+  if (kind === 'heroImage' && (size.width < 480 || size.height < 240 || size.width / size.height < .5 || size.width / size.height > 6)) throw Error('Choose a clear brand image at least 480 × 240 pixels, suitable for a cropped cover panel.')
   return { data: 'data:' + mime + ';base64,' + image.buffer.toString('base64'), source: image.url }
 }

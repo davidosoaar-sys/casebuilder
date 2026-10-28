@@ -95,12 +95,18 @@ function brandKitDownloads(html, website2, company) {
 function brandHeroCandidates(html, website2, company = "") {
   const key = company.toLowerCase().replace(/[^a-z0-9]/g, "");
   const candidates = [];
-  for (const tag of html.match(/<(?:img|meta|source)\b[^>]*>/gi) || []) {
-    const meta = /^<meta/i.test(tag), src = meta ? /^(?:og:image|twitter:image)$/i.test(attr(tag, "property") || attr(tag, "name")) ? attr(tag, "content") : "" : attr(tag, "src") || attr(tag, "data-src") || (attr(tag, "srcset") || attr(tag, "data-srcset")).split(",").at(-1)?.trim().split(/\s+/)[0];
+  for (const match of html.matchAll(/<(?:img|meta|source|video)\b[^>]*>/gi)) {
+    const tag = match[0], context = html.slice(Math.max(0, match.index - 500), match.index);
+    const meta = /^<meta/i.test(tag), src = meta ? /^(?:og:image|twitter:image)$/i.test(attr(tag, "property") || attr(tag, "name")) ? attr(tag, "content") : "" : (attr(tag, "srcset") || attr(tag, "data-srcset")).split(",").at(-1)?.trim().split(/\s+/)[0] || attr(tag, "data-src") || attr(tag, "src") || attr(tag, "poster");
     if (!src) continue;
-    const label = (src + " " + attr(tag, "alt") + " " + attr(tag, "class")).toLowerCase();
-    if (/logo|favicon|icon|avatar|portrait|sprite|download-page|opengraph|screenshot|size[-_ ]?chart|swatch/i.test(label)) continue;
-    const campaign = /hero|masthead|banner|campaign|just-do-it/i.test(label);
+    let path = src;
+    try {
+      path = new URL(src, website2).pathname;
+    } catch {
+    }
+    const label = (path + " " + attr(tag, "alt") + " " + attr(tag, "class")).toLowerCase();
+    if (/logo|favicon|icon|avatar|portrait|sprite|download-page|opengraph|screenshot|size[-_ ]?chart|swatch|groupcompany|tracking|beacon|pixel_|(?:^|[\/_-])ceo[\/_.-]|headshot|leadership/i.test(label)) continue;
+    const campaign = /hero|masthead|banner|campaign|just-do-it|key[-_ ]?visual|main[-_ ]?visual|(?:^|[\/_-])kv[\/_.-]/i.test(label) || /^<video/i.test(tag) || /(?:class|id|data-[\w-]+)=["'][^"']*(?:hero|masthead|campaign|banner)/i.test(context);
     const product = /product|shoe|sneaker|jordan|headphone|packaging|commerce|storefront/i.test(label);
     const named = key && label.replace(/[^a-z0-9]/g, "").includes(key);
     if (!campaign && !meta && !named && !product) continue;
@@ -110,7 +116,18 @@ function brandHeroCandidates(html, website2, company = "") {
     } catch {
     }
   }
-  return candidates.sort((a, b) => b.score - a.score).filter((c, i, list) => list.findIndex((x) => x.url === c.url) === i).slice(0, 2);
+  return candidates.sort((a, b) => b.score - a.score).filter((c, i, list) => list.findIndex((x) => x.url === c.url) === i).slice(0, 6);
+}
+function brandImagePages(html, website2) {
+  const host2 = new URL(website2).hostname.replace(/^www\./, "");
+  return [...html.matchAll(/<a\b[^>]*>/gi)].flatMap((m) => {
+    try {
+      const u = new URL(attr(m[0], "href"), website2), h = u.hostname.replace(/^www\./, "");
+      return u.protocol === "https:" && (h === host2 || h.endsWith("." + host2)) && /about|newsroom|press|campaign|products?|company/i.test(u.pathname) && !/privacy|legal|login|support/i.test(u.pathname) ? [u.href] : [];
+    } catch {
+      return [];
+    }
+  }).filter((u, i, all) => all.indexOf(u) === i).slice(0, 2);
 }
 function brandCssHeroCandidates(css, stylesheet) {
   return [...css.matchAll(/url\(\s*["']?([^"')\s]+)["']?\s*\)/gi)].flatMap((m) => {
@@ -145,7 +162,7 @@ async function fetchBrandAsset(url, kind, fetcher, { page = true } = {}) {
   }
   if (kind === "heroImage" && !/^image\/(png|jpeg|webp)$/.test(mime)) throw Error("Use PNG, JPEG or WebP for brand imagery.");
   const size = inspectBrandImage(image.buffer, mime);
-  if (kind === "heroImage" && (size.width < 480 || size.height < 240 || size.width / size.height < 0.5 || size.width / size.height > 4)) throw Error("Choose a clear brand image at least 480 \xD7 240 pixels, suitable for a cropped cover panel.");
+  if (kind === "heroImage" && (size.width < 480 || size.height < 240 || size.width / size.height < 0.5 || size.width / size.height > 6)) throw Error("Choose a clear brand image at least 480 \xD7 240 pixels, suitable for a cropped cover panel.");
   return { data: "data:" + mime + ";base64," + image.buffer.toString("base64"), source: image.url };
 }
 
@@ -433,7 +450,7 @@ async function fetchPublic(input, { limit = 15e5, redirects = 3 } = {}) {
   if (!records.length || records.some((r) => !publicAddress(r.address))) throw new Error("That website address is not public.");
   return new Promise((resolve, reject) => {
     const req = https.get(url, {
-      headers: { "User-Agent": "CaseBuilder/1.0 (public company and professional profile research)", Accept: "text/html,application/xhtml+xml,image/avif,image/webp,image/svg+xml,text/css,*/*;q=0.8", "Accept-Language": "en-US,en;q=0.9", "Accept-Encoding": "identity" },
+      headers: { "User-Agent": "CaseBuilder/1.0 (public company and professional profile research)", Accept: "text/html,application/xhtml+xml,image/png,image/jpeg,image/webp,image/svg+xml,text/css,*/*;q=0.8", "Accept-Language": "en-US,en;q=0.9", "Accept-Encoding": "identity" },
       lookup: (_host, options, callback) => options.all ? callback(null, records) : callback(null, records[0].address, records[0].family)
     }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
@@ -527,6 +544,7 @@ function normalizeBrand(value) {
     logoVariants: (Array.isArray(b.logoVariants) ? b.logoVariants : []).slice(0, 3).flatMap((v) => safeAsset(v?.logo) && v.logo.length < 25e4 ? [{ logo: safeAsset(v.logo), sourceUrl: publicProfileUrl(v.sourceUrl), authority: v.authority === "company-profile" ? "company-profile" : "official-site" }] : []),
     icon: safeAsset(b.icon),
     hideLogo: b.hideLogo === true,
+    heroImageHidden: b.heroImageHidden === true,
     logoBackground: /^#[0-9a-f]{6}$/i.test(b.logoBackground) ? b.logoBackground : "transparent",
     fontFaces: Array.isArray(b.fontFaces) ? b.fontFaces.filter((f) => f && cleanFont(f.family) && typeof f.data === "string" && f.data.length < 9e5 && /^data:font\/(woff2?|ttf|otf);base64,[a-zA-Z0-9+/=]+$/.test(f.data)).slice(0, 3).map((f) => ({ family: cleanFont(f.family), data: f.data })) : [],
     review: b.review?.version === 1 ? { version: 1, mode: ["agent-selected", "deterministic-fallback"].includes(b.review.mode) ? b.review.mode : "deterministic-fallback", status: "needs-review", decisions: (Array.isArray(b.review.decisions) ? b.review.decisions : []).filter((d) => d && typeof d === "object").slice(0, 10).map((d) => ({ field: String(d.field || "").slice(0, 40), value: String(d.value || "").slice(0, 160), sourceUrl: publicProfileUrl(d.sourceUrl), origin: ["observed", "readability-adjustment", "fallback"].includes(d.origin) ? d.origin : "fallback" })), adjustments: (Array.isArray(b.review.adjustments) ? b.review.adjustments : []).filter((x) => typeof x === "string").slice(0, 12).map((x) => x.slice(0, 300)), warnings: (Array.isArray(b.review.warnings) ? b.review.warnings : []).filter((x) => typeof x === "string").slice(0, 12).map((x) => x.slice(0, 300)), checks: { logoPresent: !!safeAsset(b.logo), textContrast: b.review.checks?.textContrast === true, secondaryContrast: b.review.checks?.secondaryContrast === true, ...Object.fromEntries(["assetBytesValidated", "officialSource", "displayCheckPerformed", "logoDecoded", "logoVisible", "fontFilesLoaded"].map((k) => [k, b.review.checks?.[k] === true])), visualReviewPerformed: false } } : null,
@@ -1873,6 +1891,34 @@ async function discoverBrand({ company, website: website2 }, fetcher = fetchPubl
       const { candidate, image } = result.value;
       heroCandidates.push({ heroImage: image.data, heroAlt: candidate.alt || company + " brand image", heroSource: image.source });
       sources.push(image.source);
+    }
+  }
+  if (!heroCandidates.length && Date.now() < deadline - 15e3) {
+    let pages = brandImagePages(html, home.url);
+    const engine = searchBackendOrNull();
+    if (!pages.length && engine) try {
+      const results2 = await engine.search(`site:${host2} ${company} official product campaign images`, { count: 4 });
+      pages = (results2 || []).flatMap((r) => {
+        try {
+          const u = new URL(r.url), h = u.hostname.replace(/^www\./, "");
+          return u.protocol === "https:" && (h === host2 || h.endsWith("." + host2)) ? [u.href] : [];
+        } catch {
+          return [];
+        }
+      }).slice(0, 2);
+    } catch {
+    }
+    const found = await Promise.allSettled(pages.map(async (url) => {
+      const page = await fetcher(url, { limit: 15e5 });
+      if (!/html/i.test(page.type)) return [];
+      return Promise.allSettled(brandHeroCandidates(page.buffer.toString(), page.url, company).slice(0, 3).map(async (candidate) => ({ candidate, image: await fetchBrandAsset(candidate.url, "heroImage", fetcher) })));
+    }));
+    for (const page of found) if (page.status === "fulfilled") {
+      for (const result of page.value) if (result.status === "fulfilled") {
+        const { candidate, image } = result.value;
+        heroCandidates.push({ heroImage: image.data, heroAlt: candidate.alt || company + " brand image", heroSource: image.source });
+        sources.push(image.source);
+      }
     }
   }
   if (heroCandidates.length) ({ heroImage, heroAlt, heroSource } = heroCandidates[0]);

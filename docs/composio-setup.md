@@ -109,7 +109,11 @@ References: [hosted authentication](https://docs.composio.dev/docs/tools-direct/
 [Slack](https://docs.composio.dev/toolkits/slack),
 [HubSpot](https://docs.composio.dev/toolkits/hubspot).
 
-## Direct Google Slides and Canva export (v0.26.0)
+## Google Slides only (current setup)
+
+The platform now exposes only Google Slides direct export. Do not configure Canva for this workflow. The local Google Drive auth config was checked and includes Drive write access; Vercel has COMPOSIO_API_KEY and COMPOSIO_AUTH_GOOGLEDRIVE in Production and Preview. Each signed-in user still needs an active Google Drive connection: choose Export → Google Slides, then Connect Google Drive if prompted, authorize the account, return to the case and export again. CB_APP_URL may be set to https://casebuilder-three.vercel.app for an explicit production callback; localhost defaults to port 5173.
+
+## Direct-export implementation background (v0.26.0; Canva now disabled)
 
 Configure these server-only values on Vercel and in local .env.server.local:
 
@@ -125,3 +129,5 @@ The endpoint /api/slide-export accepts only signed-in users and chooses a verifi
 Once configured: Export → Google Slides uploads/converts and opens the new presentation; Export → Canva uploads, polls import completion and opens the editing link. Browser popup blocking leaves a clickable editing link. Unsupported destination fonts can still be substituted. No live import is claimed until configuration, user OAuth consent and a real file upload pass. The local Claude plugin still generates import files; this authenticated app endpoint does not grant the local plugin access to app accounts.
 
 References: https://developers.google.com/workspace/drive/api/guides/manage-uploads ; https://www.canva.dev/docs/apps/rest-apis/reference/design-imports/create-design-import-job/ ; https://docs.composio.dev/reference/v3/api-reference/tools/postToolsExecuteProxy .
+
+Google Slides typography: preserve recognized Google Fonts and native Slides families; unknown company faces export as Poppins with a visible notice. Custom font binaries cannot be uploaded into Slides. Source company metadata and PDF/browser embedded fonts are preserved. Cover photos are normalized to JPEG/PNG for PPTX import.

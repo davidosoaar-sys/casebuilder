@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { download } from './download.js'
 import { Select } from '../components/ui.jsx'
 import {normalizeBrand,officeFont} from '../brand.js'
+import {googleSlideFont} from './googleSlideFont.js'
 
 // A full-screen preview of the one-pager, with print / save as PDF.
 
@@ -29,7 +30,8 @@ export default function Preview({ preview, onClose, audience, onView, onDownload
   const [destination,setDestination]=useState(preview.destination||'powerpoint')
   useEffect(()=>{setDestination(preview.destination||'powerpoint')},[preview.destination])
   const identity=normalizeBrand(brand)
-  const label=destination==='google-slides'?'Google Slides':destination==='canva'?'Canva':'PowerPoint'
+  const fonts=[identity.headingFont,identity.bodyFont].map(font=>destination==='google-slides'?googleSlideFont(font):{requested:officeFont(font),family:officeFont(font),substituted:false})
+  const label=destination==='google-slides'?'Google Slides':'PowerPoint'
 
   useEffect(() => {
     const onKey = e => e.key === 'Escape' && !e.defaultPrevented && onClose()
@@ -58,10 +60,11 @@ export default function Preview({ preview, onClose, audience, onView, onDownload
           </div>
         </header>
         {preview.kind==='slides'&&<section className="slide-import-options" aria-label="Slide export options">
-          <label>Export for <Select aria-label="Slide export destination" value={destination} options={[{value:'powerpoint',label:'PowerPoint'},{value:'google-slides',label:'Google Slides'},{value:'canva',label:'Canva'}]} onChange={setDestination}/></label>
-          <div><p><strong>Editable text</strong> · Headings: {officeFont(identity.headingFont)} · Body: {officeFont(identity.bodyFont)}</p><p>Font names are preserved in the file. Fonts are not embedded; the destination may substitute fonts it does not support.</p>
+          <label>Export for <Select aria-label="Slide export destination" value={destination} options={[{value:'powerpoint',label:'PowerPoint'},{value:'google-slides',label:'Google Slides'}]} onChange={setDestination}/></label>
+          <div><p><strong>Editable text</strong> · Headings: {fonts[0].family} · Body: {fonts[1].family}</p><p>Company font names are retained in PowerPoint; Google Slides uses its supported fonts. Custom font files cannot be uploaded to Google Slides.</p>
+          {fonts.some(f=>f.substituted)&&<p>{[...new Set(fonts.filter(f=>f.substituted).map(f=>f.requested))].join(', ')} is unavailable in Google Slides. This export uses Poppins; your saved company fonts are unchanged.</p>}
           {destination!=='powerpoint'&&<p>Imports this deck into your connected {label} account and opens the editing link. Account authorization and write/import permission are required. Choose PowerPoint to download a file instead.</p>}
-          {exportError&&<p role="alert">{exportError} {connectToolkit&&<button className="ghost" disabled={busy} onClick={onConnect}>Connect {connectToolkit==='canva'?'Canva':'Google Drive'}</button>}</p>}
+          {exportError&&<p role="alert">{exportError} {connectToolkit&&<button className="ghost" disabled={busy} onClick={onConnect}>Connect Google Drive</button>}</p>}
           {handoff&&<p role="status">{handoff.instructions} <a href={handoff.url} target="_blank" rel="noopener noreferrer">Open {handoff.name}</a></p>}
           </div>
         </section>}

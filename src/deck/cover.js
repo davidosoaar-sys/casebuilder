@@ -1,7 +1,9 @@
 import {normalizeBrand} from '../brand.js'
 export function splitCover(slide,brand){
  const b=normalizeBrand(brand)
- return slide?.design?.coverLayout==='split'&&!!b.heroImage&&slide.blocks.every(x=>['logo','text','spacer'].includes(x.type||x.kind))
+ const choice=slide?.design?.coverLayout
+ const legacyCover=!choice&&slide?.variant==='hero'&&slide.blocks?.some(x=>(x.type||x.kind)==='logo')&&slide.blocks?.some(x=>(x.type||x.kind)==='text'&&x.style==='hero')
+ return (choice==='split'||legacyCover)&&!!b.heroImage&&slide.blocks.every(x=>['logo','text','spacer'].includes(x.type||x.kind))
 }
 export const SPLIT_COVER_CSS=`
 .slide.brand-split-cover{position:relative;overflow:hidden;background:var(--bg)!important}

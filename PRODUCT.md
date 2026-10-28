@@ -3,7 +3,7 @@
 CaseBuilder is a platform for Chris to turn customer conversations, research and
 his business-case inputs into one credible case he can present in a Live Room,
 slides, PDF or a one-pager.
-Slides can be exported directly to connected Google Slides/Canva accounts when Composio write/import authorization is configured. PowerPoint download remains available. These imports use editable
+Slides can be exported directly to a connected Google Slides account when Composio write/import authorization is configured. PowerPoint download remains available. These imports use editable
 chart shapes and preserve font names. Font availability in the destination
 still controls editable rendering; web fonts are not embedded in PowerPoint.
 
@@ -135,6 +135,10 @@ Saved-key lookup failures remain unknown rather than showing missing keys. Dashb
 
 Local Claude plugin update: guided `/casebuilder:inputs` and `/casebuilder:dump` workflows propose and review canonical sourced inputs. An explicitly authorized official-site discovery tool saves logo/font/color/photography bytes; SVG logo rasterization makes company marks available to PPTX. Available campaign photography may be sourced from linked CSS. No invented imagery, automatic connectors or exact editable-font compatibility is claimed.
 
-Case Artifacts opens Slides first; View as selects PDF, one-pager or Live Room without downloading. The Live Room retains its opening company identity without repeating the name in header chrome, overview context or footer.
+Case Artifacts opens the multi-slide editor first; View as opens presentation, PDF, one-pager or Live Room previews without downloading. The Live Room retains its opening company identity without repeating the name in header chrome, overview context or footer.
 
-Google Slides/Canva export uploads PPTX through the signed-in user’s authorized Composio connection and opens the returned editing URL. Missing configuration/account authorization produces a setup/connect action rather than pretending import succeeded. Live OAuth and import testing remain pending setup. Client cover source captions are hidden; original image provenance stays on the case. Slides keep the cover identity without repeating the company name in viewer chrome.
+Google Slides export uploads PPTX through the signed-in user’s authorized Composio connection and opens the returned editing URL. Missing configuration/account authorization produces a setup/connect action rather than pretending import succeeded. A fictional Google Slides import succeeded and was confirmed by the user. Client cover source captions are hidden; original image provenance stays on the case. Slides keep the cover identity without repeating the company name in viewer chrome.
+
+Google Slides is the only direct-export destination; Canva is removed from the platform’s export choices and rejected by the direct-export endpoint. Existing Canva source connectors and local plugin import-file support are unaffected. Google Drive auth config and deployment environment variable names were found; the local auth config includes Drive write scope. Actual account export still requires a signed-in connected user.
+
+Local brand-export fix: Google Slides exports keep supported company/Google Fonts and disclose Poppins substitutions for unsupported proprietary families. Browser exports convert WebP/other cover and authored images to PNG/JPEG for import compatibility. Legacy title covers with no explicit layout choice use available side imagery; explicit standard layouts stay standard. Missing imagery is researched at export and only photo fields are saved; intentionally removed images are not restored. Discovery also checks bounded official product/newsroom pages.

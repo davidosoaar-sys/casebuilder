@@ -25,31 +25,20 @@ test('Google import converts a private PPTX into editable Slides for only the se
  assert.ok(Buffer.from(proxy.binary_body.base64,'base64').includes(Buffer.from('application/vnd.google-apps.presentation')))
  assert.ok(!JSON.stringify(result).includes('private'))
 })
-test('Canva upload polls a signed, owner-bound job and returns the actual edit URL',async()=>{
- const f=fixture('canva',[{status:200,data:{job:{id:'job_1',status:'in_progress'}}},{status:200,data:{job:{id:'job_1',status:'success',result:{designs:[{urls:{edit_url:'https://www.canva.com/design/test/edit'},title:'Case'}]}}}}])
- const first=await handleSlideExport(req({target:'canva',title:'Case',fileBase64:pptx}),{env,...f})
- assert.equal(first.status,202);assert.ok(first.body.ticket)
- const upload=JSON.parse(f.calls.at(-1).body)
- assert.equal(upload.binary_body.base64,pptx);assert.match(upload.parameters[0].value,/title_base64/)
- const final=await handleSlideExport(req({target:'canva',action:'poll',ticket:first.body.ticket}),{env,...f})
- assert.equal(final.body.url,'https://www.canva.com/design/test/edit')
-})
 test('missing auth, configuration and connection do not upload anything',async()=>{
- assert.equal((await handleSlideExport({method:'POST',body:{target:'canva'}},{env})).status,401)
- const f=fixture('canva',[],'other')
- assert.equal((await handleSlideExport(req({target:'canva',fileBase64:pptx}),{env,...f})).status,409)
+ assert.equal((await handleSlideExport({method:'POST',body:{target:'google-slides'}},{env})).status,401)
+ const f=fixture('googledrive',[],'other')
+ assert.equal((await handleSlideExport(req({target:'google-slides',fileBase64:pptx}),{env,...f})).status,409)
  assert.equal(f.calls.some(c=>c.url.endsWith('/proxy')),false)
- const missing=await handleSlideExport(req({target:'canva',fileBase64:pptx}),{env:{...env,COMPOSIO_AUTH_CANVA:''},...fixture()})
+ const missing=await handleSlideExport(req({target:'google-slides',fileBase64:pptx}),{env:{...env,COMPOSIO_AUTH_GOOGLEDRIVE:''},...fixture()})
  assert.equal(missing.status,503);assert.equal(missing.body.code,'setup_required')
 })
-test('forged jobs, unsupported payloads and unsafe editing URLs fail closed',async()=>{
- const f=fixture('canva')
- assert.equal((await handleSlideExport(req({target:'canva',action:'poll',ticket:'forged'}),{env,...f})).status,502)
- assert.equal(f.calls.some(c=>c.url.endsWith('/proxy')),false)
- assert.equal((await handleSlideExport(req({target:'canva',fileBase64:Buffer.from('not pptx').toString('base64')}),{env,...fixture('canva')})).status,400)
- const bad=fixture('canva',[{status:200,data:{job:{status:'success',result:{designs:[{urls:{edit_url:'https://canva.com.evil.test/'}}]}}}}])
- assert.equal((await handleSlideExport(req({target:'canva',fileBase64:pptx}),{env,...bad})).status,502)
-})
+test('Canva and polling are rejected without contacting any service',async()=>{
+ let calls=0;const fetchImpl=async()=>{calls++;throw Error('Unexpected request')};
+ assert.equal((await handleSlideExport(req({target:'canva'}),{env,fetchImpl})).status,400);
+ assert.equal((await handleSlideExport(req({target:'google-slides',action:'poll'}),{env,fetchImpl})).status,400);
+ assert.equal(calls,0);
+});
 test('scope errors expose actionable text without credentials or provider payload',async()=>{
  const f=fixture('googledrive',[{status:403,data:{secret:'private-provider-key'}}])
  const r=await handleSlideExport(req({target:'google-slides',fileBase64:pptx}),{env,...f})

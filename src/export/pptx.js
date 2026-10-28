@@ -9,6 +9,7 @@ import { normalizeBrand, blockDesign, officeFont } from '../brand.js'
 import { backstageData } from '../coBrand.js'
 import {drawImportChart} from './importCharts.js'
 import {splitCover} from '../deck/cover.js'
+import {googleSlideFont} from './googleSlideFont.js'
 
 const W = 13.333
 const H = 7.5
@@ -136,7 +137,8 @@ async function layoutBlock(b, deps, theme = DEFAULTS) {
     }
     case 'image': {
       if (!b.src) return { h: 0, draw: () => {} }
-      const dims = await deps.imageSize(b.src)
+      const src=deps.compatibleImage?await deps.compatibleImage(b.src):b.src
+      const dims = await deps.imageSize(src)
       const maxW = CW
       const maxH = 3.7
       const ratio = dims.w / dims.h
@@ -150,7 +152,7 @@ async function layoutBlock(b, deps, theme = DEFAULTS) {
       return {
         h: hh + capH + 0.2,
         draw: (s, y, k) => {
-          s.addImage({ data: b.src, x: MX, y, w: w * k, h: hh * k })
+          s.addImage({ data: src, x: MX, y, w: w * k, h: hh * k })
           if (b.caption) s.addText(b.caption, { x: MX, y: y + hh * k + 0.05, w: CW, h: 0.3, fontFace: FONT, fontSize: 11, color: C.faint, margin: 0 })
         }
       }
@@ -318,10 +320,17 @@ async function layoutBlock(b, deps, theme = DEFAULTS) {
 
 // deps: { PptxGenJS, logoPng(): {data, ratio} | null, imageSize(src): {w,h} }
 export async function buildPptx({ company, slides, deps, brand }) {
+  const fontWarnings=new Set()
+  const exportFont=value=>{
+    if(deps.importTarget!=='google-slides')return officeFont(value)
+    const result=googleSlideFont(value)
+    if(result.substituted)fontWarnings.add(`${result.requested} is unavailable in Google Slides; Poppins was used.`)
+    return result.family
+  }
   const b = normalizeBrand(brand)
   const colors = brand ? { ...DEFAULTS.colors, bg: hex(b.background), panel: hex(b.surface), ink: hex(b.text), strong: hex(b.text), dim: hex(b.muted), faint: hex(b.muted), accent: hex(b.primary), mint: hex(b.primary) } : DEFAULTS.colors
   const styles = Object.fromEntries(Object.entries(DEFAULTS.styles).map(([key, style]) => [key, { ...style, color: style.color === DEFAULTS.colors.strong ? colors.strong : style.color === DEFAULTS.colors.ink ? colors.ink : style.color === DEFAULTS.colors.mint ? colors.mint : style.color === DEFAULTS.colors.faint ? colors.faint : style.color === DEFAULTS.colors.dim ? colors.dim : style.color }]))
-  const theme = { colors, logoBackground:b.logoBackground, font: brand ? officeFont(b.bodyFont) : DEFAULTS.font, headingFont:brand ? officeFont(b.headingFont) : DEFAULTS.font, styles }
+  const theme = { colors, logoBackground:b.logoBackground, font: brand ? exportFont(b.bodyFont) : DEFAULTS.font, headingFont:brand ? exportFont(b.headingFont) : DEFAULTS.font, styles }
   const C = colors, FONT = theme.font
   const pptx = new deps.PptxGenJS()
   deps = { ...deps, ChartType: pptx.ChartType }
@@ -340,8 +349,8 @@ export async function buildPptx({ company, slides, deps, brand }) {
     s.addText = (text, options) => {
       const design = blockDesign(activeDesign)
       return nativeText(text, { ...options,
-        ...(brand && heading ? { fontFace: officeFont(b.headingFont) } : {}),
-        ...(design.fontFamily ? { fontFace: officeFont(activeDesign.font) } : {}),
+        ...(brand && heading ? { fontFace: exportFont(b.headingFont) } : {}),
+        ...(design.fontFamily ? { fontFace: exportFont(activeDesign.font) } : {}),
         ...(design.color ? { color: hex(design.color) } : {}),
         ...(design.textAlign ? { align: design.textAlign } : {}),
         ...(design.fontWeight ? { bold: Number(design.fontWeight) >= 600 } : {}),
@@ -350,7 +359,8 @@ export async function buildPptx({ company, slides, deps, brand }) {
     }
     if(splitCover(sl,b)){
       // Fixed split composition; text remains editable in Office/Slides/Canva.
-      s.addImage({data:b.heroImage,x:7.0,y:0,w:W-7,h:H,sizing:{type:'cover',w:W-7,h:H}})
+      const photo=deps.compatibleImage?await deps.compatibleImage(b.heroImage):b.heroImage
+      s.addImage({data:photo,x:7.0,y:0,w:W-7,h:H,sizing:{type:'cover',w:W-7,h:H},altText:b.heroAlt||company+' cover image'})
       for(let i=0;i<24;i++)s.addShape('rect',{x:7+i*.05,y:0,w:.055,h:H,line:{transparency:100},fill:{color:s.background.color,transparency:Math.round(i/23*100)}})
       const logo=await deps.logoPng?.()
       if(logo){const w=Math.min(1.8,.35*logo.ratio);s.addImage({data:logo.data,x:MX,y:.65,w,h:.35});s.addText('×',{x:MX+w+.12,y:.65,w:.25,h:.3,fontSize:12,color:C.dim});s.addImage({data:backstageData,x:MX+w+.52,y:.69,w:1.15,h:.25})}
@@ -386,5 +396,6 @@ export async function buildPptx({ company, slides, deps, brand }) {
     s.addText(`${company}  ·  Business case`, { x: MX, y: H - 0.42, w: 6, h: 0.25, fontFace: FONT, fontSize: 9, color: C.faint, margin: 0 })
     s.addText(String(n), { x: W - MX - 1, y: H - 0.42, w: 1, h: 0.25, fontFace: FONT, fontSize: 9, color: C.faint, align: 'right', margin: 0 })
   }
+  pptx.casebuilderFontWarnings=[...fontWarnings]
   return pptx
 }
