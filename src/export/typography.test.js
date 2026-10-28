@@ -19,8 +19,8 @@ test('font stacks retain family boundaries and resolve to an actual Office face'
 test('Website, PDF and Slides preserve the same brand, embedded font and block family stack',()=>{
   for (const viewMode of ['website','pdf','slides']) {
     const html=brandDocument(buildWebsite({company:'Example',slides:[{blocks:[{type:'text',style:'hero',text:'Example',design:{font:'Courier New, monospace'}}]}],stakeholders:[],inputs:{},vmSource:'',viewMode,websiteBrand:brand}),brand)
-    assert.ok(html.includes("body{font-family:'Verdana',sans-serif!important}"))
-    assert.ok(html.includes("font-family:'Georgia',sans-serif!important"))
+    assert.ok(html.includes("body{font-family:'Verdana','Poppins',sans-serif!important}"))
+    assert.ok(html.includes("font-family:'Georgia','Poppins',sans-serif!important"))
     assert.ok(html.includes(brand.fontData))
     const data=JSON.parse(html.match(/<script id="data" type="application\/json">([\s\S]*?)<\/script>/)[1])
     assert.equal(data.fontStacks['Courier New, monospace'],"'Courier New',monospace")
@@ -32,8 +32,8 @@ test('One-pager uses the same company heading and body fonts, including metric h
   const fields=INPUT_FIELDS.map(f=>({...f,value:DEMO_VALUES[f.key]??f.value}))
   const facts=prepareOnePager({inputs:DEMO_VALUES,fields,who:resolveStakeholder({key:'finance',builtin:true})})
   const html=brandDocument(buildOnePager({facts}),brand)
-  assert.ok(html.includes("body{font-family:'Verdana',sans-serif!important}"))
-  assert.match(html,/\.brief-stat strong,\.brief-headline\{font-family:'Georgia',sans-serif!important\}/)
+  assert.ok(html.includes("body{font-family:'Verdana','Poppins',sans-serif!important}"))
+  assert.match(html,/\.brief-stat strong,\.brief-headline\{font-family:'Georgia','Poppins',sans-serif!important\}/)
   assert.ok(html.includes(brand.fontData))
 })
 

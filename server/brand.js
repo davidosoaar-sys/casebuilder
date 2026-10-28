@@ -224,13 +224,25 @@ async function searchHomepage(company) {
 }
 const HOME_LIMIT = 6_000_000 // some homepages (Netflix) are several MB of inline HTML
 
+export async function searchOfficialBrandPages(company, website, engine = searchBackendOrNull()) {
+  if (!engine) return []
+  const host = new URL(website).hostname.replace(/^www\./, '')
+  try {
+    const results = await engine.search(`site:${host} ${company} official brand assets logo media kit`, { count: 5 })
+    return [...new Set(results.flatMap(result => {
+      try { const u = new URL(result.url); const h = u.hostname.replace(/^www\./, ''); return u.protocol === 'https:' && (h === host || h.endsWith('.' + host)) && !u.username && !u.password ? [u.href] : [] } catch { return [] }
+    }))].slice(0, 2)
+  } catch { return [] }
+}
+
 const companyLinkedIn = value => {const url=publicProfileUrl(value);return /^https:\/\/(?:[a-z]{2,3}\.|www\.)?linkedin\.com\/company\/[^/?#]+\/?(?:[?#].*)?$/i.test(url)?url:''}
 async function findWebsite(company, client = null, identity = {}, {linkedinOnly=false,officialWebsite=''} = {}) {
   // Verified official domains for common demo/test accounts, not guessed assets.
-  const known = {nike:'https://www.nike.com/',spotify:'https://www.spotify.com/',microsoft:'https://www.microsoft.com/',shopify:'https://www.shopify.com/',lovable:'https://lovable.dev/',loveable:'https://lovable.dev/',adidas:'https://www.adidas-group.com/en/',addidas:'https://www.adidas-group.com/en/'}
+  const known = {apple:'https://www.apple.com/',nike:'https://www.nike.com/',spotify:'https://www.spotify.com/',microsoft:'https://www.microsoft.com/',shopify:'https://www.shopify.com/',lovable:'https://lovable.dev/',loveable:'https://lovable.dev/',adidas:'https://www.adidas-group.com/en/',addidas:'https://www.adidas-group.com/en/'}
   const official = known[String(company).trim().toLowerCase()]
   if (official && !linkedinOnly) return official
   if (!linkedinOnly && /^(https:\/\/)?[a-z0-9.-]+\.[a-z]{2,}(\/.*)?$/i.test(company)) return company.startsWith('https://') ? company : `https://${company}`
+  if (!client && !linkedinOnly) { const found = await searchHomepage(company); if (found) return found }
   if (!client) throw new Error('Enter the official company website to scan its branding. Company-name search needs an AI model key (add one in Settings).')
   const run = await runWithSearch({
     client, model: process.env.RESEARCH_MODEL || 'claude-sonnet-5-5', maxTokens: linkedinOnly ? 800 : 1200,
@@ -289,7 +301,8 @@ export async function discoverBrand({ company, website }, fetcher = fetchPublic,
   // its documentation UI must not replace the company's homepage typography.
   const officialResources={'spotify.com':['https://newsroom.spotify.com/media-kit/logo-and-brand-assets/'],'shopify.com':['https://www.shopify.com/brand-assets']}
   const host=new URL(target).hostname.replace(/^www\./,'')
-  const resourceUrls=[...new Set([...(identity.brandPages||[]),...(officialResources[host]||[]),...brandPageLinks(html,home.url)])].slice(0,2)
+  const searchedResources=parsed.candidates.some(c=>c.score>0)?[]:await searchOfficialBrandPages(company,home.url)
+  const resourceUrls=[...new Set([...(identity.brandPages||[]),...(officialResources[host]||[]),...brandPageLinks(html,home.url),...searchedResources])].slice(0,2)
   const kits=await Promise.allSettled(resourceUrls.map(url=>fetcher(url)))
   for(const result of kits)if(result.status==='fulfilled'&&/html/i.test(result.value.type)){
     const page=result.value,kit=page.buffer.toString('utf8')

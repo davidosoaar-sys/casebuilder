@@ -16,7 +16,7 @@ const MX = 0.7
 const CW = W - MX * 2
 const TOP = 0.6
 const BOTTOM = H - 0.55
-const FONT = 'Arial'
+const FONT = 'Poppins'
 
 const C = {
   bg: '111111',

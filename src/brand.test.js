@@ -198,3 +198,25 @@ test('discovered hero choices keep only embedded images with HTTPS provenance', 
   const b=normalizeBrand({heroCandidates:[{heroImage,heroSource:'https://company.example/image',heroAlt:'Campus'},{heroImage:'https://tracker.example/image',heroSource:'https://company.example/'}]})
   assert.deepEqual(b.heroCandidates,[{heroImage,heroSource:'https://company.example/image',heroAlt:'Campus'}])
 })
+
+test('Poppins is embedded as fallback without replacing an observed company font', async () => {
+ const {fontFaceCss,fontStack,officeFont}=await import('./brand.js');
+ assert.equal(normalizeBrand({}).bodyFont,'Poppins');
+ assert.equal(normalizeBrand({}).headingFont,'Poppins');
+ assert.match(fontFaceCss({}),/font-family:'Poppins';src:url\('data:font\/ttf;base64,/);
+ assert.match(fontStack('Company Sans'),/^'Company Sans','Poppins'/);
+ assert.equal(officeFont(''),'Poppins');
+ assert.equal(normalizeBrand({headingFont:'Company Sans'}).headingFont,'Company Sans');
+});
+
+test('Apple company name resolves the verified official site without a model key', async () => {
+ const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 44"><path d="M2 16h10v15H2z"/></svg>';
+ const result=await discoverBrand({company:'Apple'},async url=>{if(url!=='https://www.apple.com/')throw Error('Unavailable fixture');return {url,type:'text/html',buffer:Buffer.from('<a href="/" aria-label="Apple">'+svg+'</a>')}});
+ assert.equal(result.website,'https://www.apple.com/');assert.ok(result.logo);assert.ok(result.sources.includes('https://www.apple.com/'));
+});
+
+test('asset search accepts only pages on the verified official company domain', async () => {
+ const {searchOfficialBrandPages}=await import('../server/brand.js');let query='';
+ const pages=await searchOfficialBrandPages('Apple','https://www.apple.com/',{search:async q=>{query=q;return [{url:'https://www.apple.com/newsroom/'},{url:'https://apple.com.evil.example/logo'},{url:'https://unrelated.example/apple-logo'}]}});
+ assert.match(query,/official brand assets/);assert.deepEqual(pages,['https://www.apple.com/newsroom/']);
+});

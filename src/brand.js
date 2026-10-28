@@ -1,28 +1,30 @@
+import {POPPINS_DATA} from './poppinsFont.js'
 import {coBrandHtml} from './coBrand.js'
 import {publicProfileUrl} from './profileMedia.js'
 import { websiteThemeCss } from './export/websiteFramework.js'
 // Customer branding is scoped to a deck. It never themes the application chrome.
 export const DEFAULT_BRAND = {
   primary: '#9bf0de', background: '#111111', surface: '#1e1e1e', text: '#e3e3e3',
-  muted: '#a9acb1', headingFont: 'Outfit', bodyFont: 'Arial', logo: '', icon: '',
+  muted: '#a9acb1', headingFont: 'Poppins', bodyFont: 'Poppins', logo: '', icon: '',
   fontData: '', fontName: '', website: '', sources: [], status: 'idle', message: '', hideLogo: false
 }
 export const COLOR_KEYS = ['primary', 'background', 'surface', 'text', 'muted']
 // Fonts offered in the brand panel (installed everywhere, or loaded by the app).
 // worker/worker.py BRAND_FONTS holds the same list for the agent.
-export const BRAND_FONTS = ['Arial', 'Outfit', 'Georgia', 'Verdana', 'Times New Roman', 'Trebuchet MS', 'Segoe UI', 'Courier New']
+export const BRAND_FONTS = ['Poppins', 'Outfit', 'Arial', 'Georgia', 'Verdana', 'Times New Roman', 'Trebuchet MS', 'Segoe UI', 'Courier New']
 export const cleanFont = value => String(value || '').replace(/[^a-zA-Z0-9 ,_-]/g, '').slice(0, 100)
 export const fontStack = value => {
   const names = cleanFont(value).split(',').map(n=>n.trim()).filter(Boolean)
   const generic = ['ui-sans-serif', 'system-ui', 'sans-serif', 'serif', 'monospace', 'cursive', 'fantasy']
-  if (!names.length) return 'sans-serif'
+  if (!names.length) return "'Poppins',sans-serif"
   const stack = names.map(name=>generic.includes(name) ? name : `'${name}'`)
+  if (!names.includes('Poppins') && !names.some(n=>['serif','monospace','cursive','fantasy'].includes(n))) stack.push("'Poppins'")
   if (!generic.includes(names.at(-1))) stack.push('sans-serif')
   return stack.join(',')
 }
 export const officeFont = value => {
   const name = cleanFont(value).split(',')[0].trim()
-  return ({'ui-sans-serif':'Arial','system-ui':'Arial','sans-serif':'Arial',serif:'Times New Roman',monospace:'Courier New'})[name] || name || 'Arial'
+  return ({'ui-sans-serif':'Poppins','system-ui':'Poppins','sans-serif':'Poppins',serif:'Times New Roman',monospace:'Courier New'})[name] || name || 'Poppins'
 }
 export const safeAsset = value => typeof value === 'string' && value.length < 1_200_000 && /^data:image\/(png|jpeg|webp|svg\+xml);base64,[a-zA-Z0-9+/=]+$/.test(value) ? value : ''
 export function normalizeBrand(value) {
@@ -30,7 +32,7 @@ export function normalizeBrand(value) {
   return {
     template: ['company','backstage'].includes(b.template)?b.template:'custom',
     originalLogo:safeAsset(b.originalLogo),
-    companyStyle:b.companyStyle&&/^#[0-9a-f]{6}$/i.test(b.companyStyle.primary)?{primary:b.companyStyle.primary,headingFont:cleanFont(b.companyStyle.headingFont)||'Arial',bodyFont:cleanFont(b.companyStyle.bodyFont)||'Arial'}:null,
+    companyStyle:b.companyStyle&&/^#[0-9a-f]{6}$/i.test(b.companyStyle.primary)?{primary:b.companyStyle.primary,headingFont:cleanFont(b.companyStyle.headingFont)||'Poppins',bodyFont:cleanFont(b.companyStyle.bodyFont)||'Poppins'}:null,
     ...DEFAULT_BRAND,
     ...Object.fromEntries(COLOR_KEYS.map(k => [k, /^#[0-9a-f]{6}$/i.test(b[k]) ? b[k] : DEFAULT_BRAND[k]])),
     headingFont: cleanFont(b.headingFont) || DEFAULT_BRAND.headingFont,
@@ -62,7 +64,7 @@ export function brandVars(value) {
 export function fontFaceCss(value) {
   const b = normalizeBrand(value)
   const faces=[...b.fontFaces,...(b.fontData&&b.fontName?[{family:b.fontName,data:b.fontData}]:[])]
-  return faces.filter((f,i)=>faces.findIndex(x=>x.family===f.family)===i).map(f=>`@font-face{font-family:'${f.family}';src:url('${f.data}');font-display:swap;}`).join('\n')
+  return `@font-face{font-family:'Poppins';src:url('${POPPINS_DATA}') format('truetype');font-weight:400;font-style:normal;font-display:swap;}\n` + faces.filter((f,i)=>faces.findIndex(x=>x.family===f.family)===i).map(f=>`@font-face{font-family:'${f.family}';src:url('${f.data}');font-display:swap;}`).join('\n')
 }
 export function brandLogoHtml(value, fallback = '') {
   const b = normalizeBrand(value)

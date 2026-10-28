@@ -1396,9 +1396,9 @@ LIVE_NAMES = {"stats": "key numbers", "drivers": "drivers chart", "pairs": "toda
 DECK_TOKENS = ("company", "caseContext", "decisionHeadline", "valueHeadline", "role", "headline", "cares", "archetype",
                "annual", "net", "payback", "roi", "five")
 BRAND_COLORS = ("primary", "background", "surface", "text", "muted")
-BRAND_FONTS = ("Arial", "Outfit", "Georgia", "Verdana", "Times New Roman", "Trebuchet MS", "Segoe UI", "Courier New")
+BRAND_FONTS = ("Poppins", "Arial", "Outfit", "Georgia", "Verdana", "Times New Roman", "Trebuchet MS", "Segoe UI", "Courier New")
 DEFAULT_BRAND = {"primary": "#9bf0de", "background": "#111111", "surface": "#1e1e1e", "text": "#e3e3e3", "muted": "#a9acb1",
-                 "headingFont": "Outfit", "bodyFont": "Arial"}
+                 "headingFont": "Poppins", "bodyFont": "Poppins"}
 HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
 CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
 # Figures the agent must not type into the case (money, percentages, scaled or

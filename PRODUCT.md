@@ -127,3 +127,9 @@ by the user; do not deploy unless requested.
 At each completed logical change, update Current work and any changed product
 facts. Keep the opening sentence simple. Record ideas separately until approved.
 See WORKING_AGREEMENT.md for the implementation and release process.
+
+2026-10-28 local fix: failed cloud-deal loads show a prominent error and retry instead of an empty project list. Pending edits remain in browser storage; database connection-pool availability is an external dependency.
+
+Saved-key lookup failures remain unknown rather than showing missing keys. Dashboard and Settings offer retry and preserve previously loaded key metadata. Project/key reads time out after 20 seconds rather than leaving indefinite loading indicators.
+
+2026-10-28 local branding work: Apple names resolve to the verified official homepage and use extracted, validated logo bytes. If the homepage has no mark, configured search can find official-domain brand resources. Company defaults use bundled Poppins; known company font names are preserved with Poppins as the browser fallback. Heading/body presets, custom family names and licensed font upload remain editable. Backstage keeps Outfit.

@@ -63,7 +63,7 @@ function DealMark({ deal }) {
 
 export default function Dashboard({ account, name, deals, loading, onOpen, onSettings, onCreate, onReview, onFind, onRescan }) {
   const userId = account.session.user.id
-  const { keys } = useModelKeys(userId)
+  const { keys, error: keyError, reload: retryKeys } = useModelKeys(userId)
   const hasKey = Boolean(keys?.length)
   const summaries = useMemo(() => deals.map(dealSummary), [deals])
   const { attention, rest } = useMemo(() => triage(summaries), [summaries])
@@ -95,7 +95,13 @@ export default function Dashboard({ account, name, deals, loading, onOpen, onSet
     <div className="page dashboard">
       <Hero name={name} loading={loading} summaries={summaries} attention={attention} feed={feed} onOpen={onOpen} onAct={act} onCreate={onCreate} />
 
-      {keys && !hasKey && (
+      {keyError && (
+        <div className="dash-banner" role="alert">
+          <span>Could not check your saved API keys. Your keys may still be saved; the database request failed.</span>
+          <button className="link-btn" onClick={retryKeys}>Retry key status</button>
+        </div>
+      )}
+      {!keyError && keys && !hasKey && (
         <div className="dash-banner" role="status">
           <span>Your agent needs an API key before it can research or write.</span>
           <button className="link-btn" onClick={onSettings}>Add it in Settings</button>

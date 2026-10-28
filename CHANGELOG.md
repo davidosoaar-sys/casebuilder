@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.25.0 (2026-10-28)
+
+- Release validation: all 72 targeted tests pass; production and plugin ZIP builds pass. New deck covers keep the approved split-image template; absent imagery retains a typographic fallback.
+
+- Resolve Apple’s verified homepage without an AI lookup; search official-domain brand-resource pages when a homepage has no usable mark. Preserve validated logo provenance.
+- Validation: 54 brand/theme/typography/export tests and nine plugin tests pass; production and plugin builds pass. Live name-only Apple discovery and browser logo/font switching verified in an isolated preview.
+- Bundle licensed Poppins as the missing-brand font fallback, retain discovered fonts and the Backstage Outfit preset, and expose heading/body font presets plus custom font controls.
+
+- Validation: seven cloud storage tests and production build pass. Local browser confirms a timed-out request shows the project-loading error and retry rather than an empty list; Supabase availability remains unresolved.
+
+- Do not label failed saved-key lookups as missing API keys. Dashboard and Settings show a distinct error/retry state and retain the last successful key metadata without reading secret key values.
+
+- Show database loading failures prominently instead of an empty dashboard/project list, with a retry action that preserves pending edits. Diagnosed Supabase connection-pool timeout locally.
+
 ## v0.24.0 (2026-10-28)
 
 - Release validation: 41 targeted plugin, cover, brand and editable-import tests pass; plugin ZIP and production build pass. Includes the v0.23.2 manifest installation fix.

@@ -4,7 +4,7 @@ export function templateBrand(brand,template){
  const b=normalizeBrand(brand)
  const companyStyle=b.companyStyle||{primary:b.primary,headingFont:b.headingFont,bodyFont:b.bodyFont}
  if(template==='company')return {...b,...companyStyle,companyStyle,template,background:'#ffffff',surface:'#f5f5f5',text:'#111111',muted:'#606060'}
- if(template==='backstage')return {...b,companyStyle,template,background:DEFAULT_BRAND.background,surface:DEFAULT_BRAND.surface,text:DEFAULT_BRAND.text,muted:DEFAULT_BRAND.muted,primary:DEFAULT_BRAND.primary,headingFont:DEFAULT_BRAND.headingFont,bodyFont:DEFAULT_BRAND.bodyFont}
+ if(template==='backstage')return {...b,companyStyle,template,background:DEFAULT_BRAND.background,surface:DEFAULT_BRAND.surface,text:DEFAULT_BRAND.text,muted:DEFAULT_BRAND.muted,primary:DEFAULT_BRAND.primary,headingFont:'Outfit',bodyFont:'Outfit'}
  return b
 }
 export async function prepareTemplateBrand(brand,template){

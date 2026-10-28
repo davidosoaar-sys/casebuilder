@@ -12,8 +12,15 @@ export function useModelKeys(userId) {
   const [keys, setKeys] = useState(null) // null = loading
   const [error, setError] = useState('')
   const load = async () => {
-    const { data, error } = await supabase.from('model_keys').select('provider, last4, updated_at, preferred').eq('owner_id', userId)
-    if (error) { setError(error.message); setKeys([]) } else { setError(''); setKeys(data) }
+    setError('')
+    try {
+      const { data, error } = await supabase.from('model_keys').select('provider, last4, updated_at, preferred').eq('owner_id', userId).abortSignal(AbortSignal.timeout(20000))
+      if (error) throw error
+      setKeys(data || [])
+    } catch (e) {
+      // Unknown is not missing: retain the last successful result on failure.
+      setError(e.message || 'The key lookup could not be completed.')
+    }
   }
   useEffect(() => { load() }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
   return { keys, error, reload: load }
@@ -99,9 +106,9 @@ export default function Settings({ account, name, onName, theme, onTheme, onClos
           <section className="settings-section" id="api-key">
             <h3>AI model keys</h3>
             <p className="settings-help">Your agent runs on your own API key, from any of these providers. Keys are stored encrypted and only used for your jobs. Nobody can read them back, including you, so keep your own copy.</p>
-            {keysError && <p className="auth-error" role="alert">Could not load your key status: {keysError}</p>}
-            <ActiveProvider keys={keys} onChange={reload} />
-            {PROVIDERS.map(p => <KeyRow key={p.id} provider={p} saved={keys?.find(k => k.provider === p.id)} loading={keys === null} onChange={reload} />)}
+            {keysError && <div role="alert"><p className="auth-error">Could not load your key status: {keysError}. This does not mean your saved keys are missing.</p><button type="button" className="ghost" onClick={reload}>Retry key status</button></div>}
+            {!keysError && (keys === null ? <p className="settings-help">Checking saved keys…</p> : <ActiveProvider keys={keys} onChange={reload} />)}
+            {PROVIDERS.map(p => <KeyRow key={p.id} provider={p} saved={keys?.find(k => k.provider === p.id)} loading={keys === null || Boolean(keysError)} onChange={reload} />)}
           </section>
 
           <section className="settings-section">

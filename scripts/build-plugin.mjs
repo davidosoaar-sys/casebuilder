@@ -26,6 +26,9 @@ fs.writeFileSync(
   ['src/format.js', 'src/model.js', 'src/source.js', 'src/valueModel.js'].map(f => fs.readFileSync(path.join(root, f), 'utf8')).join('\n')
 )
 
+fs.mkdirSync(refs, { recursive: true })
+fs.copyFileSync(path.join(root,"assets/fonts/Poppins-OFL.txt"),path.join(refs,"Poppins-OFL.txt"))
+
 // 2. the bundle
 fs.mkdirSync(path.dirname(bundle), { recursive: true })
 await build({

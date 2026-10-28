@@ -20,7 +20,8 @@ export function createCloudDealStore(client, userId, getLocal = () => localStora
   const pendingKey = id => `${PENDING}${userId}:${id}`
 
   async function list() {
-    const { data, error } = await client.from('deals').select('id, data, version').eq('owner_id', userId).order('updated_at', { ascending: false })
+    const request = client.from('deals').select('id, data, version').eq('owner_id', userId).order('updated_at', { ascending: false })
+    const { data, error } = await (typeof request.abortSignal === 'function' ? request.abortSignal(AbortSignal.timeout(20000)) : request)
     if (error) throw new Error(`Could not load your deals: ${error.message}`)
     const deals = []
     for (const row of data) {

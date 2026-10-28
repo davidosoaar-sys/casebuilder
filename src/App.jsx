@@ -418,7 +418,15 @@ export default function App({ account }) {
 
       <div className={`lookup-content-wrap${agentSplit ? ' with-chat' : ''}`} style={agentSplit ? { '--chat-w': `${chatWidth}px` } : undefined}>
       <main ref={mainRef} className={`content${agentFull ? ' content-agent' : ''}`}>
-        {agentFull ? (
+        {cloud.loadError ? (
+          <section className="page" role="alert">
+            <h1>Your projects could not be loaded</h1>
+            <p>The database could not return your projects. This is a loading error, not an empty project list.</p>
+            <p>No projects have been deleted by this error. Your pending local edits are kept.</p>
+            <p>{cloud.loadError}</p>
+            <button className="primary" type="button" onClick={cloud.retry}>Try again</button>
+          </section>
+        ) : agentFull ? (
           <ChatPanel key={project.id} {...chatProps} mode="full" onSplit={() => { setSplit(true); setView(backFromAgent.current === 'agent' ? 'details' : backFromAgent.current) }} />
         ) : page === 'dashboard' ? (
           <Dashboard

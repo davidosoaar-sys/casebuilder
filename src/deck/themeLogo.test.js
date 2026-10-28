@@ -13,7 +13,7 @@ test('Backstage is a complete preset and Company styling can be recovered',()=>{
  const original={primary:'#f00000',headingFont:'Company Display',bodyFont:'Company Text'}
  const dark=templateBrand(original,'backstage')
  assert.equal(dark.headingFont,'Outfit')
- assert.equal(dark.bodyFont,'Arial')
+ assert.equal(dark.bodyFont,'Outfit')
  const styled=chooseDeckTemplate({deck:[{blocks:[{design:{font:'Company Display',color:'#000000'}}]}]},dark)
  assert.equal(styled.deck[0].blocks[0].design.font,undefined)
  assert.equal(templateBrand(dark,'company').headingFont,'Company Display')

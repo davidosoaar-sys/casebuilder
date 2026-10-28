@@ -15,6 +15,7 @@ export default function useCloudDeals(userId, connections) {
   const [deals, setDeals] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
+  const [loadAttempt, setLoadAttempt] = useState(0)
   const [status, setStatus] = useState({ state: 'saved' })
   const seen = useRef(new Map())
   const saver = useRef(null)
@@ -22,6 +23,8 @@ export default function useCloudDeals(userId, connections) {
 
   useEffect(() => {
     let alive = true
+    setLoading(true)
+    setLoadError('')
     ;(async () => {
       try {
         let { deals: loaded, replay } = await loadCloudDeals(store)
@@ -48,7 +51,7 @@ export default function useCloudDeals(userId, connections) {
       }
     })()
     return () => { alive = false }
-  }, [store]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [store, loadAttempt]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (loading) return
@@ -69,7 +72,7 @@ export default function useCloudDeals(userId, connections) {
   }, [])
 
   return {
-    deals, setDeals, loading, loadError,
+    deals, setDeals, loading, loadError, retry: () => setLoadAttempt(n => n + 1),
     saving: {
       status: loadError ? { state: 'error', message: loadError } : status,
       // Resolves once the latest copy is in the database. An edit made while a
