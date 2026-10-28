@@ -33,9 +33,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// node_modules/process-nextick-args/index.js
+// ../../node_modules/process-nextick-args/index.js
 var require_process_nextick_args = __commonJS({
-  "node_modules/process-nextick-args/index.js"(exports, module) {
+  "../../node_modules/process-nextick-args/index.js"(exports, module) {
     "use strict";
     if (typeof process === "undefined" || !process.version || process.version.indexOf("v0.") === 0 || process.version.indexOf("v1.") === 0 && process.version.indexOf("v1.8.") !== 0) {
       module.exports = { nextTick };
@@ -78,9 +78,9 @@ var require_process_nextick_args = __commonJS({
   }
 });
 
-// node_modules/isarray/index.js
+// ../../node_modules/isarray/index.js
 var require_isarray = __commonJS({
-  "node_modules/isarray/index.js"(exports, module) {
+  "../../node_modules/isarray/index.js"(exports, module) {
     var toString = {}.toString;
     module.exports = Array.isArray || function(arr) {
       return toString.call(arr) == "[object Array]";
@@ -88,16 +88,16 @@ var require_isarray = __commonJS({
   }
 });
 
-// node_modules/readable-stream/lib/internal/streams/stream.js
+// ../../node_modules/readable-stream/lib/internal/streams/stream.js
 var require_stream = __commonJS({
-  "node_modules/readable-stream/lib/internal/streams/stream.js"(exports, module) {
+  "../../node_modules/readable-stream/lib/internal/streams/stream.js"(exports, module) {
     module.exports = __require("stream");
   }
 });
 
-// node_modules/safe-buffer/index.js
+// ../../node_modules/safe-buffer/index.js
 var require_safe_buffer = __commonJS({
-  "node_modules/safe-buffer/index.js"(exports, module) {
+  "../../node_modules/safe-buffer/index.js"(exports, module) {
     var buffer = __require("buffer");
     var Buffer2 = buffer.Buffer;
     function copyProps(src, dst) {
@@ -152,9 +152,9 @@ var require_safe_buffer = __commonJS({
   }
 });
 
-// node_modules/core-util-is/lib/util.js
+// ../../node_modules/core-util-is/lib/util.js
 var require_util = __commonJS({
-  "node_modules/core-util-is/lib/util.js"(exports) {
+  "../../node_modules/core-util-is/lib/util.js"(exports) {
     function isArray(arg) {
       if (Array.isArray) {
         return Array.isArray(arg);
@@ -222,9 +222,9 @@ var require_util = __commonJS({
   }
 });
 
-// node_modules/inherits/inherits_browser.js
+// ../../node_modules/inherits/inherits_browser.js
 var require_inherits_browser = __commonJS({
-  "node_modules/inherits/inherits_browser.js"(exports, module) {
+  "../../node_modules/inherits/inherits_browser.js"(exports, module) {
     if (typeof Object.create === "function") {
       module.exports = function inherits(ctor, superCtor) {
         if (superCtor) {
@@ -254,9 +254,9 @@ var require_inherits_browser = __commonJS({
   }
 });
 
-// node_modules/inherits/inherits.js
+// ../../node_modules/inherits/inherits.js
 var require_inherits = __commonJS({
-  "node_modules/inherits/inherits.js"(exports, module) {
+  "../../node_modules/inherits/inherits.js"(exports, module) {
     try {
       util = __require("util");
       if (typeof util.inherits !== "function") throw "";
@@ -268,9 +268,9 @@ var require_inherits = __commonJS({
   }
 });
 
-// node_modules/readable-stream/lib/internal/streams/BufferList.js
+// ../../node_modules/readable-stream/lib/internal/streams/BufferList.js
 var require_BufferList = __commonJS({
-  "node_modules/readable-stream/lib/internal/streams/BufferList.js"(exports, module) {
+  "../../node_modules/readable-stream/lib/internal/streams/BufferList.js"(exports, module) {
     "use strict";
     function _classCallCheck(instance, Constructor) {
       if (!(instance instanceof Constructor)) {
@@ -346,9 +346,9 @@ var require_BufferList = __commonJS({
   }
 });
 
-// node_modules/readable-stream/lib/internal/streams/destroy.js
+// ../../node_modules/readable-stream/lib/internal/streams/destroy.js
 var require_destroy = __commonJS({
-  "node_modules/readable-stream/lib/internal/streams/destroy.js"(exports, module) {
+  "../../node_modules/readable-stream/lib/internal/streams/destroy.js"(exports, module) {
     "use strict";
     var pna = require_process_nextick_args();
     function destroy(err, cb) {
@@ -415,16 +415,16 @@ var require_destroy = __commonJS({
   }
 });
 
-// node_modules/util-deprecate/node.js
+// ../../node_modules/util-deprecate/node.js
 var require_node = __commonJS({
-  "node_modules/util-deprecate/node.js"(exports, module) {
+  "../../node_modules/util-deprecate/node.js"(exports, module) {
     module.exports = __require("util").deprecate;
   }
 });
 
-// node_modules/readable-stream/lib/_stream_writable.js
+// ../../node_modules/readable-stream/lib/_stream_writable.js
 var require_stream_writable = __commonJS({
-  "node_modules/readable-stream/lib/_stream_writable.js"(exports, module) {
+  "../../node_modules/readable-stream/lib/_stream_writable.js"(exports, module) {
     "use strict";
     var pna = require_process_nextick_args();
     module.exports = Writable;
@@ -862,9 +862,9 @@ var require_stream_writable = __commonJS({
   }
 });
 
-// node_modules/readable-stream/lib/_stream_duplex.js
+// ../../node_modules/readable-stream/lib/_stream_duplex.js
 var require_stream_duplex = __commonJS({
-  "node_modules/readable-stream/lib/_stream_duplex.js"(exports, module) {
+  "../../node_modules/readable-stream/lib/_stream_duplex.js"(exports, module) {
     "use strict";
     var pna = require_process_nextick_args();
     var objectKeys = Object.keys || function(obj) {
@@ -939,9 +939,9 @@ var require_stream_duplex = __commonJS({
   }
 });
 
-// node_modules/string_decoder/lib/string_decoder.js
+// ../../node_modules/string_decoder/lib/string_decoder.js
 var require_string_decoder = __commonJS({
-  "node_modules/string_decoder/lib/string_decoder.js"(exports) {
+  "../../node_modules/string_decoder/lib/string_decoder.js"(exports) {
     "use strict";
     var Buffer2 = require_safe_buffer().Buffer;
     var isEncoding = Buffer2.isEncoding || function(encoding) {
@@ -1177,9 +1177,9 @@ var require_string_decoder = __commonJS({
   }
 });
 
-// node_modules/readable-stream/lib/_stream_readable.js
+// ../../node_modules/readable-stream/lib/_stream_readable.js
 var require_stream_readable = __commonJS({
-  "node_modules/readable-stream/lib/_stream_readable.js"(exports, module) {
+  "../../node_modules/readable-stream/lib/_stream_readable.js"(exports, module) {
     "use strict";
     var pna = require_process_nextick_args();
     module.exports = Readable;
@@ -1863,9 +1863,9 @@ var require_stream_readable = __commonJS({
   }
 });
 
-// node_modules/readable-stream/lib/_stream_transform.js
+// ../../node_modules/readable-stream/lib/_stream_transform.js
 var require_stream_transform = __commonJS({
-  "node_modules/readable-stream/lib/_stream_transform.js"(exports, module) {
+  "../../node_modules/readable-stream/lib/_stream_transform.js"(exports, module) {
     "use strict";
     module.exports = Transform;
     var Duplex = require_stream_duplex();
@@ -1963,9 +1963,9 @@ var require_stream_transform = __commonJS({
   }
 });
 
-// node_modules/readable-stream/lib/_stream_passthrough.js
+// ../../node_modules/readable-stream/lib/_stream_passthrough.js
 var require_stream_passthrough = __commonJS({
-  "node_modules/readable-stream/lib/_stream_passthrough.js"(exports, module) {
+  "../../node_modules/readable-stream/lib/_stream_passthrough.js"(exports, module) {
     "use strict";
     module.exports = PassThrough;
     var Transform = require_stream_transform();
@@ -1982,9 +1982,9 @@ var require_stream_passthrough = __commonJS({
   }
 });
 
-// node_modules/readable-stream/readable.js
+// ../../node_modules/readable-stream/readable.js
 var require_readable = __commonJS({
-  "node_modules/readable-stream/readable.js"(exports, module) {
+  "../../node_modules/readable-stream/readable.js"(exports, module) {
     var Stream = __require("stream");
     if (process.env.READABLE_STREAM === "disable" && Stream) {
       module.exports = Stream;
@@ -2007,9 +2007,9 @@ var require_readable = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/support.js
+// ../../node_modules/jszip/lib/support.js
 var require_support = __commonJS({
-  "node_modules/jszip/lib/support.js"(exports) {
+  "../../node_modules/jszip/lib/support.js"(exports) {
     "use strict";
     exports.base64 = true;
     exports.array = true;
@@ -2047,9 +2047,9 @@ var require_support = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/base64.js
+// ../../node_modules/jszip/lib/base64.js
 var require_base64 = __commonJS({
-  "node_modules/jszip/lib/base64.js"(exports) {
+  "../../node_modules/jszip/lib/base64.js"(exports) {
     "use strict";
     var utils = require_utils();
     var support = require_support();
@@ -2124,9 +2124,9 @@ var require_base64 = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/nodejsUtils.js
+// ../../node_modules/jszip/lib/nodejsUtils.js
 var require_nodejsUtils = __commonJS({
-  "node_modules/jszip/lib/nodejsUtils.js"(exports, module) {
+  "../../node_modules/jszip/lib/nodejsUtils.js"(exports, module) {
     "use strict";
     module.exports = {
       /**
@@ -2180,9 +2180,9 @@ var require_nodejsUtils = __commonJS({
   }
 });
 
-// node_modules/immediate/lib/index.js
+// ../../node_modules/immediate/lib/index.js
 var require_lib = __commonJS({
-  "node_modules/immediate/lib/index.js"(exports, module) {
+  "../../node_modules/immediate/lib/index.js"(exports, module) {
     "use strict";
     var Mutation = global.MutationObserver || global.WebKitMutationObserver;
     var scheduleDrain;
@@ -2254,9 +2254,9 @@ var require_lib = __commonJS({
   }
 });
 
-// node_modules/lie/lib/index.js
+// ../../node_modules/lie/lib/index.js
 var require_lib2 = __commonJS({
-  "node_modules/lie/lib/index.js"(exports, module) {
+  "../../node_modules/lie/lib/index.js"(exports, module) {
     "use strict";
     var immediate = require_lib();
     function INTERNAL() {
@@ -2524,9 +2524,9 @@ var require_lib2 = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/external.js
+// ../../node_modules/jszip/lib/external.js
 var require_external = __commonJS({
-  "node_modules/jszip/lib/external.js"(exports, module) {
+  "../../node_modules/jszip/lib/external.js"(exports, module) {
     "use strict";
     var ES6Promise = null;
     if (typeof Promise !== "undefined") {
@@ -2540,9 +2540,9 @@ var require_external = __commonJS({
   }
 });
 
-// node_modules/setimmediate/setImmediate.js
+// ../../node_modules/setimmediate/setImmediate.js
 var require_setImmediate = __commonJS({
-  "node_modules/setimmediate/setImmediate.js"(exports) {
+  "../../node_modules/setimmediate/setImmediate.js"(exports) {
     (function(global2, undefined2) {
       "use strict";
       if (global2.setImmediate) {
@@ -2688,9 +2688,9 @@ var require_setImmediate = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/utils.js
+// ../../node_modules/jszip/lib/utils.js
 var require_utils = __commonJS({
-  "node_modules/jszip/lib/utils.js"(exports) {
+  "../../node_modules/jszip/lib/utils.js"(exports) {
     "use strict";
     var support = require_support();
     var base64 = require_base64();
@@ -3021,9 +3021,9 @@ var require_utils = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/stream/GenericWorker.js
+// ../../node_modules/jszip/lib/stream/GenericWorker.js
 var require_GenericWorker = __commonJS({
-  "node_modules/jszip/lib/stream/GenericWorker.js"(exports, module) {
+  "../../node_modules/jszip/lib/stream/GenericWorker.js"(exports, module) {
     "use strict";
     function GenericWorker(name) {
       this.name = name || "default";
@@ -3248,9 +3248,9 @@ var require_GenericWorker = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/utf8.js
+// ../../node_modules/jszip/lib/utf8.js
 var require_utf8 = __commonJS({
-  "node_modules/jszip/lib/utf8.js"(exports) {
+  "../../node_modules/jszip/lib/utf8.js"(exports) {
     "use strict";
     var utils = require_utils();
     var support = require_support();
@@ -3438,9 +3438,9 @@ var require_utf8 = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/stream/ConvertWorker.js
+// ../../node_modules/jszip/lib/stream/ConvertWorker.js
 var require_ConvertWorker = __commonJS({
-  "node_modules/jszip/lib/stream/ConvertWorker.js"(exports, module) {
+  "../../node_modules/jszip/lib/stream/ConvertWorker.js"(exports, module) {
     "use strict";
     var GenericWorker = require_GenericWorker();
     var utils = require_utils();
@@ -3459,9 +3459,9 @@ var require_ConvertWorker = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/nodejs/NodejsStreamOutputAdapter.js
+// ../../node_modules/jszip/lib/nodejs/NodejsStreamOutputAdapter.js
 var require_NodejsStreamOutputAdapter = __commonJS({
-  "node_modules/jszip/lib/nodejs/NodejsStreamOutputAdapter.js"(exports, module) {
+  "../../node_modules/jszip/lib/nodejs/NodejsStreamOutputAdapter.js"(exports, module) {
     "use strict";
     var Readable = require_readable().Readable;
     var utils = require_utils();
@@ -3490,9 +3490,9 @@ var require_NodejsStreamOutputAdapter = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/stream/StreamHelper.js
+// ../../node_modules/jszip/lib/stream/StreamHelper.js
 var require_StreamHelper = __commonJS({
-  "node_modules/jszip/lib/stream/StreamHelper.js"(exports, module) {
+  "../../node_modules/jszip/lib/stream/StreamHelper.js"(exports, module) {
     "use strict";
     var utils = require_utils();
     var ConvertWorker = require_ConvertWorker();
@@ -3650,9 +3650,9 @@ var require_StreamHelper = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/defaults.js
+// ../../node_modules/jszip/lib/defaults.js
 var require_defaults = __commonJS({
-  "node_modules/jszip/lib/defaults.js"(exports) {
+  "../../node_modules/jszip/lib/defaults.js"(exports) {
     "use strict";
     exports.base64 = false;
     exports.binary = false;
@@ -3667,9 +3667,9 @@ var require_defaults = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/stream/DataWorker.js
+// ../../node_modules/jszip/lib/stream/DataWorker.js
 var require_DataWorker = __commonJS({
-  "node_modules/jszip/lib/stream/DataWorker.js"(exports, module) {
+  "../../node_modules/jszip/lib/stream/DataWorker.js"(exports, module) {
     "use strict";
     var utils = require_utils();
     var GenericWorker = require_GenericWorker();
@@ -3755,9 +3755,9 @@ var require_DataWorker = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/crc32.js
+// ../../node_modules/jszip/lib/crc32.js
 var require_crc32 = __commonJS({
-  "node_modules/jszip/lib/crc32.js"(exports, module) {
+  "../../node_modules/jszip/lib/crc32.js"(exports, module) {
     "use strict";
     var utils = require_utils();
     function makeTable() {
@@ -3802,9 +3802,9 @@ var require_crc32 = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/stream/Crc32Probe.js
+// ../../node_modules/jszip/lib/stream/Crc32Probe.js
 var require_Crc32Probe = __commonJS({
-  "node_modules/jszip/lib/stream/Crc32Probe.js"(exports, module) {
+  "../../node_modules/jszip/lib/stream/Crc32Probe.js"(exports, module) {
     "use strict";
     var GenericWorker = require_GenericWorker();
     var crc32 = require_crc32();
@@ -3822,9 +3822,9 @@ var require_Crc32Probe = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/stream/DataLengthProbe.js
+// ../../node_modules/jszip/lib/stream/DataLengthProbe.js
 var require_DataLengthProbe = __commonJS({
-  "node_modules/jszip/lib/stream/DataLengthProbe.js"(exports, module) {
+  "../../node_modules/jszip/lib/stream/DataLengthProbe.js"(exports, module) {
     "use strict";
     var utils = require_utils();
     var GenericWorker = require_GenericWorker();
@@ -3845,9 +3845,9 @@ var require_DataLengthProbe = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/compressedObject.js
+// ../../node_modules/jszip/lib/compressedObject.js
 var require_compressedObject = __commonJS({
-  "node_modules/jszip/lib/compressedObject.js"(exports, module) {
+  "../../node_modules/jszip/lib/compressedObject.js"(exports, module) {
     "use strict";
     var external = require_external();
     var DataWorker = require_DataWorker();
@@ -3890,9 +3890,9 @@ var require_compressedObject = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/zipObject.js
+// ../../node_modules/jszip/lib/zipObject.js
 var require_zipObject = __commonJS({
-  "node_modules/jszip/lib/zipObject.js"(exports, module) {
+  "../../node_modules/jszip/lib/zipObject.js"(exports, module) {
     "use strict";
     var StreamHelper = require_StreamHelper();
     var DataWorker = require_DataWorker();
@@ -4007,9 +4007,9 @@ var require_zipObject = __commonJS({
   }
 });
 
-// node_modules/pako/lib/utils/common.js
+// ../../node_modules/pako/lib/utils/common.js
 var require_common = __commonJS({
-  "node_modules/pako/lib/utils/common.js"(exports) {
+  "../../node_modules/pako/lib/utils/common.js"(exports) {
     "use strict";
     var TYPED_OK = typeof Uint8Array !== "undefined" && typeof Uint16Array !== "undefined" && typeof Int32Array !== "undefined";
     function _has(obj, key) {
@@ -4098,9 +4098,9 @@ var require_common = __commonJS({
   }
 });
 
-// node_modules/pako/lib/zlib/trees.js
+// ../../node_modules/pako/lib/zlib/trees.js
 var require_trees = __commonJS({
-  "node_modules/pako/lib/zlib/trees.js"(exports) {
+  "../../node_modules/pako/lib/zlib/trees.js"(exports) {
     "use strict";
     var utils = require_common();
     var Z_FIXED = 4;
@@ -4740,9 +4740,9 @@ var require_trees = __commonJS({
   }
 });
 
-// node_modules/pako/lib/zlib/adler32.js
+// ../../node_modules/pako/lib/zlib/adler32.js
 var require_adler32 = __commonJS({
-  "node_modules/pako/lib/zlib/adler32.js"(exports, module) {
+  "../../node_modules/pako/lib/zlib/adler32.js"(exports, module) {
     "use strict";
     function adler32(adler, buf, len, pos) {
       var s1 = adler & 65535 | 0, s2 = adler >>> 16 & 65535 | 0, n = 0;
@@ -4762,9 +4762,9 @@ var require_adler32 = __commonJS({
   }
 });
 
-// node_modules/pako/lib/zlib/crc32.js
+// ../../node_modules/pako/lib/zlib/crc32.js
 var require_crc322 = __commonJS({
-  "node_modules/pako/lib/zlib/crc32.js"(exports, module) {
+  "../../node_modules/pako/lib/zlib/crc32.js"(exports, module) {
     "use strict";
     function makeTable() {
       var c, table = [];
@@ -4790,9 +4790,9 @@ var require_crc322 = __commonJS({
   }
 });
 
-// node_modules/pako/lib/zlib/messages.js
+// ../../node_modules/pako/lib/zlib/messages.js
 var require_messages = __commonJS({
-  "node_modules/pako/lib/zlib/messages.js"(exports, module) {
+  "../../node_modules/pako/lib/zlib/messages.js"(exports, module) {
     "use strict";
     module.exports = {
       2: "need dictionary",
@@ -4817,9 +4817,9 @@ var require_messages = __commonJS({
   }
 });
 
-// node_modules/pako/lib/zlib/deflate.js
+// ../../node_modules/pako/lib/zlib/deflate.js
 var require_deflate = __commonJS({
-  "node_modules/pako/lib/zlib/deflate.js"(exports) {
+  "../../node_modules/pako/lib/zlib/deflate.js"(exports) {
     "use strict";
     var utils = require_common();
     var trees = require_trees();
@@ -5866,9 +5866,9 @@ var require_deflate = __commonJS({
   }
 });
 
-// node_modules/pako/lib/utils/strings.js
+// ../../node_modules/pako/lib/utils/strings.js
 var require_strings = __commonJS({
-  "node_modules/pako/lib/utils/strings.js"(exports) {
+  "../../node_modules/pako/lib/utils/strings.js"(exports) {
     "use strict";
     var utils = require_common();
     var STR_APPLY_OK = true;
@@ -6008,9 +6008,9 @@ var require_strings = __commonJS({
   }
 });
 
-// node_modules/pako/lib/zlib/zstream.js
+// ../../node_modules/pako/lib/zlib/zstream.js
 var require_zstream = __commonJS({
-  "node_modules/pako/lib/zlib/zstream.js"(exports, module) {
+  "../../node_modules/pako/lib/zlib/zstream.js"(exports, module) {
     "use strict";
     function ZStream() {
       this.input = null;
@@ -6030,9 +6030,9 @@ var require_zstream = __commonJS({
   }
 });
 
-// node_modules/pako/lib/deflate.js
+// ../../node_modules/pako/lib/deflate.js
 var require_deflate2 = __commonJS({
-  "node_modules/pako/lib/deflate.js"(exports) {
+  "../../node_modules/pako/lib/deflate.js"(exports) {
     "use strict";
     var zlib_deflate = require_deflate();
     var utils = require_common();
@@ -6191,9 +6191,9 @@ var require_deflate2 = __commonJS({
   }
 });
 
-// node_modules/pako/lib/zlib/inffast.js
+// ../../node_modules/pako/lib/zlib/inffast.js
 var require_inffast = __commonJS({
-  "node_modules/pako/lib/zlib/inffast.js"(exports, module) {
+  "../../node_modules/pako/lib/zlib/inffast.js"(exports, module) {
     "use strict";
     var BAD = 30;
     var TYPE = 12;
@@ -6420,9 +6420,9 @@ var require_inffast = __commonJS({
   }
 });
 
-// node_modules/pako/lib/zlib/inftrees.js
+// ../../node_modules/pako/lib/zlib/inftrees.js
 var require_inftrees = __commonJS({
-  "node_modules/pako/lib/zlib/inftrees.js"(exports, module) {
+  "../../node_modules/pako/lib/zlib/inftrees.js"(exports, module) {
     "use strict";
     var utils = require_common();
     var MAXBITS = 15;
@@ -6736,9 +6736,9 @@ var require_inftrees = __commonJS({
   }
 });
 
-// node_modules/pako/lib/zlib/inflate.js
+// ../../node_modules/pako/lib/zlib/inflate.js
 var require_inflate = __commonJS({
-  "node_modules/pako/lib/zlib/inflate.js"(exports) {
+  "../../node_modules/pako/lib/zlib/inflate.js"(exports) {
     "use strict";
     var utils = require_common();
     var adler32 = require_adler32();
@@ -7952,9 +7952,9 @@ var require_inflate = __commonJS({
   }
 });
 
-// node_modules/pako/lib/zlib/constants.js
+// ../../node_modules/pako/lib/zlib/constants.js
 var require_constants = __commonJS({
-  "node_modules/pako/lib/zlib/constants.js"(exports, module) {
+  "../../node_modules/pako/lib/zlib/constants.js"(exports, module) {
     "use strict";
     module.exports = {
       /* Allowed flush values; see deflate() and inflate() below for details */
@@ -7999,9 +7999,9 @@ var require_constants = __commonJS({
   }
 });
 
-// node_modules/pako/lib/zlib/gzheader.js
+// ../../node_modules/pako/lib/zlib/gzheader.js
 var require_gzheader = __commonJS({
-  "node_modules/pako/lib/zlib/gzheader.js"(exports, module) {
+  "../../node_modules/pako/lib/zlib/gzheader.js"(exports, module) {
     "use strict";
     function GZheader() {
       this.text = 0;
@@ -8019,9 +8019,9 @@ var require_gzheader = __commonJS({
   }
 });
 
-// node_modules/pako/lib/inflate.js
+// ../../node_modules/pako/lib/inflate.js
 var require_inflate2 = __commonJS({
-  "node_modules/pako/lib/inflate.js"(exports) {
+  "../../node_modules/pako/lib/inflate.js"(exports) {
     "use strict";
     var zlib_inflate = require_inflate();
     var utils = require_common();
@@ -8193,9 +8193,9 @@ var require_inflate2 = __commonJS({
   }
 });
 
-// node_modules/pako/index.js
+// ../../node_modules/pako/index.js
 var require_pako = __commonJS({
-  "node_modules/pako/index.js"(exports, module) {
+  "../../node_modules/pako/index.js"(exports, module) {
     "use strict";
     var assign = require_common().assign;
     var deflate = require_deflate2();
@@ -8207,9 +8207,9 @@ var require_pako = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/flate.js
+// ../../node_modules/jszip/lib/flate.js
 var require_flate = __commonJS({
-  "node_modules/jszip/lib/flate.js"(exports) {
+  "../../node_modules/jszip/lib/flate.js"(exports) {
     "use strict";
     var USE_TYPEDARRAY = typeof Uint8Array !== "undefined" && typeof Uint16Array !== "undefined" && typeof Uint32Array !== "undefined";
     var pako = require_pako();
@@ -8266,9 +8266,9 @@ var require_flate = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/compressions.js
+// ../../node_modules/jszip/lib/compressions.js
 var require_compressions = __commonJS({
-  "node_modules/jszip/lib/compressions.js"(exports) {
+  "../../node_modules/jszip/lib/compressions.js"(exports) {
     "use strict";
     var GenericWorker = require_GenericWorker();
     exports.STORE = {
@@ -8284,9 +8284,9 @@ var require_compressions = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/signature.js
+// ../../node_modules/jszip/lib/signature.js
 var require_signature = __commonJS({
-  "node_modules/jszip/lib/signature.js"(exports) {
+  "../../node_modules/jszip/lib/signature.js"(exports) {
     "use strict";
     exports.LOCAL_FILE_HEADER = "PK";
     exports.CENTRAL_FILE_HEADER = "PK";
@@ -8297,9 +8297,9 @@ var require_signature = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/generate/ZipFileWorker.js
+// ../../node_modules/jszip/lib/generate/ZipFileWorker.js
 var require_ZipFileWorker = __commonJS({
-  "node_modules/jszip/lib/generate/ZipFileWorker.js"(exports, module) {
+  "../../node_modules/jszip/lib/generate/ZipFileWorker.js"(exports, module) {
     "use strict";
     var utils = require_utils();
     var GenericWorker = require_GenericWorker();
@@ -8581,9 +8581,9 @@ var require_ZipFileWorker = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/generate/index.js
+// ../../node_modules/jszip/lib/generate/index.js
 var require_generate = __commonJS({
-  "node_modules/jszip/lib/generate/index.js"(exports) {
+  "../../node_modules/jszip/lib/generate/index.js"(exports) {
     "use strict";
     var compressions = require_compressions();
     var ZipFileWorker = require_ZipFileWorker();
@@ -8622,9 +8622,9 @@ var require_generate = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/nodejs/NodejsStreamInputAdapter.js
+// ../../node_modules/jszip/lib/nodejs/NodejsStreamInputAdapter.js
 var require_NodejsStreamInputAdapter = __commonJS({
-  "node_modules/jszip/lib/nodejs/NodejsStreamInputAdapter.js"(exports, module) {
+  "../../node_modules/jszip/lib/nodejs/NodejsStreamInputAdapter.js"(exports, module) {
     "use strict";
     var utils = require_utils();
     var GenericWorker = require_GenericWorker();
@@ -8681,9 +8681,9 @@ var require_NodejsStreamInputAdapter = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/object.js
+// ../../node_modules/jszip/lib/object.js
 var require_object = __commonJS({
-  "node_modules/jszip/lib/object.js"(exports, module) {
+  "../../node_modules/jszip/lib/object.js"(exports, module) {
     "use strict";
     var utf8 = require_utf8();
     var utils = require_utils();
@@ -8954,9 +8954,9 @@ var require_object = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/reader/DataReader.js
+// ../../node_modules/jszip/lib/reader/DataReader.js
 var require_DataReader = __commonJS({
-  "node_modules/jszip/lib/reader/DataReader.js"(exports, module) {
+  "../../node_modules/jszip/lib/reader/DataReader.js"(exports, module) {
     "use strict";
     var utils = require_utils();
     function DataReader(data) {
@@ -9076,9 +9076,9 @@ var require_DataReader = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/reader/ArrayReader.js
+// ../../node_modules/jszip/lib/reader/ArrayReader.js
 var require_ArrayReader = __commonJS({
-  "node_modules/jszip/lib/reader/ArrayReader.js"(exports, module) {
+  "../../node_modules/jszip/lib/reader/ArrayReader.js"(exports, module) {
     "use strict";
     var DataReader = require_DataReader();
     var utils = require_utils();
@@ -9118,9 +9118,9 @@ var require_ArrayReader = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/reader/StringReader.js
+// ../../node_modules/jszip/lib/reader/StringReader.js
 var require_StringReader = __commonJS({
-  "node_modules/jszip/lib/reader/StringReader.js"(exports, module) {
+  "../../node_modules/jszip/lib/reader/StringReader.js"(exports, module) {
     "use strict";
     var DataReader = require_DataReader();
     var utils = require_utils();
@@ -9148,9 +9148,9 @@ var require_StringReader = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/reader/Uint8ArrayReader.js
+// ../../node_modules/jszip/lib/reader/Uint8ArrayReader.js
 var require_Uint8ArrayReader = __commonJS({
-  "node_modules/jszip/lib/reader/Uint8ArrayReader.js"(exports, module) {
+  "../../node_modules/jszip/lib/reader/Uint8ArrayReader.js"(exports, module) {
     "use strict";
     var ArrayReader = require_ArrayReader();
     var utils = require_utils();
@@ -9171,9 +9171,9 @@ var require_Uint8ArrayReader = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/reader/NodeBufferReader.js
+// ../../node_modules/jszip/lib/reader/NodeBufferReader.js
 var require_NodeBufferReader = __commonJS({
-  "node_modules/jszip/lib/reader/NodeBufferReader.js"(exports, module) {
+  "../../node_modules/jszip/lib/reader/NodeBufferReader.js"(exports, module) {
     "use strict";
     var Uint8ArrayReader = require_Uint8ArrayReader();
     var utils = require_utils();
@@ -9191,9 +9191,9 @@ var require_NodeBufferReader = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/reader/readerFor.js
+// ../../node_modules/jszip/lib/reader/readerFor.js
 var require_readerFor = __commonJS({
-  "node_modules/jszip/lib/reader/readerFor.js"(exports, module) {
+  "../../node_modules/jszip/lib/reader/readerFor.js"(exports, module) {
     "use strict";
     var utils = require_utils();
     var support = require_support();
@@ -9218,9 +9218,9 @@ var require_readerFor = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/zipEntry.js
+// ../../node_modules/jszip/lib/zipEntry.js
 var require_zipEntry = __commonJS({
-  "node_modules/jszip/lib/zipEntry.js"(exports, module) {
+  "../../node_modules/jszip/lib/zipEntry.js"(exports, module) {
     "use strict";
     var readerFor = require_readerFor();
     var utils = require_utils();
@@ -9436,9 +9436,9 @@ var require_zipEntry = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/zipEntries.js
+// ../../node_modules/jszip/lib/zipEntries.js
 var require_zipEntries = __commonJS({
-  "node_modules/jszip/lib/zipEntries.js"(exports, module) {
+  "../../node_modules/jszip/lib/zipEntries.js"(exports, module) {
     "use strict";
     var readerFor = require_readerFor();
     var utils = require_utils();
@@ -9634,9 +9634,9 @@ var require_zipEntries = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/load.js
+// ../../node_modules/jszip/lib/load.js
 var require_load = __commonJS({
-  "node_modules/jszip/lib/load.js"(exports, module) {
+  "../../node_modules/jszip/lib/load.js"(exports, module) {
     "use strict";
     var utils = require_utils();
     var external = require_external();
@@ -9713,9 +9713,9 @@ var require_load = __commonJS({
   }
 });
 
-// node_modules/jszip/lib/index.js
+// ../../node_modules/jszip/lib/index.js
 var require_lib3 = __commonJS({
-  "node_modules/jszip/lib/index.js"(exports, module) {
+  "../../node_modules/jszip/lib/index.js"(exports, module) {
     "use strict";
     function JSZip2() {
       if (!(this instanceof JSZip2)) {
@@ -9804,7 +9804,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 
-// node_modules/pptxgenjs/dist/pptxgen.es.js
+// ../../node_modules/pptxgenjs/dist/pptxgen.es.js
 var import_jszip = __toESM(require_lib3());
 function __awaiter(thisArg, _arguments, P, generator) {
   function adopt(value) {
@@ -15128,7 +15128,7 @@ var PptxGenJS = class {
 var favicon_default = '<svg xmlns="http://www.w3.org/2000/svg" id="Assets" viewBox="0 0 337.46 428.5"><style>path{fill:#121212}@media (prefers-color-scheme:dark){path{fill:#7df3e1}}</style><path d="M303,166.05a80.69,80.69,0,0,0,13.45-10.37c.79-.77,1.55-1.53,2.3-2.3a83.12,83.12,0,0,0,7.93-9.38A63.69,63.69,0,0,0,333,133.23a48.58,48.58,0,0,0,4.35-16.4c1.49-19.39-10-38.67-35.62-54.22L198.56,0,78.3,115.23,0,190.25l108.6,65.91a111.59,111.59,0,0,0,57.76,16.41c24.92,0,48.8-8.8,66.42-25.69,19.16-18.36,25.52-42.12,13.7-61.87a49.22,49.22,0,0,0-6.8-8.87A89.17,89.17,0,0,0,259,178.29h.15a85.08,85.08,0,0,0,31-5.79A80.88,80.88,0,0,0,303,166.05ZM202.45,225.86c-19.32,18.51-50.4,21.23-75.7,5.9L51.61,186.15l67.45-64.64,76.41,46.38C223,184.58,221.49,207.61,202.45,225.86Zm8.93-82.22-70.65-42.89L205.14,39,274.51,81.1c25.94,15.72,29.31,37,10.55,55A60.69,60.69,0,0,1,211.38,143.64Zm29.86,190c-19.57,18.75-46.17,29.09-74.88,29.09a123.73,123.73,0,0,1-64.1-18.2L0,282.52v24.67L108.6,373.1a111.6,111.6,0,0,0,57.76,16.42c24.92,0,48.8-8.81,66.42-25.69,12.88-12.34,20-27.13,19.68-41.49v-1.79A87.27,87.27,0,0,1,241.24,333.68Zm0-39c-19.57,18.75-46.17,29.08-74.88,29.08a123.81,123.81,0,0,1-64.1-18.19L0,243.53v24.68l108.6,65.91a111.6,111.6,0,0,0,57.76,16.42c24.92,0,48.8-8.81,66.42-25.69,12.88-12.34,20-27.13,19.68-41.5v-1.78A87.27,87.27,0,0,1,241.24,294.7Zm0-39c-19.57,18.76-46.17,29.09-74.88,29.09a123.81,123.81,0,0,1-64.1-18.19L0,204.55v24.68l108.6,65.91a111.59,111.59,0,0,0,57.76,16.41c24.92,0,48.8-8.8,66.42-25.68,12.88-12.35,20-27.13,19.68-41.5v-1.82A86.09,86.09,0,0,1,241.24,255.71Zm83.7,25.74a94.15,94.15,0,0,1-60.2,25.86h0V334a81.6,81.6,0,0,0,51.74-22.37c14-13.38,21.14-28.11,21-42.64v-2.19A94.92,94.92,0,0,1,324.94,281.45Zm-83.7,91.21c-19.57,18.76-46.17,29.09-74.88,29.09a123.73,123.73,0,0,1-64.1-18.2L0,321.5v24.68l108.6,65.9a111.6,111.6,0,0,0,57.76,16.42c24.92,0,48.8-8.8,66.42-25.69,12.88-12.34,20-27.13,19.68-41.49v-1.79A86.29,86.29,0,0,1,241.24,372.66ZM327,162.45c-.68.69-1.35,1.38-2.05,2.06a94.37,94.37,0,0,1-10.64,8.65,91.35,91.35,0,0,1-11.6,7,94.53,94.53,0,0,1-26.24,8.71,97.69,97.69,0,0,1-14.16,1.57c.5,1.61.9,3.25,1.25,4.9a53.27,53.27,0,0,1,1.14,12V217h.05a84.41,84.41,0,0,0,25.35-5.55,81,81,0,0,0,26.39-16.82c.8-.77,1.5-1.56,2.26-2.34a82.08,82.08,0,0,0,7.93-9.38A63.76,63.76,0,0,0,333,172.17a48.55,48.55,0,0,0,4.32-16.45c.09-1.23.2-2.47.19-3.7V150q-1.08,1.54-2.25,3.09A96.73,96.73,0,0,1,327,162.45Zm0,77.92c-.69.7-1.31,1.41-2,2.1a94.2,94.2,0,0,1-60.2,25.86h0l0,26.67h0a81.6,81.6,0,0,0,51.74-22.37A73.51,73.51,0,0,0,333,250.13a48.56,48.56,0,0,0,4.32-16.44c.09-1.24.2-2.47.19-3.71v-2.19c-.74,1.07-1.46,2.15-2.27,3.21A95.68,95.68,0,0,1,327,240.37Zm0-39c-.69.7-1.31,1.41-2,2.1a93.18,93.18,0,0,1-10.63,8.65,91.63,91.63,0,0,1-11.63,7,95.47,95.47,0,0,1-37.94,10.18h0V256h0a81.65,81.65,0,0,0,51.74-22.37c.8-.77,1.5-1.56,2.26-2.34a82.08,82.08,0,0,0,7.93-9.38A63.76,63.76,0,0,0,333,211.15a48.56,48.56,0,0,0,4.32-16.44c.09-1.24.2-2.48.19-3.71v-2.2c-.74,1.08-1.46,2.16-2.27,3.22A95.68,95.68,0,0,1,327,201.39Z"/></svg>';
 
 // .build/valueModel.txt
-var valueModel_default = "// Number formatting shared by the model, the deck and the exports. Pure.\r\n\r\nexport function fmtMoney(n) {\r\n  if (n == null || isNaN(n)) return '-'\r\n  const abs = Math.abs(n)\r\n  if (abs >= 1_000_000) return `$${(n / 1_000_000).toFixed(abs >= 10_000_000 ? 0 : 1)}M`\r\n  if (abs >= 1_000) return `$${Math.round(n / 1000)}k`\r\n  return `$${Math.round(n)}`\r\n}\r\n\r\nexport function fmtMoneyFull(n) {\r\n  if (n == null || isNaN(n)) return '-'\r\n  return `${n < 0 ? '-' : ''}$${Math.abs(Math.round(n)).toLocaleString('en-US')}`\r\n}\r\n\r\nexport function fmtNum(n) {\r\n  if (n == null || isNaN(n)) return '-'\r\n  return Math.round(n).toLocaleString('en-US')\r\n}\r\n\r\n// A number with up to `max` decimals and no trailing zeros: 3, 2.5, 0.8, 1,440.\r\nexport function fmtDec(n, max = 2) {\r\n  if (n == null || isNaN(n)) return '-'\r\n  return Number(n.toFixed(max)).toLocaleString('en-US', { maximumFractionDigits: max })\r\n}\r\n\r\nexport function fmtHours(n) {\r\n  if (n == null || isNaN(n)) return '-'\r\n  if (n >= 1000) return `${Math.round(n / 1000)}k hours`\r\n  return `${Math.round(n)} hours`\r\n}\r\n\r\nexport function fmtMonths(n) {\r\n  if (n == null || isNaN(n) || n <= 0) return 'n/a'\r\n  // two decimals while it is short, so a small change in an input still shows\r\n  const r = n < 10 ? Math.max(0.01, Math.round(n * 100) / 100) : Math.round(n)\r\n  return `${fmtDec(r, 2)} ${r === 1 ? 'month' : 'months'}`\r\n}\r\n\n// The model. Every figure on the deck comes from here, by plain arithmetic.\n//\n// computeModel(inputs) is a pure function: no async, no fetch, no model call, no\n// side effects. Given the same inputs it returns the same figures. The deck, the\n// exports and the website are renders of what it returns, and none of them holds\n// a number of its own.\n//\n// Each figure is { value, raw, equation, flag }\n//   value     the number to show: finite and never below zero\n//   raw       the same number before clamping (still finite), so a case where\n//             Portal costs more than it returns can still be told apart from zero\n//   equation  the formula with the current values substituted, so anyone can check it\n//   flag      null, or why the value is not simply the arithmetic:\n//               'clamped'          the result was below zero and is shown as 0\n//               'divide-by-zero'   the divisor was 0, so the figure is 0\n//               'not-finite'       the result was NaN or Infinity, so the figure is 0\n//\n// An input left blank is NOT zero. A figure that needs a blank input is `incomplete`\n// (figure.incomplete, with figure.missing naming the inputs). Its value is 0 so the\n// numbers stay finite, but nothing should show it: the deck leaves it out, and the\n// total only adds the figures that can actually be computed.\n//\n// Inputs are read as numbers; anything missing, non-numeric or negative is read\n// as 0 (and listed in `invalidInputs`), and percentages are held to 0 to 100.\n\nimport { fmtMoneyFull, fmtDec } from './format.js'\n\nexport const FIGURE_ORDER = [\n  'platformEngineers',\n  // speed\n  'hoursSavedPerEngPerWeek',\n  'productivityValue',\n  'rampDaysSaved',\n  'onboardingValue',\n  // chaos-control\n  'incidentHoursSaved',\n  'incidentValue',\n  // standards and audit\n  'auditDaysSaved',\n  'standardsValue',\n  // scale\n  'maintHoursSaved',\n  'platformValue',\n  'toolingValue',\n  // roll-ups\n  'totalValue',\n  'netValue',\n  'paybackMonths',\n  'roiMultiple',\n  'fiveYearValue',\n  // alternative\n  'selfHostCost',\n  'versusSelfHost'\n]\n\nexport const NUMERIC_INPUTS = [\n  'engineers',\n  'platformShare',\n  'hourlyCost',\n  'searchHoursToday',\n  'searchHoursPortal',\n  'rampDaysToday',\n  'rampDaysPortal',\n  'newHiresPerYear',\n  'incidentHoursToday',\n  'incidentHoursPortal',\n  'peoplePerIncident',\n  'incidentsPerMonth',\n  'auditPrepDaysToday',\n  'auditPrepDaysPortal',\n  'auditsPerYear',\n  'peoplePerAudit',\n  'maintPctToday',\n  'maintPctPortal',\n  'toolSpendToday',\n  'toolSpendPortal',\n  'portalCost',\n  'selfHostEngineers',\n  'selfHostSalary',\n  'weeksPerYear',\n  'hoursPerDay',\n  'hoursPerYear'\n]\n\n// What each figure is computed from: inputs or other figures. totalValue is special:\n// it adds whichever drivers are complete, so it is incomplete only when none are.\nexport const DRIVER_FIGURES = ['productivityValue', 'onboardingValue', 'incidentValue', 'standardsValue', 'platformValue', 'toolingValue']\nexport const FIGURE_DEPS = {\n  platformEngineers: ['engineers', 'platformShare'],\n  hoursSavedPerEngPerWeek: ['searchHoursToday', 'searchHoursPortal'],\n  productivityValue: ['hoursSavedPerEngPerWeek', 'engineers', 'weeksPerYear', 'hourlyCost'],\n  rampDaysSaved: ['rampDaysToday', 'rampDaysPortal'],\n  onboardingValue: ['rampDaysSaved', 'newHiresPerYear', 'hoursPerDay', 'hourlyCost'],\n  incidentHoursSaved: ['incidentHoursToday', 'incidentHoursPortal', 'peoplePerIncident', 'incidentsPerMonth'],\n  incidentValue: ['incidentHoursSaved', 'hourlyCost'],\n  auditDaysSaved: ['auditPrepDaysToday', 'auditPrepDaysPortal'],\n  standardsValue: ['auditDaysSaved', 'auditsPerYear', 'peoplePerAudit', 'hoursPerDay', 'hourlyCost'],\n  maintHoursSaved: ['platformEngineers', 'maintPctToday', 'maintPctPortal', 'hoursPerYear'],\n  platformValue: ['maintHoursSaved', 'hourlyCost'],\n  toolingValue: ['toolSpendToday', 'toolSpendPortal'],\n  totalValue: DRIVER_FIGURES,\n  netValue: ['totalValue', 'portalCost'],\n  paybackMonths: ['portalCost', 'totalValue'],\n  roiMultiple: ['portalCost', 'totalValue'],\n  fiveYearValue: ['netValue'],\n  selfHostCost: ['selfHostEngineers', 'selfHostSalary'],\n  versusSelfHost: ['selfHostCost', 'portalCost']\n}\n\nconst PERCENT_INPUTS = new Set(['platformShare', 'maintPctToday', 'maintPctPortal'])\n\n// Spotify's own deck puts standing up Backstage at 2 to 5 developers.\nexport const SELF_HOST_RANGE = [2, 5]\n// Upkeep Portal removes and headcount self-hosting needs describe the same\n// thing, so they should land within this share of each other.\nexport const CONSISTENCY_TOLERANCE = 0.5\n\nconst money = n => fmtMoneyFull(n)\nconst num = n => fmtDec(n, 2)\n\nexport function computeModel(rawInputs = {}) {\n  // ---- read the inputs as safe numbers\n  const invalidInputs = []\n  const blank = new Set()\n  const I = {}\n  for (const key of NUMERIC_INPUTS) {\n    const given = rawInputs ? rawInputs[key] : undefined\n    const isBlank = given === '' || given == null\n    let v = isBlank ? 0 : Number(given)\n    let bad = null\n    if (isBlank) {\n      // not entered yet: no complaint, but anything that needs it is incomplete\n      blank.add(key)\n    } else if (!Number.isFinite(v)) {\n      bad = 'not a number'\n      v = 0\n    } else if (v < 0) {\n      bad = 'negative'\n      v = 0\n    } else if (PERCENT_INPUTS.has(key) && v > 100) {\n      bad = 'over 100%'\n      v = 100\n    }\n    if (bad) invalidInputs.push({ key, problem: bad })\n    I[key] = v\n  }\n\n  // ---- which inputs each figure is still waiting on\n  const memo = {}\n  const missingOf = key => {\n    if (key in memo) return memo[key]\n    let out\n    if (!(key in FIGURE_DEPS)) out = blank.has(key) ? [key] : []\n    else if (key === 'totalValue') {\n      const per = DRIVER_FIGURES.map(missingOf)\n      out = per.some(m => m.length === 0) ? [] : [...new Set(per.flat())]\n    } else out = [...new Set(FIGURE_DEPS[key].flatMap(missingOf))]\n    return (memo[key] = out)\n  }\n\n  // ---- one figure\n  const F = {}\n  const figure = (key, raw, equation, divideByZero = false) => {\n    let flag = null\n    let value = raw\n    if (divideByZero) {\n      value = 0\n      flag = 'divide-by-zero'\n    } else if (!Number.isFinite(value)) {\n      value = 0\n      flag = 'not-finite'\n    } else if (value < 0) {\n      value = 0\n      flag = 'clamped'\n    }\n    const missing = missingOf(key)\n    F[key] = { value, raw: Number.isFinite(raw) && !divideByZero ? raw : 0, equation, flag, incomplete: missing.length > 0, missing }\n    return F[key]\n  }\n  // a difference that was clamped prints as 0, not as a negative that was not used\n  const diff = (f, a, b, fmt = num) => (f.flag === 'clamped' ? '0' : `(${fmt(a)} - ${fmt(b)})`)\n\n  // ---- platform engineers are derived, not asked for\n  figure('platformEngineers', I.engineers * (I.platformShare / 100), `${num(I.engineers)} * ${num(I.platformShare)}%`)\n\n  // ---- SPEED\n  const hs = figure('hoursSavedPerEngPerWeek', I.searchHoursToday - I.searchHoursPortal, `${num(I.searchHoursToday)} - ${num(I.searchHoursPortal)}`)\n  figure(\n    'productivityValue',\n    hs.value * I.engineers * I.weeksPerYear * I.hourlyCost,\n    `${diff(hs, I.searchHoursToday, I.searchHoursPortal)} * ${num(I.engineers)} * ${num(I.weeksPerYear)} * ${money(I.hourlyCost)}`\n  )\n  const rd = figure('rampDaysSaved', I.rampDaysToday - I.rampDaysPortal, `${num(I.rampDaysToday)} - ${num(I.rampDaysPortal)}`)\n  figure(\n    'onboardingValue',\n    rd.value * I.newHiresPerYear * I.hoursPerDay * I.hourlyCost,\n    `${diff(rd, I.rampDaysToday, I.rampDaysPortal)} * ${num(I.newHiresPerYear)} * ${num(I.hoursPerDay)} * ${money(I.hourlyCost)}`\n  )\n\n  // ---- CHAOS-CONTROL\n  const ihDiff = I.incidentHoursToday - I.incidentHoursPortal\n  const ih = figure(\n    'incidentHoursSaved',\n    Math.max(0, ihDiff) * I.peoplePerIncident * I.incidentsPerMonth * 12,\n    `${ihDiff < 0 ? '0' : `(${num(I.incidentHoursToday)} - ${num(I.incidentHoursPortal)})`} * ${num(I.peoplePerIncident)} * ${num(I.incidentsPerMonth)} * 12`\n  )\n  // a negative saving is clamped at the difference, not by multiplying negatives together\n  if (ihDiff < 0) F.incidentHoursSaved.flag = 'clamped'\n  figure('incidentValue', ih.value * I.hourlyCost, `${num(ih.value)} * ${money(I.hourlyCost)}`)\n\n  // ---- STANDARDS AND AUDIT\n  const ad = figure('auditDaysSaved', I.auditPrepDaysToday - I.auditPrepDaysPortal, `${num(I.auditPrepDaysToday)} - ${num(I.auditPrepDaysPortal)}`)\n  figure(\n    'standardsValue',\n    ad.value * I.auditsPerYear * I.peoplePerAudit * I.hoursPerDay * I.hourlyCost,\n    `${diff(ad, I.auditPrepDaysToday, I.auditPrepDaysPortal)} * ${num(I.auditsPerYear)} * ${num(I.peoplePerAudit)} * ${num(I.hoursPerDay)} * ${money(I.hourlyCost)}`\n  )\n\n  // ---- SCALE\n  const pe = F.platformEngineers.value\n  const mDiff = I.maintPctToday - I.maintPctPortal\n  const mh = figure(\n    'maintHoursSaved',\n    pe * (Math.max(0, mDiff) / 100) * I.hoursPerYear,\n    `${num(pe)} * ${mDiff < 0 ? '0' : `(${num(I.maintPctToday)} - ${num(I.maintPctPortal)})`} / 100 * ${num(I.hoursPerYear)}`\n  )\n  if (mDiff < 0) F.maintHoursSaved.flag = 'clamped'\n  figure('platformValue', mh.value * I.hourlyCost, `${num(mh.value)} * ${money(I.hourlyCost)}`)\n  figure('toolingValue', I.toolSpendToday - I.toolSpendPortal, `${money(I.toolSpendToday)} - ${money(I.toolSpendPortal)}`)\n\n  // ---- ROLL-UPS\n  // the total adds only the drivers that can be computed; an unfinished one is left out, not counted as 0\n  const done = DRIVER_FIGURES.filter(k => !F[k].incomplete)\n  const total = figure('totalValue', done.reduce((sum, k) => sum + F[k].value, 0), done.length ? done.map(k => money(F[k].value)).join(' + ') : '0')\n  const net = figure('netValue', total.value - I.portalCost, `${money(total.value)} - ${money(I.portalCost)}`)\n  const monthly = total.value / 12\n  figure(\n    'paybackMonths',\n    monthly === 0 ? 0 : I.portalCost / monthly,\n    `${money(I.portalCost)} / (${money(total.value)} / 12)`,\n    monthly === 0\n  )\n  figure('roiMultiple', I.portalCost === 0 ? 0 : total.value / I.portalCost, `${money(total.value)} / ${money(I.portalCost)}`, I.portalCost === 0)\n  figure('fiveYearValue', net.raw * 5, `${money(net.raw)} * 5`)\n\n  // ---- ALTERNATIVE\n  const sh = figure('selfHostCost', I.selfHostEngineers * I.selfHostSalary, `${num(I.selfHostEngineers)} * ${money(I.selfHostSalary)}`)\n  figure('versusSelfHost', sh.value - I.portalCost, `${money(sh.value)} - ${money(I.portalCost)}`)\n\n  return { inputs: I, figures: F, order: FIGURE_ORDER, warnings: consistencyWarnings(I, F, blank), invalidInputs, blankInputs: [...blank] }\n}\n\n// The case has to agree with itself: the upkeep burden Portal removes\n// (maintHoursSaved / hoursPerYear, in engineers) and the headcount that\n// self-hosting needs describe the same thing from two directions.\nfunction consistencyWarnings(I, F, blank) {\n  const warnings = []\n  // nothing to compare until both sides have been entered\n  if (F.maintHoursSaved.incomplete || blank.has('selfHostEngineers')) return warnings\n  const removed = I.hoursPerYear > 0 ? F.maintHoursSaved.value / I.hoursPerYear : 0\n  const needed = I.selfHostEngineers\n\n  const apart = needed === 0 ? removed > 0 : Math.abs(removed - needed) / needed > CONSISTENCY_TOLERANCE\n  if (apart) {\n    warnings.push({\n      key: 'consistency',\n      severity: 'warning',\n      inputs: ['maintPctToday', 'maintPctPortal', 'platformShare', 'selfHostEngineers'],\n      message: `The case is not internally consistent. The upkeep Portal removes equals about ${num(removed)} engineers, but self-hosting is set to need ${num(needed)}. These describe the same thing, so they should be within ${Math.round(CONSISTENCY_TOLERANCE * 100)}% of each other.`\n    })\n  }\n  if ((needed < SELF_HOST_RANGE[0] || needed > SELF_HOST_RANGE[1])) {\n    warnings.push({\n      key: 'selfHostRange',\n      severity: 'warning',\n      inputs: ['selfHostEngineers'],\n      message: `Spotify's own deck puts standing up Backstage at ${SELF_HOST_RANGE[0]} to ${SELF_HOST_RANGE[1]} developers. ${num(needed)} is outside that range, so expect the customer to question it.`\n    })\n  }\n  return warnings\n}\n\n// A plain { figureKey: value } view of a model.\nexport function figureValues(model) {\n  return Object.fromEntries(FIGURE_ORDER.map(k => [k, model.figures[k].value]))\n}\n\n// Where a number came from. Pure helpers around the `source` object every input\n// carries:\n//\n//   source: {\n//     state:  'empty' | 'input' | 'assumption' | 'suggestion'\n//     origin: string          where it came from, shown to Chris on the field\n//     quote?: string          the exact words, if pulled from a transcript\n//     link?:  string          the URL, if pulled from a public source\n//     pinnedAt?: string       when a suggestion was generated (ISO time)\n//     confidence?: 'high' | 'medium' | 'low'\n//     enabled?: string[]      the connectors that were on when it was generated\n//     notes?: string[]        why a gap or a thin suggestion looks the way it does\n//   }\n//\n//   input       a verified fact: the customer said it, or a checkable public source\n//   assumption  Chris's own read, unverified\n//   suggestion  the tool proposed it\n//\n// Only `input` counts toward confidence. None of this is ever shown on the deck.\n\nexport const STATES = ['empty', 'input', 'assumption', 'suggestion']\n\nexport const ORIGIN = {\n  input: 'Confirmed by the customer',\n  assumption: 'Your own read',\n  edited: 'Your own number (edited from a suggestion)',\n  calendar: 'Calendar constant'\n}\n\nexport const isBlank = v => v === '' || v == null\n\nexport const emptySource = () => ({ state: 'empty', origin: '' })\n\n// The state of a field as Chris sees it. A blank value is always 'empty'.\nexport function stateOf(field) {\n  if (isBlank(field.value)) return 'empty'\n  const s = field.source && field.source.state\n  return s === 'input' || s === 'suggestion' || s === 'assumption' ? s : 'assumption'\n}\n\n// Chris typed a value. The moment a suggestion is edited it becomes his number.\nexport function withValue(field, value) {\n  if (isBlank(value)) return { ...field, value: '', source: emptySource() }\n  const was = stateOf(field)\n  if (was === 'suggestion') return { ...field, value, source: { state: 'assumption', origin: ORIGIN.edited } }\n  if (was === 'empty') return { ...field, value, source: { state: 'assumption', origin: ORIGIN.assumption } }\n  return { ...field, value } // an input or assumption keeps its source\n}\n\n// Chris marks a number as verified (or takes that back).\nexport function withState(field, state) {\n  if (isBlank(field.value) || (state !== 'input' && state !== 'assumption')) return field\n  const origin = field.source && field.source.origin\n  const generic = !origin || origin === ORIGIN.input || origin === ORIGIN.assumption || origin === ORIGIN.edited\n  return {\n    ...field,\n    source: {\n      ...field.source,\n      state,\n      origin: generic ? (state === 'input' ? ORIGIN.input : ORIGIN.assumption) : origin\n    }\n  }\n}\n\nexport function withOrigin(field, origin) {\n  if (isBlank(field.value)) return field\n  return { ...field, source: { ...field.source, origin: String(origin ?? '') } }\n}\n\n// A value the tool proposed (or, for a call figure, extracted), pinned with its\n// origin and a timestamp. `ctx` = { now, enabled }.\nexport function withSuggestion(field, s, ctx) {\n  return {\n    ...field,\n    value: s.value,\n    source: {\n      state: s.state === 'input' ? 'input' : 'suggestion',\n      origin: s.origin,\n      ...(s.quote ? { quote: s.quote } : {}),\n      ...(s.link ? { link: s.link } : {}),\n      ...(s.range ? { range: s.range } : {}),\n      confidence: s.confidence || 'low',\n      pinnedAt: ctx.now,\n      enabled: ctx.enabled,\n      ...(s.notes && s.notes.length ? { notes: s.notes } : {})\n    }\n  }\n}\n\n// Nothing could be suggested. The field stays empty and says why.\nexport function withGap(field, notes, ctx) {\n  return { ...field, value: '', source: { state: 'empty', origin: '', notes, pinnedAt: ctx.now, enabled: ctx.enabled } }\n}\n\n// Fields saved before sources existed carried `confirmed: true|false`.\nexport function sourceFromLegacy(value, confirmed) {\n  if (isBlank(value)) return emptySource()\n  return confirmed\n    ? { state: 'input', origin: 'Confirmed by the customer (saved before sources were tracked)' }\n    : { state: 'assumption', origin: 'Starting number from an earlier version' }\n}\n\nexport function validSource(s) {\n  return !!s && typeof s === 'object' && STATES.includes(s.state) && typeof (s.origin ?? '') === 'string'\n}\n\n// The content around the model: what the inputs are, how they are grouped under\r\n// Spotify's three pillars, who the stakeholders are, and how archetypes bias the\r\n// case. The arithmetic itself lives in model.js; nothing here calculates a figure\r\n// (valueRange only re-runs that model with inputs moved).\r\n//\r\n// Every formula comes from Chris's written answer to Q8 (\"What inputs and KPIs\r\n// do you use to calculate ROI?\"). Every saving is a difference, so the inputs\r\n// come in pairs: how it is today, and how it is with Portal.\r\n\r\nimport { fmtMoney, fmtHours, fmtMonths } from './format.js'\r\nimport { emptySource, stateOf, sourceFromLegacy, validSource, ORIGIN } from './source.js'\r\nimport { computeModel } from './model.js'\r\n\r\nexport { fmtMoney, fmtMoneyFull, fmtNum, fmtDec, fmtHours, fmtMonths } from './format.js'\r\n\r\nexport const WORKING_WEEKS = 48 // Chris's worked example uses about 48\r\nexport const HOURS_PER_YEAR = 2080\r\n\r\n// ---------------------------------------------------------------------------\r\n// Spotify's three pillars. Every value driver sits under one of them.\r\n// ---------------------------------------------------------------------------\r\n\r\nexport const PILLARS = [\r\n  { key: 'speed', label: 'Speed', blurb: 'Engineers spend their time building, not searching.', color: '#2fc7a8' },\r\n  { key: 'chaos', label: 'Chaos-control', blurb: 'Fewer and shorter incidents, with clear owners.', color: '#e5399a' },\r\n  { key: 'scale', label: 'Scale', blurb: 'The platform grows without growing the upkeep.', color: '#111111' }\r\n]\r\n\r\nexport const DRIVERS = [\r\n  { key: 'productivity', label: 'Engineer time recovered', short: 'Productivity', pillar: 'speed', figure: 'productivityValue' },\r\n  { key: 'onboarding', label: 'Faster onboarding', short: 'Onboarding', pillar: 'speed', figure: 'onboardingValue' },\r\n  { key: 'incidents', label: 'Shorter incidents', short: 'Incidents', pillar: 'chaos', figure: 'incidentValue' },\r\n  { key: 'standards', label: 'Audit and compliance work avoided', short: 'Standards', pillar: 'chaos', figure: 'standardsValue' },\r\n  { key: 'platform', label: 'Platform team maintenance avoided', short: 'Platform load', pillar: 'scale', figure: 'platformValue' },\r\n  { key: 'tooling', label: 'Overlapping tooling retired', short: 'Tooling', pillar: 'scale', figure: 'toolingValue' }\r\n].map(d => ({ ...d, color: PILLARS.find(p => p.key === d.pillar).color }))\r\n\r\n// ---------------------------------------------------------------------------\r\n// Inputs\r\n// ---------------------------------------------------------------------------\r\n// Every answer starts empty and carries a `source` (see source.js): an input is\r\n// something the customer said or a checkable public fact, an assumption is Chris's\r\n// own read, a suggestion is something the tool proposed. `structural` inputs (the calendar) are not\r\n// claims about the customer, so they do not count toward confidence.\r\n\r\nexport const STRATEGIC_PRIORITIES = ['Audit and compliance', 'AI initiative', 'Migration', 'Cost pressure']\r\n\r\n// What leadership cares about this year decides which drivers lead the deck.\r\nexport const PRIORITY_DRIVERS = {\r\n  'Audit and compliance': ['standards'],\r\n  'AI initiative': ['productivity'],\r\n  Migration: ['productivity'],\r\n  'Cost pressure': ['platform', 'tooling']\r\n}\r\n\r\nexport const INPUT_GROUPS = ['Account', 'Scale', 'Speed', 'Chaos-control', 'Standards and audit', 'Cost and alternative', 'Calendar']\r\n\r\nconst FIELD_DEFS = [\r\n  // ---- Account\r\n  { key: 'companyName', label: 'Company', group: 'Account', type: 'text', value: 'Northwind Retail', confirmed: true, help: 'Who the case is for.' },\r\n  {\r\n    key: 'archetype',\r\n    label: 'Archetype',\r\n    group: 'Account',\r\n    type: 'select',\r\n    options: ['Fast / AI-native', 'Scaling tech', 'Enterprise', 'Regulated enterprise'],\r\n    value: 'Enterprise',\r\n    confirmed: true,\r\n    help: 'Sets which stakeholder tabs exist and which pillar leads the case.'\r\n  },\r\n\r\n  {\r\n    key: 'strategicPriority',\r\n    label: 'What their leadership cares about this year',\r\n    group: 'Account',\r\n    type: 'select',\r\n    options: STRATEGIC_PRIORITIES,\r\n    value: 'Cost pressure',\r\n    confirmed: true,\r\n    help: 'Sets which driver leads the deck. Separate from the archetype: that is the shape of the company, this is what is happening to them this year.'\r\n  },\r\n\r\n  // ---- Scale\r\n  { key: 'engineers', label: 'Engineers', group: 'Scale', type: 'number', value: 500, confirmed: true, help: 'Usually findable from LinkedIn before the first call.' },\r\n  {\r\n    key: 'platformShare',\r\n    label: 'Share of engineering that is platform / DevEx',\r\n    group: 'Scale',\r\n    type: 'percent',\r\n    value: 30,\r\n    confirmed: false,\r\n    help: \"Chris's rule: roughly 30% of the engineering org is platform or DevEx. The platform headcount is worked out from this.\"\r\n  },\r\n  { key: 'hourlyCost', label: 'Fully loaded cost per engineer hour', group: 'Scale', type: 'number', value: 100, unit: '$/hr', confirmed: false, help: \"Salary, benefits and overhead. Chris uses $100/hr in his worked example.\" },\r\n  {\r\n    key: 'maintPctToday', label: 'Platform team time spent maintaining the portal, today', group: 'Scale', type: 'number', value: 4, unit: '%', step: 0.5, confirmed: false, pair: 'maint', side: 'today',\r\n    help: 'Share of the platform / DevEx team (not all engineers) kept busy upgrading, patching and running their current portal or wiki.'\r\n  },\r\n  { key: 'maintPctPortal', label: 'Platform team time spent maintaining the portal, with Portal', group: 'Scale', type: 'number', value: 2, unit: '%', step: 0.5, confirmed: false, pair: 'maint', side: 'portal' },\r\n  { key: 'toolSpendToday', label: 'Overlapping tool spend, today', group: 'Scale', type: 'number', value: 180000, unit: '$/yr', step: 5000, confirmed: false, pair: 'tool', side: 'today', help: 'What they pay each year for tools Portal would replace or consolidate.' },\r\n  { key: 'toolSpendPortal', label: 'Overlapping tool spend, with Portal', group: 'Scale', type: 'number', value: 90000, unit: '$/yr', step: 5000, confirmed: false, pair: 'tool', side: 'portal' },\r\n\r\n  // ---- Speed\r\n  {\r\n    key: 'searchHoursToday', label: 'Time spent searching for docs, services and owners, today', group: 'Speed', type: 'number', value: 3, unit: 'hrs / eng / week', step: 0.5, confirmed: false, pair: 'search', side: 'today',\r\n    help: 'Hours each engineer loses per week hunting. Industry estimates put tech debt at 2 to 5 days per engineer per month.'\r\n  },\r\n  {\r\n    key: 'searchHoursPortal', label: 'Time spent searching, with Portal', group: 'Speed', type: 'number', value: 2, unit: 'hrs / eng / week', step: 0.5, confirmed: false, pair: 'search', side: 'portal',\r\n    help: 'The conservatism dial. Chris: the hard part is getting the customer to agree the number is realistic for them.'\r\n  },\r\n  { key: 'rampDaysToday', label: 'Days for a new hire to first contribution, today', group: 'Speed', type: 'number', value: 30, unit: 'days', confirmed: false, pair: 'ramp', side: 'today' },\r\n  { key: 'rampDaysPortal', label: 'Days to first contribution, with Portal', group: 'Speed', type: 'number', value: 21, unit: 'days', confirmed: false, pair: 'ramp', side: 'portal' },\r\n  { key: 'newHiresPerYear', label: 'Engineers hired per year', group: 'Speed', type: 'number', value: 80, confirmed: false, help: 'From the hiring plan if you can get it.' },\r\n\r\n  // ---- Chaos-control\r\n  {\r\n    key: 'incidentHoursToday', label: 'Hours each person spends on an incident, today', group: 'Chaos-control', type: 'number', value: 4, unit: 'hrs', step: 0.1, confirmed: false, pair: 'incident', side: 'today',\r\n    help: 'Most of it is finding who owns the failing service.'\r\n  },\r\n  { key: 'incidentHoursPortal', label: 'Hours each person spends on an incident, with Portal', group: 'Chaos-control', type: 'number', value: 3.2, unit: 'hrs', step: 0.1, confirmed: false, pair: 'incident', side: 'portal' },\r\n  { key: 'peoplePerIncident', label: 'People pulled into each incident', group: 'Chaos-control', type: 'number', value: 5, confirmed: false },\r\n  { key: 'incidentsPerMonth', label: 'Incidents per month', group: 'Chaos-control', type: 'number', value: 12, confirmed: false },\r\n\r\n  // ---- Standards and audit\r\n  {\r\n    key: 'auditPrepDaysToday', label: 'Days spent preparing for an audit \u2014 today', group: 'Standards and audit', type: 'number', value: 10, unit: 'days', confirmed: false, pair: 'audit', side: 'today',\r\n    help: 'Per person, per audit: gathering evidence for who owns what and which standards are met.'\r\n  },\r\n  { key: 'auditPrepDaysPortal', label: 'Days spent preparing for an audit \u2014 with Portal', group: 'Standards and audit', type: 'number', value: 5, unit: 'days', confirmed: false, pair: 'audit', side: 'portal' },\r\n  { key: 'auditsPerYear', label: 'Audits or compliance reviews per year', group: 'Standards and audit', type: 'number', value: 4, confirmed: false, help: 'Zero if the customer has none: the audit driver then drops off the deck.' },\r\n  { key: 'peoplePerAudit', label: 'People pulled into each audit', group: 'Standards and audit', type: 'number', value: 6, confirmed: false },\r\n\r\n  // ---- Cost and alternative\r\n  { key: 'portalCost', label: 'Portal annual subscription', group: 'Cost and alternative', type: 'number', value: 400000, unit: '$/yr', step: 10000, confirmed: false, help: 'A placeholder until there is a quote.' },\r\n  {\r\n    key: 'selfHostEngineers', label: 'Engineers needed to self-host Backstage', group: 'Cost and alternative', type: 'number', value: 3, step: 0.5, confirmed: false,\r\n    help: \"The comparison that decides most deals. Spotify's own deck puts standing up Backstage at 2 to 5 developers. It should also roughly match the upkeep hours Portal saves.\"\r\n  },\r\n  { key: 'selfHostSalary', label: 'Fully loaded cost per self-host engineer', group: 'Cost and alternative', type: 'number', value: 210000, unit: '$/yr', step: 5000, confirmed: false },\r\n\r\n  // ---- Calendar (structural: not claims about the customer)\r\n  { key: 'weeksPerYear', label: 'Working weeks per year', group: 'Calendar', type: 'number', value: WORKING_WEEKS, confirmed: true, structural: true, help: \"Chris's worked example uses about 48.\" },\r\n  { key: 'hoursPerDay', label: 'Working hours per day', group: 'Calendar', type: 'number', value: 8, confirmed: true, structural: true },\r\n  { key: 'hoursPerYear', label: 'Working hours per year', group: 'Calendar', type: 'number', value: HOURS_PER_YEAR, confirmed: true, structural: true }\r\n]\r\n\r\n// A numeric input the customer has to answer: it starts blank and unconfirmed, and\r\n// the deck fills in as soon as there is a value. The calendar (structural) keeps its\r\n// constants. DEMO_VALUES are the old starting numbers, kept for tests and docs.\r\nconst isAnswer = f => (f.type === 'number' || f.type === 'percent') && !f.structural\r\n\r\nexport const DEMO_VALUES = Object.fromEntries(FIELD_DEFS.map(f => [f.key, f.value]))\r\n\r\nexport const INPUT_FIELDS = FIELD_DEFS.map(({ confirmed, ...f }) => {\r\n  if (isAnswer(f)) return { ...f, value: '', source: emptySource() }\r\n  if (f.structural) return { ...f, source: { state: 'input', origin: ORIGIN.calendar } }\r\n  return { ...f, source: { state: 'input', origin: '' } }\r\n})\r\n\r\n// A saved field's source: the one it has, or one worked out from `confirmed`.\r\nexport function sourceOf(saved) {\r\n  if (validSource(saved.source)) return saved.source\r\n  return sourceFromLegacy(saved.value, saved.confirmed)\r\n}\r\n\r\n// The today / with-Portal pairs. `valueFigure` is the model figure the saving is worth.\r\nexport const PAIRS = [\r\n  { key: 'search', group: 'Speed', label: 'Time spent searching', unit: 'hrs / eng / week', today: 'searchHoursToday', portal: 'searchHoursPortal', saved: 'saved per engineer per week', valueFigure: 'productivityValue', driver: 'productivity' },\r\n  { key: 'ramp', group: 'Speed', label: 'Days to first contribution', unit: 'days', today: 'rampDaysToday', portal: 'rampDaysPortal', saved: 'saved per new hire', valueFigure: 'onboardingValue', driver: 'onboarding' },\r\n  { key: 'incident', group: 'Chaos-control', label: 'Hours per person per incident', unit: 'hrs', today: 'incidentHoursToday', portal: 'incidentHoursPortal', saved: 'saved per person per incident', valueFigure: 'incidentValue', driver: 'incidents' },\r\n  { key: 'audit', group: 'Standards and audit', label: 'Days preparing for an audit', unit: 'days', today: 'auditPrepDaysToday', portal: 'auditPrepDaysPortal', saved: 'saved per person per audit', valueFigure: 'standardsValue', driver: 'standards' },\r\n  { key: 'maint', group: 'Scale', label: 'Platform team time on upkeep', unit: '%', today: 'maintPctToday', portal: 'maintPctPortal', saved: 'of the platform team freed up', valueFigure: 'platformValue', driver: 'platform' },\r\n  { key: 'tool', group: 'Scale', label: 'Overlapping tool spend', unit: '$/yr', today: 'toolSpendToday', portal: 'toolSpendPortal', saved: 'a year saved', valueFigure: 'toolingValue', driver: 'tooling', money: true }\r\n]\r\n\r\nexport const isClaim = f => !f.deleted && (f.type === 'number' || f.type === 'percent') && !f.structural\r\n\r\n// Confidence counts INPUTS only: numbers the customer stated or a public source\r\n// shows. Assumptions and suggestions do not count, and neither do blanks.\r\nexport function confidence(fields) {\r\n  const material = fields.filter(isClaim)\r\n  if (!material.length) return 0\r\n  return Math.round((material.filter(f => stateOf(f) === 'input').length / material.length) * 100)\r\n}\r\n\r\n// Everything still to confirm: blank, assumed or only suggested.\r\nexport function unconfirmed(fields) {\r\n  return fields.filter(f => isClaim(f) && stateOf(f) !== 'input')\r\n}\r\n\r\n// The yearly value as a range, so one falsely precise figure is never shown.\r\n// Confirmed inputs stay fixed; every assumed or suggested number moves by\r\n// `band` (20%) in whichever direction lowers the total for `low` and raises it\r\n// for `high`. The arithmetic is still computeModel's. null = the model cannot\r\n// compute a total yet. { low, mid, high } in dollars a year.\r\nexport const RANGE_BAND = 0.2\r\nexport function valueRange(fields, band = RANGE_BAND) {\r\n  const base = Object.fromEntries(fields.filter(f => !f.deleted).map(f => [f.key, f.value]))\r\n  const total = inputs => computeModel(inputs).figures.totalValue\r\n  const mid = total(base)\r\n  if (mid.incomplete) return null\r\n  const loose = fields.filter(f => isClaim(f) && (stateOf(f) === 'assumption' || stateOf(f) === 'suggestion') && Number.isFinite(Number(f.value)))\r\n  const low = { ...base }\r\n  const high = { ...base }\r\n  for (const f of loose) {\r\n    const n = Number(f.value)\r\n    const down = total({ ...base, [f.key]: n * (1 - band) }).value\r\n    const up = total({ ...base, [f.key]: n * (1 + band) }).value\r\n    low[f.key] = down <= up ? n * (1 - band) : n * (1 + band)\r\n    high[f.key] = down <= up ? n * (1 + band) : n * (1 - band)\r\n  }\r\n  return { low: Math.min(total(low).value, mid.value), mid: mid.value, high: Math.max(total(high).value, mid.value) }\r\n}\r\n\r\n// ---------------------------------------------------------------------------\r\n// Stakeholder views\r\n// ---------------------------------------------------------------------------\r\n// REPLACE THE PLACEHOLDER COPY BELOW WITH CHRIS'S OWN WORDS. Headlines read the\r\n// model: headline(model) where model = computeModel(inputs).\r\n\r\nexport const hoursBack = model =>\r\n  model.figures.hoursSavedPerEngPerWeek.value * model.inputs.engineers * model.inputs.weeksPerYear\r\n\r\n// What the CTO cares about: the run cost avoided, from whichever of the two can be computed.\r\nexport function costsAvoided(model) {\r\n  const parts = ['platformValue', 'toolingValue'].map(k => model.figures[k]).filter(f => !f.incomplete)\r\n  return parts.length ? parts.reduce((s, f) => s + f.value, 0) : null\r\n}\r\n\r\nexport const STAKEHOLDERS = [\r\n  {\r\n    key: 'champion',\r\n    role: 'Director / VP Engineering',\r\n    tag: 'Usually the champion',\r\n    cares: 'Their team shipping instead of searching',\r\n    lead: ['productivity', 'onboarding'],\r\n    headline: m =>\r\n      m.figures.hoursSavedPerEngPerWeek.incomplete || m.blankInputs.includes('engineers')\r\n        ? null\r\n        : `${fmtHours(hoursBack(m))} of engineering time back per year`,\r\n    objection: 'My team already knows where things are.',\r\n    counter: 'Ask how a new hire finds the owner of a service during an incident. The cost lands on the people who joined most recently.',\r\n    needsToSee: [\r\n      'Time recovered per engineer, not just in aggregate',\r\n      'Onboarding time for the hires they are about to make',\r\n      'That it does not become another system their team has to maintain'\r\n    ]\r\n  },\r\n  {\r\n    key: 'cto',\r\n    role: 'CTO',\r\n    tag: 'Often has the opposite goal',\r\n    cares: 'Cutting spend while the org keeps growing',\r\n    lead: ['platform', 'tooling'],\r\n    headline: m => {\r\n      const avoided = costsAvoided(m)\r\n      return avoided == null ? null : `${fmtMoney(avoided)} of run cost avoided per year`\r\n    },\r\n    objection: 'Backstage is open source. Why are we paying for it?',\r\n    counter: 'The licence is free, the operation is not. Self-hosting means a standing platform team for upgrades, patches and infrastructure, permanently.',\r\n    needsToSee: [\r\n      'Total cost of ownership against self-hosting, not against doing nothing',\r\n      'What gets retired, not just what gets added',\r\n      'That this is one line item replacing several'\r\n    ]\r\n  },\r\n  {\r\n    key: 'finance',\r\n    role: 'Finance / Procurement',\r\n    tag: 'Shows up late and can stall a done deal',\r\n    cares: 'Payback, contract terms, and whether the numbers survive scrutiny',\r\n    lead: ['productivity', 'tooling'],\r\n    headline: m => {\r\n      if (m.figures.paybackMonths.incomplete) return null\r\n      const months = m.figures.paybackMonths.value\r\n      return months > 0 ? `Payback in ${fmtMonths(months)}` : 'No payback on these figures'\r\n    },\r\n    objection: 'These savings are soft. Nobody gets laid off because of this.',\r\n    counter: 'Present recovered capacity against hiring plans rather than as cash. The claim is avoided headcount, not reduced headcount.',\r\n    needsToSee: [\r\n      'Payback period and five-year value',\r\n      'Which inputs are confirmed and which are still assumptions',\r\n      'A conservative case, not the best case'\r\n    ]\r\n  },\r\n  {\r\n    key: 'security',\r\n    role: 'Security / Compliance',\r\n    tag: 'The late arrival that kills timelines',\r\n    cares: 'Proving which services meet which standards, on a date',\r\n    lead: ['standards', 'incidents'],\r\n    headline: m =>\r\n      !m.figures.standardsValue.incomplete && m.figures.standardsValue.value > 0\r\n        ? `${fmtMoney(m.figures.standardsValue.value)} of audit effort avoided per year`\r\n        : 'Ownership and standards provable on demand',\r\n    objection: 'This is another system holding our service metadata.',\r\n    counter: 'Bring them in during discovery rather than at contract. Chris lost weeks on a deal where procurement rules surfaced only after everyone had agreed.',\r\n    needsToSee: [\r\n      'Where the data lives and who can see it',\r\n      'How standards are enforced and evidenced for an audit',\r\n      'The review timeline, raised early enough to matter'\r\n    ]\r\n  }\r\n]\r\n\r\n// ---------------------------------------------------------------------------\r\n// Archetype presets\r\n// ---------------------------------------------------------------------------\r\n// An archetype decides who is in the room (the stakeholder tabs) and which pillar\r\n// leads the case.\r\n\r\nexport const ARCHETYPES = {\r\n  'Fast / AI-native': {\r\n    stakeholders: ['champion', 'cto'],\r\n    pillars: ['speed', 'chaos', 'scale'],\r\n    note: 'Short cycle, few approvers. Lead with speed, not governance.',\r\n    alternative: 'Build something lightweight in-house'\r\n  },\r\n  'Scaling tech': {\r\n    stakeholders: ['champion', 'cto', 'finance'],\r\n    pillars: ['scale', 'speed', 'chaos'],\r\n    note: 'Informal systems are breaking as headcount grows.',\r\n    alternative: 'Self-host open source Backstage'\r\n  },\r\n  Enterprise: {\r\n    stakeholders: ['champion', 'cto', 'finance', 'security'],\r\n    pillars: ['scale', 'speed', 'chaos'],\r\n    note: 'Several approvers. Map the path early; procurement surfaces late.',\r\n    alternative: 'Self-host open source Backstage with a funded platform team'\r\n  },\r\n  'Regulated enterprise': {\r\n    stakeholders: ['champion', 'cto', 'finance', 'security'],\r\n    pillars: ['chaos', 'scale', 'speed'],\r\n    note: 'Long cycle, many layers. Compliance evidence is the lever.',\r\n    alternative: 'Self-host, or defer to the next budget year'\r\n  }\r\n}\r\n\r\nexport const archetypePillars = name => (ARCHETYPES[name] || ARCHETYPES.Enterprise).pillars\r\n\r\n// The stakeholders that should exist for an archetype: its built-in roles (keeping\r\n// any edits or positions already made) plus every custom stakeholder the user added.\r\nexport function stakeholdersForArchetype(current, archetype) {\r\n  const wanted = (ARCHETYPES[archetype] || ARCHETYPES.Enterprise).stakeholders\r\n  const builtinKeys = STAKEHOLDERS.map(s => s.key)\r\n  const kept = Object.fromEntries(current.filter(s => builtinKeys.includes(s.key)).map(s => [s.key, s]))\r\n  const builtin = wanted.map(key => kept[key] || { key, builtin: true })\r\n  const custom = current.filter(s => !builtinKeys.includes(s.key) || (!wanted.includes(s.key) && s.namedPeople?.length))\r\n  return [...builtin, ...custom]\r\n}\r\n\r\n// ---------------------------------------------------------------------------\r\n// The drivers, as the deck lays them out\r\n// ---------------------------------------------------------------------------\r\n\r\n// A customer who says they have no audits has no audit driver: it is left off rather\r\n// than shown empty. (A blank is different: that is a gap, not a zero.)\r\nconst hasDriver = (model, d) => !(d.key === 'standards' && model.inputs.auditsPerYear === 0 && !model.blankInputs.includes('auditsPerYear'))\r\n\r\n// Every driver this customer has, with whether it can be computed yet.\r\nexport function allDrivers(model) {\r\n  return DRIVERS.filter(d => hasDriver(model, d)).map(d => {\r\n    const f = model.figures[d.figure]\r\n    return { ...d, value: f.value, detail: f.equation, flag: f.flag, incomplete: f.incomplete, missing: f.missing }\r\n  })\r\n}\r\n\r\n// Only the drivers that can be computed: what the deck is allowed to show.\r\nexport const computableDrivers = model => allDrivers(model).filter(d => !d.incomplete)\r\n\r\n// Chris's view: how many drivers are done, and what each unfinished one is waiting on.\r\nexport function completeness(model) {\r\n  const all = allDrivers(model)\r\n  return {\r\n    total: all.length,\r\n    done: all.filter(d => !d.incomplete).length,\r\n    waiting: all.filter(d => d.incomplete).map(d => ({ key: d.key, label: d.label, missing: d.missing }))\r\n  }\r\n}\r\n\r\n// The drivers the strategic priority leads with (only those that can be shown).\r\nexport const priorityDrivers = (model, priority) =>\r\n  (PRIORITY_DRIVERS[priority] || PRIORITY_DRIVERS['Cost pressure']).filter(k => computableDrivers(model).some(d => d.key === k))\r\n\r\n// Drivers that can be computed, grouped under the three pillars. The pillar holding\r\n// the priority driver leads (then the archetype's order), and priority drivers come\r\n// first within it. A pillar with nothing to show is left out.\r\nexport function driversByPillar(model, archetype, priority) {\r\n  const drivers = computableDrivers(model)\r\n  const lead = priorityDrivers(model, priority)\r\n  const order = [...archetypePillars(archetype)]\r\n  const holds = key => drivers.some(d => d.pillar === key && lead.includes(d.key))\r\n  order.sort((a, b) => Number(holds(b)) - Number(holds(a)))\r\n  return order\r\n    .map(key => {\r\n      const pillar = PILLARS.find(p => p.key === key)\r\n      const items = drivers\r\n        .filter(d => d.pillar === key)\r\n        .map(d => ({ ...d, priority: lead.includes(d.key) }))\r\n        .sort((a, b) => Number(b.priority) - Number(a.priority))\r\n      return { ...pillar, items, total: items.reduce((s, d) => s + d.value, 0) }\r\n    })\r\n    .filter(g => g.items.length)\r\n    .map((g, i) => ({ ...g, leads: i === 0 }))\r\n}\r\n\r\n// ---------------------------------------------------------------------------\r\n// Projects saved before the inputs were pairs\r\n// ---------------------------------------------------------------------------\r\n\r\nexport const OLD_INPUT_KEYS = new Set([\r\n  'hoursLostPerWeek', 'captureRate', 'platformEngineers', 'pctTimeMaintaining', 'daysSavedOnboarding',\r\n  'hoursPerIncident', 'incidentReduction', 'currentToolSpend', 'toolConsolidation'\r\n])\r\n\r\nconst round1 = n => Math.round(n * 10) / 10\r\n\r\n// Takes { key: { value, confirmed } } and returns the new-style keys derived from\r\n// any old-style ones, so a case built the old way keeps its numbers. Existing\r\n// new-style keys are never overwritten.\r\nexport function migrateOldInputs(saved) {\r\n  const out = {}\r\n  const has = k => saved[k] && saved[k].value != null\r\n  const val = k => Number(saved[k].value)\r\n  const ok = k => !!saved[k].confirmed\r\n\r\n  if (has('hoursLostPerWeek') && !('searchHoursToday' in saved)) {\r\n    const today = val('hoursLostPerWeek')\r\n    const capture = has('captureRate') ? val('captureRate') : 33\r\n    out.searchHoursToday = { value: today, confirmed: ok('hoursLostPerWeek') }\r\n    out.searchHoursPortal = { value: round1(today * (1 - capture / 100)), confirmed: ok('hoursLostPerWeek') && has('captureRate') && ok('captureRate') }\r\n  }\r\n  if (has('daysSavedOnboarding') && !('rampDaysToday' in saved)) {\r\n    const saving = val('daysSavedOnboarding')\r\n    const today = Math.max(14, saving)\r\n    out.rampDaysToday = { value: today, confirmed: false }\r\n    out.rampDaysPortal = { value: today - saving, confirmed: false }\r\n  }\r\n  if (has('hoursPerIncident') && !('incidentHoursToday' in saved)) {\r\n    const today = val('hoursPerIncident')\r\n    const cut = has('incidentReduction') ? val('incidentReduction') : 20\r\n    out.incidentHoursToday = { value: today, confirmed: ok('hoursPerIncident') }\r\n    out.incidentHoursPortal = { value: round1(today * (1 - cut / 100)), confirmed: ok('hoursPerIncident') && has('incidentReduction') && ok('incidentReduction') }\r\n  }\r\n  if (has('currentToolSpend') && !('toolSpendToday' in saved)) {\r\n    const today = val('currentToolSpend')\r\n    const cut = has('toolConsolidation') ? val('toolConsolidation') : 50\r\n    out.toolSpendToday = { value: today, confirmed: ok('currentToolSpend') }\r\n    out.toolSpendPortal = { value: Math.round(today * (1 - cut / 100)), confirmed: ok('currentToolSpend') && has('toolConsolidation') && ok('toolConsolidation') }\r\n  }\r\n  if (has('pctTimeMaintaining') && !('maintPctToday' in saved)) {\r\n    // The old model assumed Portal removed all of that upkeep.\r\n    out.maintPctToday = { value: val('pctTimeMaintaining'), confirmed: false }\r\n    out.maintPctPortal = { value: 0, confirmed: false }\r\n    if (has('platformEngineers') && has('engineers') && val('engineers') > 0 && !('platformShare' in saved)) {\r\n      out.platformShare = { value: Math.min(100, round1((val('platformEngineers') / val('engineers')) * 100)), confirmed: false }\r\n    }\r\n  }\r\n  return out\r\n}\r\n";
+var valueModel_default = "// Number formatting shared by the model, the deck and the exports. Pure.\r\n\r\nexport function fmtMoney(n) {\r\n  if (n == null || isNaN(n)) return '-'\r\n  const abs = Math.abs(n)\r\n  if (abs >= 1_000_000) return `$${(n / 1_000_000).toFixed(abs >= 10_000_000 ? 0 : 1)}M`\r\n  if (abs >= 1_000) return `$${Math.round(n / 1000)}k`\r\n  return `$${Math.round(n)}`\r\n}\r\n\r\nexport function fmtMoneyFull(n) {\r\n  if (n == null || isNaN(n)) return '-'\r\n  return `${n < 0 ? '-' : ''}$${Math.abs(Math.round(n)).toLocaleString('en-US')}`\r\n}\r\n\r\nexport function fmtNum(n) {\r\n  if (n == null || isNaN(n)) return '-'\r\n  return Math.round(n).toLocaleString('en-US')\r\n}\r\n\r\n// A number with up to `max` decimals and no trailing zeros: 3, 2.5, 0.8, 1,440.\r\nexport function fmtDec(n, max = 2) {\r\n  if (n == null || isNaN(n)) return '-'\r\n  return Number(n.toFixed(max)).toLocaleString('en-US', { maximumFractionDigits: max })\r\n}\r\n\r\nexport function fmtHours(n) {\r\n  if (n == null || isNaN(n)) return '-'\r\n  if (n >= 1000) return `${Math.round(n / 1000)}k hours`\r\n  return `${Math.round(n)} hours`\r\n}\r\n\r\nexport function fmtMonths(n) {\r\n  if (n == null || isNaN(n) || n <= 0) return 'n/a'\r\n  // two decimals while it is short, so a small change in an input still shows\r\n  const r = n < 10 ? Math.max(0.01, Math.round(n * 100) / 100) : Math.round(n)\r\n  return `${fmtDec(r, 2)} ${r === 1 ? 'month' : 'months'}`\r\n}\r\n\n// The model. Every figure on the deck comes from here, by plain arithmetic.\r\n//\r\n// computeModel(inputs) is a pure function: no async, no fetch, no model call, no\r\n// side effects. Given the same inputs it returns the same figures. The deck, the\r\n// exports and the website are renders of what it returns, and none of them holds\r\n// a number of its own.\r\n//\r\n// Each figure is { value, raw, equation, flag }\r\n//   value     the number to show: finite and never below zero\r\n//   raw       the same number before clamping (still finite), so a case where\r\n//             Portal costs more than it returns can still be told apart from zero\r\n//   equation  the formula with the current values substituted, so anyone can check it\r\n//   flag      null, or why the value is not simply the arithmetic:\r\n//               'clamped'          the result was below zero and is shown as 0\r\n//               'divide-by-zero'   the divisor was 0, so the figure is 0\r\n//               'not-finite'       the result was NaN or Infinity, so the figure is 0\r\n//\r\n// An input left blank is NOT zero. A figure that needs a blank input is `incomplete`\r\n// (figure.incomplete, with figure.missing naming the inputs). Its value is 0 so the\r\n// numbers stay finite, but nothing should show it: the deck leaves it out, and the\r\n// total only adds the figures that can actually be computed.\r\n//\r\n// Inputs are read as numbers; anything missing, non-numeric or negative is read\r\n// as 0 (and listed in `invalidInputs`), and percentages are held to 0 to 100.\r\n\r\nimport { fmtMoneyFull, fmtDec } from './format.js'\r\n\r\nexport const FIGURE_ORDER = [\r\n  'platformEngineers',\r\n  // speed\r\n  'hoursSavedPerEngPerWeek',\r\n  'productivityValue',\r\n  'rampDaysSaved',\r\n  'onboardingValue',\r\n  // chaos-control\r\n  'incidentHoursSaved',\r\n  'incidentValue',\r\n  // standards and audit\r\n  'auditDaysSaved',\r\n  'standardsValue',\r\n  // scale\r\n  'maintHoursSaved',\r\n  'platformValue',\r\n  'toolingValue',\r\n  // roll-ups\r\n  'totalValue',\r\n  'netValue',\r\n  'paybackMonths',\r\n  'roiMultiple',\r\n  'fiveYearValue',\r\n  // alternative\r\n  'selfHostCost',\r\n  'versusSelfHost'\r\n]\r\n\r\nexport const NUMERIC_INPUTS = [\r\n  'engineers',\r\n  'platformShare',\r\n  'hourlyCost',\r\n  'searchHoursToday',\r\n  'searchHoursPortal',\r\n  'rampDaysToday',\r\n  'rampDaysPortal',\r\n  'newHiresPerYear',\r\n  'incidentHoursToday',\r\n  'incidentHoursPortal',\r\n  'peoplePerIncident',\r\n  'incidentsPerMonth',\r\n  'auditPrepDaysToday',\r\n  'auditPrepDaysPortal',\r\n  'auditsPerYear',\r\n  'peoplePerAudit',\r\n  'maintPctToday',\r\n  'maintPctPortal',\r\n  'toolSpendToday',\r\n  'toolSpendPortal',\r\n  'portalCost',\r\n  'selfHostEngineers',\r\n  'selfHostSalary',\r\n  'weeksPerYear',\r\n  'hoursPerDay',\r\n  'hoursPerYear'\r\n]\r\n\r\n// What each figure is computed from: inputs or other figures. totalValue is special:\r\n// it adds whichever drivers are complete, so it is incomplete only when none are.\r\nexport const DRIVER_FIGURES = ['productivityValue', 'onboardingValue', 'incidentValue', 'standardsValue', 'platformValue', 'toolingValue']\r\nexport const FIGURE_DEPS = {\r\n  platformEngineers: ['engineers', 'platformShare'],\r\n  hoursSavedPerEngPerWeek: ['searchHoursToday', 'searchHoursPortal'],\r\n  productivityValue: ['hoursSavedPerEngPerWeek', 'engineers', 'weeksPerYear', 'hourlyCost'],\r\n  rampDaysSaved: ['rampDaysToday', 'rampDaysPortal'],\r\n  onboardingValue: ['rampDaysSaved', 'newHiresPerYear', 'hoursPerDay', 'hourlyCost'],\r\n  incidentHoursSaved: ['incidentHoursToday', 'incidentHoursPortal', 'peoplePerIncident', 'incidentsPerMonth'],\r\n  incidentValue: ['incidentHoursSaved', 'hourlyCost'],\r\n  auditDaysSaved: ['auditPrepDaysToday', 'auditPrepDaysPortal'],\r\n  standardsValue: ['auditDaysSaved', 'auditsPerYear', 'peoplePerAudit', 'hoursPerDay', 'hourlyCost'],\r\n  maintHoursSaved: ['platformEngineers', 'maintPctToday', 'maintPctPortal', 'hoursPerYear'],\r\n  platformValue: ['maintHoursSaved', 'hourlyCost'],\r\n  toolingValue: ['toolSpendToday', 'toolSpendPortal'],\r\n  totalValue: DRIVER_FIGURES,\r\n  netValue: ['totalValue', 'portalCost'],\r\n  paybackMonths: ['portalCost', 'totalValue'],\r\n  roiMultiple: ['portalCost', 'totalValue'],\r\n  fiveYearValue: ['netValue'],\r\n  selfHostCost: ['selfHostEngineers', 'selfHostSalary'],\r\n  versusSelfHost: ['selfHostCost', 'portalCost']\r\n}\r\n\r\nconst PERCENT_INPUTS = new Set(['platformShare', 'maintPctToday', 'maintPctPortal'])\r\n\r\n// Spotify's own deck puts standing up Backstage at 2 to 5 developers.\r\nexport const SELF_HOST_RANGE = [2, 5]\r\n// Upkeep Portal removes and headcount self-hosting needs describe the same\r\n// thing, so they should land within this share of each other.\r\nexport const CONSISTENCY_TOLERANCE = 0.5\r\n\r\nconst money = n => fmtMoneyFull(n)\r\nconst num = n => fmtDec(n, 2)\r\n\r\nexport function computeModel(rawInputs = {}) {\r\n  // ---- read the inputs as safe numbers\r\n  const invalidInputs = []\r\n  const blank = new Set()\r\n  const I = {}\r\n  for (const key of NUMERIC_INPUTS) {\r\n    const given = rawInputs ? rawInputs[key] : undefined\r\n    const isBlank = given === '' || given == null\r\n    let v = isBlank ? 0 : Number(given)\r\n    let bad = null\r\n    if (isBlank) {\r\n      // not entered yet: no complaint, but anything that needs it is incomplete\r\n      blank.add(key)\r\n    } else if (!Number.isFinite(v)) {\r\n      bad = 'not a number'\r\n      v = 0\r\n    } else if (v < 0) {\r\n      bad = 'negative'\r\n      v = 0\r\n    } else if (PERCENT_INPUTS.has(key) && v > 100) {\r\n      bad = 'over 100%'\r\n      v = 100\r\n    }\r\n    if (bad) invalidInputs.push({ key, problem: bad })\r\n    I[key] = v\r\n  }\r\n\r\n  // ---- which inputs each figure is still waiting on\r\n  const memo = {}\r\n  const missingOf = key => {\r\n    if (key in memo) return memo[key]\r\n    let out\r\n    if (!(key in FIGURE_DEPS)) out = blank.has(key) ? [key] : []\r\n    else if (key === 'totalValue') {\r\n      const per = DRIVER_FIGURES.map(missingOf)\r\n      out = per.some(m => m.length === 0) ? [] : [...new Set(per.flat())]\r\n    } else out = [...new Set(FIGURE_DEPS[key].flatMap(missingOf))]\r\n    return (memo[key] = out)\r\n  }\r\n\r\n  // ---- one figure\r\n  const F = {}\r\n  const figure = (key, raw, equation, divideByZero = false) => {\r\n    let flag = null\r\n    let value = raw\r\n    if (divideByZero) {\r\n      value = 0\r\n      flag = 'divide-by-zero'\r\n    } else if (!Number.isFinite(value)) {\r\n      value = 0\r\n      flag = 'not-finite'\r\n    } else if (value < 0) {\r\n      value = 0\r\n      flag = 'clamped'\r\n    }\r\n    const missing = missingOf(key)\r\n    F[key] = { value, raw: Number.isFinite(raw) && !divideByZero ? raw : 0, equation, flag, incomplete: missing.length > 0, missing }\r\n    return F[key]\r\n  }\r\n  // a difference that was clamped prints as 0, not as a negative that was not used\r\n  const diff = (f, a, b, fmt = num) => (f.flag === 'clamped' ? '0' : `(${fmt(a)} - ${fmt(b)})`)\r\n\r\n  // ---- platform engineers are derived, not asked for\r\n  figure('platformEngineers', I.engineers * (I.platformShare / 100), `${num(I.engineers)} * ${num(I.platformShare)}%`)\r\n\r\n  // ---- SPEED\r\n  const hs = figure('hoursSavedPerEngPerWeek', I.searchHoursToday - I.searchHoursPortal, `${num(I.searchHoursToday)} - ${num(I.searchHoursPortal)}`)\r\n  figure(\r\n    'productivityValue',\r\n    hs.value * I.engineers * I.weeksPerYear * I.hourlyCost,\r\n    `${diff(hs, I.searchHoursToday, I.searchHoursPortal)} * ${num(I.engineers)} * ${num(I.weeksPerYear)} * ${money(I.hourlyCost)}`\r\n  )\r\n  const rd = figure('rampDaysSaved', I.rampDaysToday - I.rampDaysPortal, `${num(I.rampDaysToday)} - ${num(I.rampDaysPortal)}`)\r\n  figure(\r\n    'onboardingValue',\r\n    rd.value * I.newHiresPerYear * I.hoursPerDay * I.hourlyCost,\r\n    `${diff(rd, I.rampDaysToday, I.rampDaysPortal)} * ${num(I.newHiresPerYear)} * ${num(I.hoursPerDay)} * ${money(I.hourlyCost)}`\r\n  )\r\n\r\n  // ---- CHAOS-CONTROL\r\n  const ihDiff = I.incidentHoursToday - I.incidentHoursPortal\r\n  const ih = figure(\r\n    'incidentHoursSaved',\r\n    Math.max(0, ihDiff) * I.peoplePerIncident * I.incidentsPerMonth * 12,\r\n    `${ihDiff < 0 ? '0' : `(${num(I.incidentHoursToday)} - ${num(I.incidentHoursPortal)})`} * ${num(I.peoplePerIncident)} * ${num(I.incidentsPerMonth)} * 12`\r\n  )\r\n  // a negative saving is clamped at the difference, not by multiplying negatives together\r\n  if (ihDiff < 0) F.incidentHoursSaved.flag = 'clamped'\r\n  figure('incidentValue', ih.value * I.hourlyCost, `${num(ih.value)} * ${money(I.hourlyCost)}`)\r\n\r\n  // ---- STANDARDS AND AUDIT\r\n  const ad = figure('auditDaysSaved', I.auditPrepDaysToday - I.auditPrepDaysPortal, `${num(I.auditPrepDaysToday)} - ${num(I.auditPrepDaysPortal)}`)\r\n  figure(\r\n    'standardsValue',\r\n    ad.value * I.auditsPerYear * I.peoplePerAudit * I.hoursPerDay * I.hourlyCost,\r\n    `${diff(ad, I.auditPrepDaysToday, I.auditPrepDaysPortal)} * ${num(I.auditsPerYear)} * ${num(I.peoplePerAudit)} * ${num(I.hoursPerDay)} * ${money(I.hourlyCost)}`\r\n  )\r\n\r\n  // ---- SCALE\r\n  const pe = F.platformEngineers.value\r\n  const mDiff = I.maintPctToday - I.maintPctPortal\r\n  const mh = figure(\r\n    'maintHoursSaved',\r\n    pe * (Math.max(0, mDiff) / 100) * I.hoursPerYear,\r\n    `${num(pe)} * ${mDiff < 0 ? '0' : `(${num(I.maintPctToday)} - ${num(I.maintPctPortal)})`} / 100 * ${num(I.hoursPerYear)}`\r\n  )\r\n  if (mDiff < 0) F.maintHoursSaved.flag = 'clamped'\r\n  figure('platformValue', mh.value * I.hourlyCost, `${num(mh.value)} * ${money(I.hourlyCost)}`)\r\n  figure('toolingValue', I.toolSpendToday - I.toolSpendPortal, `${money(I.toolSpendToday)} - ${money(I.toolSpendPortal)}`)\r\n\r\n  // ---- ROLL-UPS\r\n  // the total adds only the drivers that can be computed; an unfinished one is left out, not counted as 0\r\n  const done = DRIVER_FIGURES.filter(k => !F[k].incomplete)\r\n  const total = figure('totalValue', done.reduce((sum, k) => sum + F[k].value, 0), done.length ? done.map(k => money(F[k].value)).join(' + ') : '0')\r\n  const net = figure('netValue', total.value - I.portalCost, `${money(total.value)} - ${money(I.portalCost)}`)\r\n  const monthly = total.value / 12\r\n  figure(\r\n    'paybackMonths',\r\n    monthly === 0 ? 0 : I.portalCost / monthly,\r\n    `${money(I.portalCost)} / (${money(total.value)} / 12)`,\r\n    monthly === 0\r\n  )\r\n  figure('roiMultiple', I.portalCost === 0 ? 0 : total.value / I.portalCost, `${money(total.value)} / ${money(I.portalCost)}`, I.portalCost === 0)\r\n  figure('fiveYearValue', net.raw * 5, `${money(net.raw)} * 5`)\r\n\r\n  // ---- ALTERNATIVE\r\n  const sh = figure('selfHostCost', I.selfHostEngineers * I.selfHostSalary, `${num(I.selfHostEngineers)} * ${money(I.selfHostSalary)}`)\r\n  figure('versusSelfHost', sh.value - I.portalCost, `${money(sh.value)} - ${money(I.portalCost)}`)\r\n\r\n  return { inputs: I, figures: F, order: FIGURE_ORDER, warnings: consistencyWarnings(I, F, blank), invalidInputs, blankInputs: [...blank] }\r\n}\r\n\r\n// The case has to agree with itself: the upkeep burden Portal removes\r\n// (maintHoursSaved / hoursPerYear, in engineers) and the headcount that\r\n// self-hosting needs describe the same thing from two directions.\r\nfunction consistencyWarnings(I, F, blank) {\r\n  const warnings = []\r\n  // nothing to compare until both sides have been entered\r\n  if (F.maintHoursSaved.incomplete || blank.has('selfHostEngineers')) return warnings\r\n  const removed = I.hoursPerYear > 0 ? F.maintHoursSaved.value / I.hoursPerYear : 0\r\n  const needed = I.selfHostEngineers\r\n\r\n  const apart = needed === 0 ? removed > 0 : Math.abs(removed - needed) / needed > CONSISTENCY_TOLERANCE\r\n  if (apart) {\r\n    warnings.push({\r\n      key: 'consistency',\r\n      severity: 'warning',\r\n      inputs: ['maintPctToday', 'maintPctPortal', 'platformShare', 'selfHostEngineers'],\r\n      message: `The case is not internally consistent. The upkeep Portal removes equals about ${num(removed)} engineers, but self-hosting is set to need ${num(needed)}. These describe the same thing, so they should be within ${Math.round(CONSISTENCY_TOLERANCE * 100)}% of each other.`\r\n    })\r\n  }\r\n  if ((needed < SELF_HOST_RANGE[0] || needed > SELF_HOST_RANGE[1])) {\r\n    warnings.push({\r\n      key: 'selfHostRange',\r\n      severity: 'warning',\r\n      inputs: ['selfHostEngineers'],\r\n      message: `Spotify's own deck puts standing up Backstage at ${SELF_HOST_RANGE[0]} to ${SELF_HOST_RANGE[1]} developers. ${num(needed)} is outside that range, so expect the customer to question it.`\r\n    })\r\n  }\r\n  return warnings\r\n}\r\n\r\n// A plain { figureKey: value } view of a model.\r\nexport function figureValues(model) {\r\n  return Object.fromEntries(FIGURE_ORDER.map(k => [k, model.figures[k].value]))\r\n}\r\n\n// Where a number came from. Pure helpers around the `source` object every input\r\n// carries:\r\n//\r\n//   source: {\r\n//     state:  'empty' | 'input' | 'assumption' | 'suggestion'\r\n//     origin: string          where it came from, shown to Chris on the field\r\n//     quote?: string          the exact words, if pulled from a transcript\r\n//     link?:  string          the URL, if pulled from a public source\r\n//     pinnedAt?: string       when a suggestion was generated (ISO time)\r\n//     confidence?: 'high' | 'medium' | 'low'\r\n//     enabled?: string[]      the connectors that were on when it was generated\r\n//     notes?: string[]        why a gap or a thin suggestion looks the way it does\r\n//   }\r\n//\r\n//   input       a verified fact: the customer said it, or a checkable public source\r\n//   assumption  Chris's own read, unverified\r\n//   suggestion  the tool proposed it\r\n//\r\n// Only `input` counts toward confidence. None of this is ever shown on the deck.\r\n\r\nexport const STATES = ['empty', 'input', 'assumption', 'suggestion']\r\n\r\nexport const ORIGIN = {\r\n  input: 'Confirmed by the customer',\r\n  assumption: 'Your own read',\r\n  edited: 'Your own number (edited from a suggestion)',\r\n  calendar: 'Calendar constant'\r\n}\r\n\r\nexport const isBlank = v => v === '' || v == null\r\n\r\nexport const emptySource = () => ({ state: 'empty', origin: '' })\r\n\r\n// The state of a field as Chris sees it. A blank value is always 'empty'.\r\nexport function stateOf(field) {\r\n  if (isBlank(field.value)) return 'empty'\r\n  const s = field.source && field.source.state\r\n  return s === 'input' || s === 'suggestion' || s === 'assumption' ? s : 'assumption'\r\n}\r\n\r\n// Chris typed a value. The moment a suggestion is edited it becomes his number.\r\nexport function withValue(field, value) {\r\n  if (isBlank(value)) return { ...field, value: '', source: emptySource() }\r\n  const was = stateOf(field)\r\n  if (was === 'suggestion') return { ...field, value, source: { state: 'assumption', origin: ORIGIN.edited } }\r\n  if (was === 'empty') return { ...field, value, source: { state: 'assumption', origin: ORIGIN.assumption } }\r\n  return { ...field, value } // an input or assumption keeps its source\r\n}\r\n\r\n// Chris marks a number as verified (or takes that back).\r\nexport function withState(field, state) {\r\n  if (isBlank(field.value) || (state !== 'input' && state !== 'assumption')) return field\r\n  const origin = field.source && field.source.origin\r\n  const generic = !origin || origin === ORIGIN.input || origin === ORIGIN.assumption || origin === ORIGIN.edited\r\n  return {\r\n    ...field,\r\n    source: {\r\n      ...field.source,\r\n      state,\r\n      origin: generic ? (state === 'input' ? ORIGIN.input : ORIGIN.assumption) : origin\r\n    }\r\n  }\r\n}\r\n\r\nexport function withOrigin(field, origin) {\r\n  if (isBlank(field.value)) return field\r\n  return { ...field, source: { ...field.source, origin: String(origin ?? '') } }\r\n}\r\n\r\n// A value the tool proposed (or, for a call figure, extracted), pinned with its\r\n// origin and a timestamp. `ctx` = { now, enabled }.\r\nexport function withSuggestion(field, s, ctx) {\r\n  return {\r\n    ...field,\r\n    value: s.value,\r\n    source: {\r\n      state: s.state === 'input' ? 'input' : 'suggestion',\r\n      origin: s.origin,\r\n      ...(s.quote ? { quote: s.quote } : {}),\r\n      ...(s.link ? { link: s.link } : {}),\r\n      ...(s.range ? { range: s.range } : {}),\r\n      confidence: s.confidence || 'low',\r\n      pinnedAt: ctx.now,\r\n      enabled: ctx.enabled,\r\n      ...(s.notes && s.notes.length ? { notes: s.notes } : {})\r\n    }\r\n  }\r\n}\r\n\r\n// Nothing could be suggested. The field stays empty and says why.\r\nexport function withGap(field, notes, ctx) {\r\n  return { ...field, value: '', source: { state: 'empty', origin: '', notes, pinnedAt: ctx.now, enabled: ctx.enabled } }\r\n}\r\n\r\n// Fields saved before sources existed carried `confirmed: true|false`.\r\nexport function sourceFromLegacy(value, confirmed) {\r\n  if (isBlank(value)) return emptySource()\r\n  return confirmed\r\n    ? { state: 'input', origin: 'Confirmed by the customer (saved before sources were tracked)' }\r\n    : { state: 'assumption', origin: 'Starting number from an earlier version' }\r\n}\r\n\r\nexport function validSource(s) {\r\n  return !!s && typeof s === 'object' && STATES.includes(s.state) && typeof (s.origin ?? '') === 'string'\r\n}\r\n\n// The content around the model: what the inputs are, how they are grouped under\r\n// Spotify's three pillars, who the stakeholders are, and how archetypes bias the\r\n// case. The arithmetic itself lives in model.js; nothing here calculates a figure\r\n// (valueRange only re-runs that model with inputs moved).\r\n//\r\n// Every formula comes from Chris's written answer to Q8 (\"What inputs and KPIs\r\n// do you use to calculate ROI?\"). Every saving is a difference, so the inputs\r\n// come in pairs: how it is today, and how it is with Portal.\r\n\r\nimport { fmtMoney, fmtHours, fmtMonths } from './format.js'\r\nimport { emptySource, stateOf, sourceFromLegacy, validSource, ORIGIN } from './source.js'\r\nimport { computeModel } from './model.js'\r\n\r\nexport { fmtMoney, fmtMoneyFull, fmtNum, fmtDec, fmtHours, fmtMonths } from './format.js'\r\n\r\nexport const WORKING_WEEKS = 48 // Chris's worked example uses about 48\r\nexport const HOURS_PER_YEAR = 2080\r\n\r\n// ---------------------------------------------------------------------------\r\n// Spotify's three pillars. Every value driver sits under one of them.\r\n// ---------------------------------------------------------------------------\r\n\r\nexport const PILLARS = [\r\n  { key: 'speed', label: 'Speed', blurb: 'Engineers spend their time building, not searching.', color: '#2fc7a8' },\r\n  { key: 'chaos', label: 'Chaos-control', blurb: 'Fewer and shorter incidents, with clear owners.', color: '#e5399a' },\r\n  { key: 'scale', label: 'Scale', blurb: 'The platform grows without growing the upkeep.', color: '#111111' }\r\n]\r\n\r\nexport const DRIVERS = [\r\n  { key: 'productivity', label: 'Engineer time recovered', short: 'Productivity', pillar: 'speed', figure: 'productivityValue' },\r\n  { key: 'onboarding', label: 'Faster onboarding', short: 'Onboarding', pillar: 'speed', figure: 'onboardingValue' },\r\n  { key: 'incidents', label: 'Shorter incidents', short: 'Incidents', pillar: 'chaos', figure: 'incidentValue' },\r\n  { key: 'standards', label: 'Audit and compliance work avoided', short: 'Standards', pillar: 'chaos', figure: 'standardsValue' },\r\n  { key: 'platform', label: 'Platform team maintenance avoided', short: 'Platform load', pillar: 'scale', figure: 'platformValue' },\r\n  { key: 'tooling', label: 'Overlapping tooling retired', short: 'Tooling', pillar: 'scale', figure: 'toolingValue' }\r\n].map(d => ({ ...d, color: PILLARS.find(p => p.key === d.pillar).color }))\r\n\r\n// ---------------------------------------------------------------------------\r\n// Inputs\r\n// ---------------------------------------------------------------------------\r\n// Every answer starts empty and carries a `source` (see source.js): an input is\r\n// something the customer said or a checkable public fact, an assumption is Chris's\r\n// own read, a suggestion is something the tool proposed. `structural` inputs (the calendar) are not\r\n// claims about the customer, so they do not count toward confidence.\r\n\r\nexport const STRATEGIC_PRIORITIES = ['Audit and compliance', 'AI initiative', 'Migration', 'Cost pressure']\r\n\r\n// What leadership cares about this year decides which drivers lead the deck.\r\nexport const PRIORITY_DRIVERS = {\r\n  'Audit and compliance': ['standards'],\r\n  'AI initiative': ['productivity'],\r\n  Migration: ['productivity'],\r\n  'Cost pressure': ['platform', 'tooling']\r\n}\r\n\r\nexport const INPUT_GROUPS = ['Account', 'Scale', 'Speed', 'Chaos-control', 'Standards and audit', 'Cost and alternative', 'Calendar']\r\n\r\nconst FIELD_DEFS = [\r\n  // ---- Account\r\n  { key: 'companyName', label: 'Company', group: 'Account', type: 'text', value: 'Northwind Retail', confirmed: true, help: 'Who the case is for.' },\r\n  {\r\n    key: 'archetype',\r\n    label: 'Archetype',\r\n    group: 'Account',\r\n    type: 'select',\r\n    options: ['Fast / AI-native', 'Scaling tech', 'Enterprise', 'Regulated enterprise'],\r\n    value: 'Enterprise',\r\n    confirmed: true,\r\n    help: 'Sets which stakeholder tabs exist and which pillar leads the case.'\r\n  },\r\n\r\n  {\r\n    key: 'strategicPriority',\r\n    label: 'What their leadership cares about this year',\r\n    group: 'Account',\r\n    type: 'select',\r\n    options: STRATEGIC_PRIORITIES,\r\n    value: 'Cost pressure',\r\n    confirmed: true,\r\n    help: 'Sets which driver leads the deck. Separate from the archetype: that is the shape of the company, this is what is happening to them this year.'\r\n  },\r\n\r\n  // ---- Scale\r\n  { key: 'engineers', label: 'Engineers', group: 'Scale', type: 'number', value: 500, confirmed: true, help: 'Usually findable from LinkedIn before the first call.' },\r\n  {\r\n    key: 'platformShare',\r\n    label: 'Share of engineering that is platform / DevEx',\r\n    group: 'Scale',\r\n    type: 'percent',\r\n    value: 30,\r\n    confirmed: false,\r\n    help: \"Chris's rule: roughly 30% of the engineering org is platform or DevEx. The platform headcount is worked out from this.\"\r\n  },\r\n  { key: 'hourlyCost', label: 'Fully loaded cost per engineer hour', group: 'Scale', type: 'number', value: 100, unit: '$/hr', confirmed: false, help: \"Salary, benefits and overhead. Chris uses $100/hr in his worked example.\" },\r\n  {\r\n    key: 'maintPctToday', label: 'Platform team time spent maintaining the portal, today', group: 'Scale', type: 'number', value: 4, unit: '%', step: 0.5, confirmed: false, pair: 'maint', side: 'today',\r\n    help: 'Share of the platform / DevEx team (not all engineers) kept busy upgrading, patching and running their current portal or wiki.'\r\n  },\r\n  { key: 'maintPctPortal', label: 'Platform team time spent maintaining the portal, with Portal', group: 'Scale', type: 'number', value: 2, unit: '%', step: 0.5, confirmed: false, pair: 'maint', side: 'portal' },\r\n  { key: 'toolSpendToday', label: 'Overlapping tool spend, today', group: 'Scale', type: 'number', value: 180000, unit: '$/yr', step: 5000, confirmed: false, pair: 'tool', side: 'today', help: 'What they pay each year for tools Portal would replace or consolidate.' },\r\n  { key: 'toolSpendPortal', label: 'Overlapping tool spend, with Portal', group: 'Scale', type: 'number', value: 90000, unit: '$/yr', step: 5000, confirmed: false, pair: 'tool', side: 'portal' },\r\n\r\n  // ---- Speed\r\n  {\r\n    key: 'searchHoursToday', label: 'Time spent searching for docs, services and owners, today', group: 'Speed', type: 'number', value: 3, unit: 'hrs / eng / week', step: 0.5, confirmed: false, pair: 'search', side: 'today',\r\n    help: 'Hours each engineer loses per week hunting. Industry estimates put tech debt at 2 to 5 days per engineer per month.'\r\n  },\r\n  {\r\n    key: 'searchHoursPortal', label: 'Time spent searching, with Portal', group: 'Speed', type: 'number', value: 2, unit: 'hrs / eng / week', step: 0.5, confirmed: false, pair: 'search', side: 'portal',\r\n    help: 'The conservatism dial. Chris: the hard part is getting the customer to agree the number is realistic for them.'\r\n  },\r\n  { key: 'rampDaysToday', label: 'Days for a new hire to first contribution, today', group: 'Speed', type: 'number', value: 30, unit: 'days', confirmed: false, pair: 'ramp', side: 'today' },\r\n  { key: 'rampDaysPortal', label: 'Days to first contribution, with Portal', group: 'Speed', type: 'number', value: 21, unit: 'days', confirmed: false, pair: 'ramp', side: 'portal' },\r\n  { key: 'newHiresPerYear', label: 'Engineers hired per year', group: 'Speed', type: 'number', value: 80, confirmed: false, help: 'From the hiring plan if you can get it.' },\r\n\r\n  // ---- Chaos-control\r\n  {\r\n    key: 'incidentHoursToday', label: 'Hours each person spends on an incident, today', group: 'Chaos-control', type: 'number', value: 4, unit: 'hrs', step: 0.1, confirmed: false, pair: 'incident', side: 'today',\r\n    help: 'Most of it is finding who owns the failing service.'\r\n  },\r\n  { key: 'incidentHoursPortal', label: 'Hours each person spends on an incident, with Portal', group: 'Chaos-control', type: 'number', value: 3.2, unit: 'hrs', step: 0.1, confirmed: false, pair: 'incident', side: 'portal' },\r\n  { key: 'peoplePerIncident', label: 'People pulled into each incident', group: 'Chaos-control', type: 'number', value: 5, confirmed: false },\r\n  { key: 'incidentsPerMonth', label: 'Incidents per month', group: 'Chaos-control', type: 'number', value: 12, confirmed: false },\r\n\r\n  // ---- Standards and audit\r\n  {\r\n    key: 'auditPrepDaysToday', label: 'Days spent preparing for an audit \u2014 today', group: 'Standards and audit', type: 'number', value: 10, unit: 'days', confirmed: false, pair: 'audit', side: 'today',\r\n    help: 'Per person, per audit: gathering evidence for who owns what and which standards are met.'\r\n  },\r\n  { key: 'auditPrepDaysPortal', label: 'Days spent preparing for an audit \u2014 with Portal', group: 'Standards and audit', type: 'number', value: 5, unit: 'days', confirmed: false, pair: 'audit', side: 'portal' },\r\n  { key: 'auditsPerYear', label: 'Audits or compliance reviews per year', group: 'Standards and audit', type: 'number', value: 4, confirmed: false, help: 'Zero if the customer has none: the audit driver then drops off the deck.' },\r\n  { key: 'peoplePerAudit', label: 'People pulled into each audit', group: 'Standards and audit', type: 'number', value: 6, confirmed: false },\r\n\r\n  // ---- Cost and alternative\r\n  { key: 'portalCost', label: 'Portal annual subscription', group: 'Cost and alternative', type: 'number', value: 400000, unit: '$/yr', step: 10000, confirmed: false, help: 'A placeholder until there is a quote.' },\r\n  {\r\n    key: 'selfHostEngineers', label: 'Engineers needed to self-host Backstage', group: 'Cost and alternative', type: 'number', value: 3, step: 0.5, confirmed: false,\r\n    help: \"The comparison that decides most deals. Spotify's own deck puts standing up Backstage at 2 to 5 developers. It should also roughly match the upkeep hours Portal saves.\"\r\n  },\r\n  { key: 'selfHostSalary', label: 'Fully loaded cost per self-host engineer', group: 'Cost and alternative', type: 'number', value: 210000, unit: '$/yr', step: 5000, confirmed: false },\r\n\r\n  // ---- Calendar (structural: not claims about the customer)\r\n  { key: 'weeksPerYear', label: 'Working weeks per year', group: 'Calendar', type: 'number', value: WORKING_WEEKS, confirmed: true, structural: true, help: \"Chris's worked example uses about 48.\" },\r\n  { key: 'hoursPerDay', label: 'Working hours per day', group: 'Calendar', type: 'number', value: 8, confirmed: true, structural: true },\r\n  { key: 'hoursPerYear', label: 'Working hours per year', group: 'Calendar', type: 'number', value: HOURS_PER_YEAR, confirmed: true, structural: true }\r\n]\r\n\r\n// A numeric input the customer has to answer: it starts blank and unconfirmed, and\r\n// the deck fills in as soon as there is a value. The calendar (structural) keeps its\r\n// constants. DEMO_VALUES are the old starting numbers, kept for tests and docs.\r\nconst isAnswer = f => (f.type === 'number' || f.type === 'percent') && !f.structural\r\n\r\nexport const DEMO_VALUES = Object.fromEntries(FIELD_DEFS.map(f => [f.key, f.value]))\r\n\r\nexport const INPUT_FIELDS = FIELD_DEFS.map(({ confirmed, ...f }) => {\r\n  if (isAnswer(f)) return { ...f, value: '', source: emptySource() }\r\n  if (f.structural) return { ...f, source: { state: 'input', origin: ORIGIN.calendar } }\r\n  return { ...f, source: { state: 'input', origin: '' } }\r\n})\r\n\r\n// A saved field's source: the one it has, or one worked out from `confirmed`.\r\nexport function sourceOf(saved) {\r\n  if (validSource(saved.source)) return saved.source\r\n  return sourceFromLegacy(saved.value, saved.confirmed)\r\n}\r\n\r\n// The today / with-Portal pairs. `valueFigure` is the model figure the saving is worth.\r\nexport const PAIRS = [\r\n  { key: 'search', group: 'Speed', label: 'Time spent searching', unit: 'hrs / eng / week', today: 'searchHoursToday', portal: 'searchHoursPortal', saved: 'saved per engineer per week', valueFigure: 'productivityValue', driver: 'productivity' },\r\n  { key: 'ramp', group: 'Speed', label: 'Days to first contribution', unit: 'days', today: 'rampDaysToday', portal: 'rampDaysPortal', saved: 'saved per new hire', valueFigure: 'onboardingValue', driver: 'onboarding' },\r\n  { key: 'incident', group: 'Chaos-control', label: 'Hours per person per incident', unit: 'hrs', today: 'incidentHoursToday', portal: 'incidentHoursPortal', saved: 'saved per person per incident', valueFigure: 'incidentValue', driver: 'incidents' },\r\n  { key: 'audit', group: 'Standards and audit', label: 'Days preparing for an audit', unit: 'days', today: 'auditPrepDaysToday', portal: 'auditPrepDaysPortal', saved: 'saved per person per audit', valueFigure: 'standardsValue', driver: 'standards' },\r\n  { key: 'maint', group: 'Scale', label: 'Platform team time on upkeep', unit: '%', today: 'maintPctToday', portal: 'maintPctPortal', saved: 'of the platform team freed up', valueFigure: 'platformValue', driver: 'platform' },\r\n  { key: 'tool', group: 'Scale', label: 'Overlapping tool spend', unit: '$/yr', today: 'toolSpendToday', portal: 'toolSpendPortal', saved: 'a year saved', valueFigure: 'toolingValue', driver: 'tooling', money: true }\r\n]\r\n\r\nexport const isClaim = f => !f.deleted && (f.type === 'number' || f.type === 'percent') && !f.structural\r\n\r\n// Confidence counts INPUTS only: numbers the customer stated or a public source\r\n// shows. Assumptions and suggestions do not count, and neither do blanks.\r\nexport function confidence(fields) {\r\n  const material = fields.filter(isClaim)\r\n  if (!material.length) return 0\r\n  return Math.round((material.filter(f => stateOf(f) === 'input').length / material.length) * 100)\r\n}\r\n\r\n// Everything still to confirm: blank, assumed or only suggested.\r\nexport function unconfirmed(fields) {\r\n  return fields.filter(f => isClaim(f) && stateOf(f) !== 'input')\r\n}\r\n\r\n// The yearly value as a range, so one falsely precise figure is never shown.\r\n// Confirmed inputs stay fixed; every assumed or suggested number moves by\r\n// `band` (20%) in whichever direction lowers the total for `low` and raises it\r\n// for `high`. The arithmetic is still computeModel's. null = the model cannot\r\n// compute a total yet. { low, mid, high } in dollars a year.\r\nexport const RANGE_BAND = 0.2\r\nexport function valueRange(fields, band = RANGE_BAND) {\r\n  const base = Object.fromEntries(fields.filter(f => !f.deleted).map(f => [f.key, f.value]))\r\n  const total = inputs => computeModel(inputs).figures.totalValue\r\n  const mid = total(base)\r\n  if (mid.incomplete) return null\r\n  const loose = fields.filter(f => isClaim(f) && (stateOf(f) === 'assumption' || stateOf(f) === 'suggestion') && Number.isFinite(Number(f.value)))\r\n  const low = { ...base }\r\n  const high = { ...base }\r\n  for (const f of loose) {\r\n    const n = Number(f.value)\r\n    const down = total({ ...base, [f.key]: n * (1 - band) }).value\r\n    const up = total({ ...base, [f.key]: n * (1 + band) }).value\r\n    low[f.key] = down <= up ? n * (1 - band) : n * (1 + band)\r\n    high[f.key] = down <= up ? n * (1 + band) : n * (1 - band)\r\n  }\r\n  return { low: Math.min(total(low).value, mid.value), mid: mid.value, high: Math.max(total(high).value, mid.value) }\r\n}\r\n\r\n// ---------------------------------------------------------------------------\r\n// Stakeholder views\r\n// ---------------------------------------------------------------------------\r\n// REPLACE THE PLACEHOLDER COPY BELOW WITH CHRIS'S OWN WORDS. Headlines read the\r\n// model: headline(model) where model = computeModel(inputs).\r\n\r\nexport const hoursBack = model =>\r\n  model.figures.hoursSavedPerEngPerWeek.value * model.inputs.engineers * model.inputs.weeksPerYear\r\n\r\n// What the CTO cares about: the run cost avoided, from whichever of the two can be computed.\r\nexport function costsAvoided(model) {\r\n  const parts = ['platformValue', 'toolingValue'].map(k => model.figures[k]).filter(f => !f.incomplete)\r\n  return parts.length ? parts.reduce((s, f) => s + f.value, 0) : null\r\n}\r\n\r\nexport const STAKEHOLDERS = [\r\n  {\r\n    key: 'champion',\r\n    role: 'Director / VP Engineering',\r\n    tag: 'Usually the champion',\r\n    cares: 'Their team shipping instead of searching',\r\n    lead: ['productivity', 'onboarding'],\r\n    headline: m =>\r\n      m.figures.hoursSavedPerEngPerWeek.incomplete || m.blankInputs.includes('engineers')\r\n        ? null\r\n        : `${fmtHours(hoursBack(m))} of engineering time back per year`,\r\n    objection: 'My team already knows where things are.',\r\n    counter: 'Ask how a new hire finds the owner of a service during an incident. The cost lands on the people who joined most recently.',\r\n    needsToSee: [\r\n      'Time recovered per engineer, not just in aggregate',\r\n      'Onboarding time for the hires they are about to make',\r\n      'That it does not become another system their team has to maintain'\r\n    ]\r\n  },\r\n  {\r\n    key: 'cto',\r\n    role: 'CTO',\r\n    tag: 'Often has the opposite goal',\r\n    cares: 'Cutting spend while the org keeps growing',\r\n    lead: ['platform', 'tooling'],\r\n    headline: m => {\r\n      const avoided = costsAvoided(m)\r\n      return avoided == null ? null : `${fmtMoney(avoided)} of run cost avoided per year`\r\n    },\r\n    objection: 'Backstage is open source. Why are we paying for it?',\r\n    counter: 'The licence is free, the operation is not. Self-hosting means a standing platform team for upgrades, patches and infrastructure, permanently.',\r\n    needsToSee: [\r\n      'Total cost of ownership against self-hosting, not against doing nothing',\r\n      'What gets retired, not just what gets added',\r\n      'That this is one line item replacing several'\r\n    ]\r\n  },\r\n  {\r\n    key: 'finance',\r\n    role: 'Finance / Procurement',\r\n    tag: 'Shows up late and can stall a done deal',\r\n    cares: 'Payback, contract terms, and whether the numbers survive scrutiny',\r\n    lead: ['productivity', 'tooling'],\r\n    headline: m => {\r\n      if (m.figures.paybackMonths.incomplete) return null\r\n      const months = m.figures.paybackMonths.value\r\n      return months > 0 ? `Payback in ${fmtMonths(months)}` : 'No payback on these figures'\r\n    },\r\n    objection: 'These savings are soft. Nobody gets laid off because of this.',\r\n    counter: 'Present recovered capacity against hiring plans rather than as cash. The claim is avoided headcount, not reduced headcount.',\r\n    needsToSee: [\r\n      'Payback period and five-year value',\r\n      'Which inputs are confirmed and which are still assumptions',\r\n      'A conservative case, not the best case'\r\n    ]\r\n  },\r\n  {\r\n    key: 'security',\r\n    role: 'Security / Compliance',\r\n    tag: 'The late arrival that kills timelines',\r\n    cares: 'Proving which services meet which standards, on a date',\r\n    lead: ['standards', 'incidents'],\r\n    headline: m =>\r\n      !m.figures.standardsValue.incomplete && m.figures.standardsValue.value > 0\r\n        ? `${fmtMoney(m.figures.standardsValue.value)} of audit effort avoided per year`\r\n        : 'Ownership and standards provable on demand',\r\n    objection: 'This is another system holding our service metadata.',\r\n    counter: 'Bring them in during discovery rather than at contract. Chris lost weeks on a deal where procurement rules surfaced only after everyone had agreed.',\r\n    needsToSee: [\r\n      'Where the data lives and who can see it',\r\n      'How standards are enforced and evidenced for an audit',\r\n      'The review timeline, raised early enough to matter'\r\n    ]\r\n  }\r\n]\r\n\r\n// ---------------------------------------------------------------------------\r\n// Archetype presets\r\n// ---------------------------------------------------------------------------\r\n// An archetype decides who is in the room (the stakeholder tabs) and which pillar\r\n// leads the case.\r\n\r\nexport const ARCHETYPES = {\r\n  'Fast / AI-native': {\r\n    stakeholders: ['champion', 'cto'],\r\n    pillars: ['speed', 'chaos', 'scale'],\r\n    note: 'Short cycle, few approvers. Lead with speed, not governance.',\r\n    alternative: 'Build something lightweight in-house'\r\n  },\r\n  'Scaling tech': {\r\n    stakeholders: ['champion', 'cto', 'finance'],\r\n    pillars: ['scale', 'speed', 'chaos'],\r\n    note: 'Informal systems are breaking as headcount grows.',\r\n    alternative: 'Self-host open source Backstage'\r\n  },\r\n  Enterprise: {\r\n    stakeholders: ['champion', 'cto', 'finance', 'security'],\r\n    pillars: ['scale', 'speed', 'chaos'],\r\n    note: 'Several approvers. Map the path early; procurement surfaces late.',\r\n    alternative: 'Self-host open source Backstage with a funded platform team'\r\n  },\r\n  'Regulated enterprise': {\r\n    stakeholders: ['champion', 'cto', 'finance', 'security'],\r\n    pillars: ['chaos', 'scale', 'speed'],\r\n    note: 'Long cycle, many layers. Compliance evidence is the lever.',\r\n    alternative: 'Self-host, or defer to the next budget year'\r\n  }\r\n}\r\n\r\nexport const archetypePillars = name => (ARCHETYPES[name] || ARCHETYPES.Enterprise).pillars\r\n\r\n// The stakeholders that should exist for an archetype: its built-in roles (keeping\r\n// any edits or positions already made) plus every custom stakeholder the user added.\r\nexport function stakeholdersForArchetype(current, archetype) {\r\n  const wanted = (ARCHETYPES[archetype] || ARCHETYPES.Enterprise).stakeholders\r\n  const builtinKeys = STAKEHOLDERS.map(s => s.key)\r\n  const kept = Object.fromEntries(current.filter(s => builtinKeys.includes(s.key)).map(s => [s.key, s]))\r\n  const builtin = wanted.map(key => kept[key] || { key, builtin: true })\r\n  const custom = current.filter(s => !builtinKeys.includes(s.key) || (!wanted.includes(s.key) && s.namedPeople?.length))\r\n  return [...builtin, ...custom]\r\n}\r\n\r\n// ---------------------------------------------------------------------------\r\n// The drivers, as the deck lays them out\r\n// ---------------------------------------------------------------------------\r\n\r\n// A customer who says they have no audits has no audit driver: it is left off rather\r\n// than shown empty. (A blank is different: that is a gap, not a zero.)\r\nconst hasDriver = (model, d) => !(d.key === 'standards' && model.inputs.auditsPerYear === 0 && !model.blankInputs.includes('auditsPerYear'))\r\n\r\n// Every driver this customer has, with whether it can be computed yet.\r\nexport function allDrivers(model) {\r\n  return DRIVERS.filter(d => hasDriver(model, d)).map(d => {\r\n    const f = model.figures[d.figure]\r\n    return { ...d, value: f.value, detail: f.equation, flag: f.flag, incomplete: f.incomplete, missing: f.missing }\r\n  })\r\n}\r\n\r\n// Only the drivers that can be computed: what the deck is allowed to show.\r\nexport const computableDrivers = model => allDrivers(model).filter(d => !d.incomplete)\r\n\r\n// Chris's view: how many drivers are done, and what each unfinished one is waiting on.\r\nexport function completeness(model) {\r\n  const all = allDrivers(model)\r\n  return {\r\n    total: all.length,\r\n    done: all.filter(d => !d.incomplete).length,\r\n    waiting: all.filter(d => d.incomplete).map(d => ({ key: d.key, label: d.label, missing: d.missing }))\r\n  }\r\n}\r\n\r\n// The drivers the strategic priority leads with (only those that can be shown).\r\nexport const priorityDrivers = (model, priority) =>\r\n  (PRIORITY_DRIVERS[priority] || PRIORITY_DRIVERS['Cost pressure']).filter(k => computableDrivers(model).some(d => d.key === k))\r\n\r\n// Drivers that can be computed, grouped under the three pillars. The pillar holding\r\n// the priority driver leads (then the archetype's order), and priority drivers come\r\n// first within it. A pillar with nothing to show is left out.\r\nexport function driversByPillar(model, archetype, priority) {\r\n  const drivers = computableDrivers(model)\r\n  const lead = priorityDrivers(model, priority)\r\n  const order = [...archetypePillars(archetype)]\r\n  const holds = key => drivers.some(d => d.pillar === key && lead.includes(d.key))\r\n  order.sort((a, b) => Number(holds(b)) - Number(holds(a)))\r\n  return order\r\n    .map(key => {\r\n      const pillar = PILLARS.find(p => p.key === key)\r\n      const items = drivers\r\n        .filter(d => d.pillar === key)\r\n        .map(d => ({ ...d, priority: lead.includes(d.key) }))\r\n        .sort((a, b) => Number(b.priority) - Number(a.priority))\r\n      return { ...pillar, items, total: items.reduce((s, d) => s + d.value, 0) }\r\n    })\r\n    .filter(g => g.items.length)\r\n    .map((g, i) => ({ ...g, leads: i === 0 }))\r\n}\r\n\r\n// ---------------------------------------------------------------------------\r\n// Projects saved before the inputs were pairs\r\n// ---------------------------------------------------------------------------\r\n\r\nexport const OLD_INPUT_KEYS = new Set([\r\n  'hoursLostPerWeek', 'captureRate', 'platformEngineers', 'pctTimeMaintaining', 'daysSavedOnboarding',\r\n  'hoursPerIncident', 'incidentReduction', 'currentToolSpend', 'toolConsolidation'\r\n])\r\n\r\nconst round1 = n => Math.round(n * 10) / 10\r\n\r\n// Takes { key: { value, confirmed } } and returns the new-style keys derived from\r\n// any old-style ones, so a case built the old way keeps its numbers. Existing\r\n// new-style keys are never overwritten.\r\nexport function migrateOldInputs(saved) {\r\n  const out = {}\r\n  const has = k => saved[k] && saved[k].value != null\r\n  const val = k => Number(saved[k].value)\r\n  const ok = k => !!saved[k].confirmed\r\n\r\n  if (has('hoursLostPerWeek') && !('searchHoursToday' in saved)) {\r\n    const today = val('hoursLostPerWeek')\r\n    const capture = has('captureRate') ? val('captureRate') : 33\r\n    out.searchHoursToday = { value: today, confirmed: ok('hoursLostPerWeek') }\r\n    out.searchHoursPortal = { value: round1(today * (1 - capture / 100)), confirmed: ok('hoursLostPerWeek') && has('captureRate') && ok('captureRate') }\r\n  }\r\n  if (has('daysSavedOnboarding') && !('rampDaysToday' in saved)) {\r\n    const saving = val('daysSavedOnboarding')\r\n    const today = Math.max(14, saving)\r\n    out.rampDaysToday = { value: today, confirmed: false }\r\n    out.rampDaysPortal = { value: today - saving, confirmed: false }\r\n  }\r\n  if (has('hoursPerIncident') && !('incidentHoursToday' in saved)) {\r\n    const today = val('hoursPerIncident')\r\n    const cut = has('incidentReduction') ? val('incidentReduction') : 20\r\n    out.incidentHoursToday = { value: today, confirmed: ok('hoursPerIncident') }\r\n    out.incidentHoursPortal = { value: round1(today * (1 - cut / 100)), confirmed: ok('hoursPerIncident') && has('incidentReduction') && ok('incidentReduction') }\r\n  }\r\n  if (has('currentToolSpend') && !('toolSpendToday' in saved)) {\r\n    const today = val('currentToolSpend')\r\n    const cut = has('toolConsolidation') ? val('toolConsolidation') : 50\r\n    out.toolSpendToday = { value: today, confirmed: ok('currentToolSpend') }\r\n    out.toolSpendPortal = { value: Math.round(today * (1 - cut / 100)), confirmed: ok('currentToolSpend') && has('toolConsolidation') && ok('toolConsolidation') }\r\n  }\r\n  if (has('pctTimeMaintaining') && !('maintPctToday' in saved)) {\r\n    // The old model assumed Portal removed all of that upkeep.\r\n    out.maintPctToday = { value: val('pctTimeMaintaining'), confirmed: false }\r\n    out.maintPctPortal = { value: 0, confirmed: false }\r\n    if (has('platformEngineers') && has('engineers') && val('engineers') > 0 && !('platformShare' in saved)) {\r\n      out.platformShare = { value: Math.min(100, round1((val('platformEngineers') / val('engineers')) * 100)), confirmed: false }\r\n    }\r\n  }\r\n  return out\r\n}\r\n";
 
 // src/format.js
 function fmtMoney(n) {
@@ -15842,6 +15842,7 @@ function websiteBlockDesign(design = {}, brand) {
 function websiteSection(slide2) {
   if (slide2.websiteKind) return { kind: slide2.websiteKind, nav: slide2.websiteNav };
   const blocks = slide2.blocks || [];
+  if (blocks.some((b) => b.type === "chart")) return { kind: "chart", nav: "" };
   const kind = slide2.variant === "hero" || blocks.some((b) => b.type === "text" && b.style === "hero") ? "overview" : blocks.some((b) => b.type === "drivers") ? "drivers" : blocks.some((b) => b.type === "stats") ? "impact" : blocks.some((b) => b.type === "pairs") ? "comparison" : blocks.some((b) => b.type === "versus") ? "alternative" : blocks.some((b) => b.type === "room") ? "stakeholder" : "content";
   const names = { overview: "Overview", impact: "Business impact", drivers: "Value drivers", comparison: "What changes", alternative: "The alternative", stakeholder: "Your perspective" };
   const title = blocks.find((b) => b.type === "text" && ["title", "label", "headline"].includes(b.style) && b.text?.trim());
@@ -16855,6 +16856,7 @@ function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, narrative
       cost: inputs.portalCost === "" || inputs.portalCost == null ? "" : VM.fmtMoney(Number(inputs.portalCost) || 0),
       net: when(F.netValue, (f) => VM.fmtMoney(f.raw)),
       payback: when(F.paybackMonths, (f) => monthsText(f.value)),
+      paybackShort: when(F.paybackMonths, (f) => !(f.value > 0) ? "n/a" : f.value < 1 ? "under a month" : f.value < 10 ? Math.round(f.value * 10) / 10 + " months" : Math.round(f.value) + " months"),
       roi: when(F.roiMultiple, (f) => f.value.toFixed(1) + "x"),
       five: when(F.fiveYearValue, (f) => VM.fmtMoney(f.raw))
     };
@@ -17039,19 +17041,26 @@ function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, narrative
       $("#scenario-summary").innerHTML = annual ? "Annual value<strong>" + esc5(annual.value) + "</strong>Figures update as you explore." : "Add the missing inputs to calculate annual value.";
       main2.querySelectorAll('.slide:not([data-kind="cover"]):not([data-kind="content"])').forEach((section) => {
         const inner = section.querySelector(".inner");
-        const copy = document.createElement("div"), content = document.createElement("div");
+        const copy = document.createElement("div"), content = document.createElement("div"), more = document.createElement("div");
         const summaries = [];
         copy.className = "section-copy";
         content.className = "section-content";
+        more.className = "section-more";
         Array.from(inner.children).forEach((child) => {
           if (child.classList.contains("overview-bento")) {
             summaries.push(child);
             return;
           }
           const block2 = DATA.slides[Number(child.dataset.s)]?.blocks[Number(child.dataset.b)];
+          if (block2 && block2.websiteArea === "more") {
+            more.appendChild(child);
+            return;
+          }
+          ;
           (block2 && (LIVE2[block2.type] || ["room", "overviewFacts", "stakeholderMap"].includes(block2.type)) || child.querySelector(".story-waiting") ? content : copy).appendChild(child);
         });
         inner.append(copy, content, ...summaries);
+        if (more.children.length) inner.append(more);
       });
       window.scrollTo({ top: keep, behavior: "instant" });
       updateProgress();
@@ -17458,7 +17467,7 @@ body.view-website{display:block;height:auto;min-height:100svh;overflow:visible;b
 .view-website .website-actions button:hover{transform:none!important;text-decoration:underline;text-underline-offset:5px}
 .view-website .slide[data-kind="cover"] .website-actions button[data-scenario]{display:none}
 .view-website .slide:not([data-kind="cover"]) .inner{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.3fr);gap:64px;align-items:start}
-.view-website .section-copy{position:sticky;top:140px;min-width:0}.view-website .section-content{min-width:0}
+.view-website .section-copy{position:sticky;top:140px;min-width:0}.view-website .section-content{min-width:0}.view-website .section-more{grid-column:1/-1;min-width:0;max-width:760px;margin-top:48px;padding-top:32px;border-top:1px solid var(--line)}
 .view-website .website-section-number{display:none}
 .view-website .section-copy h2{font-size:clamp(28px,3cqw,42px);line-height:1.15;max-width:23ch;letter-spacing:-.025em}
 .view-website .section-copy .blk[data-custom-size]:has(h2){font-size:min(var(--authored-size),clamp(28px,3cqw,42px))!important}
@@ -17562,10 +17571,19 @@ function landingArtwork({ company, logo, brand }) {
 // src/export/websiteStory.js
 function websiteStory(slides) {
   const groups = {}, names = {};
+  const SHOWN = /* @__PURE__ */ new Set(["{caseContext}", "{cares}", "What this room cares about: {cares}"]);
   for (const slide2 of slides) {
     const kind = websiteSection(slide2).kind;
+    if (kind === "chart") continue;
     if (slide2.websiteNav && !names[kind]) names[kind] = slide2.websiteNav;
-    (groups[kind] ||= []).push(...slide2.blocks.filter((b) => !(b.type === "text" && b.style === "label")).map((b) => ({ ...b, sourceSlideId: slide2.id })));
+    let blocks = slide2.blocks.filter((b) => !(b.type === "text" && b.style === "label"));
+    if (kind === "content") {
+      blocks = blocks.filter((b) => !(b.type === "text" && SHOWN.has(String(b.text || "").trim())));
+      if (!blocks.some((b) => !(b.type === "text" && ["title", "headline"].includes(b.style)))) continue;
+      blocks = blocks.map((b) => ({ ...b, websiteArea: "more" }));
+    }
+    ;
+    (groups[kind] ||= []).push(...blocks.map((b) => ({ ...b, sourceSlideId: slide2.id })));
   }
   const block2 = (type, props = {}) => ({ id: "website-" + type, type, ...props });
   const text2 = (style, value) => block2("text", { style, text: value });
@@ -18013,6 +18031,35 @@ hr{border:0;border-top:1px solid var(--line2);margin:22px 0}.spacer{height:40px}
 @media(max-width:780px){.top{gap:10px;padding:0 12px}.co{display:none}.aud-wrap>span{display:none}.slide{padding:40px 36px 40px 16px}.cols,.stats{grid-template-columns:1fr}.bar-row{grid-template-columns:1fr 70px;grid-template-areas:"l v" "t t" "d d"}.bar-detail{padding-left:0}.v-row{grid-template-columns:1fr 90px}.v-row .track{grid-column:1/-1;order:3}.whatif{left:12px;right:12px;width:auto}}
 `;
 
+// src/export/importCharts.js
+function drawImportChart(slide2, b, box, { font, colors }) {
+  const { x, y, w, h } = box;
+  const text2 = (value, options) => slide2.addText(String(value), { fontFace: font, fontSize: 11, color: colors.ink, margin: 0, breakLine: false, ...options });
+  const bar = (left, top, width, height, color) => {
+    if (width > 0 && height > 0) slide2.addShape("rect", { x: left, y: top, w: width, h: height, line: { color, transparency: 100 }, fill: { color } });
+  };
+  const money2 = (n) => "$" + Math.round(n).toLocaleString("en-US");
+  if (b.chart === "payback") {
+    const max2 = Math.max(1, ...b.value, ...b.cost), plotH = h - 0.65, step = w / b.months.length;
+    b.months.forEach((month, i) => {
+      for (const [values, color, offset] of [[b.value, colors.accent, 0.1], [b.cost, colors.bad, 0.53]]) {
+        const height = Math.max(0, values[i]) / max2 * plotH;
+        bar(x + i * step + offset * step, y + plotH - height, step * 0.35, height, color);
+      }
+      if (i % 6 === 5) text2("M" + month, { x: x + i * step - step, y: y + plotH + 0.04, w: step * 3, h: 0.2, fontSize: 8, align: "center" });
+    });
+    text2("Cumulative value " + money2(b.value.at(-1)) + " \xB7 Cumulative cost " + money2(b.cost.at(-1)), { x, y: y + h - 0.25, w, h: 0.25, fontSize: 10 });
+    return;
+  }
+  const rows = b.rows || [], max = Math.max(1, ...rows.map((r) => b.chart === "confidence" ? r.count : r.value)), rowH = h / Math.max(1, rows.length);
+  rows.forEach((r, i) => {
+    const value = b.chart === "confidence" ? r.count : r.value, top = y + i * rowH;
+    text2(r.label, { x, y: top, w: w * 0.4, h: rowH * 0.85, fit: "shrink" });
+    bar(x + w * 0.42, top + 0.06, w * 0.35 * value / max, Math.min(0.2, rowH * 0.45), r.group === "spend" ? colors.warn : colors.accent);
+    text2(b.chart === "confidence" ? value : money2(value), { x: x + w * 0.79, y: top, w: w * 0.21, h: rowH * 0.85, align: "right", fit: "shrink" });
+  });
+}
+
 // src/export/pptx.js
 var W = 13.333;
 var H = 7.5;
@@ -18197,7 +18244,7 @@ async function layoutBlock(b, deps, theme = DEFAULTS) {
             margin: 0,
             color: it.tone === "good" ? C2.accent : it.tone === "bad" ? C2.bad : C2.strong
           });
-          if (it.eq) s.addText(it.eq, { x: x + 0.2, y: yy + 0.86 * k, w: tw - 0.3, h: 0.2 * k, fontFace: "Consolas", fontSize: 7 * k, color: C2.faint, margin: 0, fit: "shrink" });
+          if (it.eq) s.addText(it.eq, { x: x + 0.2, y: yy + 0.86 * k, w: tw - 0.3, h: 0.2 * k, fontFace: FONT3, fontSize: 7 * k, color: C2.faint, margin: 0, fit: "shrink" });
         })
       };
     }
@@ -18212,6 +18259,10 @@ async function layoutBlock(b, deps, theme = DEFAULTS) {
         h: ch + 0.2,
         draw: (s, y, k) => {
           const box = { x: MX, y, w: CW, h: ch * k };
+          if (deps.importTarget === "google-slides" || deps.importTarget === "canva") {
+            drawImportChart(s, b, box, { font: FONT3, colors: C2 });
+            return;
+          }
           if (b.chart === "payback") {
             const labels = b.months.map((m) => `M${m}`);
             s.addChart(T.line || "line", [
@@ -18270,14 +18321,14 @@ async function layoutBlock(b, deps, theme = DEFAULTS) {
               line: { color: hex2(d.color), width: 0 }
             });
             s.addText(d.valueStr, { x: W - MX - 1.6, y: yy, w: 1.6, h: 0.3 * k, fontFace: FONT3, fontSize: 12 * k, bold: d.lead, color: d.lead ? C2.strong : C2.dim, align: "right", margin: 0, valign: "middle" });
-            s.addText(d.detail, { x: trackX, y: yy + 0.3 * k, w: CW - 3.5, h: 0.22 * k, fontFace: "Consolas", fontSize: 8 * k, color: C2.faint, margin: 0, valign: "top", fit: "shrink" });
+            s.addText(d.detail, { x: trackX, y: yy + 0.3 * k, w: CW - 3.5, h: 0.22 * k, fontFace: FONT3, fontSize: 8 * k, color: C2.faint, margin: 0, valign: "top", fit: "shrink" });
             yy += rh * k;
           });
           const ty = y + height * k + 0.08;
           s.addShape("line", { x: MX, y: ty, w: CW, h: 0, line: { color: C2.track, width: 1 } });
           s.addText("TOTAL ANNUAL VALUE", { x: MX, y: ty + 0.1, w: 5, h: 0.4 * k, fontFace: FONT3, fontSize: 10 * k, bold: true, color: C2.dim, charSpacing: 1, margin: 0, valign: "middle" });
           s.addText(b.total, { x: W - MX - 4, y: ty + 0.06, w: 4, h: 0.5 * k, fontFace: FONT3, fontSize: 24 * k, bold: true, color: C2.strong, align: "right", margin: 0, valign: "middle" });
-          s.addText(b.totalEq, { x: MX, y: ty + 0.56 * k, w: CW, h: 0.22 * k, fontFace: "Consolas", fontSize: 8 * k, color: C2.faint, margin: 0, fit: "shrink" });
+          s.addText(b.totalEq, { x: MX, y: ty + 0.56 * k, w: CW, h: 0.22 * k, fontFace: FONT3, fontSize: 8 * k, color: C2.faint, margin: 0, fit: "shrink" });
         }
       };
     }
@@ -18323,7 +18374,7 @@ async function layoutBlock(b, deps, theme = DEFAULTS) {
               line: { color: C2.accent, width: 0 }
             });
             s.addText(r.valueStr, { x: W - MX - 1.6, y: yy, w: 1.6, h: 0.4 * k, fontFace: FONT3, fontSize: 15 * k, bold: true, color: C2.strong, align: "right", margin: 0, valign: "middle" });
-            if (r.eq) s.addText(r.eq, { x: trackX, y: yy + 0.38 * k, w: trackW, h: 0.2 * k, fontFace: "Consolas", fontSize: 8 * k, color: C2.faint, margin: 0, fit: "shrink" });
+            if (r.eq) s.addText(r.eq, { x: trackX, y: yy + 0.38 * k, w: trackW, h: 0.2 * k, fontFace: FONT3, fontSize: 8 * k, color: C2.faint, margin: 0, fit: "shrink" });
           });
           s.addText(
             [

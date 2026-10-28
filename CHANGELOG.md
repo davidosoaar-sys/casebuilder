@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.23.2 (2026-10-28)
+
+- Merge Bruno’s Claude Code installation fix: remove unsupported `displayName` from the plugin manifest.
+- Validation: rebuild plugin package and run plugin tests; no application design changes included.
+
 Every version that lands on `main` gets a line here and a git tag.
 
 ## How we version
