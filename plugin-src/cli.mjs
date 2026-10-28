@@ -1,4 +1,5 @@
 import { clientCompanyName } from '../src/companyName.js'
+import {rasterLogo as toRasterLogo} from './logoRaster.mjs'
 import {clientStakeholder} from '../src/stakeholderRequirements.js'
 // casebuilder: the command line behind the Claude plugin. It reads and writes
 // a case file (see src/caseFile.js), runs the value model, and builds the
@@ -465,7 +466,7 @@ async function cmdBuild(pos, flags) {
   const brand=normalizeBrand(project.brand)
   const hasCompanyLogo=Boolean(brand.logo&&!brand.hideLogo)
   const companyLogo=brandLogoHtml(brand,'')
-  const rasterLogo=hasCompanyLogo&&/^data:image\/(png|jpeg);base64,/.test(brand.logo)?brand.logo:null
+  const rasterLogo=hasCompanyLogo ? await toRasterLogo(brand.logo) : null
   const warnings=[]
   if(hasCompanyLogo&&!rasterLogo&&formats.some(f=>['pptx','google-slides','canva'].includes(f)))warnings.push('The company logo is not PNG/JPEG. PPTX omits it; supply a PNG/JPEG variant for an embedded logo. HTML outputs retain the original asset.')
 
@@ -500,7 +501,7 @@ async function cmdBuild(pos, flags) {
     written.push({ format: 'website', file: out, bytes: fs.statSync(out).size, audience: 'company story with stakeholder map' })
   }
 
-  print({ built: written, warnings, note: 'PowerPoint and one-pager use the selected stakeholder. The website uses the company story and stakeholder map. PPTX keeps font names; recipients need those fonts installed.' })
+  print({ built: written, warnings, assets:{companyLogo:hasCompanyLogo,pptxLogo:!!rasterLogo,coverImage:!!brand.heroImage,headingFont:brand.headingFont,bodyFont:brand.bodyFont,embeddedFontFamilies:brand.fontFaces.map(f=>f.family),fallbackFont:'Poppins'}, note: 'PowerPoint and one-pager use the selected stakeholder. The website uses the company story and stakeholder map. PPTX keeps font names; recipients need those fonts installed.' })
 }
 
 function websiteHtml({ company, deck, inputs, project, list, who }) {

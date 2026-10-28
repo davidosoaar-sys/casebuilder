@@ -1,4 +1,4 @@
-import {fetchBrandAsset,inspectBrandImage,brandPageLinks,brandKitDownloads,brandHeroCandidates} from './brandAssets.js'
+import {fetchBrandAsset,inspectBrandImage,brandPageLinks,brandKitDownloads,brandHeroCandidates,brandCssHeroCandidates} from './brandAssets.js'
 import { runWithSearch, searchBackendOrNull } from './agentSearch.js'
 import { fetchPublic } from './publicWeb.js'
 import {publicProfileUrl} from '../src/profileMedia.js'
@@ -116,7 +116,7 @@ export function parseBrand(html, css, website, company = '') {
   const themeVariables = darkDefault ? variables : firstVariables
   const expand = text => { let s = text || ''; for (let n = 0; n < 5; n++) s = s.replace(/var\(--([\w-]+)(?:,([^)]*))?\)/g, (_all, key, fallback) => variables[key] || fallback || ''); return s }
   const rules=[...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
-  const familyFor=selector=>rules.filter(m=>selector.test(m[1])).map(m=>[...m[2].matchAll(/font-family\s*:\s*([^;}]+)/gi)].at(-1)?.[1]).filter(Boolean).at(-1)||''
+  const familyFor=selector=>rules.filter(m=>selector.test(m[1])&&!/:lang\(|\[lang[\s=|]/i.test(m[1])).map(m=>[...m[2].matchAll(/font-family\s*:\s*([^;}]+)/gi)].at(-1)?.[1]).filter(Boolean).at(-1)||''
   const headingRule=familyFor(/(?:^|,)\s*(?:h1|\.h1|\.heading|\.headline)(?:$|[:.#\s])/i)
   const bodyRuleFont=familyFor(/(?:^|,)\s*(?:body|html)(?:$|[:.#\s])/i)
   let heading = fontName(expand(variables['heading-font'] || variables['font-heading'] || variables['encore-title-font-stack'] || variables['ds-font-family-segoe-variable-display'] || variables['ifm-heading-font-family'] || headingRule || bodyRuleFont || variables['font-sans'] || css.match(/(?:h1|\.heading|\.headline)[^{]*\{[^}]*font-family\s*:\s*([^;}]+)/i)?.[1] || css.match(/font-family\s*:\s*([^;}]+)/i)?.[1]))
@@ -288,13 +288,14 @@ export async function discoverBrand({ company, website }, fetcher = fetchPublic,
   const heroWork=Promise.allSettled(brandHeroCandidates(html,home.url,company).map(async candidate=>({candidate,image:await fetchBrandAsset(candidate.url,'heroImage',fetcher)})))
   const assetBase=documentBase(html,home.url)
   const sources = [home.url]
-  const sheets = [...html.matchAll(/<link\b[^>]*>/gi)].map(m => m[0]).filter(t => /stylesheet/i.test(attr(t, 'rel'))).map(t => absolute(attr(t, 'href'), assetBase)).filter(Boolean).slice(0, 4)
+  const sheets = [...html.matchAll(/<link\b[^>]*>/gi)].map(m => m[0]).filter(t => /stylesheet/i.test(attr(t, 'rel'))).map(t => absolute(attr(t, 'href'), assetBase)).filter(Boolean).slice(0, 6)
   let css = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map(m => m[1]).join('\n')
   const results = await Promise.allSettled(sheets.map(url => fetcher(url)))
   const cssBases = []
   for (const r of results) if (r.status === 'fulfilled' && /css|text\/plain/i.test(r.value.type)) {
     const text = r.value.buffer.toString('utf8'); css += '\n' + text; cssBases.push({ text, url: r.value.url }); sources.push(r.value.url)
   }
+  const cssHeroWork=Promise.allSettled(cssBases.flatMap(s=>brandCssHeroCandidates(s.text,s.url)).slice(0,2).map(async candidate=>({candidate,image:await fetchBrandAsset(candidate.url,'heroImage',fetcher)})))
   const parsed = parseBrand(html, css, home.url, company)
   const sourceNotes=[]
   // Follow only published official-site links. A brand kit supplies logo variants;
@@ -353,7 +354,7 @@ export async function discoverBrand({ company, website }, fetcher = fetchPublic,
   })
   let heroImage='',heroAlt='',heroSource=''
   const heroCandidates=[]
-  for(const result of await heroWork){
+  for(const result of [...await heroWork,...await cssHeroWork]){
     if(result.status==='fulfilled'){
       const {candidate,image}=result.value
       heroCandidates.push({heroImage:image.data,heroAlt:candidate.alt||company+' brand image',heroSource:image.source})

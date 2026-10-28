@@ -84,6 +84,10 @@ test('bundled plugin completes an offline fixture from empty case to branded out
   run('set',file,'engineers=500','hourlyCost=100','searchHoursToday=3','searchHoursPortal=2','--confirmed','engineers,hourlyCost,searchHoursToday','--assumed','searchHoursPortal','--origin','Fictional discovery transcript, lines 4–6')
   const raw=JSON.parse(fs.readFileSync(file))
   raw.brand={...raw.brand,headingFont:'Georgia',bodyFont:'Arial',primary:'#224488',background:'#FFFFFF',text:'#111111',surface:'#F5F5F5',muted:'#555555',logo:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg=='}
+  raw.brand.logo='data:image/svg+xml;base64,'+Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="60" viewBox="0 0 100 60"><path fill="#224488" d="M0 0h100v60H0z"/></svg>').toString('base64')
+  raw.brand.heroImage='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg=='
+  raw.brand.heroSource='https://fixture.example/campaign'
+  raw.brand.heroAlt='Fictional campaign image'
   fs.writeFileSync(file,JSON.stringify(raw))
   run('person','add',file,'--stakeholder','cto','--name','Alex Fixture','--title','Chief Exploration Officer','--source','https://fixture.example/team')
   assert.equal(JSON.parse(fs.readFileSync(file)).people.cto[0].mapping.confidence,'low')
@@ -94,11 +98,15 @@ test('bundled plugin completes an offline fixture from empty case to branded out
   const site=fs.readFileSync(built.built.find(f=>f.format==='website').file,'utf8')
   assert.ok(site.includes('Georgia'))
   assert.ok(site.includes(raw.brand.logo))
+  assert.ok(site.includes(raw.brand.heroImage))
+  assert.ok(site.includes("font-family:'Poppins';src:url('data:font/ttf;base64,"))
   assert.ok(site.includes('Alex Fixture'))
   assert.ok(!site.includes('Fictional discovery transcript, lines'))
   const {default:JSZip}=await import('jszip')
   const zip=await JSZip.loadAsync(fs.readFileSync(built.built.find(f=>f.format==='pptx').file))
   assert.ok((await zip.file('ppt/theme/theme1.xml').async('string')).includes('Georgia'))
+  const cover=await zip.file('ppt/slides/slide1.xml').async('string')
+  assert.ok((cover.match(/<p:pic>/g)||[]).length>=3,'Cover includes separate company logo, Backstage logo and campaign image')
   assert.equal(caseFileToProject(raw).deck[0].design.coverLayout,'split')
   const imports=run('build',file,'--format','google-slides,canva','--out',path.join(dir,'imports'))
   assert.deepEqual(imports.built.map(b=>b.format),['google-slides','canva'])

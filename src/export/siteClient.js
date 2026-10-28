@@ -158,7 +158,7 @@ export function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, na
       case 'logo':
         return '<div class="logo">' + DATA.logo + '</div>'
       case 'overviewFacts':
-        return '<div class="overview-context"><span class="label">THE DIRECTION</span><h3>' + esc(DATA.company) + '</h3><dl><dt>Company archetype</dt><dd>' + esc(inputs.archetype || 'Not yet specified') + '</dd><dt>Strategic priority</dt><dd>' + esc(inputs.strategicPriority || 'Not yet specified') + '</dd><dt>Stakeholders</dt><dd>' + DATA.stakeholders.length + '</dd></dl></div>'
+        return '<div class="overview-context"><span class="label">THE DIRECTION</span><dl><dt>Company archetype</dt><dd>' + esc(inputs.archetype || 'Not yet specified') + '</dd><dt>Strategic priority</dt><dd>' + esc(inputs.strategicPriority || 'Not yet specified') + '</dd><dt>Stakeholders</dt><dd>' + DATA.stakeholders.length + '</dd></dl></div>'
       case 'stakeholderMap': return DATA.journeyHtml || ''
       case 'divider':
         return '<hr>'
@@ -323,7 +323,7 @@ export function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, na
       const summary = ['annual', 'payback', 'roi'].map(statItem).filter(Boolean)
       if (overview && summary.length) overview.insertAdjacentHTML('beforeend', '<div class="overview-bento">' + summary.map(i => '<div class="bento-cell"><span>' + esc(i.label) + '</span><strong>' + esc(i.value) + '</strong></div>').join('') + '</div>')
       if (!shown.length) main.innerHTML = '<section class="website-empty"><span class="label">Business case</span><h1>' + esc(DATA.company || 'Your company') + '</h1><p>Your business case is taking shape.</p><p>Add inputs and content to bring the value, comparisons and stakeholder perspectives into view.</p></section>'
-      main.insertAdjacentHTML('beforeend', '<footer class="website-end"><span>' + esc(DATA.company) + ' · Business case</span><button data-explore="0">Back to top ↑</button></footer>')
+      main.insertAdjacentHTML('beforeend', '<footer class="website-end"><span>Business case</span><button data-explore="0">Back to top ↑</button></footer>')
       const annual = statItem('annual')
       $('#scenario-summary').innerHTML = annual ? 'Annual value<strong>' + esc(annual.value) + '</strong>Figures update as you explore.' : 'Add the missing inputs to calculate annual value.'
       main.querySelectorAll('.slide:not([data-kind="cover"]):not([data-kind="content"])').forEach(section => {

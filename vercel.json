@@ -14,6 +14,9 @@
     },
     "api/mcp.js": {
       "maxDuration": 60
+    },
+    "api/slide-export.js": {
+      "maxDuration": 60
     }
   },
   "framework": "vite",

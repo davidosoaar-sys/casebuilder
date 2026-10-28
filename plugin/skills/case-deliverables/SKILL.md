@@ -35,8 +35,7 @@ creates files by explicit request. PDF is optional and requires a supported brow
 
 Check actual output before declaring success: logo visibility/aspect ratio,
 font availability, contrast, clipping, matching figures and no source/confidence
-metadata in client content. Node/PPTX may require a supplied PNG/JPEG logo fallback;
-report this instead of silently using Backstage's logo for another company.
+metadata in client content. Safe SVG logos are rasterized locally for PPTX. Check that the company logo, green Backstage mark and sourced right-side image are separate assets on the cover. Inspect the build asset report. Do not substitute a Backstage-only identity for a missing company mark.
 Keep unknown values visible as missing and research metadata in the internal
 report. Never publish or message a customer as part of building outputs.
 
@@ -62,3 +61,7 @@ optional when required by that account. Never request secrets pasted into chat
 or include tokens in the plugin ZIP. Report a shareable URL only when publishing
 returns success, and disclose deployment protection if `public:false`. A shared
 link is a snapshot; revisions require republishing. Do not claim live sync.
+
+## Asset preflight
+
+Before building, inspect logo, heading/body fonts, embedded font files and heroImage. Run brand discovery for missing pieces when web is authorized; preserve existing authored assets. The cover uses logo × green Backstage at left and an official campaign/product image at right. Keep the split cover marker on new covers. A missing brand font falls back to bundled Poppins, not Arial. Brand font names remain in editable PPTX; recipients need them installed. HTML/PDF embed available font bytes. Never claim the named company font was embedded if only Poppins is available.

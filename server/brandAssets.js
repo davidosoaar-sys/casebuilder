@@ -50,7 +50,7 @@ export function brandKitDownloads(html,website,company){
 export function brandHeroCandidates(html,website,company=''){
  const key=company.toLowerCase().replace(/[^a-z0-9]/g,'')
  const candidates=[]
- for(const tag of html.match(/<(?:img|meta)\b[^>]*>/gi)||[]){
+ for(const tag of html.match(/<(?:img|meta|source)\b[^>]*>/gi)||[]){
   const meta=/^<meta/i.test(tag),src=meta?(/^(?:og:image|twitter:image)$/i.test(attr(tag,'property')||attr(tag,'name'))?attr(tag,'content'):''):attr(tag,'src')||attr(tag,'data-src')||(attr(tag,'srcset')||attr(tag,'data-srcset')).split(',').at(-1)?.trim().split(/\s+/)[0]
   if(!src)continue
   const label=(src+' '+attr(tag,'alt')+' '+attr(tag,'class')).toLowerCase()
@@ -59,9 +59,17 @@ export function brandHeroCandidates(html,website,company=''){
   const product=/product|shoe|sneaker|jordan|headphone|packaging|commerce|storefront/i.test(label)
   const named=key&&label.replace(/[^a-z0-9]/g,'').includes(key)
   if(!campaign&&!meta&&!named&&!product)continue
-  try{const url=new URL(src.replace(/&amp;/g,'&'),website);if(url.protocol==='https:')candidates.push({url:url.href,alt:attr(tag,'alt'),score:campaign?100:product?90:meta?80:60})}catch{}
+  try{const url=new URL(src.replace(/&amp;/g,'&'),website);if(url.protocol==='https:')candidates.push({url:url.href,alt:attr(tag,'alt'),score:(campaign?100:product?90:meta?80:60)+(/largetall|portrait|mediumtall/.test(label)?10:0)-(/small|thumbnail/.test(label)?30:0)})}catch{}
  }
  return candidates.sort((a,b)=>b.score-a.score).filter((c,i,list)=>list.findIndex(x=>x.url===c.url)===i).slice(0,2)
+}
+
+export function brandCssHeroCandidates(css, stylesheet) {
+ return [...css.matchAll(/url\(\s*["']?([^"')\s]+)["']?\s*\)/gi)].flatMap(m=>{
+  const src=m[1]
+  if(!/\.(?:png|jpe?g|webp)(?:\?|$)/i.test(src)||!/hero|campaign|masthead|product/i.test(src)||/logo|icon|sprite|small|thumbnail/i.test(src))return []
+  try{const url=new URL(src,stylesheet);return url.protocol==='https:'?[{url:url.href,alt:'Official company campaign image'}]:[]}catch{return []}
+ }).filter((c,i,all)=>all.findIndex(x=>x.url===c.url)===i).slice(0,2)
 }
 
 // The same byte and public-network checks serve discovery and later replacements.

@@ -101,3 +101,10 @@ test('cover imagery accepts official product photos and responsive sources but r
  assert.ok(images.some(i=>i.url.endsWith('/campaign-large.jpg')))
  assert.equal(images.some(i=>i.url.includes('logo-tile')),false)
 })
+
+test('responsive picture sources and CSS campaigns provide cover images',async()=>{
+ const {brandHeroCandidates,brandCssHeroCandidates}=await import('./brandAssets.js');
+ const photos=brandHeroCandidates('<picture><source srcset="/hero_device_largetall.jpg 1x, /hero_device_largetall_2x.jpg 2x"><img src="/hero_device_large.jpg"></picture>','https://company.example/','Company');
+ assert.match(photos[0].url,/largetall_2x/);
+ assert.equal(brandCssHeroCandidates('a{background:url(/logo.png)}.hero{background:url(/campaign_product.jpg)}','https://company.example/style/main.css').length,1);
+});

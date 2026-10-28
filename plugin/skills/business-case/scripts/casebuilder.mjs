@@ -9756,6 +9756,610 @@ function clientCompanyName(companyName, projectName2 = "") {
   return raw.split(/\s+·\s+/)[0].trim() || raw;
 }
 
+// plugin-src/logoRaster.mjs
+import fs from "node:fs";
+
+// node_modules/@resvg/resvg-wasm/index.mjs
+var wasm;
+var heap = new Array(128).fill(void 0);
+heap.push(void 0, null, true, false);
+var heap_next = heap.length;
+function addHeapObject(obj) {
+  if (heap_next === heap.length)
+    heap.push(heap.length + 1);
+  const idx = heap_next;
+  heap_next = heap[idx];
+  heap[idx] = obj;
+  return idx;
+}
+function getObject(idx) {
+  return heap[idx];
+}
+function dropObject(idx) {
+  if (idx < 132)
+    return;
+  heap[idx] = heap_next;
+  heap_next = idx;
+}
+function takeObject(idx) {
+  const ret = getObject(idx);
+  dropObject(idx);
+  return ret;
+}
+var WASM_VECTOR_LEN = 0;
+var cachedUint8Memory0 = null;
+function getUint8Memory0() {
+  if (cachedUint8Memory0 === null || cachedUint8Memory0.byteLength === 0) {
+    cachedUint8Memory0 = new Uint8Array(wasm.memory.buffer);
+  }
+  return cachedUint8Memory0;
+}
+var cachedTextEncoder = typeof TextEncoder !== "undefined" ? new TextEncoder("utf-8") : { encode: () => {
+  throw Error("TextEncoder not available");
+} };
+var encodeString = typeof cachedTextEncoder.encodeInto === "function" ? function(arg, view) {
+  return cachedTextEncoder.encodeInto(arg, view);
+} : function(arg, view) {
+  const buf = cachedTextEncoder.encode(arg);
+  view.set(buf);
+  return {
+    read: arg.length,
+    written: buf.length
+  };
+};
+function passStringToWasm0(arg, malloc, realloc) {
+  if (realloc === void 0) {
+    const buf = cachedTextEncoder.encode(arg);
+    const ptr2 = malloc(buf.length, 1) >>> 0;
+    getUint8Memory0().subarray(ptr2, ptr2 + buf.length).set(buf);
+    WASM_VECTOR_LEN = buf.length;
+    return ptr2;
+  }
+  let len = arg.length;
+  let ptr = malloc(len, 1) >>> 0;
+  const mem = getUint8Memory0();
+  let offset = 0;
+  for (; offset < len; offset++) {
+    const code = arg.charCodeAt(offset);
+    if (code > 127)
+      break;
+    mem[ptr + offset] = code;
+  }
+  if (offset !== len) {
+    if (offset !== 0) {
+      arg = arg.slice(offset);
+    }
+    ptr = realloc(ptr, len, len = offset + arg.length * 3, 1) >>> 0;
+    const view = getUint8Memory0().subarray(ptr + offset, ptr + len);
+    const ret = encodeString(arg, view);
+    offset += ret.written;
+    ptr = realloc(ptr, len, offset, 1) >>> 0;
+  }
+  WASM_VECTOR_LEN = offset;
+  return ptr;
+}
+function isLikeNone(x) {
+  return x === void 0 || x === null;
+}
+var cachedInt32Memory0 = null;
+function getInt32Memory0() {
+  if (cachedInt32Memory0 === null || cachedInt32Memory0.byteLength === 0) {
+    cachedInt32Memory0 = new Int32Array(wasm.memory.buffer);
+  }
+  return cachedInt32Memory0;
+}
+var cachedTextDecoder = typeof TextDecoder !== "undefined" ? new TextDecoder("utf-8", { ignoreBOM: true, fatal: true }) : { decode: () => {
+  throw Error("TextDecoder not available");
+} };
+if (typeof TextDecoder !== "undefined") {
+  cachedTextDecoder.decode();
+}
+function getStringFromWasm0(ptr, len) {
+  ptr = ptr >>> 0;
+  return cachedTextDecoder.decode(getUint8Memory0().subarray(ptr, ptr + len));
+}
+function _assertClass(instance, klass) {
+  if (!(instance instanceof klass)) {
+    throw new Error(`expected instance of ${klass.name}`);
+  }
+  return instance.ptr;
+}
+function handleError(f, args) {
+  try {
+    return f.apply(this, args);
+  } catch (e) {
+    wasm.__wbindgen_exn_store(addHeapObject(e));
+  }
+}
+var BBoxFinalization = typeof FinalizationRegistry === "undefined" ? { register: () => {
+}, unregister: () => {
+} } : new FinalizationRegistry((ptr) => wasm.__wbg_bbox_free(ptr >>> 0));
+var BBox = class _BBox {
+  static __wrap(ptr) {
+    ptr = ptr >>> 0;
+    const obj = Object.create(_BBox.prototype);
+    obj.__wbg_ptr = ptr;
+    BBoxFinalization.register(obj, obj.__wbg_ptr, obj);
+    return obj;
+  }
+  __destroy_into_raw() {
+    const ptr = this.__wbg_ptr;
+    this.__wbg_ptr = 0;
+    BBoxFinalization.unregister(this);
+    return ptr;
+  }
+  free() {
+    const ptr = this.__destroy_into_raw();
+    wasm.__wbg_bbox_free(ptr);
+  }
+  /**
+  * @returns {number}
+  */
+  get x() {
+    const ret = wasm.__wbg_get_bbox_x(this.__wbg_ptr);
+    return ret;
+  }
+  /**
+  * @param {number} arg0
+  */
+  set x(arg0) {
+    wasm.__wbg_set_bbox_x(this.__wbg_ptr, arg0);
+  }
+  /**
+  * @returns {number}
+  */
+  get y() {
+    const ret = wasm.__wbg_get_bbox_y(this.__wbg_ptr);
+    return ret;
+  }
+  /**
+  * @param {number} arg0
+  */
+  set y(arg0) {
+    wasm.__wbg_set_bbox_y(this.__wbg_ptr, arg0);
+  }
+  /**
+  * @returns {number}
+  */
+  get width() {
+    const ret = wasm.__wbg_get_bbox_width(this.__wbg_ptr);
+    return ret;
+  }
+  /**
+  * @param {number} arg0
+  */
+  set width(arg0) {
+    wasm.__wbg_set_bbox_width(this.__wbg_ptr, arg0);
+  }
+  /**
+  * @returns {number}
+  */
+  get height() {
+    const ret = wasm.__wbg_get_bbox_height(this.__wbg_ptr);
+    return ret;
+  }
+  /**
+  * @param {number} arg0
+  */
+  set height(arg0) {
+    wasm.__wbg_set_bbox_height(this.__wbg_ptr, arg0);
+  }
+};
+var RenderedImageFinalization = typeof FinalizationRegistry === "undefined" ? { register: () => {
+}, unregister: () => {
+} } : new FinalizationRegistry((ptr) => wasm.__wbg_renderedimage_free(ptr >>> 0));
+var RenderedImage = class _RenderedImage {
+  static __wrap(ptr) {
+    ptr = ptr >>> 0;
+    const obj = Object.create(_RenderedImage.prototype);
+    obj.__wbg_ptr = ptr;
+    RenderedImageFinalization.register(obj, obj.__wbg_ptr, obj);
+    return obj;
+  }
+  __destroy_into_raw() {
+    const ptr = this.__wbg_ptr;
+    this.__wbg_ptr = 0;
+    RenderedImageFinalization.unregister(this);
+    return ptr;
+  }
+  free() {
+    const ptr = this.__destroy_into_raw();
+    wasm.__wbg_renderedimage_free(ptr);
+  }
+  /**
+  * Get the PNG width
+  * @returns {number}
+  */
+  get width() {
+    const ret = wasm.renderedimage_width(this.__wbg_ptr);
+    return ret >>> 0;
+  }
+  /**
+  * Get the PNG height
+  * @returns {number}
+  */
+  get height() {
+    const ret = wasm.renderedimage_height(this.__wbg_ptr);
+    return ret >>> 0;
+  }
+  /**
+  * Write the image data to Uint8Array
+  * @returns {Uint8Array}
+  */
+  asPng() {
+    try {
+      const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+      wasm.renderedimage_asPng(retptr, this.__wbg_ptr);
+      var r0 = getInt32Memory0()[retptr / 4 + 0];
+      var r1 = getInt32Memory0()[retptr / 4 + 1];
+      var r2 = getInt32Memory0()[retptr / 4 + 2];
+      if (r2) {
+        throw takeObject(r1);
+      }
+      return takeObject(r0);
+    } finally {
+      wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+  }
+  /**
+  * Get the RGBA pixels of the image
+  * @returns {Uint8Array}
+  */
+  get pixels() {
+    const ret = wasm.renderedimage_pixels(this.__wbg_ptr);
+    return takeObject(ret);
+  }
+};
+var ResvgFinalization = typeof FinalizationRegistry === "undefined" ? { register: () => {
+}, unregister: () => {
+} } : new FinalizationRegistry((ptr) => wasm.__wbg_resvg_free(ptr >>> 0));
+var Resvg = class {
+  __destroy_into_raw() {
+    const ptr = this.__wbg_ptr;
+    this.__wbg_ptr = 0;
+    ResvgFinalization.unregister(this);
+    return ptr;
+  }
+  free() {
+    const ptr = this.__destroy_into_raw();
+    wasm.__wbg_resvg_free(ptr);
+  }
+  /**
+  * @param {Uint8Array | string} svg
+  * @param {string | undefined} [options]
+  * @param {Array<any> | undefined} [custom_font_buffers]
+  */
+  constructor(svg, options, custom_font_buffers) {
+    try {
+      const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+      var ptr0 = isLikeNone(options) ? 0 : passStringToWasm0(options, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+      var len0 = WASM_VECTOR_LEN;
+      wasm.resvg_new(retptr, addHeapObject(svg), ptr0, len0, isLikeNone(custom_font_buffers) ? 0 : addHeapObject(custom_font_buffers));
+      var r0 = getInt32Memory0()[retptr / 4 + 0];
+      var r1 = getInt32Memory0()[retptr / 4 + 1];
+      var r2 = getInt32Memory0()[retptr / 4 + 2];
+      if (r2) {
+        throw takeObject(r1);
+      }
+      this.__wbg_ptr = r0 >>> 0;
+      return this;
+    } finally {
+      wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+  }
+  /**
+  * Get the SVG width
+  * @returns {number}
+  */
+  get width() {
+    const ret = wasm.resvg_width(this.__wbg_ptr);
+    return ret;
+  }
+  /**
+  * Get the SVG height
+  * @returns {number}
+  */
+  get height() {
+    const ret = wasm.resvg_height(this.__wbg_ptr);
+    return ret;
+  }
+  /**
+  * Renders an SVG in Wasm
+  * @returns {RenderedImage}
+  */
+  render() {
+    try {
+      const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+      wasm.resvg_render(retptr, this.__wbg_ptr);
+      var r0 = getInt32Memory0()[retptr / 4 + 0];
+      var r1 = getInt32Memory0()[retptr / 4 + 1];
+      var r2 = getInt32Memory0()[retptr / 4 + 2];
+      if (r2) {
+        throw takeObject(r1);
+      }
+      return RenderedImage.__wrap(r0);
+    } finally {
+      wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+  }
+  /**
+  * Output usvg-simplified SVG string
+  * @returns {string}
+  */
+  toString() {
+    let deferred1_0;
+    let deferred1_1;
+    try {
+      const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+      wasm.resvg_toString(retptr, this.__wbg_ptr);
+      var r0 = getInt32Memory0()[retptr / 4 + 0];
+      var r1 = getInt32Memory0()[retptr / 4 + 1];
+      deferred1_0 = r0;
+      deferred1_1 = r1;
+      return getStringFromWasm0(r0, r1);
+    } finally {
+      wasm.__wbindgen_add_to_stack_pointer(16);
+      wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+    }
+  }
+  /**
+  * Calculate a maximum bounding box of all visible elements in this SVG.
+  *
+  * Note: path bounding box are approx values.
+  * @returns {BBox | undefined}
+  */
+  innerBBox() {
+    const ret = wasm.resvg_innerBBox(this.__wbg_ptr);
+    return ret === 0 ? void 0 : BBox.__wrap(ret);
+  }
+  /**
+  * Calculate a maximum bounding box of all visible elements in this SVG.
+  * This will first apply transform.
+  * Similar to `SVGGraphicsElement.getBBox()` DOM API.
+  * @returns {BBox | undefined}
+  */
+  getBBox() {
+    const ret = wasm.resvg_getBBox(this.__wbg_ptr);
+    return ret === 0 ? void 0 : BBox.__wrap(ret);
+  }
+  /**
+  * Use a given `BBox` to crop the svg. Currently this method simply changes
+  * the viewbox/size of the svg and do not move the elements for simplicity
+  * @param {BBox} bbox
+  */
+  cropByBBox(bbox) {
+    _assertClass(bbox, BBox);
+    wasm.resvg_cropByBBox(this.__wbg_ptr, bbox.__wbg_ptr);
+  }
+  /**
+  * @returns {Array<any>}
+  */
+  imagesToResolve() {
+    try {
+      const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+      wasm.resvg_imagesToResolve(retptr, this.__wbg_ptr);
+      var r0 = getInt32Memory0()[retptr / 4 + 0];
+      var r1 = getInt32Memory0()[retptr / 4 + 1];
+      var r2 = getInt32Memory0()[retptr / 4 + 2];
+      if (r2) {
+        throw takeObject(r1);
+      }
+      return takeObject(r0);
+    } finally {
+      wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+  }
+  /**
+  * @param {string} href
+  * @param {Uint8Array} buffer
+  */
+  resolveImage(href, buffer) {
+    try {
+      const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+      const ptr0 = passStringToWasm0(href, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+      const len0 = WASM_VECTOR_LEN;
+      wasm.resvg_resolveImage(retptr, this.__wbg_ptr, ptr0, len0, addHeapObject(buffer));
+      var r0 = getInt32Memory0()[retptr / 4 + 0];
+      var r1 = getInt32Memory0()[retptr / 4 + 1];
+      if (r1) {
+        throw takeObject(r0);
+      }
+    } finally {
+      wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+  }
+};
+async function __wbg_load(module, imports) {
+  if (typeof Response === "function" && module instanceof Response) {
+    if (typeof WebAssembly.instantiateStreaming === "function") {
+      try {
+        return await WebAssembly.instantiateStreaming(module, imports);
+      } catch (e) {
+        if (module.headers.get("Content-Type") != "application/wasm") {
+          console.warn("`WebAssembly.instantiateStreaming` failed because your server does not serve wasm with `application/wasm` MIME type. Falling back to `WebAssembly.instantiate` which is slower. Original error:\n", e);
+        } else {
+          throw e;
+        }
+      }
+    }
+    const bytes = await module.arrayBuffer();
+    return await WebAssembly.instantiate(bytes, imports);
+  } else {
+    const instance = await WebAssembly.instantiate(module, imports);
+    if (instance instanceof WebAssembly.Instance) {
+      return { instance, module };
+    } else {
+      return instance;
+    }
+  }
+}
+function __wbg_get_imports() {
+  const imports = {};
+  imports.wbg = {};
+  imports.wbg.__wbg_new_28c511d9baebfa89 = function(arg0, arg1) {
+    const ret = new Error(getStringFromWasm0(arg0, arg1));
+    return addHeapObject(ret);
+  };
+  imports.wbg.__wbindgen_memory = function() {
+    const ret = wasm.memory;
+    return addHeapObject(ret);
+  };
+  imports.wbg.__wbg_buffer_12d079cc21e14bdb = function(arg0) {
+    const ret = getObject(arg0).buffer;
+    return addHeapObject(ret);
+  };
+  imports.wbg.__wbg_newwithbyteoffsetandlength_aa4a17c33a06e5cb = function(arg0, arg1, arg2) {
+    const ret = new Uint8Array(getObject(arg0), arg1 >>> 0, arg2 >>> 0);
+    return addHeapObject(ret);
+  };
+  imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
+    takeObject(arg0);
+  };
+  imports.wbg.__wbg_new_63b92bc8671ed464 = function(arg0) {
+    const ret = new Uint8Array(getObject(arg0));
+    return addHeapObject(ret);
+  };
+  imports.wbg.__wbg_values_839f3396d5aac002 = function(arg0) {
+    const ret = getObject(arg0).values();
+    return addHeapObject(ret);
+  };
+  imports.wbg.__wbg_next_196c84450b364254 = function() {
+    return handleError(function(arg0) {
+      const ret = getObject(arg0).next();
+      return addHeapObject(ret);
+    }, arguments);
+  };
+  imports.wbg.__wbg_done_298b57d23c0fc80c = function(arg0) {
+    const ret = getObject(arg0).done;
+    return ret;
+  };
+  imports.wbg.__wbg_value_d93c65011f51a456 = function(arg0) {
+    const ret = getObject(arg0).value;
+    return addHeapObject(ret);
+  };
+  imports.wbg.__wbg_instanceof_Uint8Array_2b3bbecd033d19f6 = function(arg0) {
+    let result;
+    try {
+      result = getObject(arg0) instanceof Uint8Array;
+    } catch (_) {
+      result = false;
+    }
+    const ret = result;
+    return ret;
+  };
+  imports.wbg.__wbindgen_string_get = function(arg0, arg1) {
+    const obj = getObject(arg1);
+    const ret = typeof obj === "string" ? obj : void 0;
+    var ptr1 = isLikeNone(ret) ? 0 : passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    var len1 = WASM_VECTOR_LEN;
+    getInt32Memory0()[arg0 / 4 + 1] = len1;
+    getInt32Memory0()[arg0 / 4 + 0] = ptr1;
+  };
+  imports.wbg.__wbg_new_16b304a2cfa7ff4a = function() {
+    const ret = new Array();
+    return addHeapObject(ret);
+  };
+  imports.wbg.__wbindgen_string_new = function(arg0, arg1) {
+    const ret = getStringFromWasm0(arg0, arg1);
+    return addHeapObject(ret);
+  };
+  imports.wbg.__wbg_push_a5b05aedc7234f9f = function(arg0, arg1) {
+    const ret = getObject(arg0).push(getObject(arg1));
+    return ret;
+  };
+  imports.wbg.__wbg_length_c20a40f15020d68a = function(arg0) {
+    const ret = getObject(arg0).length;
+    return ret;
+  };
+  imports.wbg.__wbg_set_a47bac70306a19a7 = function(arg0, arg1, arg2) {
+    getObject(arg0).set(getObject(arg1), arg2 >>> 0);
+  };
+  imports.wbg.__wbindgen_throw = function(arg0, arg1) {
+    throw new Error(getStringFromWasm0(arg0, arg1));
+  };
+  return imports;
+}
+function __wbg_init_memory(imports, maybe_memory) {
+}
+function __wbg_finalize_init(instance, module) {
+  wasm = instance.exports;
+  __wbg_init.__wbindgen_wasm_module = module;
+  cachedInt32Memory0 = null;
+  cachedUint8Memory0 = null;
+  return wasm;
+}
+async function __wbg_init(input) {
+  if (wasm !== void 0)
+    return wasm;
+  if (typeof input === "undefined") {
+    input = new URL("index_bg.wasm", void 0);
+  }
+  const imports = __wbg_get_imports();
+  if (typeof input === "string" || typeof Request === "function" && input instanceof Request || typeof URL === "function" && input instanceof URL) {
+    input = fetch(input);
+  }
+  __wbg_init_memory(imports);
+  const { instance, module } = await __wbg_load(await input, imports);
+  return __wbg_finalize_init(instance, module);
+}
+var dist_default = __wbg_init;
+var initialized = false;
+var initWasm = async (module_or_path) => {
+  if (initialized) {
+    throw new Error("Already initialized. The `initWasm()` function can be used only once.");
+  }
+  await dist_default(await module_or_path);
+  initialized = true;
+};
+var Resvg2 = class extends Resvg {
+  /**
+   * @param {Uint8Array | string} svg
+   * @param {ResvgRenderOptions | undefined} options
+   */
+  constructor(svg, options) {
+    if (!initialized)
+      throw new Error("Wasm has not been initialized. Call `initWasm()` function.");
+    const font = options?.font;
+    if (!!font && isCustomFontsOptions(font)) {
+      const serializableOptions = {
+        ...options,
+        font: {
+          ...font,
+          fontBuffers: void 0
+        }
+      };
+      super(svg, JSON.stringify(serializableOptions), font.fontBuffers);
+    } else {
+      super(svg, JSON.stringify(options));
+    }
+  }
+};
+function isCustomFontsOptions(value) {
+  return Object.prototype.hasOwnProperty.call(value, "fontBuffers");
+}
+
+// plugin-src/logoRaster.mjs
+var ready;
+async function rasterLogo(data) {
+  if (/^data:image\/(png|jpeg);base64,/.test(data)) return data;
+  if (!/^data:image\/svg\+xml;base64,/.test(data)) return null;
+  const svg = Buffer.from(data.split(",")[1], "base64").toString("utf8");
+  if (svg.length > 9e5 || /<(?:script|foreignObject|image|use)\b|\bon\w+\s*=|(?:href|src)\s*=|<!ENTITY|url\s*\(/i.test(svg)) throw Error("Unsafe SVG logo");
+  ready ||= initWasm(fs.readFileSync(new URL("./resvg.wasm", import.meta.url)));
+  await ready;
+  const renderer = new Resvg2(svg, { fitTo: { mode: "width", value: 800 } });
+  try {
+    const image = renderer.render();
+    try {
+      return "data:image/png;base64," + Buffer.from(image.asPng()).toString("base64");
+    } finally {
+      image.free();
+    }
+  } finally {
+    renderer.free();
+  }
+}
+
 // src/profileMedia.js
 function publicProfileUrl(value) {
   try {
@@ -9799,7 +10403,7 @@ function requirementListHtml(s, heading = "") {
 }
 
 // plugin-src/cli.mjs
-import fs from "node:fs";
+import fs2 from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -13366,10 +13970,10 @@ function createLineCap(lineCap) {
 function encodeSlideMediaRels(layout) {
   var _a, _b;
   const isNode = typeof process !== "undefined" && !!((_a = process.versions) === null || _a === void 0 ? void 0 : _a.node) && ((_b = process.release) === null || _b === void 0 ? void 0 : _b.name) === "node";
-  let fs2;
+  let fs3;
   let https;
   const loadNodeDeps = isNode ? () => __awaiter(this, void 0, void 0, function* () {
-    ({ default: fs2 } = yield import("node:fs"));
+    ({ default: fs3 } = yield import("node:fs"));
     ({ default: https } = yield import("node:https"));
   }) : () => __awaiter(this, void 0, void 0, function* () {
   });
@@ -13390,9 +13994,9 @@ function encodeSlideMediaRels(layout) {
     imageProms.push((() => __awaiter(this, void 0, void 0, function* () {
       if (!https)
         yield loadNodeDeps();
-      if (isNode && fs2 && rel.path.indexOf("http") !== 0) {
+      if (isNode && fs3 && rel.path.indexOf("http") !== 0) {
         try {
-          const bitmap = fs2.readFileSync(rel.path);
+          const bitmap = fs3.readFileSync(rel.path);
           rel.data = Buffer.from(bitmap).toString("base64");
           candidateRels.filter((dupe) => dupe.isDuplicate && dupe.path === rel.path).forEach((dupe) => dupe.data = rel.data);
           return "done";
@@ -13450,9 +14054,9 @@ ${String(ex)}`);
   });
   layout._relsMedia.filter((rel) => rel.isSvgPng && rel.data).forEach((rel) => {
     (() => __awaiter(this, void 0, void 0, function* () {
-      if (isNode && !fs2)
+      if (isNode && !fs3)
         yield loadNodeDeps();
-      if (isNode && fs2) {
+      if (isNode && fs3) {
         rel.data = IMG_BROKEN;
         imageProms.push(Promise.resolve("done"));
       } else {
@@ -14977,8 +15581,8 @@ var PptxGenJS = class {
       const outputType = isNode ? "nodebuffer" : null;
       const data = yield this.exportPresentation({ compression, outputType });
       if (isNode) {
-        const { promises: fs2 } = yield import("node:fs");
-        const { writeFile } = fs2;
+        const { promises: fs3 } = yield import("node:fs");
+        const { writeFile } = fs3;
         yield writeFile(fileName, data);
         return fileName;
       }
@@ -16917,7 +17521,7 @@ function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, narrative
       case "logo":
         return '<div class="logo">' + DATA.logo + "</div>";
       case "overviewFacts":
-        return '<div class="overview-context"><span class="label">THE DIRECTION</span><h3>' + esc5(DATA.company) + "</h3><dl><dt>Company archetype</dt><dd>" + esc5(inputs.archetype || "Not yet specified") + "</dd><dt>Strategic priority</dt><dd>" + esc5(inputs.strategicPriority || "Not yet specified") + "</dd><dt>Stakeholders</dt><dd>" + DATA.stakeholders.length + "</dd></dl></div>";
+        return '<div class="overview-context"><span class="label">THE DIRECTION</span><dl><dt>Company archetype</dt><dd>' + esc5(inputs.archetype || "Not yet specified") + "</dd><dt>Strategic priority</dt><dd>" + esc5(inputs.strategicPriority || "Not yet specified") + "</dd><dt>Stakeholders</dt><dd>" + DATA.stakeholders.length + "</dd></dl></div>";
       case "stakeholderMap":
         return DATA.journeyHtml || "";
       case "divider":
@@ -17041,7 +17645,7 @@ function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, narrative
       const summary = ["annual", "payback", "roi"].map(statItem).filter(Boolean);
       if (overview && summary.length) overview.insertAdjacentHTML("beforeend", '<div class="overview-bento">' + summary.map((i) => '<div class="bento-cell"><span>' + esc5(i.label) + "</span><strong>" + esc5(i.value) + "</strong></div>").join("") + "</div>");
       if (!shown.length) main2.innerHTML = '<section class="website-empty"><span class="label">Business case</span><h1>' + esc5(DATA.company || "Your company") + "</h1><p>Your business case is taking shape.</p><p>Add inputs and content to bring the value, comparisons and stakeholder perspectives into view.</p></section>";
-      main2.insertAdjacentHTML("beforeend", '<footer class="website-end"><span>' + esc5(DATA.company) + ' \xB7 Business case</span><button data-explore="0">Back to top \u2191</button></footer>');
+      main2.insertAdjacentHTML("beforeend", '<footer class="website-end"><span>Business case</span><button data-explore="0">Back to top \u2191</button></footer>');
       const annual = statItem("annual");
       $("#scenario-summary").innerHTML = annual ? "Annual value<strong>" + esc5(annual.value) + "</strong>Figures update as you explore." : "Add the missing inputs to calculate annual value.";
       main2.querySelectorAll('.slide:not([data-kind="cover"]):not([data-kind="content"])').forEach((section) => {
@@ -17569,7 +18173,7 @@ function landingArtwork({ company, logo, brand }) {
   const b = normalizeBrand(brand);
   const identity = b.hideLogo ? "" : logo || '<span class="landing-initial">' + esc(String(company || "C").slice(0, 1)) + "</span>";
   if (b.hideLogo && !b.heroImage) return "";
-  if (b.heroImage) return '<div class="landing-art cover-art has-brand-image"><figure class="brand-cover-image"><img src="' + b.heroImage + '" alt="' + esc(b.heroAlt || company + " brand image") + '">' + (b.heroSource ? '<figcaption><a href="' + esc(b.heroSource) + '" target="_blank" rel="noreferrer noopener">Image source</a></figcaption>' : "") + "</figure>" + (identity ? '<div class="landing-logo brand-logo-overlay">' + identity + "</div>" : "") + "</div>";
+  if (b.heroImage) return '<div class="landing-art cover-art has-brand-image"><figure class="brand-cover-image"><img src="' + b.heroImage + '" alt="' + esc(b.heroAlt || company + " brand image") + '"></figure>' + (identity ? '<div class="landing-logo brand-logo-overlay">' + identity + "</div>" : "") + "</div>";
   return '<div class="landing-art cover-art"><div class="landing-logo">' + identity + "</div></div>";
 }
 
@@ -17932,7 +18536,7 @@ ${viewMode === "website" ? WEBSITE_CSS + EDITORIAL_CSS + GRAPHIC_CSS + websiteTh
 <body class="view-${viewMode}">
 <header class="top">
   <div class="brand">${logoSvg || (viewMode === "website" ? '<span class="company-monogram">' + esc4(String(company || "C").slice(0, 1).toUpperCase()) + "</span>" : "")}</div>
-  <div class="co">${esc4(company)}</div>
+  ${viewMode === "pdf" ? '<div class="co">' + esc4(company) + "</div>" : ""}
   <div class="aud-wrap">${viewMode === "website" ? "" : "<span>Perspective</span>"}<div id="audience" class="audience"></div></div>
   <div class="pager"><button id="prev" aria-label="Previous page">\u2190</button><span id="count"></span><button id="next" aria-label="Next page">\u2192</button></div>
 </header>
@@ -18790,10 +19394,10 @@ var slug2 = (s) => String(s || "case").toLowerCase().replace(/[^a-z0-9]+/g, "-")
 var print = (obj) => console.log(JSON.stringify(obj, null, 2));
 function readCase(file) {
   if (!file) fail("Which case file? Pass its path, e.g. northwind.case.json");
-  if (!fs.existsSync(file)) fail(`No such file: ${file}`);
+  if (!fs2.existsSync(file)) fail(`No such file: ${file}`);
   let raw;
   try {
-    raw = JSON.parse(fs.readFileSync(file, "utf8"));
+    raw = JSON.parse(fs2.readFileSync(file, "utf8"));
   } catch (e) {
     fail(`${file} is not valid JSON: ${e.message}`);
   }
@@ -18803,7 +19407,7 @@ function writeCase(file, data) {
   const { errors, warnings } = checkCaseFile(data);
   if (errors.length) fail(`Not saved. The change would leave the case file invalid:
 - ${errors.join("\n- ")}`);
-  fs.writeFileSync(file, JSON.stringify(data, null, 2) + "\n");
+  fs2.writeFileSync(file, JSON.stringify(data, null, 2) + "\n");
   return warnings;
 }
 function loadProject(file) {
@@ -18832,10 +19436,10 @@ function inlineImages(deck, baseDir) {
     blocks: s.blocks.map((b) => {
       if (b.type !== "image" || !b.src || b.src.startsWith("data:")) return b;
       const p = path.resolve(baseDir, b.src);
-      if (!fs.existsSync(p)) fail(`Image not found: ${b.src}`);
+      if (!fs2.existsSync(p)) fail(`Image not found: ${b.src}`);
       const type = mime[path.extname(p).toLowerCase()];
       if (!type) fail(`Unsupported image type: ${b.src}`);
-      return { ...b, src: `data:${type};base64,${fs.readFileSync(p).toString("base64")}` };
+      return { ...b, src: `data:${type};base64,${fs2.readFileSync(p).toString("base64")}` };
     })
   }));
 }
@@ -18843,7 +19447,7 @@ function cmdInit(pos, flags) {
   const company = pos[0];
   if (!company) fail('Usage: init "<company name>" [--archetype "Enterprise"] [--out file.case.json]');
   const out = one(flags, "out") || `${slug2(company)}.case.json`;
-  if (fs.existsSync(out) && !has(flags, "force")) fail(`${out} already exists. Use --force to overwrite it.`);
+  if (fs2.existsSync(out) && !has(flags, "force")) fail(`${out} already exists. Use --force to overwrite it.`);
   const data = projectToCaseFile(newProject(company));
   delete data.deck;
   delete data.exportedAt;
@@ -19120,19 +19724,19 @@ function findBrowser() {
       if (r.status === 0 && r.stdout.trim()) c.push(r.stdout.trim());
     }
   }
-  return c.find((p) => fs.existsSync(p)) || null;
+  return c.find((p) => fs2.existsSync(p)) || null;
 }
 function printToPdf(htmlPath, pdfPath) {
   const browser = findBrowser();
   if (!browser) return { ok: false, reason: "No Chrome, Edge or Chromium found. Open the .html file and use Print > Save as PDF." };
-  const profile = fs.mkdtempSync(path.join(os.tmpdir(), "cb-pdf-"));
+  const profile = fs2.mkdtempSync(path.join(os.tmpdir(), "cb-pdf-"));
   const r = spawnSync(
     browser,
     ["--headless=new", "--disable-gpu", "--no-sandbox", `--user-data-dir=${profile}`, "--no-pdf-header-footer", `--print-to-pdf=${pdfPath}`, "file:///" + htmlPath.replace(/\\/g, "/").replace(/^\//, "")],
     { timeout: 9e4, stdio: "ignore" }
   );
-  fs.rmSync(profile, { recursive: true, force: true });
-  return fs.existsSync(pdfPath) ? { ok: true } : { ok: false, reason: `The browser did not produce a PDF (exit ${r.status}). Open the .html and print it instead.` };
+  fs2.rmSync(profile, { recursive: true, force: true });
+  return fs2.existsSync(pdfPath) ? { ok: true } : { ok: false, reason: `The browser did not produce a PDF (exit ${r.status}). Open the .html and print it instead.` };
 }
 async function cmdBuild(pos, flags) {
   const file = pos[0];
@@ -19142,7 +19746,7 @@ async function cmdBuild(pos, flags) {
   for (const f of formats) if (!["pptx", "google-slides", "canva", "onepager", "website"].includes(f)) fail(`Unknown format "${f}". Use pptx, google-slides, canva, onepager, website or all.`);
   const { list, who } = audienceFor(project, one(flags, "stakeholder"));
   const outDir = path.resolve(one(flags, "out") || path.dirname(path.resolve(file)));
-  fs.mkdirSync(outDir, { recursive: true });
+  fs2.mkdirSync(outDir, { recursive: true });
   const inputs = inputsOf(project.fields);
   const company = clientCompanyName(inputs.companyName, project.name);
   const deck = inlineImages(project.deck, path.dirname(path.resolve(file)));
@@ -19151,9 +19755,9 @@ async function cmdBuild(pos, flags) {
   const brand = normalizeBrand(project.brand);
   const hasCompanyLogo = Boolean(brand.logo && !brand.hideLogo);
   const companyLogo = brandLogoHtml(brand, "");
-  const rasterLogo = hasCompanyLogo && /^data:image\/(png|jpeg);base64,/.test(brand.logo) ? brand.logo : null;
+  const rasterLogo2 = hasCompanyLogo ? await rasterLogo(brand.logo) : null;
   const warnings = [];
-  if (hasCompanyLogo && !rasterLogo && formats.some((f) => ["pptx", "google-slides", "canva"].includes(f))) warnings.push("The company logo is not PNG/JPEG. PPTX omits it; supply a PNG/JPEG variant for an embedded logo. HTML outputs retain the original asset.");
+  if (hasCompanyLogo && !rasterLogo2 && formats.some((f) => ["pptx", "google-slides", "canva"].includes(f))) warnings.push("The company logo is not PNG/JPEG. PPTX omits it; supply a PNG/JPEG variant for an embedded logo. HTML outputs retain the original asset.");
   for (const target of formats.filter((f) => ["pptx", "google-slides", "canva"].includes(f))) {
     const env = buildEnv(inputs, project.fields, clientStakeholder(who));
     const pptx = await buildPptx({
@@ -19161,32 +19765,32 @@ async function cmdBuild(pos, flags) {
       brand,
       slides: resolveSlides(deck, env),
       deps: { PptxGenJS, importTarget: target, logoPng: async () => {
-        if (!rasterLogo) return null;
-        const size = dataUrlSize(rasterLogo);
-        return { data: rasterLogo, ratio: size.w / size.h };
+        if (!rasterLogo2) return null;
+        const size = dataUrlSize(rasterLogo2);
+        return { data: rasterLogo2, ratio: size.w / size.h };
       }, imageSize: async (src) => dataUrlSize(src) }
     });
     const out = path.join(outDir, `${name}-business-case${target === "pptx" ? "" : "-" + target}.pptx`);
-    fs.writeFileSync(out, await pptx.write({ outputType: "nodebuffer" }));
-    written.push({ format: target, file: out, bytes: fs.statSync(out).size, audience: who.role, ...target === "google-slides" ? { importInstructions: "Google Slides: File \u2192 Open \u2192 Upload this PPTX.", openUrl: "https://slides.google.com/" } : target === "canva" ? { importInstructions: "Upload this PPTX in Canva. Charts are editable shapes.", openUrl: "https://www.canva.com/" } : {} });
+    fs2.writeFileSync(out, await pptx.write({ outputType: "nodebuffer" }));
+    written.push({ format: target, file: out, bytes: fs2.statSync(out).size, audience: who.role, ...target === "google-slides" ? { importInstructions: "Google Slides: File \u2192 Open \u2192 Upload this PPTX.", openUrl: "https://slides.google.com/" } : target === "canva" ? { importInstructions: "Upload this PPTX in Canva. Charts are editable shapes.", openUrl: "https://www.canva.com/" } : {} });
   }
   if (formats.includes("onepager")) {
     const facts = prepareOnePager({ inputs, fields: project.fields, who });
     const out = path.join(outDir, `${name}-one-pager.html`);
-    fs.writeFileSync(out, brandDocument(buildOnePager({ facts, brand: project.brand, logoSvg: companyLogo, faviconSvg: favicon_default }), brand));
-    written.push({ format: "onepager", file: out, bytes: fs.statSync(out).size, audience: who.role });
+    fs2.writeFileSync(out, brandDocument(buildOnePager({ facts, brand: project.brand, logoSvg: companyLogo, faviconSvg: favicon_default }), brand));
+    written.push({ format: "onepager", file: out, bytes: fs2.statSync(out).size, audience: who.role });
     if (has(flags, "pdf")) {
       const pdf = out.replace(/\.html$/, ".pdf");
       const r = printToPdf(out, pdf);
-      written.push(r.ok ? { format: "onepager-pdf", file: pdf, bytes: fs.statSync(pdf).size, audience: who.role } : { format: "onepager-pdf", skipped: r.reason });
+      written.push(r.ok ? { format: "onepager-pdf", file: pdf, bytes: fs2.statSync(pdf).size, audience: who.role } : { format: "onepager-pdf", skipped: r.reason });
     }
   }
   if (formats.includes("website")) {
     const out = path.join(outDir, `${name}-business-case.html`);
-    fs.writeFileSync(out, websiteHtml({ company, deck, inputs, project, list, who }));
-    written.push({ format: "website", file: out, bytes: fs.statSync(out).size, audience: "company story with stakeholder map" });
+    fs2.writeFileSync(out, websiteHtml({ company, deck, inputs, project, list, who }));
+    written.push({ format: "website", file: out, bytes: fs2.statSync(out).size, audience: "company story with stakeholder map" });
   }
-  print({ built: written, warnings, note: "PowerPoint and one-pager use the selected stakeholder. The website uses the company story and stakeholder map. PPTX keeps font names; recipients need those fonts installed." });
+  print({ built: written, warnings, assets: { companyLogo: hasCompanyLogo, pptxLogo: !!rasterLogo2, coverImage: !!brand.heroImage, headingFont: brand.headingFont, bodyFont: brand.bodyFont, embeddedFontFamilies: brand.fontFaces.map((f) => f.family), fallbackFont: "Poppins" }, note: "PowerPoint and one-pager use the selected stakeholder. The website uses the company story and stakeholder map. PPTX keeps font names; recipients need those fonts installed." });
 }
 function websiteHtml({ company, deck, inputs, project, list, who }) {
   const args = prepareWebsite({ company, deck, inputs, fields: project.fields, stakeholders: list, who });
@@ -19229,14 +19833,14 @@ async function cmdPublish(pos, flags) {
   if (probe.status !== 0) {
     fail('Cannot publish: set VERCEL_TOKEN (create one at vercel.com/account/tokens), or install the Vercel CLI (npm i -g vercel) and run "vercel login". The site is not published.');
   }
-  const dir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "cb-site-")), name);
-  fs.mkdirSync(dir);
-  for (const f of siteFiles(html)) fs.writeFileSync(path.join(dir, f.file), Buffer.from(f.data, "base64"));
+  const dir = path.join(fs2.mkdtempSync(path.join(os.tmpdir(), "cb-site-")), name);
+  fs2.mkdirSync(dir);
+  for (const f of siteFiles(html)) fs2.writeFileSync(path.join(dir, f.file), Buffer.from(f.data, "base64"));
   const args = ["deploy", "--prod", "--yes"];
   const scope = one(flags, "scope") || process.env.VERCEL_SCOPE;
   if (typeof scope === "string") args.push("--scope", scope);
   const r = spawnSync("vercel", args, { cwd: dir, shell: true, encoding: "utf8", timeout: 24e4 });
-  fs.rmSync(path.dirname(dir), { recursive: true, force: true });
+  fs2.rmSync(path.dirname(dir), { recursive: true, force: true });
   const out = `${r.stdout || ""}
 ${r.stderr || ""}`;
   const urls = out.match(/https:\/\/[a-z0-9.-]+\.vercel\.app/g) || [];
@@ -19253,7 +19857,7 @@ function cmdExport(pos, flags) {
   const { project } = loadProject(pos[0]);
   const out = one(flags, "out") || pos[0];
   const data = projectToCaseFile(project);
-  fs.writeFileSync(out, JSON.stringify(data, null, 2) + "\n");
+  fs2.writeFileSync(out, JSON.stringify(data, null, 2) + "\n");
   print({ wrote: path.resolve(out), note: "Import this file in the CaseBuilder app (Projects > Import)." });
 }
 function help() {

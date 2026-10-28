@@ -14,6 +14,7 @@ const cli=fileURLToPath(new URL('../skills/business-case/scripts/casebuilder.mjs
 const schema=properties=>({type:'object',properties,additionalProperties:false})
 const str={type:'string'}
 const tools=[
+ {name:'casebuilder_discover_assets',description:'Search the official company website and embed validated logo, fonts, colors and cover photography. Requires authorized web access and explicit approval to replace the current brand. No AI key required for a known company or explicit website; never invent assets.',inputSchema:{...schema({caseId:str,website:str,webEnabled:{type:'boolean'},approved:{type:'boolean'}}),required:['caseId','webEnabled','approved']}},
  {name:'casebuilder_apply_brand',description:'Save reviewed official brand findings and embedded assets to a local case. Host research tools discover/download assets; this tool does not fetch URLs.',inputSchema:{...schema({caseId:str,approved:{type:'boolean'},brand:{type:'object'},sources:{type:'array',items:str}}),required:['caseId','approved','brand','sources']}},
  {name:'casebuilder_info',description:'List canonical inputs, roles and archetypes. No network access.',inputSchema:schema({})},
  {name:'casebuilder_create',description:'Create an empty local case. Does not connect accounts or sync to the app.',inputSchema:{...schema({company:str}),required:['company']}},
@@ -33,12 +34,17 @@ function call(name,a){
   const id=randomUUID();run(['init',a.company,'--out',file(id)]);return JSON.stringify({caseId:id,case:JSON.parse(fs.readFileSync(file(id),'utf8'))})
  }
  const f=file(a.caseId)
+ if(name==='casebuilder_discover_assets'){
+  if(a.webEnabled!==true||a.approved!==true)throw Error('Web access and brand replacement must be authorized')
+  if(a.website!==undefined&&typeof a.website!=='string')throw Error('Website must be a string')
+  return execFileSync(process.execPath,[fileURLToPath(new URL('./discover-assets.mjs',import.meta.url)),f,a.website||'','web-enabled','approved'],{encoding:'utf8',timeout:65000,maxBuffer:8e6})
+ }
  if(name==='casebuilder_apply_brand'){
   if(a.approved!==true)throw Error('Brand replacement must be authorized')
   if(!a.brand||typeof a.brand!=='object'||Array.isArray(a.brand)||!Array.isArray(a.sources)||!a.sources.length||a.sources.some(s=>typeof s!=='string'||!/^https:\/\//i.test(s)))throw Error('Official HTTPS source URLs and brand findings required')
   if(JSON.stringify(a.brand).length>4500000)throw Error('Brand assets exceed the local size limit')
   const data=JSON.parse(fs.readFileSync(f,'utf8'))
-  const allowed=['logo','logoBackground','headingFont','bodyFont','fontFaces','primary','background','surface','text','muted','heroImage','heroSource','heroAlt','website']
+  const allowed=['logo','logoBackground','headingFont','bodyFont','fontFaces','fontData','fontName','primary','background','surface','text','muted','heroImage','heroSource','heroAlt','website']
   const patch=Object.fromEntries(allowed.filter(k=>Object.hasOwn(a.brand,k)).map(k=>[k,a.brand[k]]))
   if(patch.logo&&!/^data:image\/(png|jpeg|svg\+xml);base64,[a-zA-Z0-9+/=]+$/.test(patch.logo))throw Error('Embed a validated image, not a remote logo URL')
   if(patch.heroImage&&!/^data:image\/(png|jpeg|webp);base64,[a-zA-Z0-9+/=]+$/.test(patch.heroImage))throw Error('Embed a validated raster hero image')

@@ -6,6 +6,9 @@ import { AnimatePresence, MotionConfig, motion } from 'framer-motion'
 import { EASE_OUT } from '../components/ui.jsx'
 import { prepareOnePager, pickAudience, hiddenForClient } from './prepare.js'
 import { buildEnv, resolveSlides } from '../deck/model.js'
+import {SLIDE_DESTINATIONS} from './slideHandoff.js'
+import {importPresentation} from './connectedSlideExport.js'
+import {apiHeaders} from '../apiAuth.js'
 import { buildOnePager } from './html.js'
 import { buildSiteHtml } from './site.js'
 import Preview from './Preview.jsx'
@@ -51,6 +54,8 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
+  const [handoff, setHandoff] = useState(null)
+  const [connectToolkit,setConnectToolkit]=useState('')
   const [preview, setPreview] = useState(null) // { kind, html, title }
   const ref = useRef(null)
   const menu = useRef(null)
@@ -81,6 +86,11 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
   async function pptx(target='powerpoint') {
     setOpen(false)
     setError('')
+    setHandoff(null)
+    setConnectToolkit('')
+    const destination=SLIDE_DESTINATIONS[target]
+    const popup=destination?window.open('about:blank','_blank'):null
+    if(popup)popup.opener=null
     setBusy('Building the PowerPoint…')
     try {
       const [{ default: PptxGenJS }, { buildPptx }] = await Promise.all([import('pptxgenjs'), import('./pptx.js')])
@@ -91,13 +101,33 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
         slides: resolveSlides(deck, env),
         deps: { PptxGenJS, logoPng: () => rasterLogo(brand), imageSize, importTarget:target }
       })
-      await file.writeFile({ fileName: `${slug(company)} - business case${target==='powerpoint'?'':' - '+target}.pptx` })
+      if(destination){
+        setBusy(`Importing into ${destination.name}…`)
+        const bytes=await file.write({outputType:'arraybuffer'})
+        const result=await importPresentation({target,title:company+' — business case',bytes})
+        if(popup&&!popup.closed)popup.location.replace(result.url)
+        setHandoff({...destination,url:result.url,instructions:'Presentation imported. Open it to edit.'})
+      }else await file.writeFile({fileName:`${slug(company)} - business case.pptx`})
     } catch (err) {
+      if(popup&&!popup.closed)popup.close()
       console.error(err)
-      setError('Could not build the PowerPoint. ' + (err?.message || ''))
+      setConnectToolkit(err.toolkit||'')
+      setError((destination?'Could not export to '+destination.name+'. ':'Could not build the PowerPoint. ') + (err?.message || ''))
     } finally {
       setBusy('')
     }
+  }
+
+  async function connectDestination(){
+    setBusy('Opening account authorization…')
+    try{
+      const response=await fetch('/api/connect',{method:'POST',headers:await apiHeaders(),body:JSON.stringify({toolkit:connectToolkit,action:'connect'})})
+      const result=await response.json()
+      if(!response.ok)throw Error(result.error||'Connection failed.')
+      const url=new URL(result.redirect_url)
+      if(url.protocol!=='https:')throw Error('Invalid connection link.')
+      window.location.assign(url.href)
+    }catch(e){setError(e.message)}finally{setBusy('')}
   }
 
   function onePager() {
@@ -110,8 +140,8 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
   const items = [
     { name: 'PDF', note: 'Preview, then save as PDF', gets: 'PDF', run: () => show('pdf') },
     { name: 'Slides', note: 'Present, or download PowerPoint (.pptx)', gets: 'PPTX', run: () => show('slides') },
-    { name: 'Google Slides', note: 'Editable PPTX to import into Google Slides', gets: 'Import', run: () => {show('slides');setPreview(p=>({...p,destination:'google-slides'}))} },
-    { name: 'Canva', note: 'Editable PPTX with import-friendly charts', gets: 'Import', run: () => {show('slides');setPreview(p=>({...p,destination:'canva'}))} },
+    { name: 'Google Slides', note: 'Import into your connected Google account and open to edit', gets: 'Open', run: () => pptx('google-slides') },
+    { name: 'Canva', note: 'Import into your connected Canva account and open to edit', gets: 'Open', run: () => pptx('canva') },
     { name: 'One-pager', note: 'Preview, then PDF or HTML', gets: 'PDF, HTML', run: () => show('onepager') },
     { name: 'Live room', note: 'Interactive page you can share', gets: 'Link', run: () => show('website') }
   ]
@@ -157,9 +187,10 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
       </MotionConfig>
 
       {busy && <div className="export-toast">{busy}</div>}
+      {handoff && !preview && <div className="export-toast" role="status">{handoff.instructions} <a href={handoff.url} target="_blank" rel="noopener noreferrer">Open {handoff.name}</a> <button onClick={()=>setHandoff(null)}>Dismiss</button></div>}
       {error && (
         <div className="export-toast export-error" role="alert">
-          {error} <button onClick={() => setError('')}>Dismiss</button>
+          {error} {connectToolkit&&<button disabled={!!busy} onClick={connectDestination}>Connect {connectToolkit==='canva'?'Canva':'Google Drive'}</button>} <button onClick={() => setError('')}>Dismiss</button>
         </div>
       )}
 
@@ -172,6 +203,10 @@ export default function ExportMenu({ company: projectName, deck, inputs, fields,
           onDownloadSlides={pptx}
           brand={brand}
           busy={!!busy}
+          exportError={error}
+          handoff={handoff}
+          connectToolkit={connectToolkit}
+          onConnect={connectDestination}
           hidden={hiddenForClient({ deck, inputs, fields, stakeholders, activeKey })}
           onFillInputs={onFillInputs}
         />

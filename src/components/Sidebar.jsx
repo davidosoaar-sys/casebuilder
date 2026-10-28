@@ -77,7 +77,7 @@ function Item({ id, icon: iconId, label, view, onNav, disabled, title, pill }) {
 
 const PROJECT_ITEMS = [
   { id: 'details', label: 'Case inputs' },
-  { id: 'website', icon: 'deck', label: 'Case artifacts', title: 'Live room, deck, PDF and one-pager' },
+  { id: 'deck', icon: 'deck', label: 'Case artifacts', title: 'Slides, Live room, PDF and one-pager' },
   { id: 'agent', label: 'Agent' },
   { id: 'people-lookup', icon: 'research', label: 'Person lookup', title: 'Who is this? Look up one person before a call' },
   { id: 'files', label: 'Files', title: 'Context the agent reads for this project' }
@@ -116,7 +116,7 @@ export default function Sidebar({ view, project, projectMode = false, onNav, onS
   }, [])
 
   const items = (projectMode ? PROJECT_ITEMS : MAIN_ITEMS).filter(it => !it.admin || admin)
-  const current = view === 'deck' ? 'website' : CUSTOMIZE_TABS.includes(view) ? 'customize' : view
+  const current = view === 'website' ? 'deck' : CUSTOMIZE_TABS.includes(view) ? 'customize' : view
   const title = items.find(it => it.id === current)?.label || (projectMode ? project?.name : '') || 'CaseBuilder'
 
   // Menu contents, shared by the desktop sidebar and the mobile drawer.

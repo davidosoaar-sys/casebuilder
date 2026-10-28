@@ -24,7 +24,7 @@ export function HiddenPagesNotice({ hidden, onFill }) {
   )
 }
 
-export default function Preview({ preview, onClose, audience, onView, onDownloadSlides, busy, hidden, onFillInputs, brand }) {
+export default function Preview({ preview, onClose, audience, onView, onDownloadSlides, busy, hidden, onFillInputs, brand,exportError,handoff,connectToolkit,onConnect }) {
   const frame = useRef(null)
   const [destination,setDestination]=useState(preview.destination||'powerpoint')
   useEffect(()=>{setDestination(preview.destination||'powerpoint')},[preview.destination])
@@ -46,10 +46,10 @@ export default function Preview({ preview, onClose, audience, onView, onDownload
             <span>For {preview.for || audience}</span>
           </div>
           <div className="preview-actions">
-            {onView && <Select className="preview-format" aria-label="Preview format" value={preview.kind} options={FORMATS} onChange={onView} />}
+            {onView && <label>View as <Select className="preview-format" aria-label="View as format" value={preview.kind} options={FORMATS} onChange={onView} /></label>}
             {preview.kind === 'slides' ? <>
               <button className="ghost" onClick={() => frame.current?.requestFullscreen?.()}>Present fullscreen</button>
-              <button className="primary" disabled={busy} onClick={()=>onDownloadSlides(destination)}>{busy ? 'Preparing…' : destination==='powerpoint'?'Download PPTX':`Download for ${label}`}</button>
+              <button className="primary" disabled={busy} onClick={()=>onDownloadSlides(destination)}>{busy ? 'Preparing…' : destination==='powerpoint'?'Download PPTX':`Open in ${label}`}</button>
             </> : <button className="primary" title="Open the browser’s Save as PDF dialog" onClick={async () => { await frame.current?.contentDocument?.fonts?.ready; frame.current?.contentWindow?.print() }}>Download PDF</button>}
             {preview.kind === 'onepager' && <button className="ghost" onClick={() => download(preview.file, new Blob([preview.html], { type: 'text/html' }))}>Download HTML</button>}
             <button className="ghost" onClick={onClose}>
@@ -60,8 +60,9 @@ export default function Preview({ preview, onClose, audience, onView, onDownload
         {preview.kind==='slides'&&<section className="slide-import-options" aria-label="Slide export options">
           <label>Export for <Select aria-label="Slide export destination" value={destination} options={[{value:'powerpoint',label:'PowerPoint'},{value:'google-slides',label:'Google Slides'},{value:'canva',label:'Canva'}]} onChange={setDestination}/></label>
           <div><p><strong>Editable text</strong> · Headings: {officeFont(identity.headingFont)} · Body: {officeFont(identity.bodyFont)}</p><p>Font names are preserved in the file. Fonts are not embedded; the destination may substitute fonts it does not support.</p>
-          {destination==='google-slides'&&<p>Download the PPTX, then in <a href="https://slides.google.com/" target="_blank" rel="noopener noreferrer">Google Slides</a> choose File → Open → Upload. This imports a file; it does not connect your Google account.</p>}
-          {destination==='canva'&&<p>Download the PPTX, then <a href="https://www.canva.com/" target="_blank" rel="noopener noreferrer">upload it in Canva</a>. Charts export as editable shapes so they survive import. For custom fonts, use a supported, licensed font in your Canva Brand Kit.</p>}
+          {destination!=='powerpoint'&&<p>Imports this deck into your connected {label} account and opens the editing link. Account authorization and write/import permission are required. Choose PowerPoint to download a file instead.</p>}
+          {exportError&&<p role="alert">{exportError} {connectToolkit&&<button className="ghost" disabled={busy} onClick={onConnect}>Connect {connectToolkit==='canva'?'Canva':'Google Drive'}</button>}</p>}
+          {handoff&&<p role="status">{handoff.instructions} <a href={handoff.url} target="_blank" rel="noopener noreferrer">Open {handoff.name}</a></p>}
           </div>
         </section>}
         <HiddenPagesNotice hidden={hidden} onFill={onFillInputs && (() => { onClose(); onFillInputs() })} />

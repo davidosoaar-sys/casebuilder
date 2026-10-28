@@ -9,9 +9,9 @@ there is no custom checkbox screen in this ZIP. Output selection is not inferred
 as "all". See skills/connected-case/onboarding.md and pranav-framework.md for the
 flow, eight-part framework and acceptance scorecard.
 
-The plugin now includes a local stdio MCP server with eight tools: save reviewed official branding, inspect the input
+The plugin now includes a local stdio MCP server with nine tools: save reviewed official branding, inspect the input
 schema, create/read a case, apply reviewed sourced inputs, calculate, build and explicitly approved website publishing.
-Brand discovery uses the host’s authorized web/download tools, saves reviewed assets with provenance, then deck-design guides composition and visual checks.
+The asset-discovery tool fetches validated official-site logos, fonts, colors and cover images after authorized web access and brand replacement. Host web tools can supplement missing assets. Safe SVG logos are rasterized for PPTX; HTML retains original vectors.
 The tools call the same bundled CaseBuilder model/exporters as the existing CLI.
 No Anthropic API key is needed by this local bridge: Claude supplies the reasoning.
 
@@ -33,7 +33,7 @@ For example, in Desktop's MCP configuration:
 ```
 
 Local cases/artifacts are stored under `~/.casebuilder` or CASEBUILDER_HOME, outside
-the plugin installation. The server cannot publish or send email. The upload ZIP
+the plugin installation. The server publishes only after explicit approval and host Vercel configuration; it cannot send email. The upload ZIP
 does not make a local server available to cloud-only chat/Cowork: those need a
 separately hosted, authenticated remote endpoint. Supabase deal sync and live
 account integrations are not implemented by this prototype.
@@ -51,6 +51,8 @@ CLI, an action planner, evidence checks and an offline fixture.
 
 | Command | Purpose |
 | --- | --- |
+| `/casebuilder:inputs [case]` | Guided questions for missing inputs, reviewed before saving. |
+| `/casebuilder:dump [case] [files or notes]` | Extract sourced proposals from supplied material, review and save. |
 | `/casebuilder:new <company>` | Create an empty case and discover official branding when web is enabled. |
 | `/casebuilder:run <company> [discovery files]` | Coordinate the full input → research → calculation → output workflow. |
 | `/casebuilder:assets <company or case>` | Return sourced logo, font and color findings with explicit fallbacks. |

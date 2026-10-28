@@ -108,3 +108,20 @@ References: [hosted authentication](https://docs.composio.dev/docs/tools-direct/
 [Gmail](https://docs.composio.dev/toolkits/gmail),
 [Slack](https://docs.composio.dev/toolkits/slack),
 [HubSpot](https://docs.composio.dev/toolkits/hubspot).
+
+## Direct Google Slides and Canva export (v0.26.0)
+
+Configure these server-only values on Vercel and in local .env.server.local:
+
+- COMPOSIO_API_KEY: the existing Composio project key, with Proxy execute permission.
+- COMPOSIO_AUTH_GOOGLEDRIVE: Google Drive OAuth auth config supporting https://www.googleapis.com/auth/drive.file (or an already authorized equivalent write scope). Drive creates and converts the PPTX to a native Google Slides presentation.
+- COMPOSIO_AUTH_CANVA: Canva OAuth auth config supporting design:content:write for binary PPTX import and import-job status.
+- CB_APP_URL: the canonical app origin; retain the existing Supabase URL/public key used to verify signed-in accounts.
+
+In Composio, create/configure the googledrive and canva auth configs with those scopes. Set their IDs above, redeploy/restart, then have each user select Connect in the app (or the export error's Connect action) and authorize their own account. Existing read-only connections must be reauthorized for the write scopes. After authorization, return to the case and choose Export again. Never paste OAuth tokens into chat or frontend variables.
+
+The endpoint /api/slide-export accepts only signed-in users and chooses a verified active account belonging to that user and the configured auth ID. It uses fixed provider endpoints, not browser-supplied endpoints or account IDs. PPTX bytes go directly through Composio to the destination; no public file staging. Canva jobs use short-lived owner-bound signed tickets. Large files (over about 2.8 MB) retain the downloadable PPTX route.
+
+Once configured: Export → Google Slides uploads/converts and opens the new presentation; Export → Canva uploads, polls import completion and opens the editing link. Browser popup blocking leaves a clickable editing link. Unsupported destination fonts can still be substituted. No live import is claimed until configuration, user OAuth consent and a real file upload pass. The local Claude plugin still generates import files; this authenticated app endpoint does not grant the local plugin access to app accounts.
+
+References: https://developers.google.com/workspace/drive/api/guides/manage-uploads ; https://www.canva.dev/docs/apps/rest-apis/reference/design-imports/create-design-import-job/ ; https://docs.composio.dev/reference/v3/api-reference/tools/postToolsExecuteProxy .

@@ -16,9 +16,11 @@ test('MCP case workflow generates artifacts, retains evidence and rejects unappr
  const call=(name,args={})=>request('tools/call',{name,arguments:args})
  try{
   assert.equal((await request('initialize',{protocolVersion:'2025-06-18'})).serverInfo.name,'casebuilder-local')
-  assert.equal((await request('tools/list')).tools.length,8)
+  assert.equal((await request('tools/list')).tools.length,9)
   const created=JSON.parse((await call('casebuilder_create',{company:'Northwind demo'})).content[0].text)
   const caseId=created.caseId
+  assert.equal((await call('casebuilder_discover_assets',{caseId,webEnabled:false,approved:true})).isError,true)
+  assert.equal((await call('casebuilder_discover_assets',{caseId,webEnabled:true,approved:false})).isError,true)
   assert.equal((await call('casebuilder_apply_brand',{caseId,approved:false,brand:{primary:'#112233'},sources:['https://example.com/brand']})).isError,true)
   assert.equal((await call('casebuilder_apply_brand',{caseId,approved:true,brand:{primary:'#112233',headingFont:'Arial'},sources:['https://example.com/brand']})).isError,undefined)
   const inputs=[{key:'engineers',value:500,state:'suggestion',origin:'Fictional Granola fixture',quote:'We have about 500 engineers.',link:'https://example.com/demo-note'}]

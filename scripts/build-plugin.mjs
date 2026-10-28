@@ -44,6 +44,8 @@ await build({
   legalComments: 'none'
 })
 console.log(`bundle   ${path.relative(root, bundle)}  ${(fs.statSync(bundle).size / 1024 / 1024).toFixed(2)} MB`)
+fs.copyFileSync(path.join(root,'node_modules/@resvg/resvg-wasm/index_bg.wasm'),path.join(path.dirname(bundle),'resvg.wasm'))
+await build({entryPoints:[path.join(root,'plugin-src/discover-assets.mjs')],outfile:path.join(plugin,'scripts/discover-assets.mjs'),bundle:true,platform:'node',format:'esm',target:'node18',loader:{'.svg':'text'},logLevel:'warning'})
 
 // The framework planner and evidence validator use the app's source permission
 // and title-mapping helpers, bundled so the distributed plugin stays portable.

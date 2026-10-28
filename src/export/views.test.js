@@ -70,3 +70,12 @@ test('one-pager excludes unavailable figures instead of fabricating zeroes', () 
   assert.equal(html.includes('$0'), false)
   assert.equal(html.includes('Where the value comes from'), false)
 })
+
+test('Live Room does not repeat a company-name heading in the sticky header',()=>{
+ const web=buildWebsite({...args,viewMode:'website'});
+ const slides=buildWebsite({...args,viewMode:'slides'});
+ const header=web.match(/<header class="top">([\s\S]*?)<\/header>/)[1];
+ assert.equal(header.includes('class="co"'),false);
+ assert.equal(slides.includes('<div class="co">'),false);
+  assert.ok(buildWebsite({...args,viewMode:'pdf'}).includes('<div class="co">Preview fixture</div>'));
+});

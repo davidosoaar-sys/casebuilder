@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.26.0 (2026-10-28)
+
+- Add authenticated direct Google Slides conversion and Canva import using the signed-in user’s verified Composio connection, with connection/setup actions and a returned editing link. Keep PowerPoint download. Provider OAuth configuration with write/import scopes is required; real account imports are not yet verified.
+- Open Case Artifacts in Slides first; View as switches formats without downloading. Remove repeated company-name chrome from Slides and Live Room, and hide client cover image-source captions while preserving provenance internally.
+- Add Claude /casebuilder:inputs guided entry and /casebuilder:dump material extraction, both reviewing sourced input changes before saving.
+- Add authorized official-site asset discovery to the local Claude plugin, support responsive/CSS campaign imagery, keep default-language fonts, and rasterize safe SVG company logos for PPTX. Include embedded fallback font and renderer licenses, and report missing assets honestly.
+- Validation: all 66 targeted direct-export/account-ownership, provider-job, export, brand and plugin tests pass; production/plugin builds pass. Packaged Apple logo/photo export verified; new input commands and real account imports still need Claude/OAuth host checks. No secret keys or customer cases included.
+
 ## v0.25.0 (2026-10-28)
 
 - Release validation: all 72 targeted tests pass; production and plugin ZIP builds pass. New deck covers keep the approved split-image template; absent imagery retains a typographic fallback.

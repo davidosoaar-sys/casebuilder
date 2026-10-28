@@ -197,7 +197,7 @@ export default function App({ account }) {
     onAdd={person => update(p => addPersonToDeal(p, person))}
     onInput={suggestion => setPendingPersonInput({ dealId: project.id, suggestion })} />
   function navigate(next) {
-    if(next==='deck')next='website' // Case Artifacts opens the Live Room; editor remains available.
+    if(next==='deck')setPreviewRequest('slides') // Case Artifacts opens the slide viewer; View as switches formats.
     if (next === 'customize') next = 'skills' // Customize opens on its Skills tab
     setStage(null)
     if (next === 'settings') { setSettingsOpen(true); return } // overlay: never leaves the current page

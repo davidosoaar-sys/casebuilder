@@ -164,7 +164,7 @@ ${needsOutfit ? '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?
 <body class="view-${viewMode}">
 <header class="top">
   <div class="brand">${logoSvg || (viewMode === 'website' ? '<span class="company-monogram">' + esc(String(company || 'C').slice(0, 1).toUpperCase()) + '</span>' : '')}</div>
-  <div class="co">${esc(company)}</div>
+  ${viewMode === 'pdf' ? '<div class="co">' + esc(company) + '</div>' : ''}
   <div class="aud-wrap">${viewMode==='website'?'':'<span>Perspective</span>'}<div id="audience" class="audience"></div></div>
   <div class="pager"><button id="prev" aria-label="Previous page">←</button><span id="count"></span><button id="next" aria-label="Next page">→</button></div>
 </header>

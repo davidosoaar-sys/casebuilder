@@ -3,8 +3,7 @@
 CaseBuilder is a platform for Chris to turn customer conversations, research and
 his business-case inputs into one credible case he can present in a Live Room,
 slides, PDF or a one-pager.
-Slides can be downloaded as editable PPTX for manual import into Google Slides
-or Canva; no direct account export is connected. These imports use editable
+Slides can be exported directly to connected Google Slides/Canva accounts when Composio write/import authorization is configured. PowerPoint download remains available. These imports use editable
 chart shapes and preserve font names. Font availability in the destination
 still controls editable rendering; web fonts are not embedded in PowerPoint.
 
@@ -133,3 +132,9 @@ See WORKING_AGREEMENT.md for the implementation and release process.
 Saved-key lookup failures remain unknown rather than showing missing keys. Dashboard and Settings offer retry and preserve previously loaded key metadata. Project/key reads time out after 20 seconds rather than leaving indefinite loading indicators.
 
 2026-10-28 local branding work: Apple names resolve to the verified official homepage and use extracted, validated logo bytes. If the homepage has no mark, configured search can find official-domain brand resources. Company defaults use bundled Poppins; known company font names are preserved with Poppins as the browser fallback. Heading/body presets, custom family names and licensed font upload remain editable. Backstage keeps Outfit.
+
+Local Claude plugin update: guided `/casebuilder:inputs` and `/casebuilder:dump` workflows propose and review canonical sourced inputs. An explicitly authorized official-site discovery tool saves logo/font/color/photography bytes; SVG logo rasterization makes company marks available to PPTX. Available campaign photography may be sourced from linked CSS. No invented imagery, automatic connectors or exact editable-font compatibility is claimed.
+
+Case Artifacts opens Slides first; View as selects PDF, one-pager or Live Room without downloading. The Live Room retains its opening company identity without repeating the name in header chrome, overview context or footer.
+
+Google Slides/Canva export uploads PPTX through the signed-in user’s authorized Composio connection and opens the returned editing URL. Missing configuration/account authorization produces a setup/connect action rather than pretending import succeeded. Live OAuth and import testing remain pending setup. Client cover source captions are hidden; original image provenance stays on the case. Slides keep the cover identity without repeating the company name in viewer chrome.

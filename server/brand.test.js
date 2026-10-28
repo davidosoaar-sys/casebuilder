@@ -150,3 +150,8 @@ test('brand selection recolours a black mark on a dark canvas instead of adding 
   assert.equal(svgInk(fromUrl(r.brand.logo)), '#ffffff')
   assert.ok(r.review.adjustments.some(a => /single-colour logo/i.test(a)))
 })
+
+test('regional font overrides do not replace the default company body font',()=>{
+ const result=parseBrand('','body{font-family:Brand Text}body:lang(zh-TW){font-family:Regional Face}','https://company.example/','Company');
+ assert.equal(result.bodyFont,'Brand Text');
+});

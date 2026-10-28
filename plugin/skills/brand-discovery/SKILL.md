@@ -5,6 +5,8 @@ description: Find and verify a company's official logo variants, website fonts a
 
 # Discover the correct identity
 
+Prefer `casebuilder_discover_assets` when the local MCP is available. It uses the app’s official-site extraction and saves embedded asset bytes. Pass `webEnabled:true` only for authorized web access and `approved:true` only for authorized initial discovery or replacement. Verify unknown company domains with host search first. Inspect `logoFound`, `fontFiles` and `coverImageFound`; use authorized host research/download tools and `casebuilder_apply_brand` for missing assets. Saving names or research prose alone does not embed assets.
+
 Read `${CLAUDE_PLUGIN_ROOT}/framework/README.md` and
 `${CLAUDE_PLUGIN_ROOT}/templates/brand-findings.json`. Company name and optional
 official URL/case file come from the action request. Use only enabled, available
@@ -45,6 +47,4 @@ environment photograph on official public pages. Prefer a large image suitable
 for cropping into the right half of a landscape slide. Shoes and other products
 are valid imagery; logo tiles, screenshots and precomposed deck covers are not.
 Save the verified embedded PNG/JPEG/WebP as `brand.heroImage`, an accurate
-description as `heroAlt` and its public provenance as `heroSource`. Keep a safe
-PNG/JPEG logo variant for editable PPTX when the host can produce one; otherwise
-report the existing SVG/PPTX limitation. Never generate substitute brand assets.
+description as `heroAlt` and its public provenance as `heroSource`. Safe SVG logos now convert locally to PNG for PPTX while HTML retains the original. Never generate substitute brand assets. Missing official photography stays a disclosed typographic fallback.
