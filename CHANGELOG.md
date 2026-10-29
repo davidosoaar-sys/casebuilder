@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## v0.27.0 (2026-10-29)
+
+- Apply Shea's four workflow refinements: remove stakeholder maps and named stakeholder data from shared Live Rooms; reuse the internal map below lookup results with sourced reporting lines and explicitly inferred seniority; automatically research empty public company inputs as unconfirmed suggestions; rename Projects/Scheduled to Cases/Recurring tasks. Preserve existing onboarding, equations, user-entered values and slide/PDF audience framing. Public auto-fill reads no private connectors and requires an exact observed excerpt for engineering headcount or annual engineering hires.
+- Validation: application and shared-plugin builds pass. Full regression run: 554 pass, three failures reproduced unchanged from HEAD (old font-default, image-candidate and time-format expectations); focused follow-up checks cover vice-president seniority. Browser checks confirm the internal lookup panel, new navigation labels, automatic research with an honest no-result state, and generated Live Room without the stakeholder map. Existing published snapshots need republishing to remove the old map. Deployment has not been verified.
+
+- Record real typed-company discovery checks for xboxx, Sony, playstation, git and nvidia: all five rendered side imagery; Xbox/PlayStation logos were missing and Git selected a weak book-cover asset. Manually entered seven fictional PlayStation assumptions and verified two computed drivers totaling $5.2M. Document Sony's concurrent-tab save conflict and remaining validation limits in docs/brand-discovery-manual-qa.md; no product behavior changed.
+
 ## v0.26.1 (2026-10-28)
 
 - Validation: all 57 targeted brand/image/font/export and plugin checks pass; production/plugin builds pass. Browser WebP→JPEG conversion preserves dimensions. Public Sony and Shopify discovery verified; Sony now returns campaign photography. A fictional presentation imported successfully into Google Slides; the user confirmed it works. Automated visual inspection stopped at Google sign-in.

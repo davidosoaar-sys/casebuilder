@@ -1,6 +1,6 @@
 {
   "name": "casebuilder",
-  "version": "0.26.1",
+  "version": "0.27.0",
   "description": "Build a customer-specific business case for Spotify Portal for Backstage: an ROI model from the customer's own numbers, framed for each stakeholder, with researched contacts, and exported as a PowerPoint, a one-pager and an interactive website.",
   "author": {
     "name": "davidosoaar-sys",

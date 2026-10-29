@@ -27,12 +27,12 @@ test('PDF and Slides are standalone previews with no print or download on open',
   }
 })
 
-test('website view supports section navigation, stakeholder journey and scenario exploration', () => {
+test('website view supports section navigation and scenario exploration without the internal stakeholder journey', () => {
   const html = buildWebsite({ ...args, viewMode: 'website' })
   assert.ok(html.includes('class="view-website"'))
   assert.equal(html.includes('Stakeholder perspective'),false)
   assert.ok(html.includes('Adjust assumptions'))
-  assert.ok(html.includes('data-journey-node'))
+  assert.equal(html.includes('data-journey-node'),false)
   assert.ok(html.includes('Adjust the numbers'))
   assert.ok(html.includes('scroll-snap-type:none'))
   assert.ok(html.includes('Reset to the original'))

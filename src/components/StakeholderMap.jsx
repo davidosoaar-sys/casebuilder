@@ -1,6 +1,7 @@
 import {profilePhotoData} from '../profileMedia.js'
 import React, { useMemo, useRef, useState } from 'react'
-import { resolve, AddStakeholder } from './Deck.jsx'
+import {resolveStakeholder as resolve} from '../deck/stakeholders.js'
+import {AddStakeholder} from './AddStakeholder.jsx'
 import AppLogo from './AppLogo.jsx'
 import { defaultPositions } from '../deck/mapLayout.js'
 
@@ -28,6 +29,7 @@ export default function StakeholderMap({
   continueLabel = 'Continue',
   showStep = true,
   embedded = false,
+  readOnly = false,
   onOpen
 }) {
   const mapRef = useRef(null)
@@ -71,8 +73,7 @@ export default function StakeholderMap({
     <div data-tour="stakeholders" className={embedded ? 'map-embedded' : 'map-page'}>
       {embedded ? (
         <p className="sub embedded-sub">
-          Drag people to arrange the map, add anyone this case has to convince, and remove anyone
-          who doesn't belong.
+          {readOnly ? 'Role placement only. Lines connect roles to the company; they do not indicate who reports to whom.' : "Drag people to arrange the map, add anyone this case has to convince, and remove anyone who doesn't belong."}
         </p>
       ) : (
         <>
@@ -110,24 +111,24 @@ export default function StakeholderMap({
               className={`map-node ${dragKey === s.key ? 'dragging' : ''}`}
               key={s.key}
               style={{ left: `${x}%`, top: `${y}%` }}
-              onPointerDown={e => startDrag(e, s.key)}
-              onPointerMove={e => drag(e, s.key)}
+              onPointerDown={readOnly ? undefined : e => startDrag(e, s.key)}
+              onPointerMove={readOnly ? undefined : e => drag(e, s.key)}
               onPointerUp={() => setDragKey(null)}
               onPointerCancel={() => setDragKey(null)}
             >
-              <button
+              {!readOnly && <button
                 className="map-x"
                 title={`Remove ${s.role}`}
                 aria-label={`Remove ${s.role}`}
                 onClick={() => onChange(list => list.filter(x => x.key !== s.key))}
               >
                 ×
-              </button>
+              </button>}
               <span className="map-badge" aria-hidden="true">{s.namedPeople?.find(p=>profilePhotoData(p.photo?.dataUrl))?<img src={s.namedPeople.find(p=>profilePhotoData(p.photo?.dataUrl)).photo.dataUrl} alt=""/>:initials(s.role)}</span>
               <span className="map-text">
                 <strong>{s.role}</strong>
                 <span className="map-people">
-                  {found > 0 ? `${found} ${found === 1 ? 'person' : 'people'} found` : 'No one found yet'}
+                  {readOnly ? (s.namedPeople.length?s.namedPeople.map((p,i)=><React.Fragment key={p.name}>{i?', ':''}<a href={p.sourceUrl} target="_blank" rel="noreferrer noopener">{p.name}</a></React.Fragment>):'No named person') : found > 0 ? `${found} ${found === 1 ? 'person' : 'people'} found` : 'No one found yet'}
                 </span>
                 {onOpen && <button type="button" className="link-btn map-open" onClick={() => onOpen(s.key)} aria-label={`Open the brief for ${s.role}`}>Brief →</button>}
               </span>
@@ -138,7 +139,7 @@ export default function StakeholderMap({
         {n === 0 && <p className="map-empty">No stakeholders yet. Add one below.</p>}
       </div>
 
-      <div className="map-actions">
+      {!readOnly && <div className="map-actions">
         <div className="map-actions-left">
           <AddStakeholder existing={stakeholders} onAdd={s => onChange(list => [...list, s])} />
           {moved && (
@@ -152,7 +153,7 @@ export default function StakeholderMap({
             {continueLabel}
           </button>
         )}
-      </div>
+      </div>}
     </div>
   )
 }

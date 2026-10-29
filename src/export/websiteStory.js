@@ -36,7 +36,6 @@ export function websiteStory(slides) {
     section('impact','Business impact',ensure('impact','Business impact','stats')),
     section('drivers','Value drivers',ensure('drivers','Value drivers','drivers')),
     section('comparison','What changes',ensure('comparison','What changes','pairs')),
-    section('alternative','The alternative',ensure('alternative','The alternative','versus')),
-    section('stakeholder','Stakeholders',[text('title','Stakeholders'),block('stakeholderMap')])
+    section('alternative','The alternative',ensure('alternative','The alternative','versus'))
   ]
 }

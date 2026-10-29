@@ -25,6 +25,7 @@ export default function Details({
   onStakeholders,
   onPeople,
   onReset,
+  onRetryPublicInputs,
   userId,
   onFiles
 }) {
@@ -69,6 +70,8 @@ export default function Details({
       {tab === 'inputs' && <CaseContext fields={project.fields} onFields={onFields}/>}
       {tab === 'inputs' && (
         <InputSheet
+          publicResearch={project.publicInputResearch}
+          onRetryPublicInputs={onRetryPublicInputs}
           fields={project.fields.filter(f=>!CASE_CONTEXT.some(c=>c.key===f.key))}
           model={model}
           company={project.name}

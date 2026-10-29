@@ -47,6 +47,7 @@ import ProjectFiles from './components/ProjectFiles.jsx'
 import WaitlistAdmin, { isAdmin } from './components/WaitlistAdmin.jsx'
 import usePersonLookup from './usePersonLookup.js'
 import { addPersonToDeal, acceptPersonInput } from './personLookup.js'
+import usePublicInputs from './usePublicInputs.js'
 
 const USER_KEY = 'casebuilder.user'
 const THEME_KEY = 'casebuilder.theme'
@@ -183,6 +184,7 @@ export default function App({ account }) {
 
   const project = projects.find(p => p.id === currentId)
   const dealConnections = project?.connectors || connections
+  const retryPublicInputs=usePublicInputs({project,active:!!project&&['details','deck','website'].includes(view),setProjects})
   const connectionProject = project || projects.find(p=>p.id===connectionProjectId)
   function updateConnectionProject(patch) {
     if (!connectionProject) return
@@ -443,6 +445,7 @@ export default function App({ account }) {
           />
         ) : page === 'details' ? (
           <Details
+            onRetryPublicInputs={retryPublicInputs}
             project={project}
             model={model}
             connections={dealConnections}

@@ -18,6 +18,8 @@ Motion: preserve the existing moving stakeholder map; use reduced-motion support
 and visible defaults. No decorative moving background. Status boxes in client
 outputs are a read-only snapshot, not a pretend shared task database.
 
+The stakeholder map is internal only. Person lookup reuses its established role layout in a read-only panel; sourced reporting facts and inferred seniority appear below it. Company-to-role lines never imply a reporting relationship. The shared Live Room has no stakeholder-map section or named stakeholder payload. Keep the current onboarding, and use Cases / Recurring tasks as navigation labels.
+
 These choices extend the incumbent implementation; they do not rebrand the app.
 
 Deck-cover reference: https://casebuilder-site-omega.vercel.app/ — small customer

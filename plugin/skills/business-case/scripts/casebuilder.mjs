@@ -10396,11 +10396,6 @@ function clientStakeholder(s = {}) {
     clientFacing: true
   };
 }
-function requirementListHtml(s, heading = "") {
-  const esc5 = (value) => String(value || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-  const rows = clientRequirements(s);
-  return rows.length ? heading + '<ul class="client-requirements">' + rows.map((r) => '<li><span class="requirement-box ' + (r.status === "Actioned" ? "is-done" : "") + '" aria-hidden="true"></span><span>' + esc5(r.text) + "</span><small>" + esc5(r.status) + "</small></li>").join("") + "</ul>" : "";
-}
 
 // plugin-src/cli.mjs
 import fs2 from "node:fs";
@@ -17405,7 +17400,7 @@ function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, narrative
   const graphic = (kind, rows) => DATA.viewMode === "website" && renderGraphic ? renderGraphic(kind, rows) : "";
   const $ = (s) => document.querySelector(s);
   const mode = DATA.viewMode || "website";
-  const esc5 = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const esc4 = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   if (DATA.company) {
     document.title = DATA.company + " \xB7 Business case";
     const co = document.querySelector(".co");
@@ -17480,8 +17475,8 @@ function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, narrative
       (lines) => lines.every((l) => /^\s*[-•]\s+/.test(l)) ? { type: "ul", items: lines.map((l) => l.replace(/^\s*[-•]\s+/, "")) } : { type: "p", text: lines.join(" ") }
     );
   }
-  const bodyHtml = (list) => '<div class="body">' + list.map((p) => p.type === "ul" ? "<ul>" + p.items.map((i) => "<li>" + esc5(i) + "</li>").join("") + "</ul>" : "<p>" + esc5(p.text) + "</p>").join("") + "</div>";
-  const equationHtml = (equation) => !equation ? "" : mode === "website" ? '<details class="figure-math"><summary>How it is calculated</summary><em class="eq">' + esc5(equation) + "</em></details>" : '<em class="eq">' + esc5(equation) + "</em>";
+  const bodyHtml = (list) => '<div class="body">' + list.map((p) => p.type === "ul" ? "<ul>" + p.items.map((i) => "<li>" + esc4(i) + "</li>").join("") + "</ul>" : "<p>" + esc4(p.text) + "</p>").join("") + "</div>";
+  const equationHtml = (equation) => !equation ? "" : mode === "website" ? '<details class="figure-math"><summary>How it is calculated</summary><em class="eq">' + esc4(equation) + "</em></details>" : '<em class="eq">' + esc4(equation) + "</em>";
   const TAGS = {
     hero: ["h1", "hero"],
     headline: ["h2", "headline"],
@@ -17511,18 +17506,18 @@ function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, narrative
       case "text": {
         if (b.style === "body") return bodyHtml(paras(fill2(b.text, ctx)));
         const t = TAGS[b.style] || ["p", ""];
-        return "<" + t[0] + ' class="' + t[1] + '">' + esc5(fill2(b.text, ctx)) + "</" + t[0] + ">";
+        return "<" + t[0] + ' class="' + t[1] + '">' + esc4(fill2(b.text, ctx)) + "</" + t[0] + ">";
       }
       case "quote":
-        return "<blockquote>" + esc5(fill2(b.text, ctx)) + "</blockquote>";
+        return "<blockquote>" + esc4(fill2(b.text, ctx)) + "</blockquote>";
       case "columns":
         return '<div class="cols">' + bodyHtml(paras(fill2(b.left, ctx))) + bodyHtml(paras(fill2(b.right, ctx))) + "</div>";
       case "image":
-        return b.src ? '<figure><img src="' + esc5(b.src) + '" alt="">' + (b.caption ? "<figcaption>" + esc5(fill2(b.caption, ctx)) + "</figcaption>" : "") + "</figure>" : "";
+        return b.src ? '<figure><img src="' + esc4(b.src) + '" alt="">' + (b.caption ? "<figcaption>" + esc4(fill2(b.caption, ctx)) + "</figcaption>" : "") + "</figure>" : "";
       case "logo":
         return '<div class="logo">' + DATA.logo + "</div>";
       case "overviewFacts":
-        return '<div class="overview-context"><span class="label">THE DIRECTION</span><dl><dt>Company archetype</dt><dd>' + esc5(inputs.archetype || "Not yet specified") + "</dd><dt>Strategic priority</dt><dd>" + esc5(inputs.strategicPriority || "Not yet specified") + "</dd><dt>Stakeholders</dt><dd>" + DATA.stakeholders.length + "</dd></dl></div>";
+        return '<div class="overview-context"><span class="label">THE DIRECTION</span><dl><dt>Company archetype</dt><dd>' + esc4(inputs.archetype || "Not yet specified") + "</dd><dt>Strategic priority</dt><dd>" + esc4(inputs.strategicPriority || "Not yet specified") + "</dd></dl></div>";
       case "stakeholderMap":
         return DATA.journeyHtml || "";
       case "divider":
@@ -17535,7 +17530,7 @@ function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, narrative
         return graphic("impact", [
           ...!M().figures.totalValue.incomplete ? [{ label: "Annual business value", value: M().figures.totalValue.value, display: VM.fmtMoney(M().figures.totalValue.value) }] : [],
           ...inputs.portalCost !== "" && inputs.portalCost != null ? [{ label: "Annual Portal spend", value: Number(inputs.portalCost), display: VM.fmtMoney(Number(inputs.portalCost)) }] : []
-        ]) + '<div class="stats" data-card-count="' + keys.map(statItem).filter(Boolean).length + '">' + keys.map(statItem).filter(Boolean).map((i) => '<div class="stat ' + (i.tone || "") + '"><span>' + esc5(i.label) + "</span><strong>" + esc5(i.value) + "</strong>" + equationHtml(i.eq) + "</div>").join("") + "</div>";
+        ]) + '<div class="stats" data-card-count="' + keys.map(statItem).filter(Boolean).length + '">' + keys.map(statItem).filter(Boolean).map((i) => '<div class="stat ' + (i.tone || "") + '"><span>' + esc4(i.label) + "</span><strong>" + esc4(i.value) + "</strong>" + equationHtml(i.eq) + "</div>").join("") + "</div>";
       }
       case "drivers": {
         const m = M();
@@ -17543,11 +17538,11 @@ function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, narrative
         if (!groups.length) return "";
         const max = Math.max.apply(null, [1].concat(groups.reduce((acc, g) => acc.concat(g.items.map((d) => d.value)), [])));
         const arithmetic = '<div class="chart">' + groups.map(
-          (g) => '<section class="pillar' + (g.leads ? " pl" : "") + '"><h3>' + esc5(g.label) + "<span>" + esc5(VM.fmtMoney(g.total)) + "</span></h3>" + g.items.map((d) => {
+          (g) => '<section class="pillar' + (g.leads ? " pl" : "") + '"><h3>' + esc4(g.label) + "<span>" + esc4(VM.fmtMoney(g.total)) + "</span></h3>" + g.items.map((d) => {
             const lead = st.lead.indexOf(d.key) >= 0 || d.priority;
-            return '<div class="bar-row' + (lead ? " lead" : "") + '"><div class="bar-label">' + esc5(d.label) + (lead ? "<i></i>" : "") + '</div><div class="track"><div class="fill" style="width:' + (d.value / max * 100).toFixed(1) + "%;background:" + d.color + ";opacity:" + (lead ? 1 : 0.45) + '"></div></div><div class="bar-value">' + esc5(VM.fmtMoney(d.value)) + '</div><div class="bar-detail eq">' + esc5(d.detail) + "</div></div>";
+            return '<div class="bar-row' + (lead ? " lead" : "") + '"><div class="bar-label">' + esc4(d.label) + (lead ? "<i></i>" : "") + '</div><div class="track"><div class="fill" style="width:' + (d.value / max * 100).toFixed(1) + "%;background:" + d.color + ";opacity:" + (lead ? 1 : 0.45) + '"></div></div><div class="bar-value">' + esc4(VM.fmtMoney(d.value)) + '</div><div class="bar-detail eq">' + esc4(d.detail) + "</div></div>";
           }).join("") + "</section>"
-        ).join("") + "</div>" + (DATA.viewMode === "website" && m.figures.totalValue.incomplete ? '<p class="eq">Complete the remaining inputs to calculate total annual value.</p>' : '<div class="total"><span>Total annual value</span><strong>' + esc5(VM.fmtMoneyFull(m.figures.totalValue.value)) + '</strong></div><p class="eq">' + esc5(m.figures.totalValue.equation) + "</p>");
+        ).join("") + "</div>" + (DATA.viewMode === "website" && m.figures.totalValue.incomplete ? '<p class="eq">Complete the remaining inputs to calculate total annual value.</p>' : '<div class="total"><span>Total annual value</span><strong>' + esc4(VM.fmtMoneyFull(m.figures.totalValue.value)) + '</strong></div><p class="eq">' + esc4(m.figures.totalValue.equation) + "</p>");
         return DATA.viewMode === "website" ? graphic("drivers", groups.flatMap((g) => g.items.map((d) => ({ label: d.label, value: d.value, display: VM.fmtMoney(d.value) })))) + '<details class="website-calculation-notes"><summary>View driver arithmetic</summary>' + arithmetic + "</details>" : arithmetic;
       }
       case "pairs": {
@@ -17558,7 +17553,7 @@ function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, narrative
         const table = '<div class="pairs"><div class="pr ph"><span></span><span>today</span><span>with Portal</span><span>difference</span></div>' + rowsOf.map((p) => {
           const t = m.inputs[p.today];
           const q = m.inputs[p.portal];
-          return '<div class="pr"><span class="pl2">' + esc5(p.label) + (p.money || p.unit === "%" ? "" : " <i>(" + esc5(p.unit) + ")</i>") + "</span><b>" + esc5(show(p, t)) + "</b><b>" + esc5(show(p, q)) + '</b><b class="pd">' + esc5(show(p, Math.max(0, t - q))) + '</b><em class="eq">' + esc5(p.saved) + ": worth " + esc5(VM.fmtMoney(m.figures[p.valueFigure].value)) + "</em></div>";
+          return '<div class="pr"><span class="pl2">' + esc4(p.label) + (p.money || p.unit === "%" ? "" : " <i>(" + esc4(p.unit) + ")</i>") + "</span><b>" + esc4(show(p, t)) + "</b><b>" + esc4(show(p, q)) + '</b><b class="pd">' + esc4(show(p, Math.max(0, t - q))) + '</b><em class="eq">' + esc4(p.saved) + ": worth " + esc4(VM.fmtMoney(m.figures[p.valueFigure].value)) + "</em></div>";
         }).join("") + "</div>";
         return DATA.viewMode === "website" ? graphic("comparison", rowsOf.map((p) => ({ label: p.label, unit: p.unit, before: m.inputs[p.today], after: m.inputs[p.portal], beforeDisplay: show(p, m.inputs[p.today]), afterDisplay: show(p, m.inputs[p.portal]) }))) + '<details class="website-calculation-notes"><summary>View the underlying numbers</summary>' + table + "</details>" : table;
       }
@@ -17569,11 +17564,11 @@ function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, narrative
         const portal = inputs.portalCost >= 0 ? Number(inputs.portalCost) || 0 : 0;
         const max = Math.max(selfHost, portal, 1);
         const delta = F.versusSelfHost.raw;
-        const row = (name, val, tone, eq) => '<div class="v-row"><span>' + name + '</span><div class="track"><div class="fill ' + tone + '" style="width:' + (val / max * 100).toFixed(1) + '%"></div></div><b>' + esc5(VM.fmtMoney(val)) + "/yr</b>" + (eq ? '<em class="eq">' + esc5(eq) + "</em>" : "") + "</div>";
-        return (DATA.viewMode === "website" ? graphic("alternative", [{ label: "Self-host open source", value: selfHost, display: VM.fmtMoney(selfHost) + "/yr" }, { label: "Spotify Portal", value: portal, display: VM.fmtMoney(portal) + "/yr" }]) + '<div class="alternative-flow" aria-label="Self-hosting annual cost calculation"><div><small>Platform engineers</small><strong>' + esc5(VM.fmtDec(Number(inputs.selfHostEngineers), 1)) + "</strong></div><span>\xD7</span><div><small>Fully loaded salary</small><strong>" + esc5(VM.fmtMoney(Number(inputs.selfHostSalary))) + "</strong></div><span>\u2192</span><div><small>Annual self-host cost</small><strong>" + esc5(VM.fmtMoney(selfHost)) + "</strong></div></div>" : '<div class="versus">' + row("Self-host open source", selfHost, "bad", F.selfHostCost.equation) + row("Spotify Portal", portal, "good", "") + "</div>") + '<p class="v-note">' + esc5(VM.fmtDec(Number(inputs.selfHostEngineers) || 0, 1)) + " platform engineers at " + esc5(VM.fmtMoney(Number(inputs.selfHostSalary) || 0)) + " fully loaded, permanently, for upgrades, patches and infrastructure. <strong>" + esc5(delta > 0 ? "Portal is " + VM.fmtMoney(delta) + "/yr cheaper before any of the value above." : "On these figures self-hosting is cheaper. The case has to rest on the value drivers, not on cost avoidance.") + '</strong></p><p class="eq">' + esc5(F.versusSelfHost.equation) + "</p>";
+        const row = (name, val, tone, eq) => '<div class="v-row"><span>' + name + '</span><div class="track"><div class="fill ' + tone + '" style="width:' + (val / max * 100).toFixed(1) + '%"></div></div><b>' + esc4(VM.fmtMoney(val)) + "/yr</b>" + (eq ? '<em class="eq">' + esc4(eq) + "</em>" : "") + "</div>";
+        return (DATA.viewMode === "website" ? graphic("alternative", [{ label: "Self-host open source", value: selfHost, display: VM.fmtMoney(selfHost) + "/yr" }, { label: "Spotify Portal", value: portal, display: VM.fmtMoney(portal) + "/yr" }]) + '<div class="alternative-flow" aria-label="Self-hosting annual cost calculation"><div><small>Platform engineers</small><strong>' + esc4(VM.fmtDec(Number(inputs.selfHostEngineers), 1)) + "</strong></div><span>\xD7</span><div><small>Fully loaded salary</small><strong>" + esc4(VM.fmtMoney(Number(inputs.selfHostSalary))) + "</strong></div><span>\u2192</span><div><small>Annual self-host cost</small><strong>" + esc4(VM.fmtMoney(selfHost)) + "</strong></div></div>" : '<div class="versus">' + row("Self-host open source", selfHost, "bad", F.selfHostCost.equation) + row("Spotify Portal", portal, "good", "") + "</div>") + '<p class="v-note">' + esc4(VM.fmtDec(Number(inputs.selfHostEngineers) || 0, 1)) + " platform engineers at " + esc4(VM.fmtMoney(Number(inputs.selfHostSalary) || 0)) + " fully loaded, permanently, for upgrades, patches and infrastructure. <strong>" + esc4(delta > 0 ? "Portal is " + VM.fmtMoney(delta) + "/yr cheaper before any of the value above." : "On these figures self-hosting is cheaper. The case has to rest on the value drivers, not on cost avoidance.") + '</strong></p><p class="eq">' + esc4(F.versusSelfHost.equation) + "</p>";
       }
       case "room":
-        return (st.requirements || []).length ? '<section class="client-requirements"><h3>Requirements</h3><ul>' + st.requirements.map((r) => '<li><span aria-hidden="true" class="requirement-box ' + (r.status === "Actioned" ? "is-done" : "") + '"></span><span>' + esc5(r.text) + "</span><small>" + esc5(r.status) + "</small></li>").join("") + "</ul></section>" : "";
+        return (st.requirements || []).length ? '<section class="client-requirements"><h3>Requirements</h3><ul>' + st.requirements.map((r) => '<li><span aria-hidden="true" class="requirement-box ' + (r.status === "Actioned" ? "is-done" : "") + '"></span><span>' + esc4(r.text) + "</span><small>" + esc4(r.status) + "</small></li>").join("") + "</ul></section>" : "";
       default:
         return "";
     }
@@ -17624,14 +17619,14 @@ function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, narrative
       const live = parts.filter((p) => LIVE2[p.b.type]);
       const liveShown = live.filter((p) => p.html);
       const kept = parts.filter((p) => mode === "website" || LIVE2[p.b.type] ? p.html : p.b.type !== "assumptions");
-      if (mode === "website" && live.length && !liveShown.length) kept.push({ b: { type: "waiting" }, j: -1, html: '<div class="story-waiting"><h3>' + esc5(DATA.layout?.[i]?.nav || "Figures") + "</h3><p>These figures will appear when the required inputs are supplied.</p></div>" });
+      if (mode === "website" && live.length && !liveShown.length) kept.push({ b: { type: "waiting" }, j: -1, html: '<div class="story-waiting"><h3>' + esc4(DATA.layout?.[i]?.nav || "Figures") + "</h3><p>These figures will appear when the required inputs are supplied.</p></div>" });
       if (mode !== "website" && (live.length && !liveShown.length || !kept.length)) return;
       shown.push({ s, i, kept });
     });
     const slideHtml = shown.map(
-      (v, n) => '<section class="slide ' + (v.s.variant === "hero" ? "hero-bg" : "") + (DATA.splitCovers?.[v.i] ? " brand-split-cover" : "") + '" data-kind="' + esc5(DATA.layout?.[v.i]?.kind || "content") + '" data-i="' + n + '"' + (mode !== "website" && /^#[0-9a-f]{6}$/i.test(v.s.design?.background) ? ' style="background:' + v.s.design.background + '!important"' : "") + ">" + (DATA.splitCovers?.[v.i] ? '<img class="cover-photo" src="' + esc5(DATA.coverPhoto) + '" alt="' + esc5(DATA.coverAlt) + '">' : "") + '<div class="inner">' + (mode === "website" && n > 0 ? '<div class="website-section-number">' + String(n + 1).padStart(2, "0") + " / " + String(shown.length).padStart(2, "0") + "</div>" : "") + v.kept.map(
+      (v, n) => '<section class="slide ' + (v.s.variant === "hero" ? "hero-bg" : "") + (DATA.splitCovers?.[v.i] ? " brand-split-cover" : "") + '" data-kind="' + esc4(DATA.layout?.[v.i]?.kind || "content") + '" data-i="' + n + '"' + (mode !== "website" && /^#[0-9a-f]{6}$/i.test(v.s.design?.background) ? ' style="background:' + v.s.design.background + '!important"' : "") + ">" + (DATA.splitCovers?.[v.i] ? '<img class="cover-photo" src="' + esc4(DATA.coverPhoto) + '" alt="' + esc4(DATA.coverAlt) + '">' : "") + '<div class="inner">' + (mode === "website" && n > 0 ? '<div class="website-section-number">' + String(n + 1).padStart(2, "0") + " / " + String(shown.length).padStart(2, "0") + "</div>" : "") + v.kept.map(
         (p) => '<div class="blk" data-s="' + v.i + '" data-b="' + p.j + '"' + (EDITABLE[p.b.type] && (mode !== "website" || p.b.sourceSlideId) ? ' data-e="1"' : "") + formatAttrs(p.b.design) + ">" + p.html + "</div>"
-      ).join("") + "</div>" + (mode === "pdf" ? '<footer class="pdf-footer"><span>' + esc5(DATA.company) + " \xB7 Business case</span><span>" + (n + 1) + " / " + shown.length + "</span></footer>" : "") + "</section>"
+      ).join("") + "</div>" + (mode === "pdf" ? '<footer class="pdf-footer"><span>' + esc4(DATA.company) + " \xB7 Business case</span><span>" + (n + 1) + " / " + shown.length + "</span></footer>" : "") + "</section>"
     );
     main2.innerHTML = mode === "pdf" ? slideHtml.map((html) => '<div class="pdf-paper">' + html + "</div>").join("") : slideHtml.join("");
     main2.scrollTop = keep;
@@ -17644,11 +17639,11 @@ function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, narrative
         if (title.textContent.length > 55) title.classList.add("long-title");
       });
       const summary = ["annual", "payback", "roi"].map(statItem).filter(Boolean);
-      if (overview && summary.length) overview.insertAdjacentHTML("beforeend", '<div class="overview-bento">' + summary.map((i) => '<div class="bento-cell"><span>' + esc5(i.label) + "</span><strong>" + esc5(i.value) + "</strong></div>").join("") + "</div>");
-      if (!shown.length) main2.innerHTML = '<section class="website-empty"><span class="label">Business case</span><h1>' + esc5(DATA.company || "Your company") + "</h1><p>Your business case is taking shape.</p><p>Add inputs and content to bring the value, comparisons and stakeholder perspectives into view.</p></section>";
+      if (overview && summary.length) overview.insertAdjacentHTML("beforeend", '<div class="overview-bento">' + summary.map((i) => '<div class="bento-cell"><span>' + esc4(i.label) + "</span><strong>" + esc4(i.value) + "</strong></div>").join("") + "</div>");
+      if (!shown.length) main2.innerHTML = '<section class="website-empty"><span class="label">Business case</span><h1>' + esc4(DATA.company || "Your company") + "</h1><p>Your business case is taking shape.</p><p>Add inputs and content to bring the value, comparisons and stakeholder perspectives into view.</p></section>";
       main2.insertAdjacentHTML("beforeend", '<footer class="website-end"><span>Business case</span><button data-explore="0">Back to top \u2191</button></footer>');
       const annual = statItem("annual");
-      $("#scenario-summary").innerHTML = annual ? "Annual value<strong>" + esc5(annual.value) + "</strong>Figures update as you explore." : "Add the missing inputs to calculate annual value.";
+      $("#scenario-summary").innerHTML = annual ? "Annual value<strong>" + esc4(annual.value) + "</strong>Figures update as you explore." : "Add the missing inputs to calculate annual value.";
       main2.querySelectorAll('.slide:not([data-kind="cover"]):not([data-kind="content"])').forEach((section) => {
         const inner = section.querySelector(".inner");
         const copy = document.createElement("div"), content = document.createElement("div"), more = document.createElement("div");
@@ -17676,11 +17671,11 @@ function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, narrative
       updateProgress();
     }
     if (current > shown.length - 1) current = Math.max(0, shown.length - 1);
-    $("#audience").innerHTML = mode === "website" ? DATA.sliders.length ? "<button data-header-scenario>Adjust assumptions</button>" : "" : DATA.stakeholders.map((s) => '<button class="' + (s.key === st.key ? "on" : "") + '" data-key="' + esc5(s.key) + '">' + esc5(s.role) + "</button>").join("");
+    $("#audience").innerHTML = mode === "website" ? DATA.sliders.length ? "<button data-header-scenario>Adjust assumptions</button>" : "" : DATA.stakeholders.map((s) => '<button class="' + (s.key === st.key ? "on" : "") + '" data-key="' + esc4(s.key) + '">' + esc4(s.role) + "</button>").join("");
     $("#dots").innerHTML = shown.map((s, i) => {
       const title = s.s.blocks.find((b) => b.type === "text" && ["label", "hero", "title"].includes(b.style));
       const label = mode === "website" ? fill2(DATA.layout?.[s.i]?.nav || (title ? title.text : "Section " + (i + 1)), ctx) : "";
-      return '<button class="dot ' + (i === current ? "on" : "") + '" data-go="' + i + '" aria-current="' + (i === current ? "location" : "false") + '" aria-label="' + esc5(mode === "website" ? label : "Go to page " + (i + 1)) + '">' + esc5(label) + "</button>";
+      return '<button class="dot ' + (i === current ? "on" : "") + '" data-go="' + i + '" aria-current="' + (i === current ? "location" : "false") + '" aria-label="' + esc4(mode === "website" ? label : "Go to page " + (i + 1)) + '">' + esc4(label) + "</button>";
     }).join("");
     $("#count").textContent = shown.length ? current + 1 + " / " + shown.length : "";
     if (mode === "slides") document.querySelectorAll(".slide").forEach((s, i) => {
@@ -17722,7 +17717,7 @@ function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, narrative
   }
   function buildSliders() {
     $("#sliders").innerHTML = DATA.sliders.map(
-      (s) => "<label><span>" + esc5(s.label) + '<b id="v-' + s.key + '"></b></span><input type="range" data-key="' + s.key + '" min="' + s.min + '" max="' + s.max + '" step="' + s.step + '" value="' + inputs[s.key] + '"></label>'
+      (s) => "<label><span>" + esc4(s.label) + '<b id="v-' + s.key + '"></b></span><input type="range" data-key="' + s.key + '" min="' + s.min + '" max="' + s.max + '" step="' + s.step + '" value="' + inputs[s.key] + '"></label>'
     ).join("");
     const show = () => DATA.sliders.forEach((s) => {
       $("#v-" + s.key).textContent = " " + (s.unit === "%" ? inputs[s.key] + "%" : s.unit === "$" ? "$" + Number(inputs[s.key]).toLocaleString() : Number(inputs[s.key]).toLocaleString());
@@ -18226,14 +18221,13 @@ function websiteStory(slides) {
     section("impact", "Business impact", ensure("impact", "Business impact", "stats")),
     section("drivers", "Value drivers", ensure("drivers", "Value drivers", "drivers")),
     section("comparison", "What changes", ensure("comparison", "What changes", "pairs")),
-    section("alternative", "The alternative", ensure("alternative", "The alternative", "versus")),
-    section("stakeholder", "Stakeholders", [text2("title", "Stakeholders"), block2("stakeholderMap")])
+    section("alternative", "The alternative", ensure("alternative", "The alternative", "versus"))
   ];
 }
 
 // src/export/websiteGraphics.js
 function renderWebsiteGraphic(kind, input) {
-  const esc5 = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const esc4 = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const nonnegative = (n) => typeof n === "number" && Number.isFinite(n) && n >= 0;
   const rows = (input || []).filter((r) => kind === "comparison" ? nonnegative(r.before) && nonnegative(r.after) : nonnegative(r.value));
   if (!rows.length) return "";
@@ -18244,19 +18238,19 @@ function renderWebsiteGraphic(kind, input) {
     const segments = rows.map((r, i) => {
       const width = r.value / total * 800, x = start;
       start += width;
-      return '<rect x="' + x.toFixed(3) + '" y="8" width="' + width.toFixed(3) + '" height="30" fill="var(--accent)" opacity="' + (1 - i % 6 * 0.12) + '"><title>' + esc5(r.label) + ": " + esc5(r.display) + " (" + (r.value / total * 100).toFixed(1) + "%)</title></rect>";
+      return '<rect x="' + x.toFixed(3) + '" y="8" width="' + width.toFixed(3) + '" height="30" fill="var(--accent)" opacity="' + (1 - i % 6 * 0.12) + '"><title>' + esc4(r.label) + ": " + esc4(r.display) + " (" + (r.value / total * 100).toFixed(1) + "%)</title></rect>";
     }).join("");
-    return '<figure class="website-graphic driver-composition" aria-label="Annual value by driver"><figcaption>Where the computed annual value comes from</figcaption><svg viewBox="0 0 800 46" role="img" aria-label="Proportional contribution of each computed value driver">' + segments + '</svg><ol class="graphic-legend">' + rows.map((r, i) => '<li><i style="opacity:' + (1 - i % 6 * 0.12) + '" aria-hidden="true"></i><span>' + esc5(r.label) + "</span><strong>" + esc5(r.display) + "</strong><small>" + (r.value / total * 100).toFixed(1) + "%</small></li>").join("") + "</ol></figure>";
+    return '<figure class="website-graphic driver-composition" aria-label="Annual value by driver"><figcaption>Where the computed annual value comes from</figcaption><svg viewBox="0 0 800 46" role="img" aria-label="Proportional contribution of each computed value driver">' + segments + '</svg><ol class="graphic-legend">' + rows.map((r, i) => '<li><i style="opacity:' + (1 - i % 6 * 0.12) + '" aria-hidden="true"></i><span>' + esc4(r.label) + "</span><strong>" + esc4(r.display) + "</strong><small>" + (r.value / total * 100).toFixed(1) + "%</small></li>").join("") + "</ol></figure>";
   }
   if (kind === "comparison") {
     return '<figure class="website-graphic change-graphic"><figcaption>Today and with Portal</figcaption><p class="graphic-caption">Each row uses its own unit and scale.</p>' + rows.map((r) => {
       const max2 = Math.max(r.before, r.after, 1), before = 20 + r.before / max2 * 760, after = 20 + r.after / max2 * 760;
-      return '<div class="change-graphic-row"><div class="change-graphic-label"><strong>' + esc5(r.label) + "</strong><small>" + esc5(r.unit) + '</small></div><svg viewBox="0 0 800 46" role="img" aria-label="' + esc5(r.label + ": " + r.beforeDisplay + " today; " + r.afterDisplay + " with Portal") + '"><line x1="20" y1="23" x2="780" y2="23" stroke="var(--line)" stroke-width="2"/><line x1="' + before.toFixed(2) + '" y1="23" x2="' + after.toFixed(2) + '" y2="23" stroke="var(--site-accent-text)" stroke-width="3"/><circle cx="' + before.toFixed(2) + '" cy="23" r="8" fill="var(--bg)" stroke="var(--dim)" stroke-width="3"><title>Today: ' + esc5(r.beforeDisplay) + '</title></circle><circle cx="' + after.toFixed(2) + '" cy="23" r="8" fill="var(--site-accent-text)"><title>With Portal: ' + esc5(r.afterDisplay) + '</title></circle></svg><div class="change-graphic-values"><span>Today <b>' + esc5(r.beforeDisplay) + "</b></span><span>With Portal <b>" + esc5(r.afterDisplay) + "</b></span></div></div>";
+      return '<div class="change-graphic-row"><div class="change-graphic-label"><strong>' + esc4(r.label) + "</strong><small>" + esc4(r.unit) + '</small></div><svg viewBox="0 0 800 46" role="img" aria-label="' + esc4(r.label + ": " + r.beforeDisplay + " today; " + r.afterDisplay + " with Portal") + '"><line x1="20" y1="23" x2="780" y2="23" stroke="var(--line)" stroke-width="2"/><line x1="' + before.toFixed(2) + '" y1="23" x2="' + after.toFixed(2) + '" y2="23" stroke="var(--site-accent-text)" stroke-width="3"/><circle cx="' + before.toFixed(2) + '" cy="23" r="8" fill="var(--bg)" stroke="var(--dim)" stroke-width="3"><title>Today: ' + esc4(r.beforeDisplay) + '</title></circle><circle cx="' + after.toFixed(2) + '" cy="23" r="8" fill="var(--site-accent-text)"><title>With Portal: ' + esc4(r.afterDisplay) + '</title></circle></svg><div class="change-graphic-values"><span>Today <b>' + esc4(r.beforeDisplay) + "</b></span><span>With Portal <b>" + esc4(r.afterDisplay) + "</b></span></div></div>";
     }).join("") + "</figure>";
   }
   const max = Math.max(1, ...rows.map((r) => r.value));
   const title = kind === "alternative" ? "Annual operating cost" : "Annual value and annual spend";
-  return '<figure class="website-graphic annual-graphic" aria-label="' + title + '"><figcaption>' + title + "</figcaption>" + rows.map((r, i) => '<div class="annual-graphic-row"><div><span>' + esc5(r.label) + "</span><strong>" + esc5(r.display) + '</strong></div><svg viewBox="0 0 800 28" role="img" aria-label="' + esc5(r.label + ": " + r.display) + '"><rect x="0" y="5" width="800" height="18" fill="var(--line)"/><rect x="0" y="5" width="' + (r.value / max * 800).toFixed(2) + '" height="18" fill="' + (i ? "var(--dim)" : "var(--site-accent-text)") + '"><title>' + esc5(r.label + ": " + r.display) + "</title></rect></svg></div>").join("") + "</figure>";
+  return '<figure class="website-graphic annual-graphic" aria-label="' + title + '"><figcaption>' + title + "</figcaption>" + rows.map((r, i) => '<div class="annual-graphic-row"><div><span>' + esc4(r.label) + "</span><strong>" + esc4(r.display) + '</strong></div><svg viewBox="0 0 800 28" role="img" aria-label="' + esc4(r.label + ": " + r.display) + '"><rect x="0" y="5" width="800" height="18" fill="var(--line)"/><rect x="0" y="5" width="' + (r.value / max * 800).toFixed(2) + '" height="18" fill="' + (i ? "var(--dim)" : "var(--site-accent-text)") + '"><title>' + esc4(r.label + ": " + r.display) + "</title></rect></svg></div>").join("") + "</figure>";
 }
 var GRAPHIC_CSS = `
 .website-graphic{margin:0 0 30px;padding:22px 0;border-block:1px solid var(--line);width:100%;color:var(--ink)}
@@ -18270,209 +18264,15 @@ var GRAPHIC_CSS = `
 @media(max-width:550px){.graphic-legend li{grid-template-columns:8px minmax(0,1fr) auto;gap:8px}.graphic-legend small{grid-column:2/-1;text-align:left}.alternative-flow{grid-template-columns:1fr 16px 1fr;gap:8px}.alternative-flow>span:nth-of-type(2){display:none}.alternative-flow>div:last-child{grid-column:1/-1;border-top:1px solid var(--line);padding-top:12px}.alternative-flow strong{font-size:17px}}
 `;
 
-// src/deck/mapLayout.js
-var MAP = { w: 920, h: 500 };
-var NODE = { w: 176, h: 58 };
-var CENTER = { w: 180, h: 88 };
-var GAP = 8;
-var RX = 37;
-var RY = 34;
-var rad = (deg) => deg * Math.PI / 180;
-function startAngles(n) {
-  if (n === 1) return [-90];
-  if (n === 2) return [180, 0];
-  const start = n % 2 === 0 ? -90 + 180 / n : -90;
-  return Array.from({ length: n }, (_, i) => start + 360 / n * i);
-}
-function defaultPositions(n) {
-  if (n <= 0) return [];
-  const pts = startAngles(n).map((a) => ({
-    x: (0.5 + RX / 100 * Math.cos(rad(a))) * MAP.w,
-    y: (0.5 + RY / 100 * Math.sin(rad(a))) * MAP.h
-  }));
-  const cx = MAP.w / 2;
-  const cy = MAP.h / 2;
-  const minX = NODE.w / 2 + 6;
-  const maxX = MAP.w - minX;
-  const minY = NODE.h / 2 + 6;
-  const maxY = MAP.h - minY;
-  for (let pass = 0; pass < 400; pass++) {
-    let moved = false;
-    for (let i = 0; i < n; i++) {
-      for (let j = i + 1; j < n; j++) {
-        const dx2 = pts[j].x - pts[i].x;
-        const dy2 = pts[j].y - pts[i].y;
-        const ox2 = NODE.w + GAP - Math.abs(dx2);
-        const oy2 = NODE.h + GAP - Math.abs(dy2);
-        if (ox2 > 0 && oy2 > 0) {
-          moved = true;
-          if (ox2 < oy2) {
-            const s = (dx2 >= 0 ? 1 : -1) * (ox2 / 2 + 0.5);
-            pts[i].x -= s;
-            pts[j].x += s;
-          } else {
-            const s = (dy2 >= 0 ? 1 : -1) * (oy2 / 2 + 0.5);
-            pts[i].y -= s;
-            pts[j].y += s;
-          }
-        }
-      }
-      const dx = pts[i].x - cx;
-      const dy = pts[i].y - cy;
-      const ox = (NODE.w + CENTER.w) / 2 + GAP - Math.abs(dx);
-      const oy = (NODE.h + CENTER.h) / 2 + GAP - Math.abs(dy);
-      if (ox > 0 && oy > 0) {
-        moved = true;
-        if (ox < oy) pts[i].x += (dx >= 0 ? 1 : -1) * (ox + 0.5);
-        else pts[i].y += (dy >= 0 ? 1 : -1) * (oy + 0.5);
-      }
-      pts[i].x = Math.min(maxX, Math.max(minX, pts[i].x));
-      pts[i].y = Math.min(maxY, Math.max(minY, pts[i].y));
-    }
-    if (!moved) break;
-  }
-  return pts.map((p) => ({ x: p.x / MAP.w * 100, y: p.y / MAP.h * 100 }));
-}
-var GUIDE_RINGS = [
-  [RX, RY],
-  [RX * 0.6, RY * 0.6]
-];
-
-// src/export/stakeholderJourney.js
-var esc2 = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-function stakeholderJourneyHtml(company, logo, stakeholders) {
-  stakeholders = stakeholders.map(clientStakeholder);
-  const positions = defaultPositions(stakeholders.length);
-  const nodes = stakeholders.map((s, i) => {
-    const pos = s.pos && Number.isFinite(s.pos.x) && Number.isFinite(s.pos.y) ? s.pos : positions[i];
-    const x = Math.min(84, Math.max(16, pos.x)), y = Math.min(88, Math.max(12, pos.y));
-    const name = (s.namedPeople || []).map((p) => p.name).filter(Boolean).join(", ");
-    return { s, i, x, y, name };
-  });
-  const initial = (s) => String(s).split(/[^a-zA-Z]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
-  const diagram = '<div class="relation-map" aria-label="Stakeholder map"><svg class="relation-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' + nodes.map((n) => '<line data-line="' + n.i + '" x1="50" y1="50" x2="' + n.x + '" y2="' + n.y + '" vector-effect="non-scaling-stroke"/>').join("") + '</svg><div class="relation-center">' + (logo ? "<div>" + logo + "</div>" : "") + "<small>Customer</small><strong>" + esc2(company) + "</strong></div>" + nodes.map((n) => '<button class="relation-node" data-journey-node="' + n.i + '" data-x="' + n.x + '" data-y="' + n.y + '" style="left:' + n.x + "%;top:" + n.y + '%" aria-label="Explore ' + esc2(n.name || n.s.role) + '" aria-pressed="false"><span class="relation-badge" aria-hidden="true">' + ((n.s.namedPeople || []).find((p) => p.photo)?.photo ? '<img src="' + n.s.namedPeople.find((p) => p.photo).photo.dataUrl + '" alt="' + esc2(n.name) + '">' : esc2(initial(n.s.role))) + "</span><span><strong>" + esc2(n.name || n.s.role) + "</strong>" + (n.name ? "<small>" + esc2(n.s.role) + "</small>" : "") + "</span></button>").join("") + "</div>";
-  const briefs = nodes.map((n) => '<template data-journey-brief="' + n.i + '"><article class="journey-brief"><h3>' + esc2(n.name || n.s.role) + "</h3><p>" + esc2(n.s.role) + "</p>" + requirementListHtml(n.s, "<h4>Requirements</h4>") + "</article></template>").join("");
-  return '<div class="stakeholder-journey" data-count="' + nodes.length + '" style="--journey-stops:' + Math.max(1, nodes.length + 1) + '"><div class="journey-stage"><div class="journey-map">' + diagram + '</div><div class="journey-copy" tabindex="-1" aria-label="Stakeholder brief"></div><div class="journey-controls"><button data-journey-reset>Full map</button><span class="journey-step-label">Scroll to explore</span><button data-journey-next>Next stakeholder \u2193</button></div></div>' + briefs + "</div>";
-}
-function mountStakeholderJourney(root, env = window) {
-  const journey = root.querySelector(".stakeholder-journey");
-  if (!journey) return () => {
-  };
-  const stage = journey.querySelector(".journey-stage"), copy = journey.querySelector(".journey-copy");
-  const nodes = Array.from(journey.querySelectorAll("[data-journey-node]"));
-  const templates = Array.from(journey.querySelectorAll("template"));
-  const preference = env.matchMedia("(prefers-reduced-motion: reduce)");
-  let current = -2, frame = 0, wireFrame = 0, manual = -1;
-  const mobile = () => env.innerWidth < 800;
-  function followWires(start) {
-    const bounds = journey.querySelector(".relation-map").getBoundingClientRect();
-    if (bounds.width && bounds.height) nodes.forEach((node, i) => {
-      const rect = node.getBoundingClientRect(), line = journey.querySelector('[data-line="' + i + '"]');
-      line?.setAttribute("x2", String((rect.left + rect.width / 2 - bounds.left) / bounds.width * 100));
-      line?.setAttribute("y2", String((rect.top + rect.height / 2 - bounds.top) / bounds.height * 100));
-    });
-    if (!preference.matches && env.performance.now() - start < 720) wireFrame = env.requestAnimationFrame(() => followWires(start));
-    else wireFrame = 0;
-  }
-  function show(index) {
-    if (index === current) return;
-    current = index;
-    stage.classList.toggle("has-focus", index >= 0);
-    stage.classList.toggle("map-on-right", index >= 0 && index % 2 === 1);
-    stage.dataset.active = String(index);
-    copy.innerHTML = index >= 0 && templates[index] ? templates[index].innerHTML : "";
-    copy.hidden = index < 0;
-    nodes.forEach((node, i) => {
-      const selected = i === index, right = index % 2 === 1;
-      const x = index < 0 || mobile() ? Number(node.dataset.x) : selected ? right ? 14 : 86 : Math.min(84, Math.max(16, Number(node.dataset.x) + (right ? 7 : -7)));
-      node.style.left = x + "%";
-      node.style.top = (selected && !mobile() ? 50 : Number(node.dataset.y)) + "%";
-      node.classList.toggle("is-selected", selected);
-      node.setAttribute("aria-pressed", String(selected));
-      const line = journey.querySelector('[data-line="' + i + '"]');
-      line?.setAttribute("x2", String(x));
-      line?.setAttribute("y2", selected && !mobile() ? "50" : node.dataset.y);
-      line?.classList.toggle("is-selected", selected);
-    });
-    journey.querySelector(".journey-step-label").textContent = index < 0 ? "Scroll to explore" : String(index + 1).padStart(2, "0") + " / " + String(nodes.length).padStart(2, "0");
-    journey.querySelector("[data-journey-next]").disabled = !nodes.length;
-    if (wireFrame) env.cancelAnimationFrame(wireFrame);
-    if (!preference.matches) wireFrame = env.requestAnimationFrame(() => followWires(env.performance.now()));
-  }
-  function update() {
-    frame = 0;
-    if (mobile()) {
-      show(manual);
-      return;
-    }
-    const rect = journey.getBoundingClientRect(), top = 96, travel = Math.max(1, journey.offsetHeight - stage.offsetHeight);
-    const progress = Math.max(0, Math.min(1, (top - rect.top) / travel));
-    const index = Math.max(-1, Math.min(nodes.length - 1, Math.floor(progress * (nodes.length + 1)) - 1));
-    show(index);
-  }
-  function schedule() {
-    if (!frame) frame = env.requestAnimationFrame(update);
-  }
-  function navigate(index) {
-    const target = Math.max(-1, Math.min(nodes.length - 1, index));
-    manual = target;
-    if (mobile()) {
-      show(target);
-      if (target >= 0) {
-        copy.scrollIntoView({ block: "start", behavior: "instant" });
-        copy.focus({ preventScroll: true });
-      }
-      return;
-    }
-    const travel = Math.max(1, journey.offsetHeight - stage.offsetHeight);
-    const progress = target < 0 ? 0 : (target + 1.35) / (nodes.length + 1);
-    env.scrollTo({ top: journey.getBoundingClientRect().top + env.scrollY - 96 + progress * travel, behavior: "instant" });
-    show(target);
-    if (target >= 0) copy.focus({ preventScroll: true });
-    else {
-      stage.setAttribute("tabindex", "-1");
-      stage.focus({ preventScroll: true });
-    }
-  }
-  function click(e) {
-    const node = e.target.closest("[data-journey-node]");
-    if (node) {
-      navigate(Number(node.dataset.journeyNode));
-      return;
-    }
-    if (e.target.closest("[data-journey-reset]")) navigate(-1);
-    if (e.target.closest("[data-journey-next]")) navigate(current >= nodes.length - 1 ? -1 : current + 1);
-  }
-  function key(e) {
-    if (e.key === "Escape") {
-      navigate(-1);
-      nodes[0]?.focus({ preventScroll: true });
-    }
-  }
-  journey.addEventListener("click", click);
-  journey.addEventListener("keydown", key);
-  env.addEventListener("scroll", schedule, { passive: true });
-  env.addEventListener("resize", schedule);
-  update();
-  return () => {
-    if (frame) env.cancelAnimationFrame(frame);
-    if (wireFrame) env.cancelAnimationFrame(wireFrame);
-    env.removeEventListener("scroll", schedule);
-    env.removeEventListener("resize", schedule);
-    journey.removeEventListener("click", click);
-    journey.removeEventListener("keydown", key);
-  };
-}
-
 // src/export/onePager.js
-var esc3 = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+var esc2 = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 function buildOnePager({ facts: f, logoSvg = "", faviconSvg = "", brand }) {
   const rows = (f.groups || []).flatMap((g) => g.rows);
   const alternative = f.versus;
   const b = normalizeBrand(brand);
   const accentText = brand ? contrast(b.primary, b.background) >= 4.5 ? b.primary : b.text : "currentColor";
   const requirements = clientRequirements({ requirements: f.requirements });
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc3(f.company)} \xB7 One-pager</title>
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc2(f.company)} \xB7 One-pager</title>
 ${faviconSvg ? `<link rel="icon" href="data:image/svg+xml,${encodeURIComponent(faviconSvg)}">` : ""}
 <style>
 @page{size:A4 portrait;margin:0}*{box-sizing:border-box}html,body{margin:0}body{background:#36383b;font-family:Arial,sans-serif;color:#16221d;line-height:1.45;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -18491,19 +18291,19 @@ h1{font-size:34px;line-height:1.05;letter-spacing:-.03em;margin:0 0 10px;font-we
 @media print{html,body{background:transparent!important;height:auto}.onepager-paper{width:210mm!important;height:297mm!important;margin:0;box-shadow:none}.page{transform:none!important}}
 :root{--brief-accent-text:${accentText}}.page h2,.page .brief-stat.good strong,.page .brief-total strong{color:var(--brief-accent-text)!important}.brief-driver .fill{background:var(--brief-accent-text)!important}.brief-brand-image{margin:0 0 12px;height:32mm;overflow:hidden}.brief-brand-image img{width:100%;height:100%;object-fit:cover;object-position:center 22%}.brief-top{border-bottom:2px solid var(--accent)}.brief-hero h1{font-size:38px}.brief-stats{gap:0;border-top:1px solid var(--line2);border-bottom:1px solid var(--line2);margin-bottom:18px}.brief-stat{border:0;border-radius:0;background:transparent;padding:12px 8px;border-right:1px solid var(--line2)}.brief-stat:last-child{border-right:0}.brief-comparison{border:0;border-radius:0;border-top:2px solid var(--accent);padding:12px;background:var(--panel)}.brief-requirements{list-style:none!important;padding:0!important}.brief-requirements li{display:grid;grid-template-columns:12px 1fr;gap:6px;margin:6px 0}.brief-requirements small{grid-column:2;font-size:8px;color:var(--dim)}.requirement-box{display:block;border:1px solid currentColor;width:9px;height:9px;margin-top:3px}.requirement-box.is-done{background:var(--accent)}.brief-audience{gap:18px}.brief-driver .track,.brief-driver .fill{border-radius:0}
 </style></head><body><div class="onepager-paper"><article class="page"><div class="onepager-content">
-<header class="brief-top"><div class="brief-logo">${logoSvg}</div><span>Executive brief<br>${esc3(f.date)}</span></header>
-${b.heroImage ? `<figure class="brief-brand-image"><img src="${b.heroImage}" alt="${esc3(b.heroAlt || f.company + " brand image")}"></figure>` : ""}<section class="brief-hero"><p class="eyebrow">Spotify Portal for Backstage \xB7 ${esc3(f.role)}</p><h1>${esc3(f.company)}</h1>${f.headline ? `<p class="brief-headline">${esc3(f.headline)}</p>` : ""}<p class="cares">${esc3(f.cares)}</p>${f.caseContext ? `<p class="cares">Scope for this case: ${esc3(f.caseContext)}</p>` : ""}${f.priority || f.archetype ? `<div class="brief-context">${f.priority ? `<span>Priority: ${esc3(f.priority)}</span>` : ""}${f.archetype ? `<span>${esc3(f.archetype)}</span>` : ""}</div>` : ""}</section>
-${f.stats.length ? `<p class="cares" style="margin-bottom:10px">Modeled value includes engineering capacity; it is not automatically a cash saving.</p><section class="brief-stats" aria-label="Business impact">${f.stats.map((s) => `<div class="brief-stat ${s.tone || ""}"><span>${esc3(s.label)}</span><strong>${esc3(s.value)}</strong></div>`).join("")}</section>` : ""}
-${rows.length || alternative ? `<div class="brief-main">${rows.length ? `<section class="brief-section"><h2>Value drivers</h2>${rows.map((d) => `<div class="brief-driver"><div class="brief-driver-top"><span>${esc3(d.label)}</span><strong>${esc3(d.valueStr)}</strong></div><div class="track"><div class="fill" style="width:${Math.max(0, Math.min(100, d.pct)).toFixed(1)}%"></div></div><p class="brief-equation">${esc3(d.detail)}</p></div>`).join("")}<div class="brief-total"><span>Total annual value</span><strong>${esc3(f.total)}</strong></div></section>` : ""}${alternative ? `<section class="brief-section brief-comparison"><h2>Portal versus self-hosting</h2>${alternative.rows.map((r) => `<div class="brief-comparison-row"><span>${esc3(r.name)}</span><strong>${esc3(r.valueStr)}</strong></div>`).join("")}<p>${esc3(alternative.lead)}</p><p class="verdict">${esc3(alternative.verdict)}</p></section>` : ""}</div>` : ""}
-<section class="brief-audience">${requirements.length ? "<div><h2>Requirements \xB7 " + esc3(f.role) + '</h2><ul class="brief-requirements">' + requirements.slice(0, 3).map((r) => '<li><span class="requirement-box ' + (r.status === "Actioned" ? "is-done" : "") + '" aria-hidden="true"></span><span>' + esc3(r.text.length > 180 ? r.text.slice(0, 177) + "\u2026" : r.text) + "</span><small>" + esc3(r.status) + "</small></li>").join("") + "</ul>" + (requirements.length > 3 ? '<p class="brief-counter">' + (requirements.length - 3) + " more requirements in the Live Room.</p>" : "") + "</div>" : ""}<div><h2>The decision</h2><p class="brief-counter">Compare the proposed operating model with running Backstage in-house, using the scope and figures above. Engineering capacity is valued separately from any confirmed cash saving.</p></div></section>
-</div><footer class="brief-footer"><span>${esc3(f.company)} \xB7 Spotify Portal for Backstage</span><span>Business case \xB7 1 / 1</span></footer></article></div>
+<header class="brief-top"><div class="brief-logo">${logoSvg}</div><span>Executive brief<br>${esc2(f.date)}</span></header>
+${b.heroImage ? `<figure class="brief-brand-image"><img src="${b.heroImage}" alt="${esc2(b.heroAlt || f.company + " brand image")}"></figure>` : ""}<section class="brief-hero"><p class="eyebrow">Spotify Portal for Backstage \xB7 ${esc2(f.role)}</p><h1>${esc2(f.company)}</h1>${f.headline ? `<p class="brief-headline">${esc2(f.headline)}</p>` : ""}<p class="cares">${esc2(f.cares)}</p>${f.caseContext ? `<p class="cares">Scope for this case: ${esc2(f.caseContext)}</p>` : ""}${f.priority || f.archetype ? `<div class="brief-context">${f.priority ? `<span>Priority: ${esc2(f.priority)}</span>` : ""}${f.archetype ? `<span>${esc2(f.archetype)}</span>` : ""}</div>` : ""}</section>
+${f.stats.length ? `<p class="cares" style="margin-bottom:10px">Modeled value includes engineering capacity; it is not automatically a cash saving.</p><section class="brief-stats" aria-label="Business impact">${f.stats.map((s) => `<div class="brief-stat ${s.tone || ""}"><span>${esc2(s.label)}</span><strong>${esc2(s.value)}</strong></div>`).join("")}</section>` : ""}
+${rows.length || alternative ? `<div class="brief-main">${rows.length ? `<section class="brief-section"><h2>Value drivers</h2>${rows.map((d) => `<div class="brief-driver"><div class="brief-driver-top"><span>${esc2(d.label)}</span><strong>${esc2(d.valueStr)}</strong></div><div class="track"><div class="fill" style="width:${Math.max(0, Math.min(100, d.pct)).toFixed(1)}%"></div></div><p class="brief-equation">${esc2(d.detail)}</p></div>`).join("")}<div class="brief-total"><span>Total annual value</span><strong>${esc2(f.total)}</strong></div></section>` : ""}${alternative ? `<section class="brief-section brief-comparison"><h2>Portal versus self-hosting</h2>${alternative.rows.map((r) => `<div class="brief-comparison-row"><span>${esc2(r.name)}</span><strong>${esc2(r.valueStr)}</strong></div>`).join("")}<p>${esc2(alternative.lead)}</p><p class="verdict">${esc2(alternative.verdict)}</p></section>` : ""}</div>` : ""}
+<section class="brief-audience">${requirements.length ? "<div><h2>Requirements \xB7 " + esc2(f.role) + '</h2><ul class="brief-requirements">' + requirements.slice(0, 3).map((r) => '<li><span class="requirement-box ' + (r.status === "Actioned" ? "is-done" : "") + '" aria-hidden="true"></span><span>' + esc2(r.text.length > 180 ? r.text.slice(0, 177) + "\u2026" : r.text) + "</span><small>" + esc2(r.status) + "</small></li>").join("") + "</ul>" + (requirements.length > 3 ? '<p class="brief-counter">' + (requirements.length - 3) + " more requirements in the Live Room.</p>" : "") + "</div>" : ""}<div><h2>The decision</h2><p class="brief-counter">Compare the proposed operating model with running Backstage in-house, using the scope and figures above. Engineering capacity is valued separately from any confirmed cash saving.</p></div></section>
+</div><footer class="brief-footer"><span>${esc2(f.company)} \xB7 Spotify Portal for Backstage</span><span>Business case \xB7 1 / 1</span></footer></article></div>
 <script>
 (function(){function fit(){var page=document.querySelector('.page'),content=document.querySelector('.onepager-content');document.documentElement.style.setProperty('--paper-scale',Math.min(1,Math.max(.15,(window.innerWidth-32)/793.7)));document.documentElement.style.setProperty('--content-fit','1');for(var i=0;i<3;i++){var available=page.clientHeight-120,ratio=Math.min(1,available/Math.max(1,content.scrollHeight));document.documentElement.style.setProperty('--content-fit',String(ratio));}}window.addEventListener('resize',fit);window.addEventListener('beforeprint',fit);if(document.fonts)document.fonts.ready.then(fit);fit();})();
 </script></body></html>`;
 }
 
 // src/export/html.js
-var esc4 = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+var esc3 = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 var iconLink = (svg) => svg ? `<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,${encodeURIComponent(svg)}">` : "";
 var FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", sans-serif, BlinkMacSystemFont, Helvetica, Arial';
 function stripModules(src) {
@@ -18512,14 +18312,15 @@ function stripModules(src) {
 function buildWebsite({ company, slides, stakeholders, activeKey, inputs, openFields, sliders, logoSvg, faviconSvg, vmSource, viewMode = "website", websiteBrand }) {
   viewMode = ["website", "pdf", "slides"].includes(viewMode) ? viewMode : "website";
   if (viewMode === "website") slides = websiteStory(slides).map((s) => ({ ...s, blocks: s.blocks.map((b) => ({ ...b, design: b.design?.color || b.design?.background ? websiteBlockDesign(b.design, websiteBrand) : b.design })) }));
-  stakeholders = stakeholders.map(clientStakeholder);
+  stakeholders = viewMode === "website" ? [] : stakeholders.map(clientStakeholder);
+  if (viewMode === "website") activeKey = null;
   const data = { company, slides, stakeholders, activeKey, inputs, openFields, sliders: sliders || [], logo: logoSvg || "", viewMode, layout: viewMode === "website" ? slides.map(websiteSection) : [], artwork: viewMode === "website" ? landingArtwork({ company, logo: logoSvg, roles: stakeholders, brand: websiteBrand, cover: true }) : "" };
   const safe = (obj) => JSON.stringify(obj).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
   data.coverPhoto = websiteBrand?.heroImage || "";
   data.coverAlt = websiteBrand?.heroAlt || "";
   data.splitCovers = slides.map((s) => viewMode !== "website" && splitCover(s, websiteBrand));
   data.fontStacks = Object.fromEntries(slides.flatMap((s) => s.blocks).filter((b) => b.design?.font).map((b) => [b.design.font, fontStack(b.design.font)]));
-  data.journeyHtml = viewMode === "website" ? stakeholderJourneyHtml(company, logoSvg, stakeholders) : "";
+  data.journeyHtml = "";
   const json = safe(data);
   const needsOutfit = [websiteBrand?.headingFont || "Outfit", websiteBrand?.bodyFont, ...Object.keys(data.fontStacks)].some((font) => String(font).split(",").some((name) => name.trim() === "Outfit"));
   const vm = `(function(){${stripModules(vmSource)}
@@ -18530,7 +18331,7 @@ return {computeModel:computeModel,STAKEHOLDERS:STAKEHOLDERS,PAIRS:PAIRS,driversB
 <meta name="robots" content="noindex, nofollow">
 ${iconLink(faviconSvg)}
 ${needsOutfit ? '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap">' : ""}
-<title>${esc4(company)} \xB7 Business case</title>
+<title>${esc3(company)} \xB7 Business case</title>
 <style>${REQUIREMENTS_CSS}
 ${SITE_CSS}
 ${VIEW_CSS}
@@ -18538,8 +18339,8 @@ ${SPLIT_COVER_CSS}
 ${viewMode === "website" ? WEBSITE_CSS + EDITORIAL_CSS + GRAPHIC_CSS + websiteThemeCss(websiteBrand) : ""}</style></head>
 <body class="view-${viewMode}">
 <header class="top">
-  <div class="brand">${logoSvg || (viewMode === "website" ? '<span class="company-monogram">' + esc4(String(company || "C").slice(0, 1).toUpperCase()) + "</span>" : "")}</div>
-  ${viewMode === "pdf" ? '<div class="co">' + esc4(company) + "</div>" : ""}
+  <div class="brand">${logoSvg || (viewMode === "website" ? '<span class="company-monogram">' + esc3(String(company || "C").slice(0, 1).toUpperCase()) + "</span>" : "")}</div>
+  ${viewMode === "pdf" ? '<div class="co">' + esc3(company) + "</div>" : ""}
   <div class="aud-wrap">${viewMode === "website" ? "" : "<span>Perspective</span>"}<div id="audience" class="audience"></div></div>
   <div class="pager"><button id="prev" aria-label="Previous page">\u2190</button><span id="count"></span><button id="next" aria-label="Next page">\u2192</button></div>
 </header>
@@ -18558,7 +18359,7 @@ ${viewMode === "website" ? '<div class="website-progress" aria-hidden="true"><sp
 <script>
 var DATA = JSON.parse(document.getElementById('data').textContent);
 var VM = ${vm};
-(${String(siteMain)})(DATA, VM, ${viewMode === "website" ? String(createWebsiteMotion) : "null"}, ${viewMode === "website" ? String(mountStakeholderJourney) : "null"}, ${viewMode === "website" ? String(renderWebsiteGraphic) : "null"}, ${String(caseNarrative)});
+(${String(siteMain)})(DATA, VM, ${viewMode === "website" ? String(createWebsiteMotion) : "null"}, null, ${viewMode === "website" ? String(renderWebsiteGraphic) : "null"}, ${String(caseNarrative)});
 </script>
 </body></html>`;
 }

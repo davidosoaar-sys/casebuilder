@@ -183,9 +183,10 @@ export const emptyKeys = fields => fields.filter(f => !f.deleted && NUMERIC_INPU
 
 // ------------------------------------------------------------------ the server call
 
-export async function fetchAgent(payload, { code, fetchImpl = fetch } = {}) {
+export async function fetchAgent(payload, { code, signal, fetchImpl = fetch } = {}) {
   const res = await fetchImpl('/api/suggest', {
     method: 'POST',
+    signal,
     headers: await apiHeaders(code ? { 'x-access-code': code } : {}),
     body: JSON.stringify({...payload,command:AGENT_COMMANDS.SUGGEST_INPUTS})
   })

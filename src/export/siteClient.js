@@ -158,7 +158,7 @@ export function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, na
       case 'logo':
         return '<div class="logo">' + DATA.logo + '</div>'
       case 'overviewFacts':
-        return '<div class="overview-context"><span class="label">THE DIRECTION</span><dl><dt>Company archetype</dt><dd>' + esc(inputs.archetype || 'Not yet specified') + '</dd><dt>Strategic priority</dt><dd>' + esc(inputs.strategicPriority || 'Not yet specified') + '</dd><dt>Stakeholders</dt><dd>' + DATA.stakeholders.length + '</dd></dl></div>'
+        return '<div class="overview-context"><span class="label">THE DIRECTION</span><dl><dt>Company archetype</dt><dd>' + esc(inputs.archetype || 'Not yet specified') + '</dd><dt>Strategic priority</dt><dd>' + esc(inputs.strategicPriority || 'Not yet specified') + '</dd></dl></div>'
       case 'stakeholderMap': return DATA.journeyHtml || ''
       case 'divider':
         return '<hr>'

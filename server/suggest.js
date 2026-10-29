@@ -76,19 +76,28 @@ export function quoteSupportsValue(quote, value) {
   return false
 }
 
+export function publicMetricEvidence(key,evidence,value){
+  if(/\b(?:vacanc\w*|open (?:roles|jobs|positions)|r&d employees|research and development employees|approximately|roughly|estimated|up to|more than|at least)\b/i.test(evidence))return false
+  const numeric='\\d[\\d,]*(?:\\.\\d+)?\\s*(?:million|thousand|k|m)?'
+  const phrases=evidence.match(new RegExp('(?:'+numeric+'\\s+engineers?\\b|engineering (?:team|headcount|staff|workforce)(?:\\s+(?:of|is|has|includes|totals|comprises|stands|at|was|currently|now))*\\s+'+numeric+')','gi'))||[]
+  if(!phrases.some(phrase=>quoteSupportsValue(phrase,value)))return false
+  return key==='engineers'||(/\b(?:hired|hires)\b/i.test(evidence)&&/\b(?:20\d{2}|annual|year|12 months)\b/i.test(evidence))
+}
+
 // Turn what the agent said into suggestions we are willing to show. Everything that
 // cannot be checked is dropped.
-export function validateAgentItems(parsed, { documents, seen, only }) {
+export function validateAgentItems(parsed, { documents, seen, only, publicOnly=false, citations={} }) {
   const out = []
   const docs = documents.map(d => ({ ...d, flat: squash(d.text) }))
   for (const it of Array.isArray(parsed && parsed.suggestions) ? parsed.suggestions : []) {
     const range = SUGGESTIBLE[it.key]
     if (!range || (only && !only.includes(it.key))) continue
+    if(publicOnly&&!PUBLIC_FACTS.includes(it.key))continue
     const value = Number(it.value)
     if (!Number.isFinite(value) || value < range[0] || value > range[1]) continue
     const confidence = ['high', 'medium', 'low'].includes(it.confidence) ? it.confidence : 'low'
 
-    if (typeof it.quote === 'string' && it.quote.trim().length >= 4) {
+    if (!publicOnly && typeof it.quote === 'string' && it.quote.trim().length >= 4) {
       const quote = it.quote.trim().slice(0, 400)
       const flat = squash(quote)
       const doc = docs.find(d => (it.document ? d.id === it.document : true) && d.flat.includes(flat))
@@ -108,6 +117,14 @@ export function validateAgentItems(parsed, { documents, seen, only }) {
 
     if (typeof it.link === 'string' && /^https?:\/\//i.test(it.link) && seen.has(norm(it.link))) {
       const link = it.link.trim().split('#')[0]
+      if(publicOnly){
+        const evidence=typeof it.evidence==='string'?it.evidence.trim().slice(0,600):''
+        if(it.publication||!publicMetricEvidence(it.key,evidence,value))continue
+        const observed=Object.entries(citations).filter(([url])=>norm(url)===norm(link)).map(([,excerpt])=>squash(excerpt)).join(' ')
+        if(!observed.includes(squash(evidence)))continue
+        out.push({key:it.key,value,state:'suggestion',kind:'public',link,quote:evidence,confidence,origin:`Public source — review needed: ${link}`})
+        continue
+      }
       if (PUBLIC_FACTS.includes(it.key) && !(typeof it.publication === 'string' && it.publication.trim())) {
         out.push({ key: it.key, value, state: 'input', kind: 'public', link, confidence, origin: `Public source: ${link}` })
       } else if (typeof it.publication === 'string' && it.publication.trim()) {
@@ -138,7 +155,7 @@ function extractJson(text) {
 }
 
 // body: { company, filled: {key: value}, documents: [{source, name, text}], web: bool, only: [key], labels: {key: label} }
-export async function suggest({ company, filled, documents, web, only, labels }, client = new Anthropic()) {
+export async function suggest({ company, filled, documents, web, only, labels, publicOnly=false }, client = new Anthropic()) {
   // Filled keys are outside the research scope, even for a direct API request.
   only = only.filter(key => !Object.prototype.hasOwnProperty.call(filled, key))
   if (!only.length) return { suggestions: [] }
@@ -168,12 +185,12 @@ export async function suggest({ company, filled, documents, web, only, labels },
 
   const run = await runWithSearch({
     client, model: MODEL, maxTokens: 6000, maxSearches: MAX_SEARCHES, web,
-    system: agentPrompt(AGENT_COMMANDS.SUGGEST_INPUTS),
+    system: agentPrompt(AGENT_COMMANDS.SUGGEST_INPUTS)+(publicOnly?'\nAutomatic public-input pass: use public web only. Return only directly stated company engineering headcount or engineering hires over a stated year. Each item MUST include evidence: an exact source excerpt containing the value, metric and reporting period where relevant. Do not report total employees, R&D headcount, open vacancies, estimates or benchmarks. No documents, arithmetic or Portal assumptions. All results remain unconfirmed suggestions.':'') ,
     messages
   })
   const message = run.message
   if (message.stop_reason === 'refusal') return { suggestions: [] }
   const seen = new Set(run.urls.map(norm))
   const parsed = extractJson(run.text)
-  return { suggestions: validateAgentItems(parsed, { documents: docs, seen, only }), search: run.search }
+  return { suggestions: validateAgentItems(parsed, { documents: docs, seen, only, publicOnly, citations:run.citations }), search: run.search }
 }

@@ -11,7 +11,7 @@ function loadComponent(name){
   const source=fs.readFileSync(new URL('components/'+name,import.meta.url),'utf8')
   const compiled=transformSync(source,{loader:'jsx',format:'cjs',tsconfigRaw:{}}).code
   const module={exports:{}}
-  const resolve=id=>id.endsWith('.jsx')?loadComponent(id.replace('./','')):require(id.startsWith('../')?'./'+id.slice(3):id)
+  const resolve=id=>id.endsWith('.jsx')?loadComponent(id.replace('./','')):id.endsWith('?raw')?fs.readFileSync(new URL('components/'+id.slice(0,-4),import.meta.url),'utf8'):require(id.startsWith('../')?'./'+id.slice(3):id)
   new Function('require','module','exports',compiled)(resolve,module,module.exports)
   return module.exports
 }
@@ -28,6 +28,17 @@ test('empty lookup keeps a single-line search with a useful empty state',()=>{
   assert.ok(html.includes('Name, email or LinkedIn URL'))
   assert.ok(!html.includes('<textarea'))
   assert.ok(!html.includes('class="mono-label"'))
+})
+
+test('lookup shows an internal read-only role map and sourced reporting facts without adding a person',()=>{
+  const html=render({project:{name:'Example',stakeholders:[]},results:[{...result,person:{...person,reportsTo:claim('Taylor, CTO')}}]})
+  assert.ok(html.includes('Internal stakeholder map'))
+  assert.ok(html.includes('Where they fit'))
+  assert.ok(html.includes('Seniority and reporting relationships'))
+  assert.ok(html.includes('Lines connect roles to the company'))
+  assert.ok(html.includes('Taylor, CTO</a>'))
+  assert.equal(html.includes('class="map-x"'),false)
+  assert.equal(html.includes('class="map-actions"'),false)
 })
 test('brief keeps per-claim evidence and explicit inference while hiding unsourced claims',()=>{
   const p={...person,publicSignals:[{value:'Unsupported quote'}],likelyCares:{value:'Unsupported personal preference'}}

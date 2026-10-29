@@ -1,6 +1,7 @@
 import React from 'react'
 import PageHead from './PageHead.jsx'
 import {ProfileAvatar,PublicProfileLinks} from './ProfileMedia.jsx'
+import LookupStakeholderMap from './LookupStakeholderMap.jsx'
 
 function SearchIcon(){return <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5" strokeLinecap="round"/></svg>}
 function SourceLink({url,label='View source'}){
@@ -59,6 +60,7 @@ export default function PersonLookup({lookup,project,onAdd,onInput,embedded=fals
           {p&&<details className="lookup-detail-section lookup-coverage"><summary>Sources & search coverage <span>{disabled.length?`${disabled.length} disabled`:p.sourcesUsed.length?`${p.sourcesUsed.length} used`:'No sources yet'}</span></summary><div className="lookup-gaps"><p>Sources used: {p.sourcesUsed.map(s=>s==='web'?'Public web':s).join(', ')||'none yet'}.</p>{p.sourcesSkipped.map(s=><p key={s.source}>{s.reason==='disabled'?`${s.label} is disabled, so no ${s.source==='slack'?'internal context':s.label+' context'} was used.`:`${s.label} is enabled: ${s.reason}.`}</p>)}</div></details>}
         </article>
       })}</div>
+      {!!results.length&&<LookupStakeholderMap project={project} results={results}/>}
     </div>
   </section>
 }

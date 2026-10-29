@@ -8,7 +8,6 @@ import { fontStack } from '../brand.js'
 import {splitCover,SPLIT_COVER_CSS} from '../deck/cover.js'
 import { websiteStory } from './websiteStory.js'
 import { renderWebsiteGraphic, GRAPHIC_CSS } from './websiteGraphics.js'
-import { stakeholderJourneyHtml, mountStakeholderJourney } from './stakeholderJourney.js'
 import { websiteSection, websiteBlockDesign, websiteThemeCss } from './websiteFramework.js'
 
 // HTML exports. Both builders are pure: they take plain data and return a
@@ -139,14 +138,17 @@ export function stripModules(src) {
 export function buildWebsite({ company, slides, stakeholders, activeKey, inputs, openFields, sliders, logoSvg, faviconSvg, vmSource, viewMode = 'website', websiteBrand }) {
   viewMode = ['website', 'pdf', 'slides'].includes(viewMode) ? viewMode : 'website'
   if (viewMode === 'website') slides = websiteStory(slides).map(s => ({ ...s, blocks: s.blocks.map(b => ({ ...b, design: b.design?.color || b.design?.background ? websiteBlockDesign(b.design, websiteBrand) : b.design })) }))
-  stakeholders=stakeholders.map(clientStakeholder)
+  // The shared Live Room carries no account map or named stakeholder data,
+  // including in its embedded JSON. Slide/PDF audience framing stays intact.
+  stakeholders=viewMode==='website'?[]:stakeholders.map(clientStakeholder)
+  if(viewMode==='website')activeKey=null
   const data = { company, slides, stakeholders, activeKey, inputs, openFields, sliders: sliders || [], logo: logoSvg || '', viewMode, layout: viewMode === 'website' ? slides.map(websiteSection) : [], artwork: viewMode === 'website' ? landingArtwork({ company, logo:logoSvg, roles:stakeholders, brand:websiteBrand, cover:true }) : '' }
   // JSON inside a <script> must not be able to close the tag.
   const safe = obj => JSON.stringify(obj).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029')
   data.coverPhoto=websiteBrand?.heroImage||'';data.coverAlt=websiteBrand?.heroAlt||''
   data.splitCovers=slides.map(s=>viewMode!=='website'&&splitCover(s,websiteBrand))
   data.fontStacks = Object.fromEntries(slides.flatMap(s=>s.blocks).filter(b=>b.design?.font).map(b=>[b.design.font,fontStack(b.design.font)]))
-  data.journeyHtml = viewMode==='website' ? stakeholderJourneyHtml(company,logoSvg,stakeholders) : ''
+  data.journeyHtml = ''
   const json = safe(data)
   const needsOutfit = [websiteBrand?.headingFont || 'Outfit', websiteBrand?.bodyFont, ...Object.keys(data.fontStacks)].some(font=>String(font).split(',').some(name=>name.trim()==='Outfit'))
   // The value model, turned into a function that returns what the site needs.
@@ -183,7 +185,7 @@ ${viewMode === 'website' ? '<div class="website-progress" aria-hidden="true"><sp
 <script>
 var DATA = JSON.parse(document.getElementById('data').textContent);
 var VM = ${vm};
-(${String(siteMain)})(DATA, VM, ${viewMode === 'website' ? String(createWebsiteMotion) : 'null'}, ${viewMode === 'website' ? String(mountStakeholderJourney) : 'null'}, ${viewMode === 'website' ? String(renderWebsiteGraphic) : 'null'}, ${String(caseNarrative)});
+(${String(siteMain)})(DATA, VM, ${viewMode === 'website' ? String(createWebsiteMotion) : 'null'}, null, ${viewMode === 'website' ? String(renderWebsiteGraphic) : 'null'}, ${String(caseNarrative)});
 </script>
 </body></html>`
 }

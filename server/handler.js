@@ -127,8 +127,9 @@ export async function handleSuggest({ body, headers }) {
 
   const company = typeof body?.company === 'string' ? body.company.trim() : ''
   if (!company || company.length > 120) return { status: 400, body: { error: 'A company name is required.' } }
-  const only = (Array.isArray(body?.only) ? body.only : []).filter(k => typeof k === 'string' && k in SUGGESTIBLE).slice(0, 40)
-  const documents = (Array.isArray(body?.documents) ? body.documents : [])
+  const publicOnly=body?.publicOnly===true
+  const only = (Array.isArray(body?.only) ? body.only : []).filter(k => typeof k === 'string' && k in SUGGESTIBLE && (!publicOnly||['engineers','newHiresPerYear'].includes(k))).slice(0, 40)
+  const documents = (!publicOnly&&Array.isArray(body?.documents) ? body.documents : [])
     .filter(d => d && DOC_SOURCES.includes(d.source) && typeof d.text === 'string' && d.text.trim())
     .slice(0, 20)
     .map(d => ({ source: d.source, name: typeof d.name === 'string' ? d.name : 'Untitled', text: d.text }))
@@ -146,7 +147,7 @@ export async function handleSuggest({ body, headers }) {
   if (who.error) return who.error
 
   try {
-    return { status: 200, body: await suggest({ company, filled, documents, web, only, labels }, who.client) }
+    return { status: 200, body: await suggest({ company, filled, documents, web, only, labels, publicOnly }, who.client) }
   } catch (err) {
     if (err instanceof Anthropic.AuthenticationError || (err instanceof ProviderAPIError && [401, 403].includes(err.status))) return { status: 502, body: { error: 'The API key was rejected.' } }
     if (err instanceof Anthropic.RateLimitError || err?.status === 429) return { status: 429, body: { error: err?.quota ? err.message : 'Rate limited. Try again in a minute.' } }

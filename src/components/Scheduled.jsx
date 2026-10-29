@@ -1,6 +1,6 @@
 // Scheduled: tasks the agent runs on its own, on a repeat. A task runs a skill
 // (how the agent does a job) or your own prompt on one project; every run
-// posts into the task's own chat in that project's Agent. Yours lists your
+// posts into the task's own chat in that case's Agent. Yours lists your
 // tasks; Templates are a skill or prompt plus a schedule to start from.
 // Backed by public.schedules + the per-minute runner.
 import React, { useEffect, useRef, useState } from 'react'
@@ -66,7 +66,7 @@ export default function Scheduled({ projects = [], userId, onOpenChat, skillToSc
     }
   }
   useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
-  const projectName = id => projects.find(p => p.id === id)?.name || 'A project'
+  const projectName = id => projects.find(p => p.id === id)?.name || 'A case'
   // From the Skills page: open the form with that skill picked.
   useEffect(() => {
     if (!skillToSchedule) return
@@ -123,7 +123,7 @@ export default function Scheduled({ projects = [], userId, onOpenChat, skillToSc
   }
 
   const full = total >= SCHEDULE_LIMIT
-  const blocked = full ? `${SCHEDULE_LIMIT} tasks is the most an account can have` : noKey ? 'Add an AI model key in Settings first' : !projects.length ? 'Create a project first' : ''
+  const blocked = full ? `${SCHEDULE_LIMIT} tasks is the most an account can have` : noKey ? 'Add an AI model key in Settings first' : !projects.length ? 'Create a case first' : ''
   const shown = tab ?? (list === null || list.length ? 'yours' : 'templates')
   const newTask = (label = 'New task') => (
     <button type="button" className="primary skill-new" onClick={() => setEditing('new')} disabled={!!blocked} title={blocked}><PlusIcon size={16} />{label}</button>
@@ -131,12 +131,12 @@ export default function Scheduled({ projects = [], userId, onOpenChat, skillToSc
   return (
     <MotionConfig reducedMotion="user">
       <section className="page scheduled-page">
-        <PageHead title="Scheduled" sub="Have the agent run a skill or a prompt on its own, on a repeat. Results land in that project's Agent.">
+        <PageHead title="Recurring tasks" sub="Have the agent run a skill or a prompt on its own, on a repeat. Results land in that case's Agent.">
           {newTask()}
         </PageHead>
         <Tabs tabs={[{ id: 'yours', label: 'Yours', count: list ? list.length : null }, { id: 'templates', label: 'Templates' }]}
-          value={list === null && tab === null ? null : shown} onChange={setTab} layoutId="sched-tab-pill" idPrefix="sched" label="Scheduled tasks" />
-        {noKey && <p className="notice">Scheduled tasks run on your own AI model key. Add one in Settings first.</p>}
+          value={list === null && tab === null ? null : shown} onChange={setTab} layoutId="sched-tab-pill" idPrefix="sched" label="Recurring tasks" />
+        {noKey && <p className="notice">Recurring tasks run on your own AI model key. Add one in Settings first.</p>}
         {error && <p className="auth-error" role="alert">{error}</p>}
 
         <div id={`sched-panel-${shown}`} role="tabpanel" aria-labelledby={`sched-tab-${shown}`} className="skill-panel">
@@ -287,7 +287,7 @@ function TaskForm({ projects, userId, skills, initial, onClose, onSaved }) {
   async function save(e) {
     e.preventDefault()
     setError('')
-    if (!dealId) { setError('Pick a project.'); return }
+    if (!dealId) { setError('Pick a case.'); return }
     if (!title.trim() || (!text.trim() && !skill)) { setError(runs === 'skill' ? 'Give the task a name and pick a skill.' : 'Give the task a name and say what the agent should do.'); return }
     const miss = skill && (skill.inputs || []).find(i => i.required && !String(skillInputs[i.key] || '').trim())
     if (miss) { setError(`Fill in "${miss.label}" for the skill.`); return }
@@ -346,10 +346,10 @@ function TaskForm({ projects, userId, skills, initial, onClose, onSaved }) {
         <label className="sched-field"><span>{kind === 'research' ? 'Question' : 'What should the agent do?'}</span>
           <textarea name="prompt" rows={4} value={text} maxLength={MAX_PROMPT} onChange={e => setText(e.target.value)} placeholder={kind === 'research' ? 'e.g. What changed at this company in the last 7 days?' : 'e.g. List the inputs still unconfirmed, most important first.'} /></label>
       )}
-      <label className="sched-field"><span>Project</span>
-        <Select name="project" value={dealId} onChange={setDealId} disabled={!!editing} aria-label="Project"
-          options={projects.map(p => ({ value: p.id, label: p.name || 'Untitled project' }))} />
-        {editing && <small>A task stays on its project; its results are in that project's chat.</small>}
+      <label className="sched-field"><span>Case</span>
+        <Select name="project" value={dealId} onChange={setDealId} disabled={!!editing} aria-label="Case"
+          options={projects.map(p => ({ value: p.id, label: p.name || 'Untitled case' }))} />
+        {editing && <small>A task stays on its case; its results are in that case's chat.</small>}
       </label>
       <label className="sched-field"><span>Name</span>
         <input name="title" autoComplete="off" value={title} maxLength={120} onChange={e => setTitle(e.target.value)} placeholder="e.g. Monday account news…" /></label>

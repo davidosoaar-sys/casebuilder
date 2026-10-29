@@ -84,8 +84,8 @@ const PROJECT_ITEMS = [
 ]
 const MAIN_ITEMS = [
   { id: 'dashboard', label: 'Dashboard' },
-  { id: 'projects', label: 'Projects' },
-  { id: 'scheduled', label: 'Scheduled', title: 'Tasks the agent runs on a repeat, across your projects' },
+  { id: 'projects', label: 'Cases' },
+  { id: 'scheduled', label: 'Recurring tasks', title: 'Tasks the agent runs on a repeat, across your cases' },
   // Skills and Connectors live together under Customize (like Claude): one place
   // for how the agent works and what it can read. The page has a tab for each.
   { id: 'customize', label: 'Customize', title: 'Skills and connectors: how the agent works and what it can read' },
@@ -122,7 +122,7 @@ export default function Sidebar({ view, project, projectMode = false, onNav, onS
   // Menu contents, shared by the desktop sidebar and the mobile drawer.
   const body = (where, go, settings) => <>
     <nav className="sidebar-nav" aria-label="Main">
-      {projectMode && <button className="side-item project-sidebar-back" onClick={() => go('projects')} title="All projects" aria-label="All projects"><span aria-hidden="true">←</span><span className="side-label">All projects</span></button>}
+      {projectMode && <button className="side-item project-sidebar-back" onClick={() => go('projects')} title="All cases" aria-label="All cases"><span aria-hidden="true">←</span><span className="side-label">All cases</span></button>}
       {items.map(it => <Item key={it.id} {...it} view={current} onNav={go} pill={`side-pill-${where}`} />)}
     </nav>
     {children}

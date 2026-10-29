@@ -25,10 +25,10 @@ test('private notes and requirements survive hydration and case-file handoff',()
  const restored=hydrate(caseFileToProject(projectToCaseFile(project)))
  assert.equal(restored.stakeholders[0].privateNotes,secret);assert.deepEqual(restored.stakeholders[0].requirements,stakeholder.requirements)
 })
-test('client website/PDF/slides contain requirements, not private stakeholder metadata',()=>{
+test('Live Room omits stakeholder data; PDF/slides keep recorded requirements without private metadata',()=>{
  for(const viewMode of ['website','pdf','slides']){
   const html=buildWebsite({company:'Example',slides:defaultDeck(),stakeholders:[stakeholder],inputs:DEMO_VALUES,vmSource:'',viewMode})
-  assert.ok(!html.includes(secret));assert.ok(html.includes('Review the annual operating cost'))
+  assert.ok(!html.includes(secret));assert.equal(html.includes('Review the annual operating cost'),viewMode!=='website')
  }
 })
 test('one-pager contains recorded requirements and no objection/counter',()=>{

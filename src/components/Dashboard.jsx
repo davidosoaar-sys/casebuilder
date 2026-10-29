@@ -29,11 +29,11 @@ function Hero({ name, loading, summaries, attention, feed, onOpen, onAct, onCrea
     <section className="dash-hero" aria-labelledby="dash-hello">
       <div className="dash-aurora" aria-hidden="true"><i /><i /><i /></div>
       <div className="dash-hero-inner">
-        <div className="dash-hero-top"><p className="dash-date">{today()}</p><button data-tour="project" className="primary" onClick={onCreate}>New project</button></div>
+        <div className="dash-hero-top"><p className="dash-date">{today()}</p><button data-tour="project" className="primary" onClick={onCreate}>New case</button></div>
         <h1 id="dash-hello" className="dash-hello">{name ? <>{greeting()},<br /><em>{name}</em>.</> : <>{greeting()}.</>}</h1>
         <p className="dash-lede">{loading ? <SkeletonText label="Loading" width="28ch" />
           : first ? <><strong>{first.deal.name}</strong> needs you before anything else today.</>
-          : summaries.length ? 'Every case is confirmed, staffed and branded.' : 'Start your first case with New project.'}</p>
+          : summaries.length ? 'Every case is confirmed, staffed and branded.' : 'Start your first case with New case.'}</p>
         {!loading && attention.length > 0 && (
           <ul className="dash-pills" aria-label="Next actions">
             {attention.map((s, i) => (
@@ -115,7 +115,7 @@ export default function Dashboard({ account, name, deals, loading, onOpen, onSet
           <Legend />
         </div>
         {loading ? <Skeleton label="Loading deals" rows={3} height={64} listClass="dash-list dash-skeleton" /> : attention.length === 0 ? (
-          <p className="dash-empty">{deals.length ? 'Nothing needs you right now. Every case is confirmed, staffed and branded.' : 'No deals yet. Start one with New project.'}</p>
+          <p className="dash-empty">{deals.length ? 'Nothing needs you right now. Every case is confirmed, staffed and branded.' : 'No deals yet. Start one with New case.'}</p>
         ) : (
           <ul className="dash-rows" aria-label="Deals that need attention">
             {attention.map((s, i) => <DealRow key={s.deal.id} s={s} i={i} onOpen={onOpen} onAct={act} />)}

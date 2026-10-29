@@ -34,7 +34,7 @@ const when = iso => {
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
 }
 
-export default function InputSheet({ fields, model, company, connectors, documents, onFields, onAdd, onRemove, onReset }) {
+export default function InputSheet({ fields, model, company, connectors, documents, onFields, onAdd, onRemove, onReset, publicResearch, onRetryPublicInputs }) {
   const visible = fields.filter(f => !f.deleted)
   const groups = INPUT_GROUPS.map(g => [g, visible.filter(f => f.group === g)]).filter(([, items]) => items.length)
   const custom = visible.filter(f => !INPUT_GROUPS.includes(f.group))
@@ -133,6 +133,10 @@ export default function InputSheet({ fields, model, company, connectors, documen
     <div className="inputs-page" data-tour="inputs">
       <header className="inputs-toolbar"><div><h2>Inputs</h2><p>Build the case with your numbers, or suggest values for empty fields.</p></div><button type="button" className="primary" onClick={() => suggest(emptyKeys(fields), 'all')} disabled={!!busy}>{busy ? 'Suggesting…' : 'Suggest values'}</button></header>
       {msg && <p className="suggest-msg" role="status">{msg}</p>}
+      {publicResearch?.company===company&&<div className="public-input-status" role="status">
+        <p>{publicResearch.status==='searching'?'Checking public sources for company figures…':publicResearch.status==='error'?'Public research could not finish. Check your AI key in Settings, or retry. Your inputs are unchanged.':publicResearch.count?`Added ${publicResearch.count} sourced public suggestion${publicResearch.count===1?'':'s'}. Review them before marking them as inputs.`:'No exact public figures were found for the empty fields. Add your numbers or use Suggest values.'}</p>
+        {publicResearch.status!=='searching'&&onRetryPublicInputs&&<button type="button" className="ghost" onClick={onRetryPublicInputs} disabled={!!busy||!fields.some(f=>['engineers','newHiresPerYear'].includes(f.key)&&isBlank(f.value)&&!f.deleted)}>Retry public research</button>}
+      </div>}
       <div className="internal-note">Only you see this page. Nothing on it (sources, states, confidence) appears on the client deck.</div>
 
       <div className="inputs-status">
