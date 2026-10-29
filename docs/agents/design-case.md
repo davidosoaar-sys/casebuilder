@@ -157,7 +157,7 @@ equivalents, a Full map reset and visible focus. Prefer small once-only reveals
 elsewhere. Reduced-motion and unsupported-animation paths keep everything visible.
 No scroll hijacking, forced perspective selector or animation blocking the story.
 
-Provide unobtrusive Adjust assumptions only when the host supplies valid controls.
+Provide unobtrusive Adjust the numbers only when the host supplies valid controls.
 Changing them refreshes all affected numbers and diagrams from the same model,
 preserves scroll position and does not create independently computed AI figures.
 Previewing never starts a download. A standalone downloaded website must retain

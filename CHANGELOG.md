@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## v0.27.2 (2026-10-29)
+
+- Live Room: rename the header button from "Adjust assumptions" to "Adjust the numbers" to match the panel title and the floating button, and keep the panel heading with its close button fixed while the sliders scroll (the panel no longer scrolls as a whole; only its slider area does, with no sideways scrollbar). Docs updated to the new name. Validation: views tests updated (renamed button, heading outside the scrolling body) and passing; in a headless browser at 560 px height the close button stayed at the same position after scrolling the sliders to the bottom and still closed the panel. The one other failure in the plugin workflow test ('Alex Fixture' missing from the site) is identical on a clean copy of HEAD, so it is not from this change.
+
+- Redesign the portrait A4 CaseBuilder one-pager around Chris’s 10–15 hour pain point, with the supplied gradient rotated 90 degrees, four vector visuals for the workflow steps, the app’s official Backstage B + CaseBuilder lockup, visible clickable site/app URLs plus QR codes, and embedded Outfit regular/bold. Verification: one page, A4 dimensions, embedded Outfit faces, four links to the two destinations.
 
 ## v0.27.1 (2026-10-29)
 

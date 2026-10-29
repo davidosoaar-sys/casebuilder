@@ -23,7 +23,7 @@ The current direction follows the user's Agent Stack reference for a persistent
 diagram that changes as the reader scrolls: https://the-agent-stack.com/
 Reference media is not embedded. The cover is the company logo and title on its
 flat authored background, with no glowing tile, gradient or floating pill UI.
-The removed Explore actions stay absent. Adjust assumptions replaces the global
+The removed Explore actions stay absent. Adjust the numbers replaces the global
 perspective selector when valid scenario controls exist.
 The main case is company-focused. Stakeholder framing stays within the map.
 Numbered slide sections are not shown in website mode.

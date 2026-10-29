@@ -345,7 +345,7 @@ export function siteMain(DATA, VM, createMotion, mountJourney, renderGraphic, na
     }
     if (current > shown.length - 1) current = Math.max(0, shown.length - 1)
 
-    $('#audience').innerHTML = mode === 'website' ? (DATA.sliders.length ? '<button data-header-scenario>Adjust assumptions</button>' : '') : DATA.stakeholders
+    $('#audience').innerHTML = mode === 'website' ? (DATA.sliders.length ? '<button data-header-scenario>Adjust the numbers</button>' : '') : DATA.stakeholders
       .map(s => '<button class="' + (s.key === st.key ? 'on' : '') + '" data-key="' + esc(s.key) + '">' + esc(s.role) + '</button>')
       .join('')
     $('#dots').innerHTML = shown

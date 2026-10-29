@@ -176,10 +176,12 @@ ${viewMode === 'website' ? '<div class="website-progress" aria-hidden="true"><sp
 <button id="whatif-toggle" class="whatif-btn" aria-controls="whatif" aria-expanded="false">Adjust the numbers</button>
 <aside id="whatif" class="whatif" aria-label="Scenario explorer">
   <div class="whatif-heading"><h3>Adjust the numbers</h3><button id="whatif-close" class="whatif-close" aria-label="Close scenario explorer">×</button></div>
+  <div class="whatif-body">
   <p>Move a slider and every figure on every page updates.</p>
   <div id="scenario-summary" class="scenario-summary" aria-live="polite"></div>
   <div id="sliders"></div>
   <button id="whatif-reset">Reset to the original</button>
+  </div>
 </aside>
 <script id="data" type="application/json">${json}</script>
 <script>
@@ -281,8 +283,8 @@ hr{border:0;border-top:1px solid var(--line2);margin:22px 0}.spacer{height:40px}
 .dots{position:fixed;right:20px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px;z-index:15}
 .dot{width:11px;height:11px;border-radius:50%;border:2px solid var(--line2);background:none;padding:0;cursor:pointer}.dot:hover{border-color:var(--ink)}.dot.on{background:var(--accent);border-color:var(--accent)}
 .whatif-btn{position:fixed;left:24px;bottom:24px;z-index:25;background:var(--accent);color:#111;border:0;border-radius:4px;padding:11px 18px;font:inherit;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.03em;cursor:pointer}
-.whatif{position:fixed;left:24px;bottom:76px;width:340px;max-height:70vh;overflow:auto;background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:18px 20px;z-index:25;display:none;box-shadow:0 12px 40px rgba(0,0,0,.5)}
-.whatif.open{display:block}.whatif h3{color:var(--strong);font-size:15px;text-transform:none;letter-spacing:0;margin:0 0 4px}.whatif p{color:var(--dim);font-size:13px}
+.whatif{position:fixed;left:24px;bottom:76px;width:340px;max-height:70vh;overflow:hidden;background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:18px 20px;z-index:25;display:none;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.whatif.open{display:flex;flex-direction:column}.whatif-heading{flex:none}.whatif-body{flex:1 1 auto;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain}.whatif h3{color:var(--strong);font-size:15px;text-transform:none;letter-spacing:0;margin:0 0 4px}.whatif p{color:var(--dim);font-size:13px}
 .whatif label{display:block;margin:14px 0}.whatif label span{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}.whatif label b{color:var(--accent)}
 .whatif input[type=range]{width:100%;accent-color:var(--accent)}.whatif button{margin-top:6px;background:none;border:1px solid var(--line2);color:var(--ink);border-radius:4px;padding:7px 12px;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
 .editing .blk[data-e]:hover{outline:1px dashed rgba(155,240,222,.6);outline-offset:6px;cursor:text;border-radius:4px}
