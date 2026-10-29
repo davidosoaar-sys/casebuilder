@@ -2,6 +2,26 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {tipsFor,tipSeen,markTipSeen,resetTour} from './tourTips.js'
 import {needsWelcome,finishWelcome} from './firstVisit.js'
+
+test('global tour introduces Cases and Recurring tasks before creating a case',()=>{
+ for(const view of ['dashboard','projects']){
+  const tips=tipsFor({view})
+  assert.deepEqual(tips.map(t=>t.id),['cases-nav','recurring-nav','project'])
+  assert.equal(tips[0].target,'[data-tour="cases-nav"]')
+  assert.equal(tips[1].target,'[data-tour="recurring-nav"]')
+  assert.equal(tips[0].kind,'navigation')
+  assert.equal(tips[1].kind,'navigation')
+  assert.match(tips[1].text,/results appear in that case’s Agent/)
+ }
+})
+
+test('mobile tour opens the real menu, explains its buttons, then returns to case creation',()=>{
+ assert.deepEqual(tipsFor({view:'dashboard',mobileNav:true,navMenuOpen:false}).map(t=>t.id),['navigation-menu','project'])
+ assert.deepEqual(tipsFor({view:'dashboard',mobileNav:true,navMenuOpen:true}).map(t=>t.id),['cases-nav','recurring-nav','project'])
+ assert.deepEqual(tipsFor({view:'dashboard',mobileNav:true,navMenuOpen:true,navigationPending:false}).map(t=>t.id),['cases-nav','recurring-nav','navigation-close','project'])
+ assert.deepEqual(tipsFor({view:'dashboard',mobileNav:true,navMenuOpen:false,navigationPending:false}).map(t=>t.id),['project'])
+ assert.deepEqual(tipsFor({view:'dashboard',mobileNav:true},false),[])
+})
 test('project guidance follows real stages rather than Next advancing to future pages',()=>{
  for(const [stage,id]of [['map','stakeholders'],['brand','branding'],['people','people'],['theme','theme']])assert.deepEqual(tipsFor({stage,view:'projects'}).map(t=>t.id),[id])
  assert.deepEqual(tipsFor({view:'details'}).map(t=>t.id),['case-inputs'])

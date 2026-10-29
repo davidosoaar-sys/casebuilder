@@ -1,5 +1,9 @@
 const tip=(id,title,text,target,kind='main')=>({id,title,text,target,kind})
 const main={
+ casesNav:tip('cases-nav','Your cases','Cases keeps every company’s business case in one place. Open a case to work on its inputs, people and artifacts.','[data-tour="cases-nav"]','navigation'),
+ recurringNav:tip('recurring-nav','Recurring tasks','Set a skill or prompt to run on a schedule. Its results appear in that case’s Agent.','[data-tour="recurring-nav"]','navigation'),
+ openNav:tip('navigation-menu','Find your way around','Open the menu to see Cases and Recurring tasks.','[data-tour="navigation-menu"]'),
+ closeNav:tip('navigation-close','Ready to start','Close the menu to create your first case.','[data-tour="navigation-close"]'),
  project:tip('project','Create a case','Click New case and enter the company name. The stakeholder step comes next.','[data-tour="project"]'),
  map:tip('stakeholders','Add stakeholders','Choose who needs to be in the decision, then use Continue when you’re ready.','[data-tour="stakeholders"] .map'),
  brand:tip('branding','Review the company branding','Check the company logo, fonts and colors, then continue to meet the people.','[data-tour="branding"] .brand-setup-actions'),
@@ -21,12 +25,16 @@ const pages={
  lookup:tip('lookup','Look up a person','Paste a name, email or LinkedIn URL, review the brief, then choose what to add to the case.','.lookup-page','page'),
  agent:tip('agent','Ask the Agent','Ask questions or request case edits using the available project context. Review its sources and proposed changes.','[data-tour="agent"]','page')
 }
-export function tipsFor({stage,view},mainEnabled=true){
+export function tipsFor({stage,view,mobileNav=false,navMenuOpen=false,navigationPending=true},mainEnabled=true){
  if(!mainEnabled)return []
  if(stage)return mainEnabled&&main[stage]?[main[stage]]:[]
  if(pages[view])return [pages[view]]
  if(view==='details')return [main.inputs]
- if(['projects','dashboard'].includes(view))return [main.project]
+ if(['projects','dashboard'].includes(view))return [
+  ...(mobileNav&&!navMenuOpen?(navigationPending?[main.openNav]:[]):[main.casesNav,main.recurringNav]),
+  ...(mobileNav&&navMenuOpen&&!navigationPending?[main.closeNav]:[]),
+  main.project
+ ]
  if(view==='website'||view==='deck')return [main[view]]
  return []
 }

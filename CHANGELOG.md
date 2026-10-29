@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v0.27.1 (2026-10-29)
+
+- Add anchored first-use explanations for Cases and Recurring tasks before case creation. Include mobile menu open/close guidance, keep Skip tour global, and track spotlight/arrow positions through drawer animation. Preserve existing onboarding style and per-account progress. Validation: production build and six tour/placement tests pass; desktop and narrow-screen welcome → navigation → New case flows and skipping later page tips verified in an isolated browser preview.
+
 ## v0.27.0 (2026-10-29)
 
 - Apply Shea's four workflow refinements: remove stakeholder maps and named stakeholder data from shared Live Rooms; reuse the internal map below lookup results with sourced reporting lines and explicitly inferred seniority; automatically research empty public company inputs as unconfirmed suggestions; rename Projects/Scheduled to Cases/Recurring tasks. Preserve existing onboarding, equations, user-entered values and slide/PDF audience framing. Public auto-fill reads no private connectors and requires an exact observed excerpt for engineering headcount or annual engineering hires.

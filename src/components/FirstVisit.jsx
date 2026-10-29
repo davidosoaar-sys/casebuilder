@@ -8,8 +8,21 @@ import './FirstVisit.css'
 export default function FirstVisit({userId,userName='',onName,context={view:'dashboard'},suspended=false,force=false}){
  const [revision,refresh]=useState(0),[intro,setIntro]=useState(()=>force||needsIntroduction(userId)),[name,setName]=useState(userName),[saving,setSaving]=useState(false),[error,setError]=useState(''),[geometry,setGeometry]=useState(null)
  const seen=useRef(new Set()),skipped=useRef(false),card=useRef(null),targetNode=useRef(null)
+ const [navigation,setNavigation]=useState(()=>({mobileNav:window.matchMedia('(max-width: 860px)').matches,navMenuOpen:false}))
+ useEffect(()=>{
+  const media=window.matchMedia('(max-width: 860px)')
+  const read=()=>{
+   const next={mobileNav:media.matches,navMenuOpen:!!document.querySelector('[data-tour="navigation-menu"][aria-expanded="true"]')}
+   setNavigation(prev=>prev.mobileNav===next.mobileNav&&prev.navMenuOpen===next.navMenuOpen?prev:next)
+  }
+  read();media.addEventListener('change',read)
+  const observer=new MutationObserver(read);observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['aria-expanded']})
+  return()=>{observer.disconnect();media.removeEventListener('change',read)}
+ },[])
  const enabled=!skipped.current&&(force||needsWelcome(userId))
- const tip=tipsFor(context,enabled).find(t=>!seen.current.has(t.id)&&(force||!tipSeen(userId,t.id)))
+ const unseen=t=>!seen.current.has(t)&&(force||!tipSeen(userId,t))
+ const navigationPending=unseen('cases-nav')||unseen('recurring-nav')
+ const tip=tipsFor({...context,...navigation,navigationPending},enabled).find(t=>t.id==='navigation-menu'||unseen(t.id))
  const welcome=!!(intro&&enabled&&userId&&!suspended)
  const target=tip?.target,id=tip?.id
  const dismiss=()=>{if(!tip)return;seen.current.add(tip.id);if(!force)markTipSeen(userId,tip.id);refresh(n=>n+1)}
@@ -20,7 +33,7 @@ export default function FirstVisit({userId,userName='',onName,context={view:'das
   let scrolled=false,frame
   const locate=()=>{
    const node=[...document.querySelectorAll(target)].find(e=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0})
-   const blocked=document.querySelector('[data-tour="project-form"], [aria-modal="true"]:not(.onboarding-dialog)')
+   const blocked=[...document.querySelectorAll('[data-tour="project-form"], [aria-modal="true"]:not(.onboarding-dialog)')].some(dialog=>!(dialog.matches('.sidebar-drawer')&&node&&dialog.contains(node)))
    if(!node||blocked){setGeometry(null);return}
    targetNode.current=node
    let rect=node.getBoundingClientRect()
@@ -30,11 +43,11 @@ export default function FirstVisit({userId,userName='',onName,context={view:'das
    const hole={left,top,right,bottom,width:right-left,height:bottom-top}
    const measure=card.current?.getBoundingClientRect()
    const place=coachPlacement(hole,Math.min(330,innerWidth-32),measure?.height||220,{width:innerWidth,height:innerHeight})
-   const next={hole,place,actionable:node.matches('button,a,[role="button"]')}
+   const next={hole,place,actionable:tip.kind!=='navigation'&&node.matches('button,a,[role="button"]')}
    setGeometry(prev=>JSON.stringify(prev)===JSON.stringify(next)?prev:next)
   }
   locate();frame=requestAnimationFrame(locate)
-  const observer=new MutationObserver(locate);observer.observe(document.body,{childList:true,subtree:true})
+  const observer=new MutationObserver(locate);observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class','aria-expanded']})
   const resize=new ResizeObserver(locate);if(card.current)resize.observe(card.current)
   const click=e=>{if(targetNode.current?.contains(e.target)&&targetNode.current.matches('button,a,[role="button"]'))dismiss()}
   document.addEventListener('click',click,true);window.addEventListener('resize',locate);window.addEventListener('scroll',locate,true)
@@ -60,10 +73,13 @@ export default function FirstVisit({userId,userName='',onName,context={view:'das
  if(!visible)return null
  const submit=async e=>{e.preventDefault();if(!name.trim()||saving)return;setSaving(true);setError('');try{await onName?.(name.trim());if(!force)finishIntroduction(userId);setIntro(false)}catch{setError('Could not save your name. Please try again.')}finally{setSaving(false)}}
  const h=geometry?.hole,p=geometry?.place
+ const arrowStyle=p?.side&&(p.side==='top'||p.side==='bottom'
+  ?{left:Math.max(14,Math.min((h.left+h.right)/2-p.left-7,Math.min(330,innerWidth-32)-28))}
+  :{top:Math.max(14,Math.min((h.top+h.bottom)/2-p.top-7,(card.current?.offsetHeight||220)-28))})
  return createPortal(<div className={'onboarding-dialog'+(welcome?' onboarding-welcome':' onboarding-spotlight')} role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
   {welcome?<div className="onboarding-scrim"/>:<><div className="coach-shade" style={{left:0,top:0,right:0,height:h.top}}/><div className="coach-shade" style={{left:0,top:h.bottom,right:0,bottom:0}}/><div className="coach-shade" style={{left:0,top:h.top,width:h.left,height:h.height}}/><div className="coach-shade" style={{left:h.right,right:0,top:h.top,height:h.height}}/><div className="coach-hole" style={{left:h.left,top:h.top,width:h.width,height:h.height}}/></>}
   <section ref={card} tabIndex={-1} className={'guided-card onboarding-card'+(!welcome?' coach-card':'')} style={!welcome?{left:p.left,top:p.top}:undefined} aria-label="CaseBuilder page guide">
-   {!welcome&&p.side&&<span className={'coach-arrow coach-arrow-'+p.side} aria-hidden="true"/>}
+   {!welcome&&p.side&&<span className={'coach-arrow coach-arrow-'+p.side} style={arrowStyle} aria-hidden="true"/>}
    {welcome?<form onSubmit={submit}><h2 id="onboarding-title">Hello, welcome to CaseBuilder.</h2><p>What should we call you?</p><label htmlFor="welcome-name">Your name</label><input id="welcome-name" autoComplete="given-name" value={name} maxLength={80} onChange={e=>setName(e.target.value)} autoFocus/>{error&&<p role="alert">{error}</p>}<footer><button type="button" className="link-btn" onClick={skip}>Skip tour</button><button className="primary" disabled={!name.trim()||saving}>{saving?'Saving…':'Continue'}</button></footer></form>:<><h2 id="onboarding-title">{tip.title}</h2><p>{tip.text}</p><footer><button className="link-btn" onClick={skip}>Skip tour</button>{geometry.actionable?<span className="coach-action">Click the highlighted button</span>:<button className="primary" onClick={dismiss}>Continue</button>}</footer></>}
   </section>
  </div>,document.body)

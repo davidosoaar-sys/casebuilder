@@ -63,7 +63,7 @@ function Item({ id, icon: iconId, label, view, onNav, disabled, title, pill }) {
       disabled={disabled}
       title={title || label}
       aria-label={label}
-      data-tour={id==='research'?'research-nav':id==='agent'?'agent':id==='details'?'inputs':id==='website'||id==='deck'?'artifacts':undefined}
+      data-tour={id==='projects'?'cases-nav':id==='scheduled'?'recurring-nav':id==='research'?'research-nav':id==='agent'?'agent':id==='details'?'inputs':id==='website'||id==='deck'?'artifacts':undefined}
       aria-current={on ? 'page' : undefined}
     >
       {on && <motion.span layoutId={pill} className="side-pill" aria-hidden="true" transition={{ duration: 0.2, ease: EASE_IN_OUT }} />}
@@ -160,7 +160,7 @@ export default function Sidebar({ view, project, projectMode = false, onNav, onS
           <AppLogo height={22} compact />
         </button>
         <span className="mobile-bar-title">{title}</span>
-        <button ref={menuBtn} type="button" className="mobile-menu-btn" onClick={() => setDrawer(true)} aria-label="Open menu" aria-haspopup="dialog" aria-expanded={drawer}>
+        <button data-tour="navigation-menu" ref={menuBtn} type="button" className="mobile-menu-btn" onClick={() => setDrawer(true)} aria-label="Open menu" aria-haspopup="dialog" aria-expanded={drawer}>
           <svg viewBox="0 0 16 16" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" /></svg>
         </button>
       </header>
@@ -174,7 +174,7 @@ export default function Sidebar({ view, project, projectMode = false, onNav, onS
                   <button type="button" className="sidebar-home" onClick={() => closeAnd(onNav)('dashboard')} title="Dashboard" aria-label="CaseBuilder, go to the dashboard">
                     <AppLogo height={26} />
                   </button>
-                  <button type="button" className="sidebar-collapse drawer-close" onClick={() => setDrawer(false)} aria-label="Close menu" title="Close menu">
+                  <button data-tour="navigation-close" type="button" className="sidebar-collapse drawer-close" onClick={() => setDrawer(false)} aria-label="Close menu" title="Close menu">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" strokeLinecap="round" /></svg>
                   </button>
                 </div>
@@ -199,6 +199,7 @@ function Drawer({ onClose, returnTo, children }) {
     const target = returnTo.current
     panel.current?.querySelector('.sidebar-nav .side-item')?.focus()
     const onKey = e => {
+      if(e.defaultPrevented)return // The onboarding callout owns its focus loop.
       if (e.key === 'Escape') { e.stopPropagation(); close.current() }
       if (e.key === 'Tab' && panel.current) {
         const f = [...panel.current.querySelectorAll('button:not(:disabled), [href], input, select, textarea')]
