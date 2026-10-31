@@ -6,7 +6,7 @@
 // measuring images) so this module can also run under Node for testing.
 
 import { normalizeBrand, blockDesign, officeFont } from '../brand.js'
-import { backstageData } from '../coBrand.js'
+import { partnerFor } from '../coBrand.js'
 import {drawImportChart} from './importCharts.js'
 import {splitCover} from '../deck/cover.js'
 import {googleSlideFont} from './googleSlideFont.js'
@@ -160,7 +160,7 @@ async function layoutBlock(b, deps, theme = DEFAULTS) {
     case 'logo': {
       const png = await deps.logoPng()
       if (!png) return { h: 0, draw: () => {} }
-      return { h: 0.7, draw: (s, y, k) => {const w=Math.min(0.34*png.ratio,3)*k,h=0.34*k;if(theme.logoBackground&&theme.logoBackground!=='transparent')s.addShape('rect',{x:MX,y,w,h,fill:{color:hex(theme.logoBackground)},line:{transparency:100}});s.addImage({data:png.data,x:MX,y,w,h});s.addText('×',{x:MX+w+0.12*k,y,w:0.25*k,h,color:theme.colors.ink||'777777',fontSize:15*k,margin:0});s.addImage({data:backstageData,x:MX+w+0.55*k,y:y+0.04*k,w:1.2*k,h:0.26*k})} }
+      return { h: 0.7, draw: (s, y, k) => {const w=Math.min(0.34*png.ratio,3)*k,h=0.34*k;if(theme.logoBackground&&theme.logoBackground!=='transparent')s.addShape('rect',{x:MX,y,w,h,fill:{color:hex(theme.logoBackground)},line:{transparency:100}});s.addImage({data:png.data,x:MX,y,w,h});s.addText('×',{x:MX+w+0.12*k,y,w:0.25*k,h,color:theme.colors.ink||'777777',fontSize:15*k,margin:0});{const p=theme.partner||partnerFor('backstage'),pw=Math.min(1.2,.26*p.ratio);s.addImage({data:p.src,x:MX+w+0.55*k,y:y+0.04*k,w:pw*k,h:(pw/p.ratio)*k})}} }
     }
     case 'divider':
       return { h: 0.35, draw: (s, y) => s.addShape('line', { x: MX, y: y + 0.1, w: CW, h: 0, line: { color: C.line, width: 1 } }) }
@@ -330,7 +330,7 @@ export async function buildPptx({ company, slides, deps, brand }) {
   const b = normalizeBrand(brand)
   const colors = brand ? { ...DEFAULTS.colors, bg: hex(b.background), panel: hex(b.surface), ink: hex(b.text), strong: hex(b.text), dim: hex(b.muted), faint: hex(b.muted), accent: hex(b.primary), mint: hex(b.primary) } : DEFAULTS.colors
   const styles = Object.fromEntries(Object.entries(DEFAULTS.styles).map(([key, style]) => [key, { ...style, color: style.color === DEFAULTS.colors.strong ? colors.strong : style.color === DEFAULTS.colors.ink ? colors.ink : style.color === DEFAULTS.colors.mint ? colors.mint : style.color === DEFAULTS.colors.faint ? colors.faint : style.color === DEFAULTS.colors.dim ? colors.dim : style.color }]))
-  const theme = { colors, logoBackground:b.logoBackground, font: brand ? exportFont(b.bodyFont) : DEFAULTS.font, headingFont:brand ? exportFont(b.headingFont) : DEFAULTS.font, styles }
+  const theme = { colors, partner: partnerFor(b.partnerLogo, b.background), logoBackground:b.logoBackground, font: brand ? exportFont(b.bodyFont) : DEFAULTS.font, headingFont:brand ? exportFont(b.headingFont) : DEFAULTS.font, styles }
   const C = colors, FONT = theme.font
   const pptx = new deps.PptxGenJS()
   deps = { ...deps, ChartType: pptx.ChartType }
@@ -363,7 +363,7 @@ export async function buildPptx({ company, slides, deps, brand }) {
       s.addImage({data:photo,x:7.0,y:0,w:W-7,h:H,sizing:{type:'cover',w:W-7,h:H},altText:b.heroAlt||company+' cover image'})
       for(let i=0;i<24;i++)s.addShape('rect',{x:7+i*.05,y:0,w:.055,h:H,line:{transparency:100},fill:{color:s.background.color,transparency:Math.round(i/23*100)}})
       const logo=await deps.logoPng?.()
-      if(logo){const w=Math.min(1.8,.35*logo.ratio);s.addImage({data:logo.data,x:MX,y:.65,w,h:.35});s.addText('×',{x:MX+w+.12,y:.65,w:.25,h:.3,fontSize:12,color:C.dim});s.addImage({data:backstageData,x:MX+w+.52,y:.69,w:1.15,h:.25})}
+      if(logo){const w=Math.min(1.8,.35*logo.ratio);s.addImage({data:logo.data,x:MX,y:.65,w,h:.35});s.addText('×',{x:MX+w+.12,y:.65,w:.25,h:.3,fontSize:12,color:C.dim});{const p=theme.partner||partnerFor('backstage'),pw=Math.min(1.15,.25*p.ratio);s.addImage({data:p.src,x:MX+w+.52,y:.69,w:pw,h:pw/p.ratio})}}
       const copy=sl.blocks.filter(x=>x.kind==='text')
       let y=2.0
       for(const item of copy){const title=item.style==='hero',small=item.style==='forwhom';heading=title;activeDesign=item.design||{};const h=title?1.3:small ? .35 : .9;s.addText(item.text,{x:MX,y:small?6.5:y,w:5.7,h,fontFace:title?theme.headingFont:FONT,fontSize:title?52:small?9:17,bold:title,color:title?C.strong:small?C.dim:C.ink,margin:0,valign:'top'});if(!small)y+=h+.2}

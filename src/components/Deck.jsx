@@ -2,6 +2,7 @@ import React, { useState, useRef, useLayoutEffect, useEffect, useMemo } from 're
 import { AnimatePresence, MotionConfig, Reorder, motion, useDragControls } from 'framer-motion'
 import { uid } from '../uid.js'
 import BrandPanel from './BrandPanel.jsx'
+import DesignSwitch from './DesignSwitch.jsx'
 import DeckLogo from './DeckLogo.jsx'
 import { Select, Menu, Popover, UndoRedo, showToast, EASE_OUT, PlusIcon, SearchIcon } from './ui.jsx'
 import { brandVars, fontFaceCss, blockDesign, normalizeBrand } from '../brand.js'
@@ -266,6 +267,7 @@ export default function Deck({ inputs, model, fields, connectors, stakeholders, 
           </div>
           <div className="toolbar-actions">
             <UndoRedo history={history} labels />
+            {onBrand && <DesignSwitch brand={brand} onBrand={onBrand} />}
             <button className="ghost" onClick={() => setDesignOpen(v => !v)} aria-expanded={designOpen}>Deck design{brand?.status === 'scanning' ? ' · scanning' : ''}</button>
             <ExportMenu
               viewPicker

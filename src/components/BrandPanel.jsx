@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { DEFAULT_BRAND, normalizeBrand, safeAsset, BRAND_FONTS } from '../brand.js'
 import BrandReview from './BrandReview.jsx'
 import { fileToDataUrl } from '../deck/image.js'
+import { PARTNERS, PARTNER_KEYS, partnerFor } from '../coBrand.js'
 
 export default function BrandPanel({ brand, onChange, onScan, onClose }) {
   const b = normalizeBrand(brand)
@@ -45,6 +46,21 @@ export default function BrandPanel({ brand, onChange, onScan, onClose }) {
         <div className="brand-actions"><label className="ghost file-btn">{b.logo ? 'Replace logo' : 'Upload logo'}<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden onChange={e => logo(e.target.files[0])} /></label>{b.logo && <button className="ghost" onClick={() => set({ logo: '', hideLogo: true })}>Remove logo</button>}</div>
         <label className="brand-hide-logo"><input type="checkbox" checked={b.hideLogo} onChange={e=>set({hideLogo:e.target.checked})}/> Hide the logo in the deck, Live room and exports</label>
         {b.logoVariants.length>0&&<><p className="help">Other logos found during brand discovery</p><div className="brand-pick-grid">{b.logoVariants.map((v,i)=><button type="button" className="brand-pick" key={i} aria-pressed={b.logo===v.logo} onClick={()=>set({logo:v.logo,hideLogo:false,logoBackground:'transparent'})} aria-label={`Use discovered logo ${i+1}`} style={{ background: b.background }}><img src={v.logo} alt=""/></button>)}</div></>}
+      </section>
+      <section className="partner-picker">
+        <h3>Partner logo</h3>
+        <p className="help">The mark shown beside the company logo on the deck, Live Room, PowerPoint and one-pager.</p>
+        <div className="partner-options" role="radiogroup" aria-label="Partner logo">
+          {PARTNER_KEYS.map(key => {
+            const p = partnerFor(key, b.background)
+            return (
+              <button type="button" role="radio" key={key} data-partner-option={key} aria-checked={b.partnerLogo === key} className={`partner-option ${b.partnerLogo === key ? 'partner-option-on' : ''}`} onClick={() => set({ partnerLogo: key })}>
+                <span className="partner-option-art" style={{ background: b.background }}><img src={p.src} alt="" /></span>
+                <span>{PARTNERS[key].label}</span>
+              </button>
+            )
+          })}
+        </div>
       </section>
       <section><h3>Company icon</h3><p className="help">The square mark without the name. Used on project cards and small spaces.</p>{b.icon && <div className="brand-logo-preview brand-icon-preview" style={{ background: b.background }}><img src={b.icon} alt="Current company icon" /></div>}<div className="brand-actions"><label className="ghost file-btn">Upload icon<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden onChange={async e => { try { set({ icon: await fileToDataUrl(e.target.files[0]) }); setProblem('') } catch { setProblem('Could not load that image. Try PNG, JPG or WebP.') } }} /></label>{b.icon && <button className="ghost" onClick={() => set({ icon: '' })}>Remove icon</button>}</div></section>
       <section>

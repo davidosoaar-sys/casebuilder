@@ -1,3 +1,4 @@
+import DesignSwitch from './DesignSwitch.jsx'
 import { clientCompanyName } from '../companyName.js'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { buildSiteHtml, hashText } from '../export/site.js'
@@ -49,7 +50,7 @@ async function copyText(text) {
   }
 }
 
-export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, onScenario, onImagery, audienceKey, onView, onFillInputs, history }) {
+export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, onScenario, onImagery, audienceKey, onView, onFillInputs, history, onBrand }) {
   const stakeholders = useMemo(() => project.stakeholders.map(resolveStakeholder).filter(Boolean), [project.stakeholders])
   const hidden = useMemo(() => hiddenForClient({ deck: project.deck, inputs, fields: project.fields, stakeholders, activeKey: audienceKey }), [project.deck, project.fields, inputs, stakeholders, audienceKey])
   const frame = useRef(null)
@@ -204,6 +205,7 @@ export default function WebsiteView({ project, inputs, onDeck, onSite, onBack, o
           </span>
         </div>
         <div className="site-bar-actions">
+          {onBrand && <DesignSwitch brand={project.brand} onBrand={onBrand} />}
           <UndoRedo history={history} />
           <Select className="website-view-format" aria-label="View as format" value="website" options={FORMATS}
             onChange={format => onView?.(format, frame.current?.contentDocument?.querySelector('#audience select')?.value || audienceKey)} />

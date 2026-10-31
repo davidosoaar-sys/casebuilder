@@ -225,6 +225,9 @@ export default function App({ account }) {
 
   // Undo / redo for the open project: through update(), so saving works as
   // normal. Undoing an agent step also marks its chat change card.
+  // Brand and theme changes, from the Deck design panel and from the quick design switch.
+  const changeBrand = async brand => { brandScans.current.delete(project.id); const changed=brand.template!==project.brand?.template&&['company','backstage'].includes(brand.template); if(changed||brand.logo!==project.brand.logo)brand=await prepareTemplateBrand({...brand,originalLogo:brand.logo!==project.brand.logo?brand.logo:brand.originalLogo},brand.template); update(changed?chooseDeckTemplate(project,brand):{ brand: { ...brand, status: 'ready', message: 'Your custom deck design is saved.' } }, { label: changed?'Changed the deck template':'Changed the deck design', key: changed?undefined:'brand-panel' }) }
+
   const history = useHistory(project, (parts, step, direction) => update(p => {
     const a = step.agent
     const entry = a && p.agentLog?.[a.id]
@@ -502,7 +505,7 @@ export default function App({ account }) {
             onPreviewOpened={() => setPreviewRequest(null)}
             key={project.id}
             brand={project.brand}
-            onBrand={async brand => { brandScans.current.delete(project.id); const changed=brand.template!==project.brand?.template&&['company','backstage'].includes(brand.template); if(changed||brand.logo!==project.brand.logo)brand=await prepareTemplateBrand({...brand,originalLogo:brand.logo!==project.brand.logo?brand.logo:brand.originalLogo},brand.template); update(changed?chooseDeckTemplate(project,brand):{ brand: { ...brand, status: 'ready', message: 'Your custom deck design is saved.' } }, { label: changed?'Changed the deck template':'Changed the deck design', key: changed?undefined:'brand-panel' }) }}
+            onBrand={changeBrand}
             history={history}
             onScanBrand={website => scanBrand(project.id, project.name, website)}
             inputs={inputs}
@@ -524,6 +527,7 @@ export default function App({ account }) {
             project={project}
             audienceKey={websiteAudience}
             onView={(format, audience) => { setWebsiteAudience(audience); setPreviewRequest(format==='editor'?null:format); setView('deck') }}
+            onBrand={changeBrand}
             inputs={inputs}
             onDeck={(fn, opts) => update(p => ({ deck: fn(p.deck) }), opts || { label: 'Edited the Live room' })}
             history={history}

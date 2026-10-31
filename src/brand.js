@@ -1,11 +1,11 @@
 import {POPPINS_DATA} from './poppinsFont.js'
-import {coBrandHtml} from './coBrand.js'
+import {coBrandHtml,partnerKind} from './coBrand.js'
 import {publicProfileUrl} from './profileMedia.js'
 import { websiteThemeCss } from './export/websiteFramework.js'
 // Customer branding is scoped to a deck. It never themes the application chrome.
 export const DEFAULT_BRAND = {
   primary: '#9bf0de', background: '#111111', surface: '#1e1e1e', text: '#e3e3e3',
-  muted: '#a9acb1', headingFont: 'Poppins', bodyFont: 'Poppins', logo: '', icon: '',
+  muted: '#a9acb1', headingFont: 'Poppins', bodyFont: 'Poppins', logo: '', icon: '', partnerLogo: 'backstage',
   fontData: '', fontName: '', website: '', sources: [], status: 'idle', message: '', hideLogo: false
 }
 export const COLOR_KEYS = ['primary', 'background', 'surface', 'text', 'muted']
@@ -41,6 +41,7 @@ export function normalizeBrand(value) {
     heroImage:safeAsset(b.heroImage),heroAlt:typeof b.heroAlt==='string'?b.heroAlt.slice(0,240):'',heroSource:publicProfileUrl(b.heroSource),
     heroCandidates:(Array.isArray(b.heroCandidates)?b.heroCandidates:[]).slice(0,2).flatMap(c=>safeAsset(c?.heroImage)&&publicProfileUrl(c.heroSource)?[{heroImage:safeAsset(c.heroImage),heroSource:publicProfileUrl(c.heroSource),heroAlt:typeof c.heroAlt==='string'?c.heroAlt.slice(0,240):''}]:[]),
     logo: safeAsset(b.logo),
+    partnerLogo: partnerKind(b.partnerLogo),
     logoVariants:(Array.isArray(b.logoVariants)?b.logoVariants:[]).slice(0,3).flatMap(v=>safeAsset(v?.logo)&&v.logo.length<250000?[{logo:safeAsset(v.logo),sourceUrl:publicProfileUrl(v.sourceUrl),authority:v.authority==='company-profile'?'company-profile':'official-site'}]:[]),
     icon: safeAsset(b.icon),
     hideLogo: b.hideLogo === true,
@@ -70,7 +71,7 @@ export function fontFaceCss(value) {
 export function brandLogoHtml(value, fallback = '') {
   const b = normalizeBrand(value)
   if (b.hideLogo) return ''
-  return coBrandHtml(b.logo ? `<img class="co-brand-customer" src="${b.logo}" alt="Company logo" style="height:40px;width:auto;max-width:220px;object-fit:contain;flex:0 1 auto;min-width:0;${b.logoBackground!=='transparent'?'background:'+b.logoBackground+';padding:8px;border-radius:4px;':''}">` : fallback, b.background)
+  return coBrandHtml(b.logo ? `<img class="co-brand-customer" src="${b.logo}" alt="Company logo" style="height:40px;width:auto;max-width:220px;object-fit:contain;flex:0 1 auto;min-width:0;${b.logoBackground!=='transparent'?'background:'+b.logoBackground+';padding:8px;border-radius:4px;':''}">` : fallback, b.background, b.partnerLogo)
 }
 // Apply the palette after the default CSS, only in exported client documents.
 export function brandDocument(html, value) {
